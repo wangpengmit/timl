@@ -198,7 +198,9 @@ fun transform_typing_atom (ty : typing, funcs : func_typing list) =
           val (ty, funcs) = transform_typing_hoisted (ty, funcs)
           val jty = extract_judge_htyping ty
       in
-          (ATyFuncPointer (([], kctx, tctx), AEFuncPointer (length funcs), t), FTyFix (([], FEFix (n, #2 jty), t), kd, ty) :: funcs)
+        (* Hoisted code is recorded as FuncPointer, not variable. *)
+        (* But the self-reference variable is still a variable. *)
+        (ATyFuncPointer (([], kctx, tctx), AEFuncPointer (length funcs), t), FTyFix (([], FEFix (n, #2 jty), t), kd, ty) :: funcs)
       end
     | TyAppC (((kctx, tctx), EAppC (e, c), t, i), ty, kd) =>
       let

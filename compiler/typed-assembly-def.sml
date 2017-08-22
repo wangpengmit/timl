@@ -1927,6 +1927,7 @@ fun fresh_reg tctx = length tctx
 
 fun transform_atom_typing kctx tctx env aty =
   case aty of
+      (* Variables are always implemented as registers. *)
       ATyVar (_, AEVar x, _) => as_TVTyReg [] kctx tctx $ nth (env, x)
     | ATyConst (_, AEConst cn, _) => as_TVTyWord tctx (as_TWTyConst [] kctx cn)
     | ATyFuncPointer (_, AEFuncPointer l, t) => as_TVTyWord tctx (as_TWTyLocAdmit [] kctx l (transform_cstr t))
@@ -1954,9 +1955,10 @@ fun transform_hoisted_typing heap_base kctx tctx env hty =
           val vty1 = transform_atom_typing kctx tctx env aty1
           val rd =
               let
-                  val tmp_rd = fresh_reg tctx
+                val tmp_rd = fresh_reg tctx
               in
-                  if tmp_rd = 1 then 2 else tmp_rd
+                (* the argument (there is only one) is always passed via Reg1 *)
+                if tmp_rd = 1 then 2 else tmp_rd
               end
           val (_, _, t1) = extract_judge_tal_value_typing vty1
           val tctx1 = update_tal_tctx rd t1 tctx
@@ -2006,6 +2008,8 @@ fun transform_hoisted_typing heap_base kctx tctx env hty =
               in
                   foldl (fn (k, t) => TCForall (k, t)) t1 kctx
               end
+          (* What's this (Reg0, dummy_t) mapping for? Is Reg0 for some special purpose? *)
+          (*   --> The self-reference variable is always mapped to Reg0. *)
           val (heaps3, heap_next, ity3) = transform_hoisted_typing heap_next_mid kctx (update_tal_tctx 0 dummy_t (update_tal_tctx rd t12 tctx1)) (rd :: env) hty3
           val ity3 = as_TITySub ity3 (as_TPrAdmit kctx (TTLe (#3 (extract_judge_tal_instr_typing ity3), dummy_i)))
           val new_loc = heap_next
@@ -2233,6 +2237,9 @@ fun transform_func_typing heap_base fty =
           val kctx = map (snd o extract_judge_tal_wfkind) wks12
           val (_, t_self, _) = extract_judge_tal_kinding kd11
           val (t_reg, i_self) = extract_tal_c_arrow t_self
+          (* The self-reference variable is always mapped to Reg0. *)
+          (* But who will be responsible for setting Reg0? Jump? *)
+          (*   --> I guess it's Jump. *)
           val tctx = t_out :: t_reg
           val env = [1, 0]
           val (heaps, heap_next, ity) = transform_hoisted_typing heap_base kctx tctx env hty2
