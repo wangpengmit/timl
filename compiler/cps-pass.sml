@@ -479,7 +479,7 @@ fun cps ty ty_cont =
               case ty_self of
                   TyAbs _ => ty_self
                 | TyAbsC _ => ty_self
-                | TyLet (_, ty, _) => ty
+                | TyLet (_, ty, _) => ty (* TyLet's body will always be 'EVar 0' because id is used for ty_self=[e, id] *)
                 | _ => raise (Impossible "CPS")
           val ty_rec = as_TyRec kd_t_self ty_self
           (* abstraction is value, send to continuation *)
