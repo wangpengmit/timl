@@ -161,8 +161,8 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
         val (t1, t2) = case e of
                            TBinOp (TBSum, t1, t2) => (t1, t2)
                          | _ => raise Error "ECase"
-        val (t1, i1) = tc (add_typing_iteh (name1, t1) ctx) e1
-        val (t2, i2) = tc (add_typing_iteh (name2, t2) ctx) e2
+        val (t1, i1) = tc (add_typing_full (name1, t1) ctx) e1
+        val (t2, i2) = tc (add_typing_full (name2, t2) ctx) e2
         val () = is_eq_ty itctx (t1, t2)
       in
         (t1, i %+ Tmax (i1, i2))
@@ -171,7 +171,7 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
       let
         val (t1, (name, e)) = unEAbs data
         val () = kc_against_kd itctx (t1, KType)
-        val (t2, i) = tc (add_typing_iteh (name, t1) ctx) e
+        val (t2, i) = tc (add_typing_full (name, t1) ctx) e
       in
         (TArrow (t1, i, t2), T0)
       end
@@ -183,7 +183,7 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
                      EAbs _ => ()
                    | _ => raise Error "ERec"
         val () = kc_against_kd itctx (t, KType)
-        val () = tc_against_ty_time (add_typing_iteh (name, t) ctx) (e, t, T0)
+        val () = tc_against_ty_time (add_typing_full (name, t) ctx) (e, t, T0)
       in
         (t, T0)
       end
@@ -191,7 +191,7 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
       let
         val (k, (name, e)) = unEAbsT data
         val () = assert "EAbsT" $ is_value e
-        val t = tc_against_time (add_kinding_iteh (name, k) ctx) (e, T0)
+        val t = tc_against_time (add_kinding_full (name, k) ctx) (e, T0)
       in
         (MakeTForall (k, t), T0)
       end
@@ -210,7 +210,7 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
         val (s, (name, e)) = unEAbsI data
         val () = is_wf_sort ictx s
         val () = assert "EAbsI" $ is_value e
-        val t = tc_against_time (add_sorting_iteh (name, k) ctx) (e, T0)
+        val t = tc_against_time (add_sorting_full (name, k) ctx) (e, T0)
       in
         (MakeTForallI (s, t), T0)
       end
@@ -224,4 +224,77 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
       in
         (subst0_i_t i t, j)
       end
-        
+    | EPack (t', t1, e) =>
+      let
+        val () = kc_against_kd itctx (t', KType)
+        val (k, (_, t)) = case t' of
+                              TQuan (Exists, data) => UnTQuan data
+                            | _ => raise Error "EPack"
+        val () = kc_against_kd itctx (t1, k)
+        val i = tc_against_ty ctx (e, subst0_t_t t1 t)
+      in
+        (t', i)
+      end
+    | EUnpack data =>
+      let
+        val (e1, (tname, ename, e2)) = unEUnpack data
+        val (t', i1) = tc ctx e1
+        val (k, (_, t)) = case t' of
+                              TQuan (Exists, data) => UnTQuan data
+                            | _ => raise Error "EUnpack"
+        val (t2, i2) = tc (add_typing_full (ename, t) $ add_kinding_full (tname, k) ctx) e2
+        val t2 = forget0_t_t t2
+      in
+        (t2, i1 %+ i2)
+      end
+    | EPackI (t', i, e) =>
+      let
+        val () = kc_against_kd itctx (t', KType)
+        val (s, (_, t)) = case t' of
+                              TQuanI (Exists, data) => UnTQuanI data
+                            | _ => raise Error "EPackI"
+        val () = sc_against_sort ictx (i, s)
+        val j = tc_against_ty ctx (e, subst0_i_t i t)
+      in
+        (t', j)
+      end
+    | EUnpackI data =>
+      let
+        val (e1, (iname, ename, e2)) = unEUnpack data
+        val (t', i1) = tc ctx e1
+        val (s, (_, t)) = case t' of
+                              TQuanI (Exists, data) => UnTQuanI data
+                            | _ => raise Error "EUnpackI"
+        val (t2, i2) = tc (add_typing_full (ename, t) $ add_sorting_full (iname, s) ctx) e2
+        val t2 = forget0_i_t t2
+        val i2 = forget0_i_i i2
+      in
+        (t2, i1 %+ i2)
+      end
+    | EAscTime (e, i2) =>
+      let
+        val (t, i1) = tc ctx e
+        val () = sc_against_sort (i2, STime)
+        val () = check_prop ictx (i1 %<= i2)
+      in
+        (t, i2)
+      end
+    | EAscType (e, t2) =>
+      let
+        val (t1, i) = tc ctx e
+        val () = kc_against_kd (t2, KType)
+        val () = is_eq_ty itctx (t1, t2)
+      in
+        (t2, i)
+      end
+    | ENever t => (t, T0)
+    | EBuiltin t => (t, T0)
+    | ELet data =>
+      let
+        val (e1, (name, e2)) = unELet data
+        val (t1, i1) = tc ctx e1
+        val (t2, i2) = tc (add_typing_full (name, t1) ctx) e2
+      in
+        (t2, i1 %+ i2)
+      end
+    | _ => raise Impossible "tc"
