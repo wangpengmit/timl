@@ -418,27 +418,28 @@ val failure = OS.Process.failure
 fun usage_and_fail () = (usage (); exit failure)
                           
 fun main (prog_name, args : string list) = 
-    let
-      val opts = create_default_options ()
-      val filenames = rev $ parse_arguments (opts, args)
-      val () = case !(#UnitTest opts) of
-                   NONE => ()
-                 | SOME dirname => (UnitTest.test_suites dirname; exit success)
-      val libraries = rev $ !(#Libraries opts)
-      val () = if null filenames then
-                 usage_and_fail ()
-               else ()
-      val () = TypeCheck.anno_less := !(#AnnoLess opts)
-      val _ = repeat_app (fn () => TiML.main libraries filenames) (!(#Repeat opts))
-    in	
-      success
-    end
-    handle
-    TiML.Error msg => (println msg; failure)
-    | IO.Io e => (println (sprintf "IO Error doing $ on $" [#function e, #name e]); failure)
-    | Impossible msg => (println ("Impossible: " ^ msg); failure)
-    | Unimpl msg => (println ("Unimpl: " ^ msg); failure)
-    | ParseArgsError msg => (println msg; usage_and_fail ())
-                               (* | _ => (println ("Internal error"); failure) *)
+  let
+    val () = println "TiML 0.1.0"
+    val opts = create_default_options ()
+    val filenames = rev $ parse_arguments (opts, args)
+    val () = case !(#UnitTest opts) of
+                 NONE => ()
+               | SOME dirname => (UnitTest.test_suites dirname; exit success)
+    val libraries = rev $ !(#Libraries opts)
+    val () = if null filenames then
+               usage_and_fail ()
+             else ()
+    val () = TypeCheck.anno_less := !(#AnnoLess opts)
+    val _ = repeat_app (fn () => TiML.main libraries filenames) (!(#Repeat opts))
+  in	
+    success
+  end
+  handle
+  TiML.Error msg => (println msg; failure)
+  | IO.Io e => (println (sprintf "IO Error doing $ on $" [#function e, #name e]); failure)
+  | Impossible msg => (println ("Impossible: " ^ msg); failure)
+  | Unimpl msg => (println ("Unimpl: " ^ msg); failure)
+  | ParseArgsError msg => (println msg; usage_and_fail ())
+                            (* | _ => (println ("Internal error"); failure) *)
 
 end

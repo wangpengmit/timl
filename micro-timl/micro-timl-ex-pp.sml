@@ -249,7 +249,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
       | ECase (e, e1, e2) =>
         (
           open_hbox ();
-          str "EMatchSum";
+          str "ECase";
           space ();
           str "(";
           pp_e e;
