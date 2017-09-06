@@ -1,3 +1,118 @@
+structure MicroTiMLTypecheck = struct
+
+fun get_ty_const_kind c =
+  case c of
+      TCUnit => KType
+    | TCInt => KType
+    | TCEmpty => KType
+
+fun get_ty_bin_op_arg1_kind opr =
+  case opr of
+      TBProd => KType
+    | TBSum => KType
+                 
+fun get_ty_bin_op_arg2_kind opr =
+  case opr of
+      TBProd => KType
+    | TBSum => KType
+                 
+fun get_ty_bin_op_res_kind opr =
+  case opr of
+      TBProd => KType
+    | TBSum => KType
+                 
+fun kc (ctx as (ictx, tctx)) t =
+  case t of
+      TVar x =>
+      (case nth_error tctx x of
+           SOME k => k
+         | NONE => raise Error "unbound type variable"
+      )
+    | TConst c => get_ty_const_kind c
+    | TBinOp (opr, t1, t2) =>
+      let
+        val () = kc_against_kind ctx (t1, get_ty_bin_op_arg1_kind opr)
+        val () = kc_against_kind ctx (t2, get_ty_bin_op_arg2_kind opr)
+      in
+        get_ty_bin_op_res_kind opr
+      end
+    | TArrow (t1, i, t2) =>
+      let
+        val () = kc_against_kind ctx (t1, KType)
+        val () = sc_against_sort ictx (i, STime)
+        val () = kc_against_kind ctx (t2, KType)
+      in
+        KType
+      end
+    | TAbsI data =>
+      let
+        val (b, (name, t)) = unTAbsI data
+        val k = kc (add_sorting_it (name, Basic b) ctx) t
+      in
+        KArrow (b, k)
+      end
+    | TAppI (t, i) =>
+      let
+        val k' = kc ctx t
+        val (b, k) = case k' of
+                         KArrow data => data
+                       | _ => raise Error "TAppI"
+        val () = sc_against_sort ictx (i, Basic b)
+      in
+        k
+      end
+    | TAbsT data =>
+      let
+        val (k1, (name, t)) = unTAbsT data
+        val k2 = kc (add_kinding_it (name, k1) ctx) t
+      in
+        KArrowT (k1, k2)
+      end
+    | TAppT (t1, t2) =>
+      let
+        val k' = kc ctx t1
+        val (k1, k2) = case k' of
+                         KArrowT data => data
+                       | _ => raise Error "TAppT"
+        val () = kc_against_kind ictx (t2, k1)
+      in
+        k2
+      end
+    | TQuanI (_, data) =>
+      let
+        val (s, (name, t)) = unTQuanI data
+        val () = kc_against_kind (add_sorting_it (name, s) ctx) (t, KType)
+      in
+        KType
+      end
+    | TQuan (_, data) =>
+      let
+        val (k, (name, t)) = unTQuan data
+        val () = kc_against_kind (add_kinding_it (name, k) ctx) (t, KType)
+      in
+        KType
+      end
+    | TRec data =>
+      let
+        val (k, (name, t)) = unTRec data
+        val () = kc_against_kind (add_kinding_it (name, k) ctx) (t, k)
+      in
+        k
+      end
+    | TNat i =>
+      let
+        val () = sc_against_sort ictx (i, SNat)
+      in
+        KType
+      end
+    | TArr (t, i) =>
+      let
+        val () = kc_against_kind ctx (t, KType)
+        val () = sc_against_sort ictx (i, SNat)
+      in
+        KType
+      end
+      
 fun get_expr_const_type c =
   case c of
       ECTT => TUnit
@@ -22,12 +137,11 @@ fun get_prim_expr_bin_opr_res_ty opr =
 fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
   case e of
       Evar x =>
-      (case nth ectx x of
+      (case nth_error ectx x of
            SOME t => (t, T0)
-         | NONE => raise Error "unbound var"
+         | NONE => raise Error "unbound term variable"
       )
-    | EConst c =>
-      (get_expr_const_type c, T0)
+    | EConst c => (get_expr_const_type c, T0)
     | ELoc l =>
       (case get m l of
            SOME (t, i) => (MakeTArr (t, i), T0)
@@ -170,7 +284,7 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
     | EAbs data =>
       let
         val (t1, (name, e)) = unEAbs data
-        val () = kc_against_kd itctx (t1, KType)
+        val () = kc_against_kind itctx (t1, KType)
         val (t2, i) = tc (add_typing_full (name, t1) ctx) e
       in
         (TArrow (t1, i, t2), T0)
@@ -182,7 +296,7 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
         val () = case e' of
                      EAbs _ => ()
                    | _ => raise Error "ERec"
-        val () = kc_against_kd itctx (t, KType)
+        val () = kc_against_kind itctx (t, KType)
         val () = tc_against_ty_time (add_typing_full (name, t) ctx) (e, t, T0)
       in
         (t, T0)
@@ -201,7 +315,7 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
         val (_, (_, t)) = case t' of
                               TQuan (Forall, data) => unTQuan data
                             | _ => raise Error "EAppT"
-        val () = kc_against_kd itctx (t1, KType)
+        val () = kc_against_kind itctx (t1, KType)
       in
         (subst0_t_t t1 t, i)
       end
@@ -226,11 +340,11 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
       end
     | EPack (t', t1, e) =>
       let
-        val () = kc_against_kd itctx (t', KType)
+        val () = kc_against_kind itctx (t', KType)
         val (k, (_, t)) = case t' of
                               TQuan (Exists, data) => UnTQuan data
                             | _ => raise Error "EPack"
-        val () = kc_against_kd itctx (t1, k)
+        val () = kc_against_kind itctx (t1, k)
         val i = tc_against_ty ctx (e, subst0_t_t t1 t)
       in
         (t', i)
@@ -249,7 +363,7 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
       end
     | EPackI (t', i, e) =>
       let
-        val () = kc_against_kd itctx (t', KType)
+        val () = kc_against_kind itctx (t', KType)
         val (s, (_, t)) = case t' of
                               TQuanI (Exists, data) => UnTQuanI data
                             | _ => raise Error "EPackI"
@@ -282,7 +396,7 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
     | EAscType (e, t2) =>
       let
         val (t1, i) = tc ctx e
-        val () = kc_against_kd (t2, KType)
+        val () = kc_against_kind (t2, KType)
         val () = is_eq_ty itctx (t1, t2)
       in
         (t2, i)
@@ -298,3 +412,5 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
         (t2, i1 %+ i2)
       end
     | _ => raise Impossible "tc"
+
+end
