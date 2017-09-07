@@ -112,6 +112,47 @@ fun kc (ctx as (ictx, tctx)) t =
       in
         KType
       end
+
+fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
+  case (t, t') of
+      (TVar x, TVar x') => assert (x = x')
+    | (TConst c, TConst c') => assert (c = c')
+    | (TBinOp (opr, t1, t2), TBinOp (opr', t1', t2')) =>
+      let
+        val () = assert (opr = opr')
+        val () = is_eq_ty ctx (t1, t1')
+        val () = is_eq_ty ctx (t2, t2')
+      in
+        ()
+      end
+    | (TArrow (t1, i, t2), TArrow (t1', i', t2')) =>
+      let
+        val () = is_eq_ty ctx (t1, t1')
+        val () = is_eq_idx ictx (i, i')
+        val () = is_eq_ty ctx (t2, t2')
+      in
+        ()
+      end
+    | (TQuanI (q, data), TQuanI (q', data')) =>
+      let
+        val () = assert (q = q')
+        val (s, (name, t)) = unTQuanI data
+        val (s', (_, t')) = unTQuanI data'
+        val () = is_eq_sort ictx (s, s')
+        val () = is_eq_ty (add_sorting_it (name, s) ctx) (t, t')
+      in
+        ()
+      end
+    | (TQuan (q, data), TQuan (q', data')) =>
+      let
+        val () = assert (q = q')
+        val (k, (name, t)) = unTQuan data
+        val (k', (_, t')) = unTQuan data'
+        val () = is_eq_kind ictx (k, k')
+        val () = is_eq_ty (add_kinding_it (name, k) ctx) (t, t')
+      in
+        ()
+      end
       
 fun get_expr_const_type c =
   case c of
