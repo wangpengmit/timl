@@ -113,46 +113,132 @@ fun kc (ctx as (ictx, tctx)) t =
         KType
       end
 
+fun whnf ctx t =
+    case t of
+        TAppT (t1, t2) =>
+        let
+          val t1 = whnf ctx t1
+        in
+          case t1 of
+              TAbsT data =>
+              let
+                val (_, (_, t1)) = unTAbsT data
+              in
+                whnf ctx $ subst0_t_t t2 t1
+              end
+            | _ => TAppT (t1, t2)
+        end
+      | TAppI (t, i) =>
+        let
+          val t = whnf ctx t
+        in
+          case t of
+              TAbsI data =>
+              let
+                val (_, (_, t)) = unTAbsT data
+              in
+                whnf ctx $ subst0_i_t i t
+              end
+            | _ => TAppI (t, i)
+        end
+      | TVar x => TVar x (* todo: look up type aliasing in ctx *)
+      | _ => t
+    
 fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
-  case (t, t') of
-      (TVar x, TVar x') => assert (x = x')
-    | (TConst c, TConst c') => assert (c = c')
-    | (TBinOp (opr, t1, t2), TBinOp (opr', t1', t2')) =>
-      let
-        val () = assert (opr = opr')
-        val () = is_eq_ty ctx (t1, t1')
-        val () = is_eq_ty ctx (t2, t2')
-      in
-        ()
-      end
-    | (TArrow (t1, i, t2), TArrow (t1', i', t2')) =>
-      let
-        val () = is_eq_ty ctx (t1, t1')
-        val () = is_eq_idx ictx (i, i')
-        val () = is_eq_ty ctx (t2, t2')
-      in
-        ()
-      end
-    | (TQuanI (q, data), TQuanI (q', data')) =>
-      let
-        val () = assert (q = q')
-        val (s, (name, t)) = unTQuanI data
-        val (s', (_, t')) = unTQuanI data'
-        val () = is_eq_sort ictx (s, s')
-        val () = is_eq_ty (add_sorting_it (name, s) ctx) (t, t')
-      in
-        ()
-      end
-    | (TQuan (q, data), TQuan (q', data')) =>
-      let
-        val () = assert (q = q')
-        val (k, (name, t)) = unTQuan data
-        val (k', (_, t')) = unTQuan data'
-        val () = is_eq_kind ictx (k, k')
-        val () = is_eq_ty (add_kinding_it (name, k) ctx) (t, t')
-      in
-        ()
-      end
+    let
+      fun assert b = assert "Can't unify types" b
+      val t = whnf ctx t
+      val t' = whnf ctx t'
+    in
+      case (t, t') of
+          (TVar x, TVar x') => assert (x = x')
+        | (TConst c, TConst c') => assert (c = c')
+        | (TBinOp (opr, t1, t2), TBinOp (opr', t1', t2')) =>
+          let
+            val () = assert (opr = opr')
+            val () = is_eq_ty ctx (t1, t1')
+            val () = is_eq_ty ctx (t2, t2')
+          in
+            ()
+          end
+        | (TArrow (t1, i, t2), TArrow (t1', i', t2')) =>
+          let
+            val () = is_eq_ty ctx (t1, t1')
+            val () = is_eq_idx ictx (i, i')
+            val () = is_eq_ty ctx (t2, t2')
+          in
+            ()
+          end
+        | (TQuanI (q, data), TQuanI (q', data')) =>
+          let
+            val () = assert (q = q')
+            val (s, (name, t)) = unTQuanI data
+            val (s', (_, t')) = unTQuanI data'
+            val () = is_eq_sort ictx (s, s')
+            val () = is_eq_ty (add_sorting_it (name, s) ctx) (t, t')
+          in
+            ()
+          end
+        | (TQuan (q, data), TQuan (q', data')) =>
+          let
+            val () = assert (q = q')
+            val (k, (name, t)) = unTQuan data
+            val (k', (_, t')) = unTQuan data'
+            val () = is_eq_kind ictx (k, k')
+            val () = is_eq_ty (add_kinding_it (name, k) ctx) (t, t')
+          in
+            ()
+          end
+        | (TRec data, TRec data') =>
+          let
+            val (k, (name, t)) = unTQuan data
+            val (k', (_, t')) = unTQuan data'
+            val () = is_eq_kind ictx (k, k')
+            val () = is_eq_ty (add_kinding_it (name, k) ctx) (t, t')
+          in
+            ()
+          end
+        | (TNat i, TNat i') => is_eq_idx ictx (i, i')
+        | (TArr (t, i), TArr (t', i')) =>
+          let
+            val () = is_eq_ty ctx (t, t')
+            val () = is_eq_idx ictx (i, i')
+          in
+            ()
+          end
+        | (TAbsT data, TAbsT data') =>
+          let
+            val (k, (name, t)) = unTAbsT data
+            val (k', (_, t')) = unTAbsT data'
+            val () = is_eq_kind ictx (k, k')
+            val () = is_eq_ty (add_kinding_it (name, k) ctx) (t, t')
+          in
+            ()
+          end
+        | (TAppT (t1, t2), TAppT (t1', t2')) =>
+          let
+            val () = is_eq_ty ctx (t1, t1')
+            val () = is_eq_ty ctx (t2, t2')
+          in
+            ()
+          end
+        | (TAbsI data, TAbsI data') =>
+          let
+            val (s, (name, t)) = unTAbsI data
+            val (s', (_, t')) = unTAbsI data'
+            val () = is_eq_sort ictx (s, s')
+            val () = is_eq_ty (add_sorting_it (name, s) ctx) (t, t')
+          in
+            ()
+          end
+        | (TAppT (t, i), TAppT (t', i')) =>
+          let
+            val () = is_eq_ty ctx (t, t')
+            val () = is_eq_idx ictx (i, i')
+          in
+            ()
+          end
+    end      
       
 fun get_expr_const_type c =
   case c of
@@ -180,13 +266,13 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
       Evar x =>
       (case nth_error ectx x of
            SOME t => (t, T0)
-         | NONE => raise Error "unbound term variable"
+         | NONE => raise Error "Unbound term variable"
       )
     | EConst c => (get_expr_const_type c, T0)
     | ELoc l =>
       (case get m l of
            SOME (t, i) => (MakeTArr (t, i), T0)
-         | NONE => raise Error "unbound location"
+         | NONE => raise Error "Unbound location"
       )
     | EUnOp (EUProj proj, e) =>
       let
@@ -451,6 +537,18 @@ fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
         val (t2, i2) = tc (add_typing_full (name, t1) ctx) e2
       in
         (t2, i1 %+ i2)
+      end
+    | ELetType data =>
+      let
+        val (t, (name, e)) = unELetType data
+      in
+        tc ctx $ subst0_t_e t e (* todo: record type aliasing in ctx *)
+      end
+    | ELetIdx data =>
+      let
+        val (i, (name, e)) = unELetIdx data
+      in
+        tc ctx $ subst0_i_e i e (* todo: record index aliasing in ctx *)
       end
     | _ => raise Impossible "tc"
 
