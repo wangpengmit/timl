@@ -21,11 +21,15 @@ main.mlb: generate-file-list.rb
 profile:
 	mlprof -show-line true -raw true main mlmon.out
 
-smlnj: main.cm
+smlnj: main.cm $(FILES)
 	./format.rb ml-build -Ccontrol.poly-eq-warn=false -Ccompiler-mc.error-non-exhaustive-match=true -Ccompiler-mc.error-non-exhaustive-bind=true main.cm Main.main main-image
 
 main.cm: generate-file-list.rb
 	ruby generate-file-list.rb smlnj > main.cm
+
+%.t.sml: %.sml
+	cp $< $@
+	# cat $< | ruby preprocess.rb > $@
 
 clean:
 	rm -f main

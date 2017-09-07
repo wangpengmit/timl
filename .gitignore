@@ -40,3 +40,5 @@ main.cm
 main.mlb
 
 tmp.timl
+
+*.t.sml

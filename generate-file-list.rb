@@ -182,7 +182,7 @@ visitor.sml
 parse-filename.sml
 micro-timl/micro-timl-visitor.sml
 micro-timl/micro-timl-pp.sml
-micro-timl/micro-timl-ex.sml
+micro-timl/micro-timl-ex.t.sml
 micro-timl/micro-timl-ex-pp.sml
 micro-timl/pattern-ex.sml
 micro-timl/micro-timl-ex-util.sml

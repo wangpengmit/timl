@@ -783,7 +783,7 @@ fun default_expr_visitor_vtable
       in
         T.ModComponents (decls, r)
       end
-    fun copy_ctx ctx =
+    fun copy_ctx (ctx : 'env ctx) =
       {outer = #outer ctx, current = copy_ref $ #current ctx}
     fun visit_ModSeal this ctx data =
       let
