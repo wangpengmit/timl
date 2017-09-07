@@ -164,6 +164,7 @@ redundant-exhaust.sml
 collect-mod.sml
 subst-uvar.sml
 update-expr.sml
+sortcheck.sml
 typecheck-main.sml
 trivial-solver.sml
 derived-trans.sml
