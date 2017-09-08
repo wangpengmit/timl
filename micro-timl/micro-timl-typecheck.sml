@@ -1,5 +1,53 @@
 structure MicroTiMLTypecheck = struct
 
+fun is_wf_bsort_UVarBS data = UVarBS data
+    
+fun get_bsort_UVarI gctx ctx (data as (x, r)) =
+  let
+    val (_, _, bs) = get_uvar_info x !! (fn () => raise Impossible "get_bsort_UVarI")
+  in
+    (UVarI data, bs)
+  end
+
+fun match_BSArrow gctx ctx r bs1 =
+  case bs1 of
+      BSArrow data => data
+    | _ => raise Impossible "match_BSArrow"
+
+fun get_sort_type_UVarS gctx ctx = UVarS data
+             
+structure Sortcheck = SortcheckFn (structure U = Expr
+                                   structure T = Expr
+                                   type sigcontext = sigcontext
+                                   val str_bs = str_bs
+                                   val str_i = str_i
+                                   val str_s = str_s
+                                   val U_str_i = US.str_i
+                                   val fetch_sort = fetch_sort
+                                   val is_wf_bsort_UVarBS = is_wf_bsort_UVarBS
+                                   val get_bsort_UVarI = get_bsort_UVarI
+                                   val match_BSArrow = match_BSArrow
+                                   val get_sort_type_UVarS = get_sort_type_UVarS
+                                   val unify_bs = unify_bs
+                                   val get_region_i = get_region_i
+                                   val get_region_s = get_region_s
+                                   val U_get_region_i = U.get_region_i
+                                   val U_get_region_p = U.get_region_p
+                                   val open_close = open_close
+                                   val add_sorting = add_sorting
+                                   val update_bs = update_bs
+                                   exception Error = Error
+                                   val get_base = get_base
+                                   val gctx_names = gctx_names
+                                   val normalize_s = normalize_s
+                                   val subst_i_p = subst_i_p
+                                   val write_admit = write_admit
+                                   val write_prop = write_prop
+                                   val get_uvar_info = get_uvar_info
+                                   val refine = refine
+                                  )
+open Sortcheck
+       
 fun get_ty_const_kind c =
   case c of
       TCUnit => KType

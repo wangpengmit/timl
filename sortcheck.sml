@@ -15,7 +15,7 @@ functor SortcheckFn (structure U : IDX where type base_sort = BaseSorts.base_sor
                      val fetch_sort : sigcontext -> (string * T.sort) list * U.var -> T.sort
                      val is_wf_bsort_UVarBS : U.bsort U.uvar_bs -> T.bsort
                      val get_bsort_UVarI : sigcontext -> (string * T.sort) list -> (U.bsort, U.idx) U.uvar_i * U.region -> T.idx * T.bsort
-                     val get_bsort_IApp : sigcontext -> (string * T.sort) list -> T.idx * T.bsort -> T.bsort * T.bsort
+                     val match_BSArrow : sigcontext -> (string * T.sort) list -> Region.region -> T.bsort -> T.bsort * T.bsort
                      val get_sort_type_UVarS : sigcontext -> (string * T.sort) list -> (U.bsort, U.sort) U.uvar_s * U.region -> T.sort
                      val unify_bs : Region.region -> T.bsort * T.bsort -> unit
                      val get_region_i : T.idx -> Region.region
@@ -293,7 +293,7 @@ and get_bsort gctx (ctx, i) =
                   let
                     (* val () = println $ U.str_i (names ctx) i *)
                     val (i1, bs1) = get_bsort (ctx, i1)
-                    val (bs, bs2) = get_bsort_IApp gctx ctx (i1, bs1)
+                    val (bs, bs2) = match_BSArrow gctx ctx (get_region_i i1) bs1
                     val i2 = check_bsort (ctx, i2, bs2)
                   in
                     (BinOpI (opr, i1, i2), bs)

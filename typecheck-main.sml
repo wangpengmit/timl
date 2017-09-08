@@ -46,11 +46,11 @@ fun get_bsort_UVarI gctx ctx ((), r) =
     (fresh_i gctx ctx bs r, bs)
   end
 
-fun get_bsort_IApp gctx ctx (i1, bs1) =
+fun match_BSArrow gctx ctx r bs1 =
   let
     val bs2 = fresh_bsort ()
     val bs = fresh_bsort ()
-    val () = unify_bs (get_region_i i1) (bs1, BSArrow (bs2, bs))
+    val () = unify_bs r (bs1, BSArrow (bs2, bs))
   in
     (bs, bs2)
   end
@@ -69,7 +69,7 @@ structure Sortcheck = SortcheckFn (structure U = U
                                    val fetch_sort = fetch_sort
                                    val is_wf_bsort_UVarBS = fresh_bsort
                                    val get_bsort_UVarI = get_bsort_UVarI
-                                   val get_bsort_IApp = get_bsort_IApp
+                                   val match_BSArrow = match_BSArrow
                                    val get_sort_type_UVarS = get_sort_type_UVarS
                                    val unify_bs = unify_bs
                                    val get_region_i = get_region_i
