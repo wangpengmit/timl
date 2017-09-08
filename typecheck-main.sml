@@ -39,17 +39,55 @@ fun turn_off_builtin () = (is_builtin_enabled := false)
 fun str_sctx gctx sctx =
   snd $ foldr (fn ((name, sort), (sctxn, acc)) => (name :: sctxn, (name, str_s gctx sctxn sort) :: acc)) ([], []) sctx
 
-          (* | U.UVarI ((), r) => *)
-          (*   let *)
-          (*     val bs = fresh_bsort () *)
-          (*   in *)
-          (*     (fresh_i gctx ctx bs r, bs) *)
-          (*   end *)
+fun get_bsort_UVarI gctx ctx ((), r) =
+  let
+    val bs = fresh_bsort ()
+  in
+    (fresh_i gctx ctx bs r, bs)
+  end
 
+fun get_bsort_IApp gctx ctx (i1, bs1) =
+  let
+    val bs2 = fresh_bsort ()
+    val bs = fresh_bsort ()
+    val () = unify_bs (get_region_i i1) (bs1, BSArrow (bs2, bs))
+  in
+    (bs, bs2)
+  end
+
+fun get_sort_type_UVarS gctx ctx ((), r) =
+  fresh_sort gctx ctx r
               
 structure Sortcheck = SortcheckFn (structure U = U
                                    structure T = Expr
+                                   type sigcontext = sigcontext
+                                   (* val str_v = str_v *)
+                                   val str_bs = str_bs
+                                   val str_i = str_i
+                                   val str_s = str_s
+                                   val U_str_i = US.str_i
+                                   val fetch_sort = fetch_sort
                                    val is_wf_bsort_UVarBS = fresh_bsort
+                                   val get_bsort_UVarI = get_bsort_UVarI
+                                   val get_bsort_IApp = get_bsort_IApp
+                                   val get_sort_type_UVarS = get_sort_type_UVarS
+                                   val unify_bs = unify_bs
+                                   val get_region_i = get_region_i
+                                   val get_region_s = get_region_s
+                                   val U_get_region_i = U.get_region_i
+                                   val U_get_region_p = U.get_region_p
+                                   val open_close = open_close
+                                   val add_sorting = add_sorting
+                                   val update_bs = update_bs
+                                   exception Error = Error
+                                   val get_base = get_base
+                                   val gctx_names = gctx_names
+                                   val normalize_s = normalize_s
+                                   val subst_i_p = subst_i_p
+                                   val write_admit = write_admit
+                                   val write_prop = write_prop
+                                   val get_uvar_info = get_uvar_info
+                                   val refine = refine
                                   )
 open Sortcheck
        

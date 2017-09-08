@@ -1,6 +1,7 @@
 structure Util = struct
 
 infixr 0 $
+infixr 0 !!
          
 fun f $ x = f x
 
@@ -39,7 +40,6 @@ fun lazy_default def opt =
     case opt of
         SOME a => a
       | NONE => def ()
-infixr 0 !!
 fun opt !! def = lazy_default def opt
 fun option2list a =
   case a of

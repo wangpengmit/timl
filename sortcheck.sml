@@ -1,17 +1,51 @@
 functor SortcheckFn (structure U : IDX where type base_sort = BaseSorts.base_sort
+                                         and type name = string * Region.region
+                                         and type region = Region.region
                      structure T : IDX where type base_sort = BaseSorts.base_sort
-                     val str_i : ToStringUtil.global_context -> ToStringUtil.context -> T.idx -> string
-                     val str_s : ToStringUtil.global_context -> ToStringUtil.context -> T.sort -> string
+                                         and type name = string * Region.region
+                                         and type region = Region.region
+                                         and type 'idx exists_anno = ('idx -> unit) option
+                     sharing type U.var = T.var
+                     (* val str_v : ToStringUtil.scontext -> U.var -> string *)
+                     val str_bs : T.bsort -> string
+                     val str_i : ToStringUtil.global_context -> ToStringUtil.scontext -> T.idx -> string
+                     val str_s : ToStringUtil.global_context -> ToStringUtil.scontext -> T.sort -> string
+                     val U_str_i : ToStringUtil.global_context -> ToStringUtil.scontext -> U.idx -> string
+                     type sigcontext
+                     val fetch_sort : sigcontext -> (string * T.sort) list * U.var -> T.sort
                      val is_wf_bsort_UVarBS : U.bsort U.uvar_bs -> T.bsort
-                     val get_bsort_UVarI : (U.bsort, U.idx) U.uvar_i * U.region -> T.idx * T.bsort
+                     val get_bsort_UVarI : sigcontext -> (string * T.sort) list -> (U.bsort, U.idx) U.uvar_i * U.region -> T.idx * T.bsort
+                     val get_bsort_IApp : sigcontext -> (string * T.sort) list -> T.idx * T.bsort -> T.bsort * T.bsort
+                     val get_sort_type_UVarS : sigcontext -> (string * T.sort) list -> (U.bsort, U.sort) U.uvar_s * U.region -> T.sort
                      val unify_bs : Region.region -> T.bsort * T.bsort -> unit
                      val get_region_i : T.idx -> Region.region
+                     val get_region_s : T.sort -> Region.region
+                     val U_get_region_i : U.idx -> Region.region
+                     val U_get_region_p : U.prop -> Region.region
+                     val open_close : (string * T.sort -> (string * T.sort) list -> (string * T.sort) list) -> string * T.sort -> (string * T.sort) list -> ((string * T.sort) list -> 'a) -> 'a
+                     val add_sorting : string * T.sort -> (string * T.sort) list -> (string * T.sort) list
+                     val update_bs : T.bsort -> T.bsort
+                     exception Error of Region.region * string list
+                     val get_base : ((T.bsort, T.sort) T.uvar_s * Region.region * (UVar.uvar_name * (string * T.bsort) list) * T.idx list -> T.bsort) -> T.sort -> T.bsort
+                     val gctx_names : sigcontext -> ToStringUtil.global_context
+                     val normalize_s : T.sort -> T.sort
+                     val subst_i_p : T.idx -> T.prop -> T.prop
+                     val write_admit : T.prop * Region.region -> unit
+                     val write_prop : T.prop * Region.region -> unit
+                     val get_uvar_info : (T.bsort, T.sort) T.uvar_s -> (int * (string * T.bsort) list) option
+                     val refine : (T.bsort, T.sort) T.uvar_s -> T.sort -> unit
                     ) = struct
 
+structure IdxUtil = IdxUtilFn (T)
+open IdxUtil
 open T
 open Operators
 open BaseSorts
+open Util
        
+infixr 0 $
+infixr 0 !!
+         
 fun idx_un_op_type opr =
   case opr of
       ToReal => (Nat, Time)
@@ -52,7 +86,9 @@ fun is_Sort (t : sort_type) = null t
 
 open Bind
        
-fun get_sort_type gctx (ctx : scontext, s : U.sort) : sort * sort_type =
+fun sctx_names ctx = (* List.mapPartial id $ *) map fst ctx
+                                                                 
+fun get_sort_type gctx (ctx, s : U.sort) : sort * sort_type =
   let
     val get_sort_type = get_sort_type gctx
     val is_wf_sort = is_wf_sort gctx
@@ -69,9 +105,9 @@ fun get_sort_type gctx (ctx : scontext, s : U.sort) : sort * sort_type =
         in
           (Subset ((bs, r), Bind ((name, r2), p), r_all), Sort)
         end
-      | U.UVarS ((), r) =>
+      | U.UVarS data => 
         (* sort underscore will always mean a sort of type Sort *)
-        (fresh_sort gctx ctx r, Sort)
+        (get_sort_type_UVarS gctx ctx data, Sort)
       | U.SAbs (b, Bind ((name, r1), s), r) =>
         let
           val b = is_wf_bsort b
@@ -93,7 +129,7 @@ fun get_sort_type gctx (ctx : scontext, s : U.sort) : sort * sort_type =
         
   end
 
-and is_wf_sort gctx (ctx : scontext, s : U.sort) : sort =
+and is_wf_sort gctx (ctx, s) =
   let
     val (s, t) = get_sort_type gctx (ctx, s)
     val r = get_region_s s
@@ -106,7 +142,7 @@ and is_wf_sort gctx (ctx : scontext, s : U.sort) : sort =
     s
   end
 
-and is_wf_prop gctx (ctx : scontext, p : U.prop) : prop =
+and is_wf_prop gctx (ctx, p) =
     let
       val is_wf_sort = is_wf_sort gctx
       val is_wf_prop = is_wf_prop gctx
@@ -125,7 +161,7 @@ and is_wf_prop gctx (ctx : scontext, p : U.prop) : prop =
 	  let 
             val (i1, bs1) = get_bsort (ctx, i1)
 	    val (i2, bs2) = get_bsort (ctx, i2)
-            val () = unify_bs (U.get_region_p p) (bs1, bs2)
+            val () = unify_bs (U_get_region_p p) (bs1, bs2)
 	  in
             BinPred (EqP, i1, i2)
 	  end
@@ -133,16 +169,16 @@ and is_wf_prop gctx (ctx : scontext, p : U.prop) : prop =
 	  let 
             val (i1, bs1) = get_bsort (ctx, i1)
 	    val (i2, bs2) = get_bsort (ctx, i2)
-            val () = unify_bs (U.get_region_p p) (bs1, bs2)
+            val () = unify_bs (U_get_region_p p) (bs1, bs2)
             val bs = update_bs bs1
             fun error expected =
-              Error (U.get_region_p p, sprintf "Sorts of operands of $ must be both $:" [str_bin_pred opr, expected] :: indent ["left: " ^ str_bs bs1, "right: " ^ str_bs bs2])
+              Error (U_get_region_p p, sprintf "Sorts of operands of $ must be both $:" [str_bin_pred opr, expected] :: indent ["left: " ^ str_bs bs1, "right: " ^ str_bs bs2])
             val () =
                 case opr of
                     BigO =>
                     let
                       val (args, ret) = collect_BSArrow bs
-                      val r = U.get_region_p p
+                      val r = U_get_region_p p
                       val () =
                           case ret of
                               UVarBS _ => ()  (* if it's uvar, it may be BSArrow *)
@@ -185,7 +221,7 @@ and get_bsort gctx (ctx, i) =
               val s = fetch_sort gctx (ctx, x)
               fun error r gctx ctx () = Error (r, [sprintf "Can't figure out base sort of $" [str_s gctx ctx s]])
             in
-              (VarI x, get_base (fn _ => raise error (U.get_region_i i) (gctx_names gctx) (sctx_names ctx) ()) s)
+              (VarI x, get_base (fn _ => raise error (U_get_region_i i) (gctx_names gctx) (sctx_names ctx) ()) s)
             end
           | U.IConst (c, r) =>
             (case c of
@@ -236,9 +272,9 @@ and get_bsort gctx (ctx, i) =
                 let 
                   val (i1, bs1) = get_bsort (ctx, i1)
                   val (i2, bs2) = get_bsort (ctx, i2)
-                  val () = unify_bs (U.get_region_i i) (bs1, bs2)
+                  val () = unify_bs (U_get_region_i i) (bs1, bs2)
                   val bs = update_bs bs1
-                  fun error () = Error (U.get_region_i i, sprintf "Sorts of operands of $ must be the same and from $:" [str_idx_bin_op opr, str_ls str_b bases] :: indent ["left: " ^ str_bs bs1, "right: " ^ str_bs bs2])
+                  fun error () = Error (U_get_region_i i, sprintf "Sorts of operands of $ must be the same and from $:" [str_idx_bin_op opr, str_ls str_b bases] :: indent ["left: " ^ str_bs bs1, "right: " ^ str_bs bs2])
                   val rettype =
                       case bs of
                           Base b =>
@@ -257,9 +293,7 @@ and get_bsort gctx (ctx, i) =
                   let
                     (* val () = println $ U.str_i (names ctx) i *)
                     val (i1, bs1) = get_bsort (ctx, i1)
-                    val bs2 = fresh_bsort ()
-                    val bs = fresh_bsort ()
-                    val () = unify_bs (get_region_i i1) (bs1, BSArrow (bs2, bs))
+                    val (bs, bs2) = get_bsort_IApp gctx ctx (i1, bs1)
                     val i2 = check_bsort (ctx, i2, bs2)
                   in
                     (BinOpI (opr, i1, i2), bs)
@@ -287,7 +321,7 @@ and get_bsort gctx (ctx, i) =
               val i = check_bsort (ctx, i, Base BoolSort)
               val (i1, bs1) = get_bsort (ctx, i1)
               val (i2, bs2) = get_bsort (ctx, i2)
-              val () = unify_bs (U.get_region_i i_all) (bs1, bs2)
+              val () = unify_bs (U_get_region_i i_all) (bs1, bs2)
             in
               (Ite (i, i1, i2, r), bs1)
             end
@@ -302,11 +336,11 @@ and get_bsort gctx (ctx, i) =
                 (*     (IAbs ((name, r1), i, r), Base (TimeFun (arity + 1))) *)
                 (*   | _ => raise Error (get_region_i i, "Sort of time funtion body should be time function" :: indent ["want: time function", "got: " ^ str_bs bs]) *)
             end
-          | U.UVarI data => get_bsort_UVarI data
+          | U.UVarI data => get_bsort_UVarI gctx ctx data
       val ret = main ()
                 handle
                 Error (r, msg) =>
-                raise Error (r, msg @ ["when sort-checking index "] @ indent [US.str_i (gctx_names gctx) (sctx_names ctx) i])
+                raise Error (r, msg @ ["when sort-checking index "] @ indent [U_str_i (gctx_names gctx) (sctx_names ctx) i])
                 (* raise Error (r, msg @ [sprintf "when sort-checking index $ in context $" [U.str_i (gctx_names gctx) (sctx_names ctx) i, str_ls (fn (name, sort) => sprintf "\n$: $" [name, sort]) $ str_sctx (gctx_names gctx) ctx]]) *)
       (* val () = println $ sprintf "get_bsort() result: $ : $" [str_i (gctx_names gctx) (sctx_names ctx) (fst ret), str_bs (snd ret)] *)
     in
@@ -324,12 +358,12 @@ and check_bsort gctx (ctx, i : U.idx, bs : bsort) : idx =
 fun is_wf_sorts gctx (ctx, sorts : U.sort list) : sort list = 
   map (fn s => is_wf_sort gctx (ctx, s)) sorts
       
-fun subst_uvar_error r body i ((fresh, fresh_ctx), x) =
-  Error (r,
-         sprintf "Can't substitute for $ in unification variable $ in $" [str_v fresh_ctx x, fresh, body] ::
-         indent [
-           sprintf "because the context of $ is [$] which contains $" [fresh, join ", " $ fresh_ctx, str_v fresh_ctx x]
-        ])
+(* fun subst_uvar_error r body i ((fresh, fresh_ctx), x) = *)
+(*   Error (r, *)
+(*          sprintf "Can't substitute for $ in unification variable $ in $" [str_v fresh_ctx x, fresh, body] :: *)
+(*          indent [ *)
+(*            sprintf "because the context of $ is [$] which contains $" [fresh, join ", " $ fresh_ctx, str_v fresh_ctx x] *)
+(*         ]) *)
 
 fun check_sort gctx (ctx, i : U.idx, s : sort) : idx =
   let 
