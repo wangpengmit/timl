@@ -84,8 +84,8 @@ structure Sortcheck = SortcheckFn (structure U = U
                                    val gctx_names = gctx_names
                                    val normalize_s = normalize_s
                                    val subst_i_p = subst_i_p
-                                   val write_admit = write_admit
-                                   val write_prop = write_prop
+                                   val write_admit = const_fun write_admit
+                                   val write_prop = const_fun write_prop
                                    val get_uvar_info = get_uvar_info
                                    val refine = refine
                                   )

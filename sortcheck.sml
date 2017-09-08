@@ -30,8 +30,8 @@ functor SortcheckFn (structure U : IDX where type base_sort = BaseSorts.base_sor
                      val gctx_names : sigcontext -> ToStringUtil.global_context
                      val normalize_s : T.sort -> T.sort
                      val subst_i_p : T.idx -> T.prop -> T.prop
-                     val write_admit : T.prop * Region.region -> unit
-                     val write_prop : T.prop * Region.region -> unit
+                     val write_admit : (string * T.sort) list -> T.prop * Region.region -> unit
+                     val write_prop : (string * T.sort) list -> T.prop * Region.region -> unit
                      val get_uvar_info : (T.bsort, T.sort) T.uvar_s -> (int * (string * T.bsort) list) option
                      val refine : (T.bsort, T.sort) T.uvar_s -> T.sort -> unit
                     ) = struct
@@ -397,9 +397,9 @@ fun check_sort gctx (ctx, i : U.idx, s : sort) : idx =
             (* val () = println $ sprintf "Writing prop $ $" [str_p (gctx_names gctx) (sctx_names ctx) p, str_region "" "" r] *)
 	    val () =
                 if is_admit then
-                  write_admit (p, r)
+                  write_admit ctx (p, r)
                 else
-                  write_prop (p, r)
+                  write_prop ctx (p, r)
           in
             ()
           end

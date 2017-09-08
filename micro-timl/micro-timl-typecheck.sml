@@ -15,7 +15,12 @@ fun match_BSArrow gctx ctx r bs1 =
     | _ => raise Impossible "match_BSArrow"
 
 fun get_sort_type_UVarS gctx ctx = UVarS data
-             
+
+fun open_close add ns ctx f = f $ add ns ctx
+    
+fun write_prop ctx (p, r) = check_prop ctx p
+fun write_admit ctx (p, r) = add_admit ctx p
+                                       
 structure Sortcheck = SortcheckFn (structure U = Expr
                                    structure T = Expr
                                    type sigcontext = sigcontext
