@@ -1,5 +1,14 @@
 structure MicroTiMLTypecheck = struct
 
+open UVar
+open TypecheckUtil
+open Unify
+open FreshUVar
+open Expr
+
+infixr 0 $
+infixr 0 !!
+       
 fun is_wf_bsort_UVarBS data = UVarBS data
     
 fun get_bsort_UVarI gctx ctx (data as (x, r)) =
@@ -14,12 +23,13 @@ fun match_BSArrow gctx ctx r bs1 =
       BSArrow data => data
     | _ => raise Impossible "match_BSArrow"
 
-fun get_sort_type_UVarS gctx ctx = UVarS data
+fun get_sort_type_UVarS gctx ctx data = UVarS data
 
 fun open_close add ns ctx f = f $ add ns ctx
 
-val vcs = ref []
-val admits = ref []
+type state = (scontext * prop) list
+val vcs : state ref = ref []
+val admits : state ref = ref []
                  
 fun check_prop ctx p = push_ref vcs (ctx, p)
 fun add_admit ctx p = push_ref admits (ctx, p)               
@@ -33,7 +43,7 @@ structure Sortcheck = SortcheckFn (structure U = Expr
                                    val str_bs = str_bs
                                    val str_i = str_i
                                    val str_s = str_s
-                                   val U_str_i = US.str_i
+                                   val U_str_i = str_i
                                    val fetch_sort = fetch_sort
                                    val is_wf_bsort_UVarBS = is_wf_bsort_UVarBS
                                    val get_bsort_UVarI = get_bsort_UVarI
@@ -58,6 +68,37 @@ structure Sortcheck = SortcheckFn (structure U = Expr
                                    val refine = refine
                                   )
 open Sortcheck
+
+open MicroTiMLExUtil
+open MicroTiMLEx
+
+exception Error of string
+                     
+fun sc_against_sort ctx (i, s) =
+  let
+    val i = check_sort Gctx.empty (ctx, i, s)
+  in
+    ()
+  end
+
+fun is_eq_k (k, k') =
+  case (k, k') of
+      (KType, KType) => ()
+    | (KArrow (b, k), KArrow (b', k')) =>
+      let
+        val () = unify_bs dummy (b, b')
+        val () = is_eq_k (k, k')
+      in
+        ()
+      end
+    | (KArrowT (k1, k2), KArrowT (k1', k2')) =>
+      let
+        val () = is_eq_k (k1, k1')
+        val () = is_eq_k (k2, k2')
+      in
+        ()
+      end
+    | _ => raise Error "can't unify kinds" 
        
 fun get_ty_const_kind c =
   case c of
@@ -79,12 +120,34 @@ fun get_ty_bin_op_res_kind opr =
   case opr of
       TBProd => KType
     | TBSum => KType
-                 
-fun kc (ctx as (ictx, tctx)) t =
+
+fun unTRec data =
+  let
+    val ((name, anno), t) = unBindAnno data
+    val name = Name2str name
+  in
+    (anno, (name, t))
+  end
+
+val unTQuan = unTRec
+val unTQuanI = unTRec
+val unTAbsT = unTRec
+val unTAbsI = unTRec
+
+type icontext = (string * sort) list
+type tcontext = (string * bsort kind) list
+type econtext = (string * (var, bsort, idx, sort) ty) list
+                            
+fun add_sorting_it new (ictx, tctx) = (new :: ictx, tctx)
+fun add_kinding_it new (ictx, tctx) = (ictx, new :: tctx)
+
+fun BasicSort b = Basic (b, dummy)
+                        
+fun kc (ctx as (ictx, tctx) : icontext * tcontext) t : bsort kind =
   case t of
       TVar x =>
       (case nth_error tctx x of
-           SOME k => k
+           SOME (_, k) => k
          | NONE => raise Error "unbound type variable"
       )
     | TConst c => get_ty_const_kind c
@@ -106,7 +169,7 @@ fun kc (ctx as (ictx, tctx)) t =
     | TAbsI data =>
       let
         val (b, (name, t)) = unTAbsI data
-        val k = kc (add_sorting_it (name, Basic b) ctx) t
+        val k = kc (add_sorting_it (name, BasicSort b) ctx) t
       in
         KArrow (b, k)
       end
@@ -116,7 +179,7 @@ fun kc (ctx as (ictx, tctx)) t =
         val (b, k) = case k' of
                          KArrow data => data
                        | _ => raise Error "TAppI"
-        val () = sc_against_sort ictx (i, Basic b)
+        val () = sc_against_sort ictx (i, BasicSort b)
       in
         k
       end
@@ -133,7 +196,7 @@ fun kc (ctx as (ictx, tctx)) t =
         val (k1, k2) = case k' of
                          KArrowT data => data
                        | _ => raise Error "TAppT"
-        val () = kc_against_kind ictx (t2, k1)
+        val () = kc_against_kind ctx (t2, k1)
       in
         k2
       end
@@ -172,6 +235,17 @@ fun kc (ctx as (ictx, tctx)) t =
         KType
       end
 
+and kc_against_kind ctx (t, k) =
+  let
+    val k' = kc ctx t
+    val () = is_eq_k (k', k)
+  in
+    ()
+  end
+
+val subst0_i_t = subst_i_t
+val subst0_t_t = subst_t_t
+                   
 fun whnf ctx t =
     case t of
         TAppT (t1, t2) =>
