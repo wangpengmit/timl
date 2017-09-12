@@ -17,7 +17,13 @@ fun match_BSArrow gctx ctx r bs1 =
 fun get_sort_type_UVarS gctx ctx = UVarS data
 
 fun open_close add ns ctx f = f $ add ns ctx
-    
+
+val vcs = ref []
+val admits = ref []
+                 
+fun check_prop ctx p = push_ref vcs (ctx, p)
+fun add_admit ctx p = push_ref admits (ctx, p)               
+                         
 fun write_prop ctx (p, r) = check_prop ctx p
 fun write_admit ctx (p, r) = add_admit ctx p
                                        

@@ -194,6 +194,7 @@ merge-modules.sml
 micro-timl/timl-to-micro-timl.sml
 unit-test.sml
 main.sml
+micro-timl/micro-timl-typecheck.sml
 }
 
 if target == :smlnj then
