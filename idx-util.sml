@@ -44,6 +44,8 @@ infix 6 %+
 fun a %+ b = BinOpI (AddI, a, b)
 infix 4 %<=
 fun a %<= b = BinPred (LeP, a, b)
+infix 4 %<
+fun a %< b = BinPred (LtP, a, b)
 infix 4 %>=
 fun a %>= b = BinPred (GeP, a, b)
 infix 4 %=

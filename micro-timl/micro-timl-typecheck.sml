@@ -14,6 +14,7 @@ infix 8 %^
 infix 7 %*
 infix 6 %+ 
 infix 4 %<=
+infix 4 %<
 infix 4 %>=
 infix 4 %=
 infixr 3 /\
@@ -114,8 +115,19 @@ val unELetType = unELetIdx
 val unELet = unELetIdx
 fun unEUnpack (def, bind) =
   let
+    val (name1, bind) = unBindSimp bind
+    val (name2, e) = unBindSimp bind
   in
+    (def, (Name2str name1, Name2str name2, e))
   end
+val unEAbsI = unTRec
+val unEAbsT = unTRec
+val unEAbs = unTRec
+val unERec = unTRec
+fun MakeTQuanI (q, s, name, t) = TQuanI (q, BindAnno ((IName (name, dummy), s), t))
+fun MakeTQuan (q, k, name, t) = TQuan (q, BindAnno ((TName (name, dummy), k), t))
+fun MakeTForallI (s, name, t) = MakeTQuanI (Forall, s, name, t)
+fun MakeTForall (s, name, t) = MakeTQuan (Forall, s, name, t)
 
 exception Error of string
 
@@ -522,8 +534,28 @@ fun adapt f d x v env b =
 fun subst_t_e d x v = subst_t_e_fn (adapt subst_t_t d x v)
 fun subst0_t_e a = subst_t_e (IDepth 0, TDepth 0) 0 a
 
+fun forget0_i_i x = forget_i_i 0 1 x
+fun forget0_i_t x = forget_i_t 0 1 x
+fun forget0_t_t x = forget_t_t 0 1 x
+
+fun add_sorting_full new (ictx, tctx, ectx, hctx) = (new :: ictx, tctx, map (mapSnd shift_i_t) ectx, map (mapSnd (mapPair (shift_i_t, shift_i_i))) hctx)
+fun add_kinding_full new (ictx, tctx, ectx, hctx) = (ictx, new :: tctx, map (mapSnd shift_t_t) ectx, map (mapSnd (mapFst shift_t_t)) hctx)
 fun add_typing_full new (ictx, tctx, ectx, hctx) = (ictx, tctx, new :: ectx, hctx)
-                             
+
+fun is_value e =
+  case e of
+      EConst _ => true
+    | EBinOp (EBPair, e1, e2) => is_value e1 andalso is_value e2
+    | EUnOp (EUInj _, e) => is_value e
+    | EAbs _ =>  true
+    | EAbsT _ => true
+    | EAbsI _ => true
+    | EPack (_, _, e) => is_value e
+    | EPackI (_, _, e) => is_value e
+    | EUnOp (EUFold _, e) => is_value e
+    | ELoc _ => true
+    | _ => false
+                                                              
 fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
   let
     val itctx = (ictx, tctx)
@@ -717,14 +749,14 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
           val (s, (name, e)) = unEAbsI data
           val () = is_wf_sort ictx s
           val () = assert "EAbsI" $ is_value e
-          val t = tc_against_time (add_sorting_full (name, k) ctx) (e, T0)
+          val t = tc_against_time (add_sorting_full (name, s) ctx) (e, T0)
         in
-          (MakeTForallI (s, t), T0)
+          (MakeTForallI (s, name, t), T0)
         end
       | EAppI (e, i) =>
         let
           val (t', j) = tc ctx e
-          val (_, (_, t)) = case t' of
+          val (s, (_, t)) = case t' of
                                 TQuanI (Forall, data) => unTQuanI data
                               | _ => raise Error "EAppT"
           val () = sc_against_sort ictx (i, s)
@@ -735,7 +767,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
         let
           val () = kc_against_kind itctx (t', KType)
           val (k, (_, t)) = case t' of
-                                TQuan (Exists, data) => UnTQuan data
+                                TQuan (Exists _, data) => unTQuan data
                               | _ => raise Error "EPack"
           val () = kc_against_kind itctx (t1, k)
           val i = tc_against_ty ctx (e, subst0_t_t t1 t)
@@ -747,7 +779,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
           val (e1, (tname, ename, e2)) = unEUnpack data
           val (t', i1) = tc ctx e1
           val (k, (_, t)) = case t' of
-                                TQuan (Exists, data) => UnTQuan data
+                                TQuan (Exists _, data) => unTQuan data
                               | _ => raise Error "EUnpack"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_kinding_full (tname, k) ctx) e2
           val t2 = forget0_t_t t2
@@ -758,7 +790,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
         let
           val () = kc_against_kind itctx (t', KType)
           val (s, (_, t)) = case t' of
-                                TQuanI (Exists, data) => UnTQuanI data
+                                TQuanI (Exists _, data) => unTQuanI data
                               | _ => raise Error "EPackI"
           val () = sc_against_sort ictx (i, s)
           val j = tc_against_ty ctx (e, subst0_i_t i t)
@@ -770,7 +802,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
           val (e1, (iname, ename, e2)) = unEUnpack data
           val (t', i1) = tc ctx e1
           val (s, (_, t)) = case t' of
-                                TQuanI (Exists, data) => UnTQuanI data
+                                TQuanI (Exists _, data) => unTQuanI data
                               | _ => raise Error "EUnpackI"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_sorting_full (iname, s) ctx) e2
           val t2 = forget0_i_t t2
@@ -818,5 +850,29 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
         end
       | _ => raise Impossible "tc"
   end
+
+and tc_against_ty (ctx as (ictx, tctx, _, _)) (e, t) =
+    let
+      val (t', i) = tc ctx e
+      val () = is_eq_ty (ictx, tctx) (t', t)
+    in
+      i
+    end
+    
+and tc_against_time (ctx as (ictx, tctx, _, _)) (e, i) =
+    let
+      val (t, i') = tc ctx e
+      val () = check_prop ictx (i' %<= i)
+    in
+      t
+    end
+    
+and tc_against_ty_time (ctx as (ictx, tctx, _, _)) (e, t, i) =
+    let
+      val t' = tc_against_time ctx (e, i)
+      val () = is_eq_ty (ictx, tctx) (t', t)
+    in
+      ()
+    end
     
 end
