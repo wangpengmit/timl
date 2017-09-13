@@ -9,6 +9,18 @@ open Expr
 infixr 0 $
 infixr 0 !!
        
+infix 9 %@
+infix 8 %^
+infix 7 %*
+infix 6 %+ 
+infix 4 %<=
+infix 4 %>=
+infix 4 %=
+infixr 3 /\
+infixr 2 \/
+infixr 1 -->
+infix 1 <->
+        
 fun is_wf_bsort_UVarBS data = UVarBS data
     
 fun get_bsort_UVarI gctx ctx (data as (x, r)) =
@@ -69,11 +81,44 @@ structure Sortcheck = SortcheckFn (structure U = Expr
                                   )
 open Sortcheck
 
+open MicroTiMLExLongId
 open MicroTiMLExUtil
 open MicroTiMLEx
 
+fun INat n = ConstIN (n, dummy)
+val TInt = TConst TCInt
+fun unTRec data =
+  let
+    val ((name, anno), t) = unBindAnno data
+    val name = Name2str name
+  in
+    (anno, (name, t))
+  end
+val unTQuan = unTRec
+val unTQuanI = unTRec
+val unTAbsT = unTRec
+val unTAbsI = unTRec
+fun unBindSimp t =
+  let
+    val (Binder name, t) = unBind t
+  in
+    (name, t)
+  end
+fun unELetIdx (def, bind) =
+  let
+    val (name, e) = unBindSimp bind
+  in
+    (def, (Name2str name, e))
+  end
+val unELetType = unELetIdx
+val unELet = unELetIdx
+fun unEUnpack (def, bind) =
+  let
+  in
+  end
+
 exception Error of string
-                     
+
 fun sc_against_sort ctx (i, s) =
   let
     val i = check_sort Gctx.empty (ctx, i, s)
@@ -81,20 +126,53 @@ fun sc_against_sort ctx (i, s) =
     ()
   end
 
-fun is_eq_k (k, k') =
+fun is_eq_bsort x = unify_bs dummy x
+  
+fun BasicSort b = Basic (b, dummy)
+                        
+fun is_eq_idx ctx (i, i') = check_prop ctx (i %= i')
+
+open Bind
+       
+fun is_eq_sort ctx (s, s') =
+  case (s, s') of
+      (Basic (bs, _), Basic (bs', _)) =>
+      is_eq_bsort (bs, bs')
+    | (Subset ((bs, r1), Bind ((name, _), p), _), Subset ((bs', _), Bind (_, p'), _)) =>
+      let
+	val () = is_eq_bsort (bs, bs')
+	val () = check_prop (add_sorting (name, BasicSort bs) ctx) (p --> p')
+      in
+        ()
+      end
+    | (Subset ((bs, r1), Bind ((name, _), p), _), Basic (bs', _)) =>
+      let
+	val () = is_eq_bsort (bs, bs')
+      in
+        ()
+      end
+    | (Basic (bs, r1), Subset ((bs', _), Bind ((name, _), p), _)) =>
+      let
+	val () = is_eq_bsort (bs, bs')
+	val () = check_prop (add_sorting (name, BasicSort bs) ctx) p
+      in
+        ()
+      end
+                                       
+fun is_eq_kind (k, k') =
   case (k, k') of
       (KType, KType) => ()
     | (KArrow (b, k), KArrow (b', k')) =>
       let
-        val () = unify_bs dummy (b, b')
-        val () = is_eq_k (k, k')
+        val () = is_eq_bsort (b, b')
+        val () = is_eq_kind (k, k')
       in
         ()
       end
     | (KArrowT (k1, k2), KArrowT (k1', k2')) =>
       let
-        val () = is_eq_k (k1, k1')
-        val () = is_eq_k (k2, k2')
+        val () = is_eq_kind (k1, k1')
+        val () = is_eq_kind (k2, k2')
       in
         ()
       end
@@ -121,19 +199,6 @@ fun get_ty_bin_op_res_kind opr =
       TBProd => KType
     | TBSum => KType
 
-fun unTRec data =
-  let
-    val ((name, anno), t) = unBindAnno data
-    val name = Name2str name
-  in
-    (anno, (name, t))
-  end
-
-val unTQuan = unTRec
-val unTQuanI = unTRec
-val unTAbsT = unTRec
-val unTAbsI = unTRec
-
 type icontext = (string * sort) list
 type tcontext = (string * bsort kind) list
 type econtext = (string * (var, bsort, idx, sort) ty) list
@@ -141,8 +206,6 @@ type econtext = (string * (var, bsort, idx, sort) ty) list
 fun add_sorting_it new (ictx, tctx) = (new :: ictx, tctx)
 fun add_kinding_it new (ictx, tctx) = (ictx, new :: tctx)
 
-fun BasicSort b = Basic (b, dummy)
-                        
 fun kc (ctx as (ictx, tctx) : icontext * tcontext) t : bsort kind =
   case t of
       TVar x =>
@@ -238,14 +301,38 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t : bsort kind =
 and kc_against_kind ctx (t, k) =
   let
     val k' = kc ctx t
-    val () = is_eq_k (k', k)
+    val () = is_eq_kind (k', k)
   in
     ()
   end
 
-val subst0_i_t = subst_i_t
-val subst0_t_t = subst_t_t
-                   
+(***************** the "subst_i_t" visitor  **********************)    
+
+fun subst_i_ty_visitor_vtable cast ((subst_i_i, subst_i_s), d, x, v) : ('this, int, 'var, 'bsort, 'idx, 'sort, 'var, 'bsort, 'idx2, 'sort2) ty_visitor_vtable =
+  let
+    fun extend_i this env _ = env + 1
+    fun visit_idx this env b = subst_i_i (d + env) (x + env) v b
+    fun visit_sort this env b = subst_i_s (d + env) (x + env) v b
+  in
+    default_ty_visitor_vtable
+      cast
+      extend_i
+      extend_noop
+      visit_noop
+      visit_noop
+      visit_idx
+      visit_sort
+  end
+
+fun new_subst_i_ty_visitor params = new_ty_visitor subst_i_ty_visitor_vtable params
+    
+fun subst_i_t_fn substs d x v b =
+  let
+    val visitor as (TyVisitor vtable) = new_subst_i_ty_visitor (substs, d, x, v)
+  in
+    #visit_ty vtable visitor 0 b
+  end
+
 fun whnf ctx t =
     case t of
         TAppT (t1, t2) =>
@@ -276,10 +363,12 @@ fun whnf ctx t =
         end
       | TVar x => TVar x (* todo: look up type aliasing in ctx *)
       | _ => t
+
+fun assert msg b = Util.assert (fn () => b) msg
     
 fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
     let
-      fun assert b = assert "Can't unify types" b
+      val assert = fn b => assert "Can't unify types" b
       val t = whnf ctx t
       val t' = whnf ctx t'
     in
@@ -317,7 +406,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
             val () = assert (q = q')
             val (k, (name, t)) = unTQuan data
             val (k', (_, t')) = unTQuan data'
-            val () = is_eq_kind ictx (k, k')
+            val () = is_eq_kind (k, k')
             val () = is_eq_ty (add_kinding_it (name, k) ctx) (t, t')
           in
             ()
@@ -326,7 +415,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           let
             val (k, (name, t)) = unTQuan data
             val (k', (_, t')) = unTQuan data'
-            val () = is_eq_kind ictx (k, k')
+            val () = is_eq_kind (k, k')
             val () = is_eq_ty (add_kinding_it (name, k) ctx) (t, t')
           in
             ()
@@ -343,7 +432,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           let
             val (k, (name, t)) = unTAbsT data
             val (k', (_, t')) = unTAbsT data'
-            val () = is_eq_kind ictx (k, k')
+            val () = is_eq_kind (k, k')
             val () = is_eq_ty (add_kinding_it (name, k) ctx) (t, t')
           in
             ()
@@ -357,14 +446,14 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           end
         | (TAbsI data, TAbsI data') =>
           let
-            val (s, (name, t)) = unTAbsI data
-            val (s', (_, t')) = unTAbsI data'
-            val () = is_eq_sort ictx (s, s')
-            val () = is_eq_ty (add_sorting_it (name, s) ctx) (t, t')
+            val (b, (name, t)) = unTAbsI data
+            val (b', (_, t')) = unTAbsI data'
+            val () = is_eq_bsort (b, b')
+            val () = is_eq_ty (add_sorting_it (name, BasicSort b) ctx) (t, t')
           in
             ()
           end
-        | (TAppT (t, i), TAppT (t', i')) =>
+        | (TAppI (t, i), TAppI (t', i')) =>
           let
             val () = is_eq_ty ctx (t, t')
             val () = is_eq_idx ictx (i, i')
@@ -372,7 +461,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
             ()
           end
     end      
-      
+
 fun get_expr_const_type c =
   case c of
       ECTT => TUnit
@@ -393,296 +482,341 @@ fun get_prim_expr_bin_opr_res_ty opr =
   case opr of
       PEBIntAdd => TInt
     | PEBIntMult => TInt
-      
-fun tc (ctx as ((itectx as (ictx, tctx, ectx)), hctx)) e =
-  case e of
-      Evar x =>
-      (case nth_error ectx x of
-           SOME t => (t, T0)
-         | NONE => raise Error "Unbound term variable"
-      )
-    | EConst c => (get_expr_const_type c, T0)
-    | ELoc l =>
-      (case get m l of
-           SOME (t, i) => (MakeTArr (t, i), T0)
-         | NONE => raise Error "Unbound location"
-      )
-    | EUnOp (EUProj proj, e) =>
-      let
-        val (t, i) = tc ctx e
-        val (t1, t2) = case t of
-                           TBinOp (TBProd, t1, t2) => (t1, t2)
-                         | _ => raise Error "EProj"
-        fun choose (t1, t2) proj =
-          case proj of
-              ProjFst => t1
-            | ProjSnd => t2
-      in
-        (choose (t1, t2) proj, i)
-      end
-    | EUnOp (EUInj (inj, t'), e) =>
-      let
-        val (t, i) = tc ctx e
-        fun inject (t, t') inj =
-          case inj of
-              InjInl => (t, t')
-            | InjInr => (t', t)
-      in
-        (TSum $ inject (t, t') inj, i)
-      end
-    | EUnOp (EUFold t', e) =>
-      let
-        val (t, args) = collect_TAppI_TAppT t'
-        val (k, (_, t1)) = case t of
-                               TRec data => unTRec data
-                             | _ => raise Error "EFold"
-        val i = tc_against_ty ctx (e, TAppIT (subst0 t t1) args) 
-      in
-        (t', i)
-      end
-    | EUnOp (EUUnfold, e) =>
-      let
-        val (t', i) = tc ctx e
-        val (t, args) = collect_TAppI_TAppT t'
-        val (k, (_, t1)) = case t of
-                               TRec data => unTRec data
-                             | _ => raise Error "EUnfold"
-      in
-        (TAppIT (subst0_t_t t t1) args, i)
-      end
-    | EBinOp (EBPrim opr, e1, e2) =>
-      let
-        val (t1, i1) = tc ctx e1
-        val () = is_eq_ty itctx (t1, get_prim_expr_bin_op_arg1_ty opr)
-        val (t2, i2) = tc ctx e2
-        val () = is_eq_ty itctx (t2, get_prim_expr_bin_op_arg2_ty opr)
-      in
-        (get_prim_expr_bin_op_res_ty opr, i1 %+ i2)
-      end
-    | EBinOp (EBApp, e1, e2) =>
-      let
-        val (t, i1) = tc ctx e1
-        val (t1, i, t2) = case t of
-                              TArrow data => data
-                            | _ => raise Error "EApp"
-        val i2 = tc_against_ty ctx (e2, t1)
-      in
-        (t2, i1 %+ i2 %+ T1 %+ i)
-      end
-    | EBinOp (EBPair, e1, e2) =>
-      let
-        val (t1, i1) = tc ctx e1
-        val (t2, i2) = tc ctx e2
-      in
-        (TProd (t1, t2), i1 %+ i2)
-      end
-    | EBinOp (EBNew, e1, e2) =>
-      let
-        val (t1, j1) = tc ctx e1
-        val i = case t1 of
-                    TNat i => i
-                  | _ => raise Error "ENew"
-        val (t, j2) = tc ctx e2
-      in
-        (TArr (t, i), j1 %+ j2)
-      end
-    | EBinOp (EBRead, e1, e2) =>
-      let
-        val (t1, j1) = tc ctx e1
-        val (t, i1) = case t1 of
-                    TArr data => data
-                  | _ => raise Error "ERead 1"
-        val (t2, j2) = tc ctx e2
-        val i2 = case t2 of
-                     TNat i => i
-                   | _ => raise Error "ERead 2"
-        val () = check_prop ictx (i2 %< i1)
-      in
-        (t, j1 %+ j2)
-      end
-    | EBinOp (EBNatAdd, e1, e2) =>
-      let
-        val (t1, j1) = tc ctx e1
-        val i1 = case t1 of
-                    TNat i => i
-                  | _ => raise Error "ENatAdd 1"
-        val (t2, j2) = tc ctx e2
-        val i2 = case t2 of
-                     TNat i => i
-                   | _ => raise Error "ENatAdd 2"
-      in
-        (TNat (i1 %+ i2), j1 %+ j2)
-      end
-    | EWrite (e1, e2, e3) =>
-      let
-        val (t1, j1) = tc ctx e1
-        val (t, i1) = case t1 of
-                    TArr data => data
-                  | _ => raise Error "ERead 1"
-        val (t2, j2) = tc ctx e2
-        val i2 = case t2 of
-                     TNat i => i
-                   | _ => raise Error "ERead 2"
-        val () = check_prop ictx (i2 %< i1)
-        val j3 = tc_against_ty ctx (e3, t)
-      in
-        (TUnit, j1 %+ j2 %+ j3)
-      end
-    | ECase data =>
-      let
-        val (e, (name1, e1), (name2, e2)) = unECase data
-        val (t, i) = tc ctx e
-        val (t1, t2) = case e of
-                           TBinOp (TBSum, t1, t2) => (t1, t2)
-                         | _ => raise Error "ECase"
-        val (t1, i1) = tc (add_typing_full (name1, t1) ctx) e1
-        val (t2, i2) = tc (add_typing_full (name2, t2) ctx) e2
-        val () = is_eq_ty itctx (t1, t2)
-      in
-        (t1, i %+ Tmax (i1, i2))
-      end
-    | EAbs data =>
-      let
-        val (t1, (name, e)) = unEAbs data
-        val () = kc_against_kind itctx (t1, KType)
-        val (t2, i) = tc (add_typing_full (name, t1) ctx) e
-      in
-        (TArrow (t1, i, t2), T0)
-      end
-    | ERec data =>
-      let
-        val (t, (name, e)) = unERec data
-        val (_, e') = collect_EAbsI_EAbsT e
-        val () = case e' of
-                     EAbs _ => ()
-                   | _ => raise Error "ERec"
-        val () = kc_against_kind itctx (t, KType)
-        val () = tc_against_ty_time (add_typing_full (name, t) ctx) (e, t, T0)
-      in
-        (t, T0)
-      end
-    | EAbsT data =>
-      let
-        val (k, (name, e)) = unEAbsT data
-        val () = assert "EAbsT" $ is_value e
-        val t = tc_against_time (add_kinding_full (name, k) ctx) (e, T0)
-      in
-        (MakeTForall (k, t), T0)
-      end
-    | EAppT (e, t1) =>
-      let
-        val (t', i) = tc ctx e
-        val (_, (_, t)) = case t' of
-                              TQuan (Forall, data) => unTQuan data
-                            | _ => raise Error "EAppT"
-        val () = kc_against_kind itctx (t1, KType)
-      in
-        (subst0_t_t t1 t, i)
-      end
-    | EAbsI data =>
-      let
-        val (s, (name, e)) = unEAbsI data
-        val () = is_wf_sort ictx s
-        val () = assert "EAbsI" $ is_value e
-        val t = tc_against_time (add_sorting_full (name, k) ctx) (e, T0)
-      in
-        (MakeTForallI (s, t), T0)
-      end
-    | EAppI (e, i) =>
-      let
-        val (t', j) = tc ctx e
-        val (_, (_, t)) = case t' of
-                              TQuanI (Forall, data) => unTQuanI data
-                            | _ => raise Error "EAppT"
-        val () = sc_against_sort ictx (i, s)
-      in
-        (subst0_i_t i t, j)
-      end
-    | EPack (t', t1, e) =>
-      let
-        val () = kc_against_kind itctx (t', KType)
-        val (k, (_, t)) = case t' of
-                              TQuan (Exists, data) => UnTQuan data
-                            | _ => raise Error "EPack"
-        val () = kc_against_kind itctx (t1, k)
-        val i = tc_against_ty ctx (e, subst0_t_t t1 t)
-      in
-        (t', i)
-      end
-    | EUnpack data =>
-      let
-        val (e1, (tname, ename, e2)) = unEUnpack data
-        val (t', i1) = tc ctx e1
-        val (k, (_, t)) = case t' of
-                              TQuan (Exists, data) => UnTQuan data
-                            | _ => raise Error "EUnpack"
-        val (t2, i2) = tc (add_typing_full (ename, t) $ add_kinding_full (tname, k) ctx) e2
-        val t2 = forget0_t_t t2
-      in
-        (t2, i1 %+ i2)
-      end
-    | EPackI (t', i, e) =>
-      let
-        val () = kc_against_kind itctx (t', KType)
-        val (s, (_, t)) = case t' of
-                              TQuanI (Exists, data) => UnTQuanI data
-                            | _ => raise Error "EPackI"
-        val () = sc_against_sort ictx (i, s)
-        val j = tc_against_ty ctx (e, subst0_i_t i t)
-      in
-        (t', j)
-      end
-    | EUnpackI data =>
-      let
-        val (e1, (iname, ename, e2)) = unEUnpack data
-        val (t', i1) = tc ctx e1
-        val (s, (_, t)) = case t' of
-                              TQuanI (Exists, data) => UnTQuanI data
-                            | _ => raise Error "EUnpackI"
-        val (t2, i2) = tc (add_typing_full (ename, t) $ add_sorting_full (iname, s) ctx) e2
-        val t2 = forget0_i_t t2
-        val i2 = forget0_i_i i2
-      in
-        (t2, i1 %+ i2)
-      end
-    | EAscTime (e, i2) =>
-      let
-        val (t, i1) = tc ctx e
-        val () = sc_against_sort (i2, STime)
-        val () = check_prop ictx (i1 %<= i2)
-      in
-        (t, i2)
-      end
-    | EAscType (e, t2) =>
-      let
-        val (t1, i) = tc ctx e
-        val () = kc_against_kind (t2, KType)
-        val () = is_eq_ty itctx (t1, t2)
-      in
-        (t2, i)
-      end
-    | ENever t => (t, T0)
-    | EBuiltin t => (t, T0)
-    | ELet data =>
-      let
-        val (e1, (name, e2)) = unELet data
-        val (t1, i1) = tc ctx e1
-        val (t2, i2) = tc (add_typing_full (name, t1) ctx) e2
-      in
-        (t2, i1 %+ i2)
-      end
-    | ELetType data =>
-      let
-        val (t, (name, e)) = unELetType data
-      in
-        tc ctx $ subst0_t_e t e (* todo: record type aliasing in ctx *)
-      end
-    | ELetIdx data =>
-      let
-        val (i, (name, e)) = unELetIdx data
-      in
-        tc ctx $ subst0_i_e i e (* todo: record index aliasing in ctx *)
-      end
-    | _ => raise Impossible "tc"
 
+(***************** the "subst_t_e" visitor  **********************)    
+
+fun subst_t_expr_visitor_vtable cast visit_ty =
+  let
+    fun extend_i this env _ = mapFst idepth_inc env
+    fun extend_t this env _ = mapSnd tdepth_inc env
+  in
+    default_expr_visitor_vtable
+      cast
+      extend_i
+      extend_t
+      extend_noop
+      extend_noop
+      visit_noop
+      visit_noop
+      visit_noop
+      visit_noop
+      (ignore_this visit_ty)
+  end
+
+fun new_subst_t_expr_visitor params = new_expr_visitor subst_t_expr_visitor_vtable params
+    
+fun subst_t_e_fn params b =
+  let
+    val visitor as (ExprVisitor vtable) = new_subst_t_expr_visitor params
+  in
+    #visit_expr vtable visitor (IDepth 0, TDepth 0) b
+  end
+
+fun adapt f d x v env b =
+  let
+    fun add_depth (di, dt) (di', dt') = (idepth_add (di, di'), tdepth_add (dt, dt'))
+  in
+    f (add_depth d env) (x + unTDepth (snd env)) v b
+  end
+    
+fun subst_t_e d x v = subst_t_e_fn (adapt subst_t_t d x v)
+fun subst0_t_e a = subst_t_e (IDepth 0, TDepth 0) 0 a
+
+fun add_typing_full new (ictx, tctx, ectx, hctx) = (ictx, tctx, new :: ectx, hctx)
+                             
+fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
+  let
+    val itctx = (ictx, tctx)
+  in
+    case e of
+        Evar x =>
+        (case nth_error ectx x of
+             SOME t => (t, T0)
+           | NONE => raise Error "Unbound term variable"
+        )
+      | EConst c => (get_expr_const_type c, T0)
+      | ELoc l =>
+        (case get m l of
+             SOME (t, i) => (MakeTArr (t, i), T0)
+           | NONE => raise Error "Unbound location"
+        )
+      | EUnOp (EUProj proj, e) =>
+        let
+          val (t, i) = tc ctx e
+          val (t1, t2) = case t of
+                             TBinOp (TBProd, t1, t2) => (t1, t2)
+                           | _ => raise Error "EProj"
+          fun choose (t1, t2) proj =
+            case proj of
+                ProjFst => t1
+              | ProjSnd => t2
+        in
+          (choose (t1, t2) proj, i)
+        end
+      | EUnOp (EUInj (inj, t'), e) =>
+        let
+          val (t, i) = tc ctx e
+          fun inject (t, t') inj =
+            case inj of
+                InjInl => (t, t')
+              | InjInr => (t', t)
+        in
+          (TSum $ inject (t, t') inj, i)
+        end
+      | EUnOp (EUFold t', e) =>
+        let
+          val (t, args) = collect_TAppI_TAppT t'
+          val (k, (_, t1)) = case t of
+                                 TRec data => unTRec data
+                               | _ => raise Error "EFold"
+          val i = tc_against_ty ctx (e, TAppIT (subst0 t t1) args) 
+        in
+          (t', i)
+        end
+      | EUnOp (EUUnfold, e) =>
+        let
+          val (t', i) = tc ctx e
+          val (t, args) = collect_TAppI_TAppT t'
+          val (k, (_, t1)) = case t of
+                                 TRec data => unTRec data
+                               | _ => raise Error "EUnfold"
+        in
+          (TAppIT (subst0_t_t t t1) args, i)
+        end
+      | EBinOp (EBPrim opr, e1, e2) =>
+        let
+          val (t1, i1) = tc ctx e1
+          val () = is_eq_ty itctx (t1, get_prim_expr_bin_op_arg1_ty opr)
+          val (t2, i2) = tc ctx e2
+          val () = is_eq_ty itctx (t2, get_prim_expr_bin_op_arg2_ty opr)
+        in
+          (get_prim_expr_bin_op_res_ty opr, i1 %+ i2)
+        end
+      | EBinOp (EBApp, e1, e2) =>
+        let
+          val (t, i1) = tc ctx e1
+          val (t1, i, t2) = case t of
+                                TArrow data => data
+                              | _ => raise Error "EApp"
+          val i2 = tc_against_ty ctx (e2, t1)
+        in
+          (t2, i1 %+ i2 %+ T1 %+ i)
+        end
+      | EBinOp (EBPair, e1, e2) =>
+        let
+          val (t1, i1) = tc ctx e1
+          val (t2, i2) = tc ctx e2
+        in
+          (TProd (t1, t2), i1 %+ i2)
+        end
+      | EBinOp (EBNew, e1, e2) =>
+        let
+          val (t1, j1) = tc ctx e1
+          val i = case t1 of
+                      TNat i => i
+                    | _ => raise Error "ENew"
+          val (t, j2) = tc ctx e2
+        in
+          (TArr (t, i), j1 %+ j2)
+        end
+      | EBinOp (EBRead, e1, e2) =>
+        let
+          val (t1, j1) = tc ctx e1
+          val (t, i1) = case t1 of
+                            TArr data => data
+                          | _ => raise Error "ERead 1"
+          val (t2, j2) = tc ctx e2
+          val i2 = case t2 of
+                       TNat i => i
+                     | _ => raise Error "ERead 2"
+          val () = check_prop ictx (i2 %< i1)
+        in
+          (t, j1 %+ j2)
+        end
+      | EBinOp (EBNatAdd, e1, e2) =>
+        let
+          val (t1, j1) = tc ctx e1
+          val i1 = case t1 of
+                       TNat i => i
+                     | _ => raise Error "ENatAdd 1"
+          val (t2, j2) = tc ctx e2
+          val i2 = case t2 of
+                       TNat i => i
+                     | _ => raise Error "ENatAdd 2"
+        in
+          (TNat (i1 %+ i2), j1 %+ j2)
+        end
+      | EWrite (e1, e2, e3) =>
+        let
+          val (t1, j1) = tc ctx e1
+          val (t, i1) = case t1 of
+                            TArr data => data
+                          | _ => raise Error "ERead 1"
+          val (t2, j2) = tc ctx e2
+          val i2 = case t2 of
+                       TNat i => i
+                     | _ => raise Error "ERead 2"
+          val () = check_prop ictx (i2 %< i1)
+          val j3 = tc_against_ty ctx (e3, t)
+        in
+          (TUnit, j1 %+ j2 %+ j3)
+        end
+      | ECase data =>
+        let
+          val (e, (name1, e1), (name2, e2)) = unECase data
+          val (t, i) = tc ctx e
+          val (t1, t2) = case e of
+                             TBinOp (TBSum, t1, t2) => (t1, t2)
+                           | _ => raise Error "ECase"
+          val (t1, i1) = tc (add_typing_full (name1, t1) ctx) e1
+          val (t2, i2) = tc (add_typing_full (name2, t2) ctx) e2
+          val () = is_eq_ty itctx (t1, t2)
+        in
+          (t1, i %+ Tmax (i1, i2))
+        end
+      | EAbs data =>
+        let
+          val (t1, (name, e)) = unEAbs data
+          val () = kc_against_kind itctx (t1, KType)
+          val (t2, i) = tc (add_typing_full (name, t1) ctx) e
+        in
+          (TArrow (t1, i, t2), T0)
+        end
+      | ERec data =>
+        let
+          val (t, (name, e)) = unERec data
+          val (_, e') = collect_EAbsI_EAbsT e
+          val () = case e' of
+                       EAbs _ => ()
+                     | _ => raise Error "ERec"
+          val () = kc_against_kind itctx (t, KType)
+          val () = tc_against_ty_time (add_typing_full (name, t) ctx) (e, t, T0)
+        in
+          (t, T0)
+        end
+      | EAbsT data =>
+        let
+          val (k, (name, e)) = unEAbsT data
+          val () = assert "EAbsT" $ is_value e
+          val t = tc_against_time (add_kinding_full (name, k) ctx) (e, T0)
+        in
+          (MakeTForall (k, t), T0)
+        end
+      | EAppT (e, t1) =>
+        let
+          val (t', i) = tc ctx e
+          val (_, (_, t)) = case t' of
+                                TQuan (Forall, data) => unTQuan data
+                              | _ => raise Error "EAppT"
+          val () = kc_against_kind itctx (t1, KType)
+        in
+          (subst0_t_t t1 t, i)
+        end
+      | EAbsI data =>
+        let
+          val (s, (name, e)) = unEAbsI data
+          val () = is_wf_sort ictx s
+          val () = assert "EAbsI" $ is_value e
+          val t = tc_against_time (add_sorting_full (name, k) ctx) (e, T0)
+        in
+          (MakeTForallI (s, t), T0)
+        end
+      | EAppI (e, i) =>
+        let
+          val (t', j) = tc ctx e
+          val (_, (_, t)) = case t' of
+                                TQuanI (Forall, data) => unTQuanI data
+                              | _ => raise Error "EAppT"
+          val () = sc_against_sort ictx (i, s)
+        in
+          (subst0_i_t i t, j)
+        end
+      | EPack (t', t1, e) =>
+        let
+          val () = kc_against_kind itctx (t', KType)
+          val (k, (_, t)) = case t' of
+                                TQuan (Exists, data) => UnTQuan data
+                              | _ => raise Error "EPack"
+          val () = kc_against_kind itctx (t1, k)
+          val i = tc_against_ty ctx (e, subst0_t_t t1 t)
+        in
+          (t', i)
+        end
+      | EUnpack data =>
+        let
+          val (e1, (tname, ename, e2)) = unEUnpack data
+          val (t', i1) = tc ctx e1
+          val (k, (_, t)) = case t' of
+                                TQuan (Exists, data) => UnTQuan data
+                              | _ => raise Error "EUnpack"
+          val (t2, i2) = tc (add_typing_full (ename, t) $ add_kinding_full (tname, k) ctx) e2
+          val t2 = forget0_t_t t2
+        in
+          (t2, i1 %+ i2)
+        end
+      | EPackI (t', i, e) =>
+        let
+          val () = kc_against_kind itctx (t', KType)
+          val (s, (_, t)) = case t' of
+                                TQuanI (Exists, data) => UnTQuanI data
+                              | _ => raise Error "EPackI"
+          val () = sc_against_sort ictx (i, s)
+          val j = tc_against_ty ctx (e, subst0_i_t i t)
+        in
+          (t', j)
+        end
+      | EUnpackI data =>
+        let
+          val (e1, (iname, ename, e2)) = unEUnpack data
+          val (t', i1) = tc ctx e1
+          val (s, (_, t)) = case t' of
+                                TQuanI (Exists, data) => UnTQuanI data
+                              | _ => raise Error "EUnpackI"
+          val (t2, i2) = tc (add_typing_full (ename, t) $ add_sorting_full (iname, s) ctx) e2
+          val t2 = forget0_i_t t2
+          val i2 = forget0_i_i i2
+        in
+          (t2, i1 %+ i2)
+        end
+      | EAscTime (e, i2) =>
+        let
+          val (t, i1) = tc ctx e
+          val () = sc_against_sort (i2, STime)
+          val () = check_prop ictx (i1 %<= i2)
+        in
+          (t, i2)
+        end
+      | EAscType (e, t2) =>
+        let
+          val (t1, i) = tc ctx e
+          val () = kc_against_kind (t2, KType)
+          val () = is_eq_ty itctx (t1, t2)
+        in
+          (t2, i)
+        end
+      | ENever t => (t, T0)
+      | EBuiltin t => (t, T0)
+      | ELet data =>
+        let
+          val (e1, (name, e2)) = unELet data
+          val (t1, i1) = tc ctx e1
+          val (t2, i2) = tc (add_typing_full (name, t1) ctx) e2
+        in
+          (t2, i1 %+ i2)
+        end
+      | ELetType data =>
+        let
+          val (t, (name, e)) = unELetType data
+        in
+          tc ctx $ subst0_t_e t e (* todo: record type aliasing in ctx *)
+        end
+      | ELetIdx data =>
+        let
+          val (i, (name, e)) = unELetIdx data
+        in
+          tc ctx $ subst0_i_e i e (* todo: record index aliasing in ctx *)
+        end
+      | _ => raise Impossible "tc"
+  end
+    
 end
