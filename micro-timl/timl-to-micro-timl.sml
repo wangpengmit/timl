@@ -926,18 +926,12 @@ fun test4 dirname =
   (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *)
   (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *)
 
-fun test_suites dirname =
-  let
-    val suites = [
-      (* test1 *)
-      (* test2 *)
-      (* test3, *)
-      test4
-    ]
-    val () = app (fn f => ignore $ f dirname) suites
-  in
-    ()
-  end
+val test_suites = [
+  (* test1 *)
+  (* test2 *)
+  (* test3, *)
+  test4
+]
   
 end
                              

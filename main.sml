@@ -424,7 +424,7 @@ fun main (prog_name, args : string list) =
     val filenames = rev $ parse_arguments (opts, args)
     val () = case !(#UnitTest opts) of
                  NONE => ()
-               | SOME dirname => (UnitTest.test_suites dirname; exit success)
+               | SOME dirname => (app (fn f => ignore $ f dirname) UnitTest.test_suites; exit success)
     val libraries = rev $ !(#Libraries opts)
     val () = if null filenames then
                usage_and_fail ()

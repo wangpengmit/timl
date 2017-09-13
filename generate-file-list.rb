@@ -192,9 +192,9 @@ micro-timl/post-process.sml
 remove-open.sml
 merge-modules.sml
 micro-timl/timl-to-micro-timl.sml
+micro-timl/micro-timl-typecheck.sml
 unit-test.sml
 main.sml
-micro-timl/micro-timl-typecheck.sml
 }
 
 if target == :smlnj then
