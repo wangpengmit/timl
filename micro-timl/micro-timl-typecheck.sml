@@ -86,7 +86,14 @@ open MicroTiMLExLongId
 open MicroTiMLExUtil
 open MicroTiMLEx
 
+fun sc_against_sort ctx (i, s) = ignore $ check_sort Gctx.empty (ctx, i, s)
+
+fun is_wf_sort ctx s = ignore $ Sortcheck.is_wf_sort Gctx.empty (ctx, s)
+
+exception Error of string
+
 fun INat n = ConstIN (n, dummy)
+fun IMax (i1, i2) = BinOpI (MaxI, i1, i2)
 val TInt = TConst TCInt
 fun unTRec data =
   let
@@ -124,19 +131,18 @@ val unEAbsI = unTRec
 val unEAbsT = unTRec
 val unEAbs = unTRec
 val unERec = unTRec
+fun unECase (e, bind1, bind2) =
+  let
+    val (name1, e1) = unBindSimp bind1
+    val (name2, e2) = unBindSimp bind2
+  in
+    (e, (Name2str name1, e1), (Name2str name2, e2))
+  end
+               
 fun MakeTQuanI (q, s, name, t) = TQuanI (q, BindAnno ((IName (name, dummy), s), t))
 fun MakeTQuan (q, k, name, t) = TQuan (q, BindAnno ((TName (name, dummy), k), t))
 fun MakeTForallI (s, name, t) = MakeTQuanI (Forall, s, name, t)
 fun MakeTForall (s, name, t) = MakeTQuan (Forall, s, name, t)
-
-exception Error of string
-
-fun sc_against_sort ctx (i, s) =
-  let
-    val i = check_sort Gctx.empty (ctx, i, s)
-  in
-    ()
-  end
 
 fun is_eq_bsort x = unify_bs dummy x
   
@@ -211,9 +217,13 @@ fun get_ty_bin_op_res_kind opr =
       TBProd => KType
     | TBSum => KType
 
+fun nth_error_local ls x =
+  case x of
+      ID (n, _) => nth_error ls n
+    | QID _ => raise Error "nth_error QID"
+                      
 type icontext = (string * sort) list
 type tcontext = (string * bsort kind) list
-type econtext = (string * (var, bsort, idx, sort) ty) list
                             
 fun add_sorting_it new (ictx, tctx) = (new :: ictx, tctx)
 fun add_kinding_it new (ictx, tctx) = (ictx, new :: tctx)
@@ -221,7 +231,7 @@ fun add_kinding_it new (ictx, tctx) = (ictx, new :: tctx)
 fun kc (ctx as (ictx, tctx) : icontext * tcontext) t : bsort kind =
   case t of
       TVar x =>
-      (case nth_error tctx x of
+      (case nth_error_local tctx x of
            SOME (_, k) => k
          | NONE => raise Error "unbound type variable"
       )
@@ -474,27 +484,6 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           end
     end      
 
-fun get_expr_const_type c =
-  case c of
-      ECTT => TUnit
-    | ECNat n => TNat $ INat n
-    | ECInt _ => TInt
-
-fun get_prim_expr_bin_opr_arg1_ty opr =
-  case opr of
-      PEBIntAdd => TInt
-    | PEBIntMult => TInt
-      
-fun get_prim_expr_bin_opr_arg2_ty opr =
-  case opr of
-      PEBIntAdd => TInt
-    | PEBIntMult => TInt
-      
-fun get_prim_expr_bin_opr_res_ty opr =
-  case opr of
-      PEBIntAdd => TInt
-    | PEBIntMult => TInt
-
 (***************** the "subst_t_e" visitor  **********************)    
 
 fun subst_t_expr_visitor_vtable cast visit_ty =
@@ -534,13 +523,49 @@ fun adapt f d x v env b =
 fun subst_t_e d x v = subst_t_e_fn (adapt subst_t_t d x v)
 fun subst0_t_e a = subst_t_e (IDepth 0, TDepth 0) 0 a
 
-fun forget0_i_i x = forget_i_i 0 1 x
-fun forget0_i_t x = forget_i_t 0 1 x
-fun forget0_t_t x = forget_t_t 0 1 x
+fun forget01_i_i x = forget_i_i 0 1 x
+fun forget01_i_t x = forget_i_t 0 1 x
+fun forget01_t_t x = forget_t_t 0 1 x
 
-fun add_sorting_full new (ictx, tctx, ectx, hctx) = (new :: ictx, tctx, map (mapSnd shift_i_t) ectx, map (mapSnd (mapPair (shift_i_t, shift_i_i))) hctx)
-fun add_kinding_full new (ictx, tctx, ectx, hctx) = (ictx, new :: tctx, map (mapSnd shift_t_t) ectx, map (mapSnd (mapFst shift_t_t)) hctx)
-fun add_typing_full new (ictx, tctx, ectx, hctx) = (ictx, tctx, new :: ectx, hctx)
+fun collect_TAppI_TAppT_rev t =
+  let
+    val self = collect_TAppI_TAppT_rev
+  in
+    case t of
+        TAppI (t, i) =>
+        let
+          val (t, args) = self t
+        in
+          (t, inl i :: args)
+        end
+      | TAppT (t, t') =>
+        let
+          val (t, args) = self t
+        in
+          (t, inr t' :: args)
+        end
+  end
+fun collect_TAppI_TAppT t = mapSnd rev $ collect_TAppI_TAppT_rev t
+
+fun TAppITs t args = foldl (fn (arg, t) => case arg of inl i => TAppI (t, i) | inr t' => TAppT (t, t')) t args
+
+fun collect_EAbsI_EAbsT e =
+  case e of
+      EAbsI data =>
+      let
+        val (s, (name, e)) = unEAbsI data
+        val (binds, e) = collect_EAbsI_EAbsT e
+      in
+        (inl (name, s) :: binds, e)
+      end
+    | EAbsT data =>
+      let
+        val (k, (name, e)) = unEAbsT data
+        val (binds, e) = collect_EAbsI_EAbsT e
+      in
+        (inr (name, k) :: binds, e)
+      end
+    | _ => ([], e)
 
 fun is_value e =
   case e of
@@ -555,21 +580,59 @@ fun is_value e =
     | EUnOp (EUFold _, e) => is_value e
     | ELoc _ => true
     | _ => false
-                                                              
-fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
+
+fun get_expr_const_type c =
+  case c of
+      ECTT => TUnit
+    | ECNat n => TNat $ INat n
+    | ECInt _ => TInt
+
+fun get_prim_expr_bin_op_arg1_ty opr =
+  case opr of
+      PEBIntAdd => TInt
+    | PEBIntMult => TInt
+      
+fun get_prim_expr_bin_op_arg2_ty opr =
+  case opr of
+      PEBIntAdd => TInt
+    | PEBIntMult => TInt
+      
+fun get_prim_expr_bin_op_res_ty opr =
+  case opr of
+      PEBIntAdd => TInt
+    | PEBIntMult => TInt
+
+val T0 = T0 dummy
+val T1 = T1 dummy
+
+val shift01_i_i = shift_i_i
+fun shift01_i_t a = shift_i_t 0 1 a
+fun shift01_t_t a = shift_t_t 0 1 a
+  
+structure IntMap = IntBinaryMap
+structure HeapMap = IntMap
+
+type mtiml_ty = (Expr.var, bsort, idx, sort) ty
+type econtext = (string * mtiml_ty) list
+                                                      
+fun add_sorting_full new (ictx, tctx, ectx, hctx) = (new :: ictx, tctx, map (mapSnd shift01_i_t) ectx, HeapMap.map (mapPair (shift01_i_t, shift01_i_i)) hctx)
+fun add_kinding_full new (ictx, tctx, ectx, hctx) = (ictx, new :: tctx, map (mapSnd shift01_t_t) ectx, HeapMap.map (mapFst shift01_t_t) hctx)
+fun add_typing_full new (ictx, tctx, ectx, hctx) = (ictx, tctx, new :: ectx, hctx)
+
+fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e : mtiml_ty * idx =
   let
     val itctx = (ictx, tctx)
   in
     case e of
-        Evar x =>
-        (case nth_error ectx x of
-             SOME t => (t, T0)
+        EVar x =>
+        (case nth_error_local ectx x of
+             SOME (_, t) => (t, T0)
            | NONE => raise Error "Unbound term variable"
         )
       | EConst c => (get_expr_const_type c, T0)
       | ELoc l =>
-        (case get m l of
-             SOME (t, i) => (MakeTArr (t, i), T0)
+        (case HeapMap.find (hctx, l) of
+             SOME (t, i) => (TArr (t, i), T0)
            | NONE => raise Error "Unbound location"
         )
       | EUnOp (EUProj proj, e) =>
@@ -601,7 +664,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
           val (k, (_, t1)) = case t of
                                  TRec data => unTRec data
                                | _ => raise Error "EFold"
-          val i = tc_against_ty ctx (e, TAppIT (subst0 t t1) args) 
+          val i = tc_against_ty ctx (e, TAppITs (subst0_t_t t t1) args) 
         in
           (t', i)
         end
@@ -613,11 +676,11 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
                                  TRec data => unTRec data
                                | _ => raise Error "EUnfold"
         in
-          (TAppIT (subst0_t_t t t1) args, i)
+          (TAppITs (subst0_t_t t t1) args, i)
         end
       | EBinOp (EBPrim opr, e1, e2) =>
         let
-          val (t1, i1) = tc ctx e1
+          val (t1, i1 : idx) = tc ctx e1
           val () = is_eq_ty itctx (t1, get_prim_expr_bin_op_arg1_ty opr)
           val (t2, i2) = tc ctx e2
           val () = is_eq_ty itctx (t2, get_prim_expr_bin_op_arg2_ty opr)
@@ -697,18 +760,18 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
         let
           val (e, (name1, e1), (name2, e2)) = unECase data
           val (t, i) = tc ctx e
-          val (t1, t2) = case e of
+          val (t1, t2) = case t of
                              TBinOp (TBSum, t1, t2) => (t1, t2)
                            | _ => raise Error "ECase"
           val (t1, i1) = tc (add_typing_full (name1, t1) ctx) e1
           val (t2, i2) = tc (add_typing_full (name2, t2) ctx) e2
           val () = is_eq_ty itctx (t1, t2)
         in
-          (t1, i %+ Tmax (i1, i2))
+          (t1, i %+ IMax (i1, i2))
         end
       | EAbs data =>
         let
-          val (t1, (name, e)) = unEAbs data
+          val (t1 : mtiml_ty, (name, e)) = unEAbs data
           val () = kc_against_kind itctx (t1, KType)
           val (t2, i) = tc (add_typing_full (name, t1) ctx) e
         in
@@ -732,7 +795,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
           val () = assert "EAbsT" $ is_value e
           val t = tc_against_time (add_kinding_full (name, k) ctx) (e, T0)
         in
-          (MakeTForall (k, t), T0)
+          (MakeTForall (k, name, t), T0)
         end
       | EAppT (e, t1) =>
         let
@@ -782,7 +845,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
                                 TQuan (Exists _, data) => unTQuan data
                               | _ => raise Error "EUnpack"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_kinding_full (tname, k) ctx) e2
-          val t2 = forget0_t_t t2
+          val t2 = forget01_t_t t2
         in
           (t2, i1 %+ i2)
         end
@@ -805,15 +868,15 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
                                 TQuanI (Exists _, data) => unTQuanI data
                               | _ => raise Error "EUnpackI"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_sorting_full (iname, s) ctx) e2
-          val t2 = forget0_i_t t2
-          val i2 = forget0_i_i i2
+          val t2 = forget01_i_t t2
+          val i2 = forget01_i_i i2
         in
           (t2, i1 %+ i2)
         end
       | EAscTime (e, i2) =>
         let
           val (t, i1) = tc ctx e
-          val () = sc_against_sort (i2, STime)
+          val () = sc_against_sort ictx (i2, STime)
           val () = check_prop ictx (i1 %<= i2)
         in
           (t, i2)
@@ -821,7 +884,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e =
       | EAscType (e, t2) =>
         let
           val (t1, i) = tc ctx e
-          val () = kc_against_kind (t2, KType)
+          val () = kc_against_kind itctx (t2, KType)
           val () = is_eq_ty itctx (t1, t2)
         in
           (t2, i)
