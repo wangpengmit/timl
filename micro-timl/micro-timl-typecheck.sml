@@ -176,6 +176,7 @@ fun is_eq_sort ctx (s, s') =
       in
         ()
       end
+    | _ => raise Error "is_eq_sort"
                                        
 fun is_eq_kind (k, k') =
   case (k, k') of
@@ -482,6 +483,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           in
             ()
           end
+        | _ => raise Error "is_eq_ty"
     end      
 
 (***************** the "subst_t_e" visitor  **********************)    
@@ -523,6 +525,9 @@ fun adapt f d x v env b =
 fun subst_t_e d x v = subst_t_e_fn (adapt subst_t_t d x v)
 fun subst0_t_e a = subst_t_e (IDepth 0, TDepth 0) 0 a
 
+fun forget_i_t a = shift_i_t_fn (forget_i_i, forget_i_s) a
+fun forget_t_t a = shift_t_t_fn forget_var a
+                               
 fun forget01_i_i x = forget_i_i 0 1 x
 fun forget01_i_t x = forget_i_t 0 1 x
 fun forget01_t_t x = forget_t_t 0 1 x
@@ -544,6 +549,7 @@ fun collect_TAppI_TAppT_rev t =
         in
           (t, inr t' :: args)
         end
+      | _ => (t, [])
   end
 fun collect_TAppI_TAppT t = mapSnd rev $ collect_TAppI_TAppT_rev t
 
