@@ -943,7 +943,14 @@ and tc_against_ty_time (ctx as (ictx, tctx, _, _)) (e, t, i) =
     in
       ()
     end
-    
+
+fun sort_to_hyps (name, s) =
+  case s of
+      Basic (b, r) => [VarH (name, b)]
+    | Subset ((b, _), Bind (_, p), _) => [PropH p, VarH (name, b)]
+      
+fun to_vc (ctx, p) = (rev $ concatMap sort_to_hyps ctx, p)
+  
 fun runWriter m () =
   let 
     val () = vcs := []
@@ -955,15 +962,22 @@ fun runWriter m () =
     val vcs = concatMap simp_vc_vcs vcs
     val vcs = map VC.simp_vc vcs
     val vcs = TrivialSolver.simp_and_solve_vcs vcs
-    val admits = map_to_vc $ admits
+    val admits = map to_vc admits
   in 
     (r, vcs, admits) 
   end
 
 fun typecheck ctx e = runWriter (fn () => tc ctx e) ()
 
-structure UnitTest = struct
+end
 
+structure MicroTiMLTypecheckUnitTest = struct
+
+structure TestUtil = struct
+
+open LongId
+open Util
+       
 fun short_to_long_id x = ID (x, dummy)
 fun export_var sel ctx id =
   let
@@ -990,17 +1004,20 @@ fun str_s a =
   (* ToStringRaw.str_raw_s a *)
   (* ToString.SN.strn_s a *)
   const_fun "<sort>" a
-fun pp_t s b =
+fun pp_t_to s b =
   (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
   str s "<ty>"
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
 fun pp_e a = MicroTiMLExPP.pp_e_fn (
     str_var,
     str_i,
     str_s,
     const_fun "<kind>",
-    pp_t
+    pp_t_to
   ) a
-                                 
+
+end
+
 fun test1 dirname =
   let
     val filename = join_dir_file (dirname, "micro-timl-tc-test1.pkg")
@@ -1028,9 +1045,16 @@ fun test1 dirname =
     val () = println "Started translating ..."
     val e = trans_e e
     val () = println "Finished translating"
-    val e = export ToStringUtil.empty_ctx e
-    val () = pp_e e
+    val () = pp_e $ export ToStringUtil.empty_ctx e
     val () = println ""
+    open MicroTiMLTypecheck
+    val ((t, i), vcs, admits) = typecheck ([], [], [], HeapMap.empty) e
+    val () = println "Type:"
+    val () = pp_t $ export_t ([], []) t
+    val () = println "Time:"
+    val () = println $ ToString.str_i [] a
+    val () = println "VCs:"
+    val () = app println $ map (fn ls => ls @ [""]) $ map (str_vc false "") vcs
   in
     ((* t, e *))
   end
@@ -1041,4 +1065,4 @@ val test_suites = [
                             
 end
                        
-end
+                                 
