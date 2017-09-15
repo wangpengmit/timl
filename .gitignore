@@ -42,3 +42,4 @@ main.mlb
 tmp.timl
 
 *.t.sml
+*.tmp
