@@ -46,13 +46,13 @@ fun get_bsort_UVarI gctx ctx ((), r) =
     (fresh_i gctx ctx bs r, bs)
   end
 
-fun match_BSArrow gctx ctx r bs1 =
+fun match_BSArrow gctx ctx r bs =
   let
+    val bs1 = fresh_bsort ()
     val bs2 = fresh_bsort ()
-    val bs = fresh_bsort ()
-    val () = unify_bs r (bs1, BSArrow (bs2, bs))
+    val () = unify_bs r (bs1, BSArrow (bs1, bs2))
   in
-    (bs, bs2)
+    (bs1, bs2)
   end
 
 fun get_sort_type_UVarS gctx ctx ((), r) =

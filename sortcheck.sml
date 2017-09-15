@@ -292,11 +292,11 @@ and get_bsort gctx (ctx, i) =
                   IApp =>
                   let
                     (* val () = println $ U.str_i (names ctx) i *)
-                    val (i1, bs1) = get_bsort (ctx, i1)
-                    val (bs, bs2) = match_BSArrow gctx ctx (get_region_i i1) bs1
-                    val i2 = check_bsort (ctx, i2, bs2)
+                    val (i1, bs) = get_bsort (ctx, i1)
+                    val (bs1, bs2) = match_BSArrow gctx ctx (get_region_i i1) bs
+                    val i2 = check_bsort (ctx, i2, bs1)
                   in
-                    (BinOpI (opr, i1, i2), bs)
+                    (BinOpI (opr, i1, i2), bs2)
                   end
                 | AddI => overloaded [Nat, Time] NONE
                 | BoundedMinusI => overloaded [Nat, Time] NONE
@@ -342,13 +342,14 @@ and get_bsort gctx (ctx, i) =
                 Error (r, msg) =>
                 raise Error (r, msg @ ["when sort-checking index "] @ indent [U_str_i (gctx_names gctx) (sctx_names ctx) i])
                 (* raise Error (r, msg @ [sprintf "when sort-checking index $ in context $" [U.str_i (gctx_names gctx) (sctx_names ctx) i, str_ls (fn (name, sort) => sprintf "\n$: $" [name, sort]) $ str_sctx (gctx_names gctx) ctx]]) *)
-      (* val () = println $ sprintf "get_bsort() result: $ : $" [str_i (gctx_names gctx) (sctx_names ctx) (fst ret), str_bs (snd ret)] *)
+      val () = println $ sprintf "get_bsort() result: $ : $" [str_i (gctx_names gctx) (sctx_names ctx) (fst ret), str_bs (snd ret)]
     in
       ret
     end
 
 and check_bsort gctx (ctx, i : U.idx, bs : bsort) : idx =
     let 
+      val () = println $ sprintf "check_bsort $ against $" [U_str_i (gctx_names gctx) (sctx_names ctx) i, str_bs bs]
       val (i, bs') = get_bsort gctx (ctx, i)
       val () = unify_bs (get_region_i i) (bs', bs)
     in
@@ -367,7 +368,7 @@ fun is_wf_sorts gctx (ctx, sorts : U.sort list) : sort list =
 
 fun check_sort gctx (ctx, i : U.idx, s : sort) : idx =
   let 
-    (* val () = println $ sprintf "sortchecking $ against $" [U.str_i (gctx_names gctx) (sctx_names ctx) i, str_s (gctx_names gctx) (sctx_names ctx) s] *)
+    val () = println $ sprintf "sortchecking $ against $" [U_str_i (gctx_names gctx) (sctx_names ctx) i, str_s (gctx_names gctx) (sctx_names ctx) s]
     val (i, bs') = get_bsort gctx (ctx, i)
     val r = get_region_i i
     val s = normalize_s s

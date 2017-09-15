@@ -75,7 +75,7 @@ fun post_process_expr_visitor_vtable cast () =
 
 fun new_post_process_expr_visitor params = new_expr_visitor post_process_expr_visitor_vtable params
     
-fun post_process_e b =
+fun post_process b =
   let
     val visitor as (ExprVisitor vtable) = new_post_process_expr_visitor ()
   in

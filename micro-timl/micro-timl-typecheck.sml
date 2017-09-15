@@ -31,8 +31,8 @@ fun get_bsort_UVarI gctx ctx (data as (x, r)) =
     (UVarI data, bs)
   end
 
-fun match_BSArrow gctx ctx r bs1 =
-  case bs1 of
+fun match_BSArrow gctx ctx r bs =
+  case bs of
       BSArrow data => data
     | _ => raise Impossible "match_BSArrow"
 
@@ -120,6 +120,7 @@ fun unELetIdx (def, bind) =
   end
 val unELetType = unELetIdx
 val unELet = unELetIdx
+val unELetConstr = unELetIdx
 fun unEUnpack (def, bind) =
   let
     val (name1, bind) = unBindSimp bind
@@ -387,20 +388,20 @@ fun whnf ctx t =
       | TVar x => TVar x (* todo: look up type aliasing in ctx *)
       | _ => t
 
-fun assert msg b = Util.assert (fn () => b) msg
+fun assert_b msg b = Util.assert (fn () => b) msg
     
 fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
     let
-      val assert = fn b => assert "Can't unify types" b
+      val assert_b = fn b => assert_b "Can't unify types" b
       val t = whnf ctx t
       val t' = whnf ctx t'
     in
       case (t, t') of
-          (TVar x, TVar x') => assert (x = x')
-        | (TConst c, TConst c') => assert (c = c')
+          (TVar x, TVar x') => assert_b (x = x')
+        | (TConst c, TConst c') => assert_b (c = c')
         | (TBinOp (opr, t1, t2), TBinOp (opr', t1', t2')) =>
           let
-            val () = assert (opr = opr')
+            val () = assert_b (opr = opr')
             val () = is_eq_ty ctx (t1, t1')
             val () = is_eq_ty ctx (t2, t2')
           in
@@ -416,7 +417,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           end
         | (TQuanI (q, data), TQuanI (q', data')) =>
           let
-            val () = assert (q = q')
+            val () = assert_b (q = q')
             val (s, (name, t)) = unTQuanI data
             val (s', (_, t')) = unTQuanI data'
             val () = is_eq_sort ictx (s, s')
@@ -426,7 +427,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           end
         | (TQuan (q, data), TQuan (q', data')) =>
           let
-            val () = assert (q = q')
+            val () = assert_b (q = q')
             val (k, (name, t)) = unTQuan data
             val (k', (_, t')) = unTQuan data'
             val () = is_eq_kind (k, k')
@@ -485,45 +486,6 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           end
         | _ => raise Error "is_eq_ty"
     end      
-
-(***************** the "subst_t_e" visitor  **********************)    
-
-fun subst_t_expr_visitor_vtable cast visit_ty =
-  let
-    fun extend_i this env _ = mapFst idepth_inc env
-    fun extend_t this env _ = mapSnd tdepth_inc env
-  in
-    default_expr_visitor_vtable
-      cast
-      extend_i
-      extend_t
-      extend_noop
-      extend_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      (ignore_this visit_ty)
-  end
-
-fun new_subst_t_expr_visitor params = new_expr_visitor subst_t_expr_visitor_vtable params
-    
-fun subst_t_e_fn params b =
-  let
-    val visitor as (ExprVisitor vtable) = new_subst_t_expr_visitor params
-  in
-    #visit_expr vtable visitor (IDepth 0, TDepth 0) b
-  end
-
-fun adapt f d x v env b =
-  let
-    fun add_depth (di, dt) (di', dt') = (idepth_add (di, di'), tdepth_add (dt, dt'))
-  in
-    f (add_depth d env) (x + unTDepth (snd env)) v b
-  end
-    
-fun subst_t_e d x v = subst_t_e_fn (adapt subst_t_t d x v)
-fun subst0_t_e a = subst_t_e (IDepth 0, TDepth 0) 0 a
 
 fun forget_i_t a = shift_i_t_fn (forget_i_i, forget_i_s) a
 fun forget_t_t a = shift_t_t_fn forget_var a
@@ -625,6 +587,109 @@ fun add_sorting_full new (ictx, tctx, ectx, hctx) = (new :: ictx, tctx, map (map
 fun add_kinding_full new (ictx, tctx, ectx, hctx) = (ictx, new :: tctx, map (mapSnd shift01_t_t) ectx, HeapMap.map (mapFst shift01_t_t) hctx)
 fun add_typing_full new (ictx, tctx, ectx, hctx) = (ictx, tctx, new :: ectx, hctx)
 
+structure ExportPP = struct
+
+open LongId
+open Util
+open MicroTiML
+open MicroTiMLVisitor
+open MicroTiMLExLongId
+open MicroTiMLEx
+       
+infixr 0 $
+infixr 0 !!
+         
+fun short_to_long_id x = ID (x, dummy)
+fun export_var sel ctx id =
+  let
+    (* fun unbound s = "__unbound_" ^ s *)
+    fun unbound s = raise Impossible $ "Unbound identifier: " ^ s
+  in
+    case id of
+        ID (x, _) =>
+        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
+  end
+(* val export_i = return2 *)
+fun export_i a = ToString.export_i Gctx.empty a
+fun export_s a = ToString.export_s Gctx.empty a
+fun export_t a = export_t_fn (export_var snd, export_i, export_s) a
+fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
+val str = PP.string
+fun str_var x = LongId.str_raw_long_id id(*str_int*) x
+fun str_i a =
+  (* ToStringRaw.str_raw_i a *)
+  (* ToString.SN.strn_i a *)
+  const_fun "<idx>" a
+fun str_s a =
+  (* ToStringRaw.str_raw_s a *)
+  (* ToString.SN.strn_s a *)
+  const_fun "<sort>" a
+fun pp_t_to s b =
+  (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
+  str s "<ty>"
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
+fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
+    str_var,
+    str_i,
+    str_s,
+    const_fun "<kind>",
+    pp_t_to
+  ) a
+
+end
+
+open Unbound
+       
+fun eval_constr_expr_visitor_vtable cast () =
+  let
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_EAppConstr this env (e1, ts, is, e2) =
+      let
+        val vtable = cast this
+        val e1 = #visit_expr vtable this env e1
+        val ts = map (#visit_ty vtable this env) ts
+        val is = map (#visit_idx vtable this env) is
+        val e2 = #visit_expr vtable this env e2
+      in
+        case e1 of
+            EAbsConstr data =>
+            let
+              val ((tnames, inames, ename), e) = unBind data
+              val di = length is
+              val e = fst $ foldl (fn (v, (b, dt)) => (subst_t_e (IDepth di, TDepth dt) dt v b, dt - 1)) (e, length ts - 1) ts
+              val e = fst $ foldl (fn (v, (b, di)) => (subst_i_e di di v b, di - 1)) (e, di - 1) is
+              val e = subst0_e_e e2 e
+            in
+              #visit_expr vtable this env e
+            end
+          | _ => EAppConstr (e1, ts, is, e2)
+      end
+    val vtable = override_visit_EAppConstr vtable visit_EAppConstr
+  in
+    vtable
+  end
+
+fun new_eval_constr_expr_visitor params = new_expr_visitor eval_constr_expr_visitor_vtable params
+    
+fun eval_constr b =
+  let
+    val visitor as (ExprVisitor vtable) = new_eval_constr_expr_visitor ()
+  in
+    #visit_expr vtable visitor () b
+  end
+    
 fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e : mtiml_ty * idx =
   let
     val itctx = (ictx, tctx)
@@ -798,7 +863,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e : mtiml_ty * idx =
       | EAbsT data =>
         let
           val (k, (name, e)) = unEAbsT data
-          val () = assert "EAbsT" $ is_value e
+          val () = assert_b "EAbsT" $ is_value e
           val t = tc_against_time (add_kinding_full (name, k) ctx) (e, T0)
         in
           (MakeTForall (k, name, t), T0)
@@ -817,7 +882,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e : mtiml_ty * idx =
         let
           val (s, (name, e)) = unEAbsI data
           val () = is_wf_sort ictx s
-          val () = assert "EAbsI" $ is_value e
+          val () = assert_b "EAbsI" $ is_value e
           val t = tc_against_time (add_sorting_full (name, s) ctx) (e, T0)
         in
           (MakeTForallI (s, name, t), T0)
@@ -917,7 +982,15 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e : mtiml_ty * idx =
         in
           tc ctx $ subst0_i_e i e (* todo: record index aliasing in ctx *)
         end
-      | _ => raise Impossible "tc"
+      | ELetConstr data =>
+        let
+          val (e1, (name, e2)) = unELetConstr data
+          val e = subst0_c_e e1 e2
+          val e = eval_constr e
+        in
+          tc ctx e
+        end
+      | _ => raise Impossible $ "tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ToStringUtil.empty_ctx e)
   end
 
 and tc_against_ty (ctx as (ictx, tctx, _, _)) (e, t) =
@@ -947,7 +1020,8 @@ and tc_against_ty_time (ctx as (ictx, tctx, _, _)) (e, t, i) =
 fun sort_to_hyps (name, s) =
   case s of
       Basic (b, r) => [VarH (name, b)]
-    | Subset ((b, _), Bind (_, p), _) => [PropH p, VarH (name, b)]
+    | Subset ((b, _), Bind.Bind (_, p), _) => [PropH p, VarH (name, b)]
+    | _ => raise Impossible "sort_to_hyps"
       
 fun to_vc (ctx, p) = (rev $ concatMap sort_to_hyps ctx, p)
   
@@ -977,7 +1051,14 @@ structure TestUtil = struct
 
 open LongId
 open Util
+open MicroTiML
+open MicroTiMLVisitor
+open MicroTiMLExLongId
+open MicroTiMLEx
        
+infixr 0 $
+infixr 0 !!
+         
 fun short_to_long_id x = ID (x, dummy)
 fun export_var sel ctx id =
   let
@@ -1015,9 +1096,15 @@ fun pp_e a = MicroTiMLExPP.pp_e_fn (
     const_fun "<kind>",
     pp_t_to
   ) a
-
+fun fail () = OS.Process.exit OS.Process.failure
+                   
 end
 
+open TestUtil
+
+infixr 0 $
+infixr 0 !!
+         
 fun test1 dirname =
   let
     val filename = join_dir_file (dirname, "micro-timl-tc-test1.pkg")
@@ -1048,16 +1135,21 @@ fun test1 dirname =
     val () = pp_e $ export ToStringUtil.empty_ctx e
     val () = println ""
     open MicroTiMLTypecheck
+    open TestUtil
+    val () = println "Started MicroTiML typechecking ..."
     val ((t, i), vcs, admits) = typecheck ([], [], [], HeapMap.empty) e
+    val () = println "Finished MicroTiML typechecking"
     val () = println "Type:"
     val () = pp_t $ export_t ([], []) t
     val () = println "Time:"
-    val () = println $ ToString.str_i [] a
+    val () = println $ ToString.str_i Gctx.empty [] i
     val () = println "VCs:"
-    val () = app println $ map (fn ls => ls @ [""]) $ map (str_vc false "") vcs
+    val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs
   in
     ((* t, e *))
   end
+  handle MicroTiMLTypecheck.Error msg => (println $ "MTiMLTC.Error: " ^ msg; fail ())
+       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End")
     
 val test_suites = [
       test1

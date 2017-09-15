@@ -703,7 +703,7 @@ and on_DRec (name, bind, _) =
       (e, t)
     end
 
-fun trans_e e = MicroTiMLExPostProcess.post_process_e $ on_e e
+fun trans_e e = MicroTiMLExPostProcess.post_process $ on_e e
 (* val trans_decls = on_decls *)
 
 (* fun on_mod m = *)

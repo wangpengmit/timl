@@ -876,6 +876,94 @@ fun subst_i_e_fn params b =
     #visit_expr vtable visitor 0 b
   end
 
+(***************** the "subst_t_e" visitor  **********************)    
+
+fun subst_t_expr_visitor_vtable cast visit_ty =
+  let
+    fun extend_i this env _ = mapFst idepth_inc env
+    fun extend_t this env _ = mapSnd tdepth_inc env
+  in
+    default_expr_visitor_vtable
+      cast
+      extend_i
+      extend_t
+      extend_noop
+      extend_noop
+      visit_noop
+      visit_noop
+      visit_noop
+      visit_noop
+      (ignore_this visit_ty)
+  end
+
+fun new_subst_t_expr_visitor params = new_expr_visitor subst_t_expr_visitor_vtable params
+    
+fun subst_t_e_fn params b =
+  let
+    val visitor as (ExprVisitor vtable) = new_subst_t_expr_visitor params
+  in
+    #visit_expr vtable visitor (IDepth 0, TDepth 0) b
+  end
+
+(***************** the "subst_c_e" visitor  **********************)    
+
+fun subst_c_expr_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_i_s, shift_i_t, shift_t_t), d, x, v) : ('this, idepth * tdepth * cdepth * edepth, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable =
+  let
+    fun extend_i this (di, dt, dc, de) _ = (idepth_inc di, dt, dc, de)
+    fun extend_t this (di, dt, dc, de) _ = (di, tdepth_inc dt, dc, de)
+    fun extend_c this (di, dt, dc, de) _ = (di, dt, cdepth_inc dc, de)
+    fun extend_e this (di, dt, dc, de) _ = (di, dt, dc, edepth_inc de)
+    fun add_depth (di, dt, dc, de) (di', dt', dc', de') = (idepth_add (di, di'), tdepth_add (dt, dt'), cdepth_add (dc, dc'), edepth_add (de, de'))
+    fun get_di (di, dt, dc, de) = di
+    fun get_dt (di, dt, dc, de) = dt
+    fun get_dc (di, dt, dc, de) = dc
+    fun get_de (di, dt, dc, de) = de
+    val shift_i_e = shift_i_e_fn (shift_i_i, shift_i_s, shift_i_t)
+    val shift_t_e = shift_t_e_fn shift_t_t
+    val shift_c_e = shift_c_e_fn shift_var
+    val shift_e_e = shift_e_e_fn shift_var
+    fun visit_EVarConstr this env y =
+      let
+        val x = x + unEDepth (get_de env)
+      in
+        case compare_var y x of
+            CmpEq =>
+            let
+              val (di, dt, dc, de) = add_depth d env
+            in
+              shift_i_e 0 (unIDepth di) $ shift_t_e 0 (unTDepth dt) $ shift_c_e 0 (unCDepth dc) $ shift_e_e 0 (unEDepth de) v
+            end
+          | CmpGreater y' =>
+            EVar y'
+          | _ =>
+            EVar y
+      end
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_i
+          extend_t
+          extend_c
+          extend_e
+          visit_noop
+          (visit_imposs "subst_e_e/visit_cvar")
+          visit_noop
+          visit_noop
+          visit_noop
+    val vtable = override_visit_EVarConstr vtable visit_EVarConstr
+  in
+    vtable
+  end
+
+fun new_subst_c_expr_visitor params = new_expr_visitor subst_c_expr_visitor_vtable params
+    
+fun subst_c_e_fn params d x v b =
+  let
+    val visitor as (ExprVisitor vtable) = new_subst_c_expr_visitor (params, d, x, v)
+  in
+    #visit_expr vtable visitor (IDepth 0, TDepth 0, CDepth 0, EDepth 0) b
+  end
+
 (***************** the "subst_e_e" visitor  **********************)    
 
 fun subst_e_expr_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_i_s, shift_i_t, shift_t_t), d, x, v) : ('this, idepth * tdepth * cdepth * edepth, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable =

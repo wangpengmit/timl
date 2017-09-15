@@ -31,7 +31,17 @@ fun shift01_e_e a = shift_e_e 0 1 a
 fun adapt f d x v env = f (d + env) (x + env) v
 fun subst_i_e d x v = subst_i_e_fn (adapt substx_i_i d x v, adapt substx_i_s d x v, adapt subst_i_t d x v)
 fun subst0_i_e a = subst_i_e 0 0 a
+fun adapt f d x v env b =
+  let
+    fun add_depth (di, dt) (di', dt') = (idepth_add (di, di'), tdepth_add (dt, dt'))
+  in
+    f (add_depth d env) (x + unTDepth (snd env)) v b
+  end
+    
+fun subst_t_e d x v = subst_t_e_fn (adapt subst_t_t d x v)
+fun subst0_t_e a = subst_t_e (IDepth 0, TDepth 0) 0 a
+fun subst_c_e a = subst_c_e_fn (compare_var, shift_var, shiftx_i_i, shiftx_i_s, shift_i_t, shift_t_t) a
+fun subst0_c_e a = subst_c_e (IDepth 0, TDepth 0, CDepth 0, EDepth 0) 0 a
 fun subst_e_e a = subst_e_e_fn (compare_var, shift_var, shiftx_i_i, shiftx_i_s, shift_i_t, shift_t_t) a
 fun subst0_e_e a = subst_e_e (IDepth 0, TDepth 0, CDepth 0, EDepth 0) 0 a
-                             
 end
