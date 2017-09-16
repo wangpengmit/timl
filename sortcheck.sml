@@ -342,14 +342,14 @@ and get_bsort gctx (ctx, i) =
                 Error (r, msg) =>
                 raise Error (r, msg @ ["when sort-checking index "] @ indent [U_str_i (gctx_names gctx) (sctx_names ctx) i])
                 (* raise Error (r, msg @ [sprintf "when sort-checking index $ in context $" [U.str_i (gctx_names gctx) (sctx_names ctx) i, str_ls (fn (name, sort) => sprintf "\n$: $" [name, sort]) $ str_sctx (gctx_names gctx) ctx]]) *)
-      val () = println $ sprintf "get_bsort() result: $ : $" [str_i (gctx_names gctx) (sctx_names ctx) (fst ret), str_bs (snd ret)]
+      (* val () = println $ sprintf "get_bsort() result: $ : $" [str_i (gctx_names gctx) (sctx_names ctx) (fst ret), str_bs (snd ret)] *)
     in
       ret
     end
 
 and check_bsort gctx (ctx, i : U.idx, bs : bsort) : idx =
     let 
-      val () = println $ sprintf "check_bsort $ against $" [U_str_i (gctx_names gctx) (sctx_names ctx) i, str_bs bs]
+      (* val () = println $ sprintf "check_bsort $ against $" [U_str_i (gctx_names gctx) (sctx_names ctx) i, str_bs bs] *)
       val (i, bs') = get_bsort gctx (ctx, i)
       val () = unify_bs (get_region_i i) (bs', bs)
     in
@@ -368,7 +368,7 @@ fun is_wf_sorts gctx (ctx, sorts : U.sort list) : sort list =
 
 fun check_sort gctx (ctx, i : U.idx, s : sort) : idx =
   let 
-    val () = println $ sprintf "sortchecking $ against $" [U_str_i (gctx_names gctx) (sctx_names ctx) i, str_s (gctx_names gctx) (sctx_names ctx) s]
+    (* val () = println $ sprintf "sortchecking $ against $" [U_str_i (gctx_names gctx) (sctx_names ctx) i, str_s (gctx_names gctx) (sctx_names ctx) s] *)
     val (i, bs') = get_bsort gctx (ctx, i)
     val r = get_region_i i
     val s = normalize_s s

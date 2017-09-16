@@ -689,9 +689,13 @@ fun eval_constr b =
   in
     #visit_expr vtable visitor () b
   end
-    
+
+fun substr start len s = substring (s, start, len)
+                                   
 fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e : mtiml_ty * idx =
   let
+    val () = print "typechecking: "
+    val () = println $ substr 0 40 $ ExportPP.pp_e_to_string $ ExportPP.export ToStringUtil.empty_ctx e
     val itctx = (ictx, tctx)
   in
     case e of
@@ -1027,9 +1031,12 @@ fun to_vc (ctx, p) = (rev $ concatMap sort_to_hyps ctx, p)
   
 fun runWriter m () =
   let 
+    val () = println "enter runWriter()"
     val () = vcs := []
     val () = admits := []
+    val () = println "before m()"
     val r = m ()
+    val () = println "after m()"
     val vcs = !vcs
     val admits = !admits
     val vcs = map to_vc vcs
@@ -1041,7 +1048,12 @@ fun runWriter m () =
     (r, vcs, admits) 
   end
 
-fun typecheck ctx e = runWriter (fn () => tc ctx e) ()
+fun typecheck ctx e =
+  let
+    val () = println "typecheck()"
+  in
+    runWriter (fn () => tc ctx e) ()
+  end
 
 end
 
