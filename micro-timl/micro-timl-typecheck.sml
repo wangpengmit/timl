@@ -547,6 +547,12 @@ fun is_value e =
     | EPackI (_, _, e) => is_value e
     | EUnOp (EUFold _, e) => is_value e
     | ELoc _ => true
+    | ERec data =>
+      let
+        val (_, (_, e)) = unERec data
+      in
+        is_value e
+      end
     | _ => false
 
 fun get_expr_const_type c =
@@ -602,8 +608,8 @@ infixr 0 !!
 fun short_to_long_id x = ID (x, dummy)
 fun export_var sel ctx id =
   let
-    (* fun unbound s = "__unbound_" ^ s *)
-    fun unbound s = raise Impossible $ "Unbound identifier: " ^ s
+    fun unbound s = "__unbound_" ^ s
+    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
   in
     case id of
         ID (x, _) =>
@@ -1074,8 +1080,8 @@ infixr 0 !!
 fun short_to_long_id x = ID (x, dummy)
 fun export_var sel ctx id =
   let
-    (* fun unbound s = "__unbound_" ^ s *)
-    fun unbound s = raise Impossible $ "Unbound identifier: " ^ s
+    fun unbound s = "__unbound_" ^ s
+    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
   in
     case id of
         ID (x, _) =>
