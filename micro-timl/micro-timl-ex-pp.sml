@@ -601,14 +601,6 @@ open WithPP
 fun pp_e_to_fn params s e = withPP ("", 80, s) (fn s => pp_e params s e)
 fun pp_e_fn params = pp_e_to_fn params TextIO.stdOut
 fun pp_e_to_string_fn params e =
-  let
-    val filename = "pp_e_t_string.tmp"
-    val os = TextIO.openOut filename
-    val () = pp_e_to_fn params os e
-    val () = TextIO.closeOut os
-    val str = read_file filename
-  in
-    str
-  end
+  pp_to_string "pp_e_to_string.tmp" (fn os => pp_e_to_fn params os e)
     
 end

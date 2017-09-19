@@ -32,9 +32,9 @@ fun get_bsort_UVarI gctx ctx (data as (x, r)) =
   end
 
 fun match_BSArrow gctx ctx r bs =
-  case bs of
+  case update_bs bs of
       BSArrow data => data
-    | _ => raise Impossible "match_BSArrow"
+    | _ => raise Impossible $ "match_BSArrow: " ^ str_bs bs
 
 fun get_sort_type_UVarS gctx ctx data = UVarS data
 
@@ -635,6 +635,7 @@ fun pp_t_to s b =
   (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
   str s "<ty>"
 fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
+fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
 fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
     str_var,
     str_i,
@@ -696,12 +697,16 @@ fun eval_constr b =
     #visit_expr vtable visitor () b
   end
 
-fun substr start len s = substring (s, start, len)
+fun min (a, b) = if a < b then a else b
+                                        
+fun substr start len s = substring (s, start, min (len, size s - start))
+
+fun ctx_names (ictx, tctx, ectx, _) = (map fst ictx, map fst tctx, [], map fst ectx)
                                    
-fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e : mtiml_ty * idx =
+fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
   let
     val () = print "typechecking: "
-    val () = println $ substr 0 40 $ ExportPP.pp_e_to_string $ ExportPP.export ToStringUtil.empty_ctx e
+    val () = println $ substr 0 40 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
     val itctx = (ictx, tctx)
   in
     case e of
@@ -841,9 +846,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e : mtiml_ty * idx =
         let
           val (e, (name1, e1), (name2, e2)) = unECase data
           val (t, i) = tc ctx e
-          val (t1, t2) = case t of
+          val (t1, t2) = case whnf itctx t of
                              TBinOp (TBSum, t1, t2) => (t1, t2)
-                           | _ => raise Error "ECase"
+                           | _ => raise Error $ "ECase: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (map fst ictx, map fst tctx) t)
           val (t1, i1) = tc (add_typing_full (name1, t1) ctx) e1
           val (t2, i2) = tc (add_typing_full (name2, t2) ctx) e2
           val () = is_eq_ty itctx (t1, t2)
@@ -1000,7 +1005,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e : mtiml_ty * idx =
         in
           tc ctx e
         end
-      | _ => raise Impossible $ "tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ToStringUtil.empty_ctx e)
+      | _ => raise Impossible $ "tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
   end
 
 and tc_against_ty (ctx as (ictx, tctx, _, _)) (e, t) =

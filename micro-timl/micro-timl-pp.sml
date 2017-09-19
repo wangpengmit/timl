@@ -238,6 +238,9 @@ open WithPP
        
 fun pp_t_fn params t = withPP ("", 80, TextIO.stdOut) (fn s => pp_t params s t)
 val pp_t_to_fn = pp_t
+fun pp_t_to_os_fn params os t = withPP ("", 80, os) (fn s => pp_t params s t)
+fun pp_t_to_string_fn params t =
+  pp_to_string "pp_t_to_string.tmp" (fn os => pp_t_to_os_fn params os t)
                               
 fun str_proj opr =
   case opr of

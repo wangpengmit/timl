@@ -63,5 +63,16 @@ fun t40 () = withPP ("Test 20 [C code]", 20, TextIO.stdOut) (fn strm => (
 	PP.string strm "}";
         PP.closeBox strm))
 
+fun pp_to_string tmp_filename f =
+  let
+    open Util
+    val os = TextIO.openOut tmp_filename
+    val () = f os
+    val () = TextIO.closeOut os
+    val str = read_file tmp_filename
+  in
+    str
+  end
+    
 end
 
