@@ -1,0 +1,3 @@
+ffi cmodule
+include cmodule.h
+link cmodule.o
