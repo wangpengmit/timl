@@ -412,14 +412,14 @@ fun shift_e_pn_fn shift_e x n b =
     
 (***************** the "subst_e_pn" visitor  **********************)    
 
-fun subst_e_ptrn_visitor_vtable cast (subst_e, d, x, v) : ('this, idepth * tdepth * edepth, 'mtype, 'expr, 'mtype, 'expr2) ptrn_visitor_vtable =
+fun subst_e_ptrn_visitor_vtable cast (subst_e, d, x, v) : ('this, idepth * tdepth * cdepth * edepth, 'mtype, 'expr, 'mtype, 'expr2) ptrn_visitor_vtable =
   let
-    fun extend_i this (di, dt, de) _ = (idepth_inc di, dt, de)
-    fun extend_e this (di, dt, de) _ = (di, dt, edepth_inc de)
-    fun add_depth (di, dt, de) (di', dt', de') = (idepth_add (di, di'), tdepth_add (dt, dt'), edepth_add (de, de'))
-    fun get_di (di, dt, de) = di
-    fun get_dt (di, dt, de) = dt
-    fun get_de (di, dt, de) = de
+    fun extend_i this (di, dt, dc, de) _ = (idepth_inc di, dt, dc, de)
+    fun extend_e this (di, dt, dc, de) _ = (di, dt, dc, edepth_inc de)
+    fun add_depth (di, dt, dc, de) (di', dt', dc', de') = (idepth_add (di, di'), tdepth_add (dt, dt'), cdepth_add (dc, dc'), edepth_add (de, de'))
+    (* fun get_di (di, dt, dc, de) = di *)
+    (* fun get_dt (di, dt, dc, de) = dt *)
+    fun get_de (di, dt, dc, de) = de
     fun visit_expr this env b = subst_e (add_depth d env) (x + unEDepth (get_de env)) v b
   in
     default_ptrn_visitor_vtable
@@ -439,8 +439,8 @@ fun visit_subst_e_pn_fn subst_e env d x v b =
     #visit_ptrn vtable visitor env b
   end
 
-fun subst_e_pn_fn subst_e = visit_subst_e_pn_fn subst_e (env2ctx (IDepth 0, TDepth 0, EDepth 0))
-fun substx_e_pn_fn subst_e = subst_e_pn_fn subst_e (IDepth 0, TDepth 0, EDepth 0) 
+fun subst_e_pn_fn subst_e = visit_subst_e_pn_fn subst_e (env2ctx (IDepth 0, TDepth 0, CDepth 0, EDepth 0))
+fun substx_e_pn_fn subst_e = subst_e_pn_fn subst_e (IDepth 0, TDepth 0, CDepth 0, EDepth 0) 
 fun subst0_e_pn_fn subst_e = substx_e_pn_fn subst_e 0
 
 (***************** the "remove_anno" visitor  **********************)    
@@ -483,7 +483,10 @@ fun remove_var_ptrn_visitor_vtable cast ()
     : ('this, 'env, 'expr, 'mtype, 'expr, 'mtype) ptrn_visitor_vtable =
   let
     fun visit_PnVar this env data =
-      PnAlias (data, PnWildcard, Outer dummy)
+      if fst (unBinderName data) = "_" then
+        PnWildcard
+      else
+        PnAlias (data, PnWildcard, Outer dummy)
     val vtable =
         default_ptrn_visitor_vtable
           cast
@@ -660,12 +663,14 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV)
     fun split_first_column ps = unzip $ map (fn p => case p of PnPair p => p | _ => raise Impossible "split_first_column()") ps
     fun add_column ps pks = map PnPair $ zip (ps, pks)
     (* val () = println $ "before " ^ str_int (length matchees) *)
+    (* val () = println $ str_ls str_pn pks *)
     val result =
         case matchees of
             [] =>
             (case pks of
-                 [PnExpr (Rebind (Outer e))] => e
-               | _ => raise Impossible "remove_deep_many()"
+                 (* There could be multiple candidates (due to wildcard expansion). We just need to choose the first one. *)
+                 PnExpr (Rebind (Outer e)) :: _ => e
+               | _ => raise Impossible $ sprintf "remove_deep_many(): $" [str_ls str_pn pks]
             )
           | matchee :: matchees =>
             let
@@ -727,7 +732,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV)
                         val pns = is_all_UnpackI pns
                         val ename = lazy_default fresh_name $ get_alias pns
                       in
-                        EMatchUnpackI (matchee, BindSimp (iname, BindSimp (ename, remove_deep_many (EV 0 :: matchees) (add_column pns pks))))
+                        EUnpackI (matchee, BindSimp (iname, BindSimp (ename, remove_deep_many (EV 0 :: matchees) (add_column pns pks))))
                       end
             end
     (* val () = println $ "after " ^ str_int (length matchees) *)
@@ -833,7 +838,8 @@ fun test2 () =
     val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV) (EV 0) branches
     open ToStringRaw
     open ToString
-    val pp_e = pp_e_fn (str_int, str_raw_i, str_raw_s, str_raw_k, str_raw_mt)
+    fun str2pp f s t = PP.string s $ f t
+    val pp_e = pp_e_fn (str_int, str_raw_i, str_raw_s, str_raw_k, str2pp str_raw_mt)
     val () = pp_e e
                   
     (* val branches = map remove_anno branches *)

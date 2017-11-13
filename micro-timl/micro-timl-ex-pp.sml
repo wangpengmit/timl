@@ -61,25 +61,30 @@ fun str_e str_var str_i e =
           sprintf "EMatchPair ($, ($, $, $))" [str_e e, name1, name2, str_e branch]
         end
       | EMatchUnfold (e, branch) => sprintf "EMatchUnfold ($, $)" [str_e e, str_pair (id, str_e) $ get_bind branch]
-      | EMatchUnpackI (e, branch) =>
+      | EUnpackI (e, branch) =>
         let
           val (name1, branch) = get_bind branch
           val (name2, branch) = get_bind branch
         in
-          sprintf "EMatchUnpackI ($, ($, $, $))" [str_e e, name1, name2, str_e branch]
+          sprintf "EUnpackI ($, ($, $, $))" [str_e e, name1, name2, str_e branch]
         end
       | _ => raise Unimpl ""
   end
     
-fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
+fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
   let
     val pp_e = pp_e params s
+    val pp_t = pp_t s
     fun space () = PP.space s 1
     fun add_space a = (space (); a)
     fun str v = PP.string s v
     fun comma () = (str ","; space ())
     fun open_hbox () = PP.openHBox s
-    fun open_vbox () = PP.openVBox s (PP.Abs 2)
+    (* fun open_vbox () = PP.openVBox s (PP.Abs 2) *)
+    fun open_vbox () = PP.openVBox s (PP.Rel 2)
+    (* fun open_vbox_noindent () = PP.openVBox s (PP.Abs 0) *)
+    fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+    (* fun open_vbox_indent a = PP.openVBox s a *)
     (* fun open_vbox () = PP.openVBox s (PP.Rel 2) *)
     fun close_box () = PP.closeBox s
     fun pp_pair (fa, fb) (a, b) =
@@ -102,6 +107,13 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
             comma ();
             pp_list f xs
           )
+    fun pp_bracket f =
+      (
+        str "[";
+        f ();
+        str "]"
+      )
+    fun pp_list_bracket f ls = pp_bracket $ (fn () => pp_list f ls)
   in
     case e of
         EVar x =>
@@ -112,17 +124,27 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str $ str_var x;
           close_box ()
         )
+      | EVarConstr x =>
+        (
+          open_hbox ();
+          str "EVarConstr";
+          space ();
+          str $ str_var x;
+          close_box ()
+        )
       | EMatchSum (e, branches) =>
         (
+	  open_vbox ();
           open_hbox ();
           str "EMatchSum";
           space ();
           str "(";
           pp_e e;
+	  close_box ();
           comma ();
           str "[";
-	  open_vbox ();
-          space ();
+	  open_vbox_noindent ();
+          (* space (); *)
           pp_list (pp_pair (str, pp_e) o get_bind) branches;
 	  close_box ();
           str "]";
@@ -134,24 +156,22 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           val (name1, branch) = get_bind branch
           val (name2, branch) = get_bind branch
         in
+	  open_vbox ();
+          (* space (); *)
           open_hbox ();
           str "EMatchPair";
           space ();
           str "(";
           pp_e e;
+	  close_box ();
           comma ();
-	  open_vbox ();
-          space ();
 	  open_hbox ();
-          str "(";
           str name1;
           comma ();
           str name2;
+	  close_box ();
           comma ();
           pp_e branch;          
-          str ")";
-	  close_box ();
-	  close_box ();
           str ")";
           close_box ()
         end
@@ -170,32 +190,6 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str ")";
           close_box ()
         )
-      | EMatchUnpackI (e, branch) =>
-        let
-          val (name1, branch) = get_bind branch
-          val (name2, branch) = get_bind branch
-        in
-          open_hbox ();
-          str "EMatchUnpackI";
-          space ();
-          str "(";
-          pp_e e;
-          comma ();
-	  open_vbox ();
-          space ();
-	  open_hbox ();
-          str "(";
-          str name1;
-          comma ();
-          str name2;
-          comma ();
-          pp_e branch;          
-          str ")";
-	  close_box ();
-	  close_box ();
-          str ")";
-          close_box ()
-        end
       | EConst c =>
         (
           open_hbox ();
@@ -218,7 +212,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str "EUnOp";
           space ();
           str "(";
-          str $ str_expr_un_op str_t opr;
+          str $ str_expr_un_op (const_fun "<ty>") opr;
           comma ();
           pp_e e;
           str ")";
@@ -273,13 +267,31 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
         let
           val (name, t, e) = get_bind_anno bind
         in
+          open_vbox ();
           open_hbox ();
           str "EAbs";
           space ();
           str "(";
           str name;
           comma ();
-          str $ str_t t;
+          pp_t t;
+          close_box ();
+          comma ();
+          pp_e e;
+          str ")";
+          close_box ()
+        end
+      | EAbsConstr bind =>
+        let
+          val ((tnames, inames, ename), e) = unBind bind
+        in
+          open_vbox ();
+          open_hbox ();
+          str "EAbsConstr";
+          space ();
+          str "(";
+          str $ sprintf "$, $, $" [str_ls binder2str tnames, str_ls binder2str inames, binder2str ename];
+          close_box ();
           comma ();
           pp_e e;
           str ")";
@@ -289,13 +301,15 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
         let
           val (name, t, e) = get_bind_anno bind
         in
+          open_vbox ();
           open_hbox ();
           str "ERec";
           space ();
           str "(";
           str name;
           comma ();
-          str $ str_t t;
+          pp_t t;
+          close_box ();
           comma ();
           pp_e e;
           str ")";
@@ -305,6 +319,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
         let
           val (name, k, e) = get_bind_anno bind
         in
+          open_vbox ();
           open_hbox ();
           str "EAbsT";
           space ();
@@ -312,6 +327,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str name;
           comma ();
           str $ str_k k;
+          close_box ();
           comma ();
           pp_e e;
           str ")";
@@ -325,7 +341,23 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str "(";
           pp_e e;
           comma ();
-          str $ str_t t;
+          pp_t t;
+          str ")";
+          close_box ()
+        )
+      | EAppConstr (e1, ts, is, e2) =>
+        (
+          open_hbox ();
+          str "EAppConstr";
+          space ();
+          str "(";
+          pp_e e1;
+          comma ();
+          pp_list_bracket pp_t ts;
+          comma ();
+          str $ str_ls str_i is;
+          comma ();
+          pp_e e2;
           str ")";
           close_box ()
         )
@@ -333,6 +365,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
         let
           val (name, s, e) = get_bind_anno bind
         in
+          open_vbox ();
           open_hbox ();
           str "EAbsI";
           space ();
@@ -340,6 +373,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str name;
           comma ();
           str $ str_s s;
+          close_box ();
           comma ();
           pp_e e;
           str ")";
@@ -363,9 +397,9 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str "EPack";
           space ();
           str "(";
-          str $ str_t t_all;
+          pp_t t_all;
           comma ();
-          str $ str_t t;
+          pp_t t;
           comma ();
           pp_e e;
           str ")";
@@ -394,7 +428,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str "EPackI";
           space ();
           str "(";
-          str $ str_t t;
+          pp_t t;
           comma ();
           str $ str_i i;
           comma ();
@@ -408,52 +442,63 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str "EPackIs";
           space ();
           str "(";
-          str $ str_t t;
+          pp_t t;
           comma ();
+          str "[";
           pp_list (str o str_i) is;
+          str "]";
           comma ();
           pp_e e;
           str ")";
           close_box ()
         )
-      | EUnpackI (e, bind) =>
+      | EUnpackI (e, branch) =>
         let
-          val (iname, bind) = get_bind bind
-          val (ename, e) = get_bind bind
+          val (name1, branch) = get_bind branch
+          val (name2, branch) = get_bind branch
         in
+	  open_vbox_noindent ();
+          (* space (); *)
           open_hbox ();
           str "EUnpackI";
           space ();
           str "(";
-          str iname;
+          str name1;
           comma ();
-          str ename;
+          str name2;
           comma ();
           pp_e e;
+	  close_box ();
+          comma ();
+          pp_e branch;          
           str ")";
           close_box ()
         end
       | EAscTime (e, i) =>
         (
+	  open_vbox_noindent ();
           open_hbox ();
           str "EAscTime";
           space ();
           str "(";
-          pp_e e;
-          comma ();
           str $ str_i i;
+          close_box ();
+          comma ();
+          pp_e e;
           str ")";
           close_box ()
         )
       | EAscType (e, t) =>
         (
+	  open_vbox_noindent ();
           open_hbox ();
           str "EAscType";
           space ();
           str "(";
-          pp_e e;
+          pp_t t;
+          close_box ();
           comma ();
-          str $ str_t t;
+          pp_e e;
           str ")";
           close_box ()
         )
@@ -462,55 +507,97 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           open_hbox ();
           str "ENever";
           space ();
-          str $ str_t t;
+          pp_t t;
+          close_box ()
+        )
+      | EBuiltin t =>
+        (
+          open_hbox ();
+          str "EBuiltin";
+          space ();
+          pp_t t;
           close_box ()
         )
       | ELet (e, branch) =>
-        (
+        let
+          val (name, e_body) = get_bind branch
+        in
+	  open_vbox_noindent ();
+          (* space (); *)
           open_hbox ();
           str "ELet";
           space ();
           str "(";
-          pp_e e;
+          str name;
           comma ();
-	  open_vbox ();
-          space ();
-          pp_pair (str, pp_e) o get_bind $ branch;
+          pp_e e;
 	  close_box ();
+          comma ();
+          pp_e e_body;
           str ")";
           close_box ()
-        )
+        end
+      | ELetIdx (i, branch) =>
+        let
+          val (name, e_body) = get_bind branch
+        in
+	  open_vbox_noindent ();
+          (* space (); *)
+          open_hbox ();
+          str "ELetIdx";
+          space ();
+          str "(";
+          str name;
+          comma ();
+          str $ str_i i;
+	  close_box ();
+          comma ();
+          pp_e e_body;
+          str ")";
+          close_box ()
+        end
+      | ELetType (t, branch) =>
+        let
+          val (name, e_body) = get_bind branch
+        in
+	  open_vbox_noindent ();
+          (* space (); *)
+          open_hbox ();
+          str "ELetType";
+          space ();
+          str "(";
+          str name;
+          comma ();
+          pp_t t;
+	  close_box ();
+          comma ();
+          pp_e e_body;
+          str ")";
+          close_box ()
+        end
+      | ELetConstr (e, branch) =>
+        let
+          val (name, e_body) = get_bind branch
+        in
+	  open_vbox_noindent ();
+          (* space (); *)
+          open_hbox ();
+          str "ELetConstr";
+          space ();
+          str "(";
+          str name;
+          comma ();
+          pp_e e;
+	  close_box ();
+          comma ();
+          pp_e e_body;
+          str ")";
+          close_box ()
+        end
   end
 
 open WithPP
        
 fun pp_e_fn params e = withPP ("", 80, TextIO.stdOut) (fn s => pp_e params s e)
-
-(* datatype ('var, 'idx, 'sort, 'ty) expr = *)
-(*          EVar of 'var *)
-(*          | EConst of Operators.expr_const *)
-(*          | ELoc of loc *)
-(*          | EUnOp of expr_un_op * ('var, 'idx, 'sort, 'ty) expr *)
-(*          | EBinOp of expr_bin_op * ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr *)
-(*          | EWrite of ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr *)
-(*          | ECase of ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr ebind * ('var, 'idx, 'sort, 'ty) expr ebind *)
-(*          | EAbs of ('ty, ('var, 'idx, 'sort, 'ty) expr) ebind_anno *)
-(*          | ERec of ('var, 'idx, 'sort, 'ty) expr ebind *)
-(*          | EAbsT of ('var, 'idx, 'sort, 'ty) expr tbind *)
-(*          | EAppT of ('var, 'idx, 'sort, 'ty) expr * 'ty *)
-(*          | EAbsI of ('sort, ('var, 'idx, 'sort, 'ty) expr) ibind_anno *)
-(*          | EAppI of ('var, 'idx, 'sort, 'ty) expr * 'idx *)
-(*          | EPack of 'ty * ('var, 'idx, 'sort, 'ty) expr *)
-(*          | EUnpack of ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr ebind tbind *)
-(*          | EPackI of 'idx * ('var, 'idx, 'sort, 'ty) expr *)
-(*          | EUnpackI of ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr ebind ibind *)
-(*          | EAscTime of ('var, 'idx, 'sort, 'ty) expr * 'idx (* time ascription *) *)
-(*          | EAscType of ('var, 'idx, 'sort, 'ty) expr * 'ty (* type ascription *) *)
-(*          | ENever of 'ty *)
-(*          | ELet of ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr ebind *)
-(*          | EMatchSum of ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr ebind list *)
-(*          | EMatchPair of ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr ebind ebind *)
-(*          | EMatchUnfold of ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr ebind *)
-(*          | EMatchUnpackI of ('var, 'idx, 'sort, 'ty) expr * ('var, 'idx, 'sort, 'ty) expr ebind ibind *)
 
 end

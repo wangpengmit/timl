@@ -345,13 +345,14 @@ local
           let
             val pn = elab_pn pn
           in
-            if null tnames then
-              DValPtrn (pn, Outer $ elab e, Outer r)
-            else
-              case pn of
-                  VarP name =>
-                  DVal (name, Outer $ Unbound.Bind (map (Binder o TName) tnames, elab e), Outer r)
-                | _ => raise Error (r, "compound pattern can't be generalized, so can't have explicit type variables")
+            case pn of
+                VarP name =>
+                DVal (name, Outer $ Unbound.Bind (map (Binder o TName) tnames, elab e), Outer r)
+              | _ =>
+                if null tnames then
+                  DValPtrn (pn, Outer $ elab e, Outer r)
+                else
+                  raise Error (r, "compound pattern can't be generalized, so can't have explicit type variables")
           end
 	| S.Rec (tnames, name, binds, (t, d), e, r) =>
           let
@@ -372,7 +373,7 @@ local
           let
             val s = default (UVarS ((), r)) $ Option.map elab_s s
           in
-            DIdxDef (Binder $ IName (name, r), Outer s, Outer $ elab_i i)
+            DIdxDef (Binder $ IName (name, r), Outer $ SOME s, Outer $ elab_i i)
           end
         | S.AbsIdx2 ((name, r), s, i) =>
           let

@@ -330,7 +330,7 @@ fun strn_e e =
       )
     | EET (opr, e, t) =>
       (case opr of
-           EETAppT => sprintf "($ {$})" [strn_e e, strn_mt t]
+           EETAppT => sprintf "($ [$])" [strn_e e, strn_mt t]
          | EETAsc => sprintf "($ : $)" [strn_e e, strn_mt t]
       )
     | ET (opr, t, _) =>
@@ -419,13 +419,19 @@ and strn_decl decl =
         let
           val name = binder2str name
         in
-          sprintf "idx $ : $ = $" [name, strn_s s, strn_i i]
+          sprintf "idx $$ = $" [name, default "" $ Option.map (prefix " : " o strn_s) s, strn_i i]
+        end
+      | DConstrDef (name, Outer x) =>
+        let
+          val name = binder2str name
+        in
+          sprintf "constr $ = $" [name, x]
         end
       | DAbsIdx2 (name, Outer s, Outer i) =>
         let
           val name = binder2str name
         in
-          sprintf "absidx $ : $ = $" [name, strn_s s, strn_i i]
+          sprintf "absidx2 $ : $ = $" [name, strn_s s, strn_i i]
         end
       | DAbsIdx ((name, Outer s, Outer i), Rebind decls, _) =>
         let

@@ -13,7 +13,7 @@ main: main.mlb $(FILES)
 	mllex parser/timl.lex
 	mlyacc sexp/sexp.grm
 	mllex sexp/sexp.lex
-	mlton $(MLTON_FLAGS) main.mlb
+	mlton $(MLTON_FLAGS) -default-ann 'nonexhaustiveMatch error' -default-ann 'redundantMatch error' main.mlb
 
 main.mlb: generate-file-list.rb
 	ruby generate-file-list.rb mlton > main.mlb
@@ -30,7 +30,7 @@ main.cm: generate-file-list.rb
 clean:
 	rm -f main
 	rm -f main-image*
-	rm main.cm
-	rm main.mlb
+	rm -f main.cm
+	rm -f main.mlb
 
 print-%  : ; @echo $* = $($*)

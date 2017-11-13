@@ -162,8 +162,12 @@ uvar-forget.sml
 unify.sml
 redundant-exhaust.sml
 collect-mod.sml
+subst-uvar.sml
+update-expr.sml
 typecheck-main.sml
 trivial-solver.sml
+derived-trans.sml
+unpackage.sml
 post-typecheck.sml
 typecheck.sml
 smt2-printer.sml
@@ -171,18 +175,24 @@ smt-solver.sml
 long-id-map.sml
 bigO-solver.sml
 simp-ctx.sml
-main.sml
 pp-util.sml
 micro-timl/micro-timl.sml
 nouvar-expr.sml
 visitor.sml                                 
+parse-filename.sml
 micro-timl/micro-timl-visitor.sml
 micro-timl/micro-timl-pp.sml
 micro-timl/micro-timl-ex.sml
 micro-timl/micro-timl-ex-pp.sml
-pattern-ex.sml
+micro-timl/pattern-ex.sml
 micro-timl/micro-timl-ex-util.sml
+micro-timl/micro-timl-ex-long-id.sml
+micro-timl/post-process.sml
+remove-open.sml
+merge-modules.sml
 micro-timl/timl-to-micro-timl.sml
+unit-test.sml
+main.sml
 }
 
 if target == :smlnj then

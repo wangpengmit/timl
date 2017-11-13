@@ -270,8 +270,8 @@ fun on_mt (t : S.mtype) =
     | S.MtAbsI (b, Bind.Bind (name, t), _) => TAbsI $ IBindAnno ((name, b), on_mt t)
     | S.BaseType (t, r) => TConst (on_base_type t)
     | S.UVar (x, _) =>
-    (* exfalso x *)
-      raise Impossible "UVar"
+      (* exfalso x *)
+      raise Impossible "to-micro-timl/on_mt/UVar"
     | S.TDatatype (Bind.Bind (dt_name, tbinds), _) =>
       let
         val (tname_kinds, (bsorts, constrs)) = unfold_binds tbinds
@@ -291,7 +291,7 @@ fun on_mt (t : S.mtype) =
             val extra_sort_name = "__VC"
             val extra_sort = Subset ((BSUnit, dummy), Bind.Bind ((extra_sort_name, dummy), prop), dummy)
             val t = on_mt t
-            val t = TExistsIMany (map (mapFst IName) $ ((extra_sort_name, dummy), extra_sort) :: rev name_sorts, t)
+            val t = TExistsI_Many (rev $ map (mapFst IName) $ ((extra_sort_name, dummy), extra_sort) :: rev name_sorts, t)
           in
             t
           end
@@ -300,50 +300,28 @@ fun on_mt (t : S.mtype) =
         val ts = map (fn (_, c, _) => on_constr c) constrs
         val t = TSums ts
         fun attach_names namespace f ls = mapi (fn (n, b) => (namespace (f n, dummy), b)) ls
-        val t = TAbsIMany (attach_names IName (fn n => "_i" ^ str_int n) $ rev bsorts, t)
-        val t = TAbsTMany (attach_names TName (fn n => "_t" ^ str_int n) $ repeat len_tnames KType, t)
+        val t = TAbsI_Many (rev $ attach_names IName (fn n => "_i" ^ str_int n) $ rev bsorts, t)
+        val t = TAbsT_Many (rev $ attach_names TName (fn n => "_t" ^ str_int n) $ repeat len_tnames KType, t)
       in
         TRec $ BindAnno ((TName dt_name, k), t)
       end
 
 val trans_mt = on_mt
                  
-val shift_var = LongIdSubst.shiftx_var
-    
-fun compare_var id x =
-  case id of
-      QID _ => CmpOther
-    | ID (y, r) =>
-      if y = x then CmpEq
-      else if y > x then
-        CmpGreater $ ID (y - 1, r)
-      else CmpOther
-             
-fun shift_i_t a = shift_i_t_fn (shiftx_i_i, shiftx_i_s) a
-fun shift_t_t a = shift_t_t_fn shift_var a
-fun subst_t_t a = subst_t_t_fn (compare_var, shift_var, shiftx_i_i, shiftx_i_s) a
-fun subst0_t_t a = subst_t_t (IDepth 0, TDepth 0) 0 a
-fun subst_i_t a = subst_i_t_fn (substx_i_i, substx_i_s) a
-fun subst0_i_t a = subst_i_t 0 0 a
-fun normalize_t a = normalize_t_fn (subst0_i_t, subst0_t_t) a
-fun shift_i_e a = shift_i_e_fn (shiftx_i_i, shiftx_i_s, shift_i_t) a
-fun shift_e_e a = shift_e_e_fn shift_var a
-fun subst_e_e a = subst_e_e_fn (compare_var, shift_var, shiftx_i_i, shiftx_i_s, shift_i_t, shift_t_t) a
-                
+open MicroTiMLExLongId
 open PatternEx
 structure S = TiML
                 
 fun shift_e_pn a = shift_e_pn_fn shift_e_e a
 
-fun MakeSUniI (s, name, t) = S.UniI (s, Bind.Bind (name, t), dummy)
+fun SEV n = S.EVar (ID (n, dummy), true)
+fun SMakeECase (e, rules) = S.ECase (e, (NONE, NONE), map Bind rules, dummy)
+fun SMakeELet (decls, e) = S.ELet ((NONE, NONE), Bind (decls, e), dummy)
 
-fun MakeSEAbs (pn, e) = S.EAbs $ Bind (pn, e)
-fun MakeSEAbsI (name, s, e) = S.EAbsI (IBindAnno ((name, s), e), dummy)
-fun MakeSECase (e, rules) = S.ECase (e, (NONE, NONE), map Bind rules, dummy)
-
-fun MakeSELet (decls, e) = S.ELet ((NONE, NONE), Bind (decls, e), dummy)
-
-structure SS = ExprSubst
+structure SS = struct
+open ExprShift
+open ExprSubst
+end
                  
 fun EV n = EVar (ID (n, dummy))
 
@@ -362,15 +340,16 @@ fun on_e (e : S.expr) =
     | S.EET (opr, e, t) =>
       (case opr of
            EETAsc => EAscType (on_e e, on_mt t)
-         | EETAppT => raise Impossible "to-micro-timl/EETAppT"
+         | EETAppT => EAppT (on_e e, on_mt t)
       )
     | S.ET (opr, t, r) =>
       (case opr of
            Op.ETNever => ENever (on_mt t)
-         | Op.ETBuiltin => raise T2MTError "can't translate builtin expression"
+         | Op.ETBuiltin => EBuiltin (on_mt t)
       )
     | S.ECase (e, return, rules, r) =>
       let
+        (* todo: use information in [return] *)
         val e = on_e e
         val rules = map (mapPair (from_TiML_ptrn, on_e) o unBind) rules
         val name = default (EName ("__x", dummy)) $ firstSuccess get_pn_alias $ map fst rules
@@ -380,203 +359,318 @@ fun on_e (e : S.expr) =
       in
         ELet (e, BindSimp (name, e2))
       end
-    | S.EAbs bind =>
-      let
-        val (pn, e) = unBind bind
-        val (pn, Outer t) = case pn of S.AnnoP a => a | _ => raise Impossible "must be AnnoP"
-        val t = on_mt t
-        val e = on_e e
-        val pn = from_TiML_ptrn pn
-        val name = default (EName ("__x", dummy)) $ get_pn_alias pn
-        val pn = PnBind (pn, e)
-        val pn = shift_e_pn 0 1 pn
-        val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV) (EV 0) [pn]
-      in
-        EAbs $ BindAnno ((name, t), e)
-      end
+    (* todo: EAbs should delegate to ECase *)
     (* | S.EAbs bind => *)
-    (*   (* delegate to ECase *) *)
     (*   let *)
     (*     val (pn, e) = unBind bind *)
-    (*     val (pn, Outer t) = case pn of S.AnnoP a => a | _ => raise Impossible "to-micro-timl/EAbs: must be AnnoP" *)
-    (*     val name = default (EName ("__x", dummy)) $ get_pn_alias $ from_TiML_ptrn pn *)
+    (*     val (pn, Outer t) = case pn of S.AnnoP a => a | _ => raise Impossible "must be AnnoP" *)
     (*     val t = on_mt t *)
-    (*     val e = MakeSECase (SEV 0, [shift_e_rule (pn, e)]) *)
     (*     val e = on_e e *)
+    (*     val pn = from_TiML_ptrn pn *)
+    (*     val name = default (EName ("__x", dummy)) $ get_pn_alias pn *)
+    (*     val pn = PnBind (pn, e) *)
+    (*     val pn = shift_e_pn 0 1 pn *)
+    (*     val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV) (EV 0) [pn] *)
     (*   in *)
     (*     EAbs $ BindAnno ((name, t), e) *)
     (*   end *)
+    | S.EAbs bind =>
+      (* delegate to ECase *)
+      let
+        val (pn, e) = unBind bind
+        val (pn, Outer t) = case pn of S.AnnoP a => a | _ => raise Impossible "to-micro-timl/EAbs: must be AnnoP"
+        val name = default (EName ("__x", dummy)) $ get_pn_alias $ from_TiML_ptrn pn
+        val t = on_mt t
+        fun shift_e_rule a = DerivedTrans.for_rule SS.shift_e_e a
+        val e = SMakeECase (SEV 0, [shift_e_rule (pn, e)])
+        val e = on_e e
+      in
+        EAbs $ BindAnno ((name, t), e)
+      end
     | S.EAbsI (bind, _) =>
       let
         val ((name, s), e) = unBindAnno bind
       in
         EAbsI $ BindAnno ((name, s), on_e e)
       end
-    | S.EAppConstr ((_, eia), ts, is, e, ot) =>
-      (* todo: should define functions corresponding to constructors and put those type annotations there, instead of having annotations on every constructor call-site. 
-         MicroTiMLEx should have a [ELetConstr] to put constructor definition in the constructor namespace, and a later pass will translate [ELetConstr] to [ELet]. 
-         Constructors will be special kind of functions that don't incur beta-reduction cost.
-       *)
+    (* | S.EAppConstr ((x, eia), ts, is, e, ot) => *)
+    (*   let *)
+    (*     val () = if eia then () else raise Impossible "to-micro-timl/AppConstr/eia" *)
+    (*     val (pos, t) = ot !! (fn () => raise Impossible "to-micro-timl/AppConstr/ot") *)
+    (*     val dt = case t of TDatatype (dt, _) => dt | _ => raise Impossible "to-micro-timl/AppConstr/TDatatype" *)
+    (*     val e = make_constr (pos, ts, is, e, dt) *)
+    (*   in *)
+    (*     e *)
+    (*   end *)
+    | S.EAppConstr ((x, eia), ts, is, e, ot) =>
       let
-        open ToStringRaw
-        open ToString
-        fun str_var (_, (x, _)) = str_int x
-        val pp_t = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_raw_i, str_raw_s, const_fun "<kind>")
-        val (pos, t) = ot !! (fn () => raise Impossible "to-micro-timl/AppConstr/ot")
-        val dt = case t of TDatatype (dt, _) => dt | _ => raise Impossible "to-micro-timl/AppConstr/TDatatype"
         val () = if eia then () else raise Impossible "to-micro-timl/AppConstr/eia"
-        val t_rec = on_mt t
-        (* val () = pp_t t_rec *)
-        val Bind.Bind (name, tbinds) = dt
-        val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
-        val constr_decl as (_, core, _) = nth_error constr_decls pos !! (fn () => raise Impossible "to-micro-timl/AppConstr: nth_error constr_decls")
-        val (name_sorts, (_, result_is)) = unfold_binds core
-        val () = assert (fn () => length is = length name_sorts) "length is = length name_sorts"
-        val result_is = foldl (fn (v, b) => map (subst_i_i v) b) result_is is
-        val fold_anno = TAppIs (TAppTs (t_rec, map on_mt ts), result_is)
-        fun unroll t_rec =
-          let
-            fun collect_until_TRec t =
-              case t of
-                  TAppI (t, i) =>
-                  let
-                    val (t, args) = collect_until_TRec t
-                  in
-                    (t, args @ [inl i])
-                  end
-                | TAppT (t, t') =>
-                  let
-                    val (t, args) = collect_until_TRec t
-                  in
-                    (t, args @ [inr t'])
-                  end
-                | TRec bind =>
-                  let
-                    val (_, t) = unBindAnno bind
-                  in
-                    (t, [])
-                  end
-                | _ => raise Impossible "collect_until_TRec"
-            val (t_body, args) = collect_until_TRec t_rec
-            val t = subst0_t_t t_rec t_body
-            fun TApp (t, arg) =
-              case arg of
-                  inl i => TAppI (t, i)
-                | inr t' => TAppT (t, t')
-            val t = foldl (swap TApp) t args
-            val t = normalize_t t
-          in
-            t
-          end
-        val unrolled = unroll fold_anno
-        (* val () = pp_t unrolled *)
-        val inj_anno = unTSums unrolled
-        (* val () = println $ sprintf "$, $" [str_int $ length inj_anno, str_int pos] *)
-        val pack_anno = nth_error inj_anno pos !! (fn () => raise Impossible $ sprintf "to-micro-timl/AppConstr: nth_error inj_anno: $, $" [str_int $ length inj_anno, str_int pos])
-        (* val exists = peel_exists (length is + 1) pack_anno *)
-        val is = is @ [TTI dummy]
+        val ts = map on_mt ts
         val e = on_e e
-        val e = EPackIs (pack_anno, is, e)
-        val e = EInj (inj_anno, pos, e)
-        val e = EFold (fold_anno, e)
+        val e = EAppConstr (EVarConstr x, ts, is, e)
       in
         e
       end
     | S.ELet (return, bind, r) => 
-	  let
-            val (decls, e) = Unbound.unBind bind
-          in
-	    on_decls (decls, e)
-	  end
+      let
+        (* todo: use information in [return] *)
+        val (decls, e) = Unbound.unBind bind
+      in
+	on_decls (decls, e)
+      end
     (* | _ => raise Unimpl "" *)
                  
+and add_constr_decls (dt, e_body) =
+    let
+      val Bind.Bind (name, tbinds) = dt
+      val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
+      val tnames = map fst tname_kinds
+      val tlen = length tname_kinds
+      fun make_constr_bind (pos, (cname, core, _)) =
+        let
+          val (name_sorts, _) = unfold_binds core
+          val inames = map fst name_sorts
+          val ilen = length name_sorts
+          fun IV n = S.VarI $ ID (n, dummy)
+          fun TV n = S.MtVar $ ID (n, dummy)
+          val ts = rev $ Range.map TV (0, tlen)
+          val is = rev $ Range.map IV (0, ilen)
+          fun shiftx_i_dt x n = DerivedTrans.for_dt $ shiftx_i_mt x n
+          fun shiftx_t_dt x n = DerivedTrans.for_dt $ shiftx_t_mt x n
+          val dt = shiftx_t_dt 0 tlen dt
+          val dt = shiftx_i_dt 0 ilen dt
+          val e = make_constr (pos, ts, is, SEV 0, dt)
+          val ename = ("__x", dummy)
+          val e = MakeEAbsConstr (tnames, inames, ename, e)
+        in
+          (cname, e)
+        end
+      val constrs = mapi make_constr_bind constr_decls
+      val e_body = foldr (fn ((name, e), e_body) => MakeELetConstr (e, name, e_body)) e_body constrs
+    in
+      e_body
+    end
+      
+and make_constr (pos, ts, is, e, dt) =
+    let
+      open ToStringRaw
+      open ToString
+      (* fun str_var (_, (x, _)) = str_int x *)
+      (* val pp_t = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_raw_i, str_raw_s, const_fun "<kind>") *)
+      val t = TDatatype (dt, dummy)
+      val t_rec = on_mt t
+      (* val () = pp_t t_rec *)
+      val Bind.Bind (name, tbinds) = dt
+      val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
+      val constr_decl as (_, core, _) = nth_error constr_decls pos !! (fn () => raise Impossible "to-micro-timl/AppConstr: nth_error constr_decls")
+      val (name_sorts, (_, result_is)) = unfold_binds core
+      val () = assert (fn () => length is = length name_sorts) "length is = length name_sorts"
+      val result_is = foldl (fn (v, b) => map (subst_i_i v) b) result_is is
+      val fold_anno = TAppIs (TAppTs (t_rec, map on_mt ts), result_is)
+      fun unroll t_rec =
+        let
+          fun collect_until_TRec t =
+            case t of
+                TAppI (t, i) =>
+                let
+                  val (t, args) = collect_until_TRec t
+                in
+                  (t, args @ [inl i])
+                end
+              | TAppT (t, t') =>
+                let
+                  val (t, args) = collect_until_TRec t
+                in
+                  (t, args @ [inr t'])
+                end
+              | TRec bind =>
+                let
+                  val (_, t) = unBindAnno bind
+                in
+                  (t, [])
+                end
+              | _ => raise Impossible "collect_until_TRec"
+          val (t_body, args) = collect_until_TRec t_rec
+          val t = subst0_t_t t_rec t_body
+          fun TApp (t, arg) =
+            case arg of
+                inl i => TAppI (t, i)
+              | inr t' => TAppT (t, t')
+          val t = foldl (swap TApp) t args
+          val t = normalize_t t
+        in
+          t
+        end
+      val unrolled = unroll fold_anno
+      (* val () = pp_t unrolled *)
+      val inj_anno = unTSums unrolled
+      (* val () = println $ sprintf "$, $" [str_int $ length inj_anno, str_int pos] *)
+      val pack_anno = nth_error inj_anno pos !! (fn () => raise Impossible $ sprintf "to-micro-timl/AppConstr: nth_error inj_anno: $, $" [str_int $ length inj_anno, str_int pos])
+      (* val exists = peel_exists (length is + 1) pack_anno *)
+      val is = is @ [TTI dummy]
+      val e = on_e e
+      val e = EPackIs (pack_anno, is, e)
+      val e = EInj (inj_anno, pos, e)
+      val e = EFold (fold_anno, e)
+    in
+      e
+    end
+
 and on_decls (decls, e_body) =
     case decls of
         TeleNil => on_e e_body
       | TeleCons (decl, Rebind decls) =>
-        case decl of
-            (* todo: DTypeDef, DIdxDef and DAbsIdx2 should generate special kind of Let instead of inlining. DTypeDef currently needs to do inlining because the translation of [EAppConstr] needs datatype details. It will be changed in the future when constructors are translated into functions. *)
-            S.DTypeDef (name, Outer t) =>
-            let
-              val e = MakeSELet (decls, e_body)
-              val e = SS.subst_t_e t e
-              val e = on_e e
-            in
-              e
-            end
-          | S.DIdxDef (name, _, Outer i) =>
-            let
-              val e = MakeSELet (decls, e_body)
-              val e = SS.subst_i_e i e
-              val e = on_e e
-            in
-              e
-            end
-          | S.DAbsIdx2 (name, _, Outer i) =>
-            let
-              val e = MakeSELet (decls, e_body)
-              val e = SS.subst_i_e i e
-              val e = on_e e
-            in
-              e
-            end
-          | S.DVal (ename, Outer bind, Outer r) =>
-            let
-              val name = unBinderName ename
-              val (tnames, e) = Unbound.unBind bind
-              val tnames = map unBinderName tnames
-              val e = on_e e
-              val e = EAbsTKindMany (tnames, e)
-              val e_body = on_decls (decls, e_body)
-            in
-              MakeELet (e, name, e_body)
-            end
-          | S.DValPtrn (pn, Outer e, Outer r) =>
-            let
-              val e_body = MakeSELet (decls, e_body)
-            in
-              on_e $ MakeSECase (e, [(pn, e_body)])
-            end
-	  | S.DRec (name, bind, _) => 
-	    let
-              val name = unBinderName name
-              val (e, t) = on_DRec (name, bind)
-              val e_body = on_decls (decls, e_body)
-            in
-              MakeELet (e, name, e_body)
-	    end
-          | S.DAbsIdx ((iname, Outer s, Outer i), Rebind decls, Outer r) =>
-            let
-              val iname = unBinderName iname
-              val (ename, bind, _) =
-                  case unTeles decls of
-                      [S.DRec a] => a
-                    | _ => raise Impossible "to-micro-timl/DAbsIdx: can only translate when the inner declarations are just one DRec"
-              val ename = unBinderName ename
-              val (e, t) = on_DRec (ename, bind)
-              val t = MakeTExistsI (iname, s, t)
-              val e = EPackI (t, i, e)
-              val e_body = on_decls (decls, e_body)
-              val e = MakeEMatchUnpackI (e, iname, ename, e_body)
-            in
-              e
-            end
-          | S.DOpen (Outer m, octx) =>
-            let
-              val ctx as (sctx, kctx, cctx, tctx) = octx !! (fn () => raise Impossible "to-micro-timl/DOpen: octx must be SOME")
-              val e = MakeSELet (decls, e_body)
-              open Package
-              val e = (self_compose (length tctx) $ package0_e_e m) $ e
-              val e = (self_compose (length cctx) $ package0_c_e m) $ e
-              val e = (self_compose (length kctx) $ package0_t_e m) $ e
-              val e = (self_compose (length sctx) $ package0_i_e m) $ e
-              val e = on_e e
-            in
-              e
-            end
-            
-and on_DRec (name, bind) =
+        let
+          val () = println "translating decl"
+          (* val () = println $ sprintf "translating: $" [fst $ ToString.str_decl Gctx.empty ToStringUtil.empty_ctx decl] *)
+        in
+          case decl of
+              S.DVal data =>
+              let
+                val name = unBinderName $ #1 data
+                val (e, _) = on_DVal data
+                val e_body = on_decls (decls, e_body)
+              in
+                MakeELet (e, name, e_body)
+              end
+            | S.DValPtrn (pn, Outer e, Outer r) =>
+              let
+                val e_body = SMakeELet (decls, e_body)
+              in
+                on_e $ SMakeECase (e, [(pn, e_body)])
+              end
+	    | S.DRec data => 
+	      let
+                val name = unBinderName $ #1 data
+                val (e, t) = on_DRec data
+                val e_body = on_decls (decls, e_body)
+              in
+                MakeELet (e, name, e_body)
+	      end
+            | S.DAbsIdx ((iname, Outer s, Outer i), Rebind inner_decls, Outer r) =>
+              let
+                val iname = unBinderName iname
+                fun make_Unpack_Pack ename (e, t) =
+                  let
+                    val ename = unBinderName $ ename
+                    val t = MakeTExistsI (iname, s, t)
+                    val e = EPackI (t, i, MakeELetIdx (i, iname, e))
+                    val e_body = on_decls (decls, e_body)
+                    val e = MakeEUnpackI (e, iname, ename, e_body)
+                  in
+                    e
+                  end
+              in
+                case unTeles inner_decls of
+                    [S.DRec data] => 
+                    let
+                      val (e, t) = on_DRec data
+                      val e = make_Unpack_Pack (#1 data) (e, t)
+                    in
+                      e
+                    end
+                  | [S.DVal data] =>
+                    let
+                      val (e, t) = on_DVal data
+                      val t = t !! (fn () => raise Impossible $ "RHS of DVal inside DAbsIdx must be EAsc:" ^ (fst $ ToString.str_decl Gctx.empty ToStringUtil.empty_ctx decl))
+                      val e = make_Unpack_Pack (#1 data) (e, t)
+                    in
+                      e
+                    end
+                  | _ => raise Impossible $ "to-micro-timl/DAbsIdx: can only translate when the inner declarations are just one DRec" ^ " or one DVal"
+              end
+            | S.DOpen (Outer m, octx) =>
+              let
+                val ctx as (sctx, kctx, cctx, tctx) = octx !! (fn () => raise Impossible "to-micro-timl/DOpen: octx must be SOME")
+                val e = SMakeELet (decls, e_body)
+                open Package
+                val e = (self_compose (length tctx) $ package0_e_e m) $ e
+                val e = (self_compose (length cctx) $ package0_c_e m) $ e
+                val e = (self_compose (length kctx) $ package0_t_e m) $ e
+                val e = (self_compose (length sctx) $ package0_i_e m) $ e
+                val e = on_e e
+              in
+                e
+              end
+            (* | S.DTypeDef (name, Outer t) => *)
+            (*   let *)
+            (*     val e = SMakeELet (decls, e_body) *)
+            (*     val e = SS.subst_t_e t e *)
+            (*     val e = on_e e *)
+            (*     val e = case t of *)
+            (*                 S.TDatatype (dt, _) => add_constr_decls (dt, e) *)
+            (*               | _ => e *)
+            (*   in *)
+            (*     e *)
+            (*   end *)
+            | S.DTypeDef (name, Outer mt) =>
+              let
+                val e = on_decls (decls, e_body)
+                val t = on_mt mt
+                val e = MakeELetType (t, unBinderName name, e)
+                val e = case mt of
+                            S.TDatatype (dt, _) => add_constr_decls (dt, e)
+                          | _ => e
+              in
+                e
+              end
+            (* | S.DIdxDef (name, _, Outer i) => *)
+            (*   let *)
+            (*     val e = SMakeELet (decls, e_body) *)
+            (*     val e = SS.subst_i_e i e *)
+            (*     val e = on_e e *)
+            (*   in *)
+            (*     e *)
+            (*   end *)
+            (* | S.DAbsIdx2 (name, _, Outer i) => *)
+            (*   let *)
+            (*     val e = SMakeELet (decls, e_body) *)
+            (*     val e = SS.subst_i_e i e *)
+            (*     val e = on_e e *)
+            (*   in *)
+            (*     e *)
+            (*   end *)
+            | S.DIdxDef (name, _, Outer i) =>
+              let
+                val e = on_decls (decls, e_body)
+                val e = MakeELetIdx (i, unBinderName name, e)
+              in
+                e
+              end
+            | S.DConstrDef (name, Outer x) =>
+              let
+                val e = on_decls (decls, e_body)
+                val e = MakeELetConstr (EVarConstr x, unBinderName name, e)
+              in
+                e
+              end
+            | S.DAbsIdx2 (name, _, Outer i) =>
+              let
+                val e = on_decls (decls, e_body)
+                val e = MakeELetIdx (i, unBinderName name, e)
+              in
+                e
+              end
+        end
+          
+and on_DVal (ename, Outer bind, Outer r) =
     let
+      val name = unBinderName ename
+      val (tnames, e) = Unbound.unBind bind
+      val tnames = map unBinderName tnames
+      val (e, t) = case e of
+                       S.EET (EETAsc, e, t) => (e, SOME t)
+                     | _ => (e, NONE)
+      val e = on_e e
+      val e = EAbsTKind_Many (tnames, e)
+      val t = Option.map (curry TUniKind_Many tnames o on_mt) t
+    in
+      (e, t)
+    end
+      
+and on_DRec (name, bind, _) =
+    let
+      val name = unBinderName name
       val ((tnames, Rebind binds), ((t, i), e)) = Unbound.unBind $ unInner bind
       (* val t = t !! (fn () => raise Impossible "to-micro-timl/DRec: t must be SOME") *)
       (* val i = i !! (fn () => raise Impossible "to-micro-timl/DRec: i must be SOME") *)
@@ -584,13 +678,13 @@ and on_DRec (name, bind) =
       val binds = unTeles binds
       fun on_bind (bind, e) =
         case bind of
-            S.SortingST (name, Outer s) => MakeSEAbsI (unBinderName name, s, e)
-          | S.TypingST pn => MakeSEAbs (pn, e)
+            S.SortingST (name, Outer s) => S.MakeEAbsI (unBinderName name, s, e, dummy)
+          | S.TypingST pn => S.MakeEAbs (pn, e)
       val e = foldr on_bind e binds
       val e = on_e e
       fun on_bind_t (bind, t) =
         case bind of
-            S.SortingST (name, Outer s) => MakeSUniI (s, unBinderName name, t)
+            S.SortingST (name, Outer s) => S.MakeUniI (s, unBinderName name, t, dummy)
           | S.TypingST pn =>
             case pn of
                 AnnoP (_, Outer t1) => S.Arrow (t1, T0 dummy, t)
@@ -599,28 +693,32 @@ and on_DRec (name, bind) =
           case rev binds of
               S.TypingST (AnnoP (_, Outer t1)) :: binds =>
               foldl on_bind_t (S.Arrow (t1, i, t)) binds
+            | [] => t
             | _ => raise Impossible "to-micro-timl/DRec: Recursion must have a annotated typing bind as the last bind"
       val t = on_mt t
       val e = MakeERec (name, t, e)
-      val t = TUniKindMany (tnames, t)
-      val e = EAbsTKindMany (tnames, e)
+      val t = TUniKind_Many (tnames, t)
+      val e = EAbsTKind_Many (tnames, e)
     in
       (e, t)
     end
 
-(* todo: module-level decls will be translated by this: *)
-(* fun on_components decls = *)
-(*   let *)
-(*     val e = on_decls (decls, ETT) *)
-(*     val (es, _) = collect_ELet e *)
-(*   in *)
-(*     es *)
-(*   end *)
+fun trans_e e = MicroTiMLExPostProcess.post_process_e $ on_e e
+(* val trans_decls = on_decls *)
+
+(* fun on_mod m = *)
+(*   case m of *)
+(*       ModComponents (decls, _) => *)
+(*       let *)
+(*         val e = on_decls (decls, ETT) *)
+(*         val (es, _) = collect_decls e *)
+(*       in *)
+(*         es *)
+(*       end *)
+(*     | _ => raise Unimpl "on_mod" *)
 
 (* todo: functor application will be translated by first fibering together actual argument and formal argument, and then doing a module translation  *)
           
-val trans_e = on_e
-
 structure UnitTest = struct
 
 structure U = UnderscoredExpr
@@ -650,8 +748,46 @@ structure U = UnderscoredExpr
 (* val cons = fold_ibinds ([("n", SNat)], (S.Prod (), [V0 %+ N1])) *)
 (* val src = TDatatype (, ()) *)
 
-fun test filename =
+fun short_to_long_id x = ID (x, dummy)
+fun export_var sel ctx id =
   let
+    (* fun unbound s = "__unbound_" ^ s *)
+    fun unbound s = raise Impossible $ "Unbound identifier: " ^ s
+  in
+    case id of
+        ID (x, _) =>
+        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
+  end
+(* val export_i = return2 *)
+fun export_i a = ToString.export_i Gctx.empty a
+fun export_s a = ToString.export_s Gctx.empty a
+fun export_t a = export_t_fn (export_var snd, export_i, export_s) a
+fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
+val str = PP.string
+fun str_var x = LongId.str_raw_long_id id(*str_int*) x
+fun str_i a =
+  (* ToStringRaw.str_raw_i a *)
+  (* ToString.SN.strn_i a *)
+  const_fun "<idx>" a
+fun str_s a =
+  (* ToStringRaw.str_raw_s a *)
+  (* ToString.SN.strn_s a *)
+  const_fun "<sort>" a
+fun pp_t s b =
+  (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
+  str s "<ty>"
+fun pp_e a = MicroTiMLExPP.pp_e_fn (
+    str_var,
+    str_i,
+    str_s,
+    const_fun "<kind>",
+    pp_t
+  ) a
+                                 
+fun test1 dirname =
+  let
+    val filename = join_dir_file (dirname, "test1.timl")
     open Parser
     val prog = parse_file filename
     open Elaborate
@@ -676,22 +812,14 @@ fun test filename =
     (* val () = println $ str_e empty ([], ["'a", "list"], ["Cons", "Nil"], []) e *)
     val BSNat = Base Nat
     val e = SimpExpr.simp_e [("'a", KeKind Type), ("list", KeKind (1, [BSNat]))] e
-    val () = println $ str_e empty ([], ["'a", "list"], ["Cons", "Nil"], []) e
+    val () = println $ str_e empty ([], ["'a", "list"], ["Cons", "Nil2", "Nil"], []) e
     val () = println ""
     (* fun visit_subst_t_pn a = PatternVisitor.visit_subst_t_pn_fn (use_idepth_tdepth substx_t_mt) a *)
     val e = ExprSubst.substx_t_e (0, 1) 1 t_list e
     val e = trans_e e
-    fun short_to_long_id x = ID (x, dummy)
-    fun visit_var (_, _, tctx) id =
-      case id of
-          ID (x, _) =>
-          short_to_long_id $ nth_error (map Name2str tctx) x !! (fn () => "__unbound_" ^ str_int x)
-        | QID _ => short_to_long_id $ "__unbound_" ^ str_raw_var id
-    val export = export_fn (visit_var, return2, return2, return2)
-    val e = export ([], [], []) e
-    fun str_var x = LongId.str_raw_long_id id(*str_int*) x
-    val pp_e = MicroTiMLExPP.pp_e_fn (str_var, str_raw_i, str_raw_s, const_fun "<kind>", const_fun "<ty>")
+    val e = export ([], ["'a"], ["Cons", "Nil2", "Nil"], []) e
     val () = pp_e e
+    val () = println ""
   in
     ((* t, e *))
   end
@@ -700,6 +828,117 @@ fun test filename =
   (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *)
   (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *)
                           
+fun test2 dirname =
+  let
+    val filename = join_dir_file (dirname, "test2.timl")
+    open Parser
+    val prog = parse_file filename
+    open Elaborate
+    val prog = elaborate_prog prog
+    open NameResolve
+    val (prog, _, _) = resolve_prog empty prog
+    val decls = case hd prog of
+                    (_, TopModBind (ModComponents (decls, _))) => decls
+                  | _ => raise Impossible ""
+    open TypeCheck
+    val () = TypeCheck.turn_on_builtin ()
+    val ((decls, _, _, _), _) = typecheck_decls empty empty_ctx decls
+    val e = SMakeELet (Teles decls, Expr.ETT dummy)
+    val e = SimpExpr.simp_e [] e
+    val () = println $ str_e empty ToStringUtil.empty_ctx e
+    val () = println ""
+    val e = trans_e e
+    val e = export ToStringUtil.empty_ctx e
+    val () = pp_e e
+    val () = println ""
+  in
+    ((* t, e *))
+  end
+  handle NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; raise Impossible "End")
+       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End")
+  (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *)
+  (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *)
+
+fun test3 dirname =
+  let
+    val filename = join_dir_file (dirname, "test3.timl")
+    open Parser
+    val prog = parse_file filename
+    open Elaborate
+    val prog = elaborate_prog prog
+    open NameResolve
+    val (prog, _, _) = resolve_prog empty prog
+    open TypeCheck
+    val () = TypeCheck.turn_on_builtin ()
+    val ((prog, _, _), _) = typecheck_prog empty prog
+    open MergeModules
+    val decls = merge_prog prog []
+    val e = SMakeELet (Teles decls, Expr.ETT dummy)
+    val e = SimpExpr.simp_e [] e
+    val () = println $ str_e empty ToStringUtil.empty_ctx e
+    val () = println ""
+    val e = trans_e e
+    val e = export ToStringUtil.empty_ctx e
+    val () = pp_e e
+    val () = println ""
+  in
+    ((* t, e *))
+  end
+  handle NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; raise Impossible "End")
+       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End")
+  (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *)
+  (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *)
+
+fun test4 dirname =
+  let
+    val filename = join_dir_file (dirname, "to-micro-timl-test4.pkg")
+    val filenames = ParseFilename.expand_pkg (fn msg => raise Impossible msg) filename
+    open Parser
+    val prog = concatMap parse_file filenames
+    open Elaborate
+    val prog = elaborate_prog prog
+    open NameResolve
+    val (prog, _, _) = resolve_prog empty prog
+    open TypeCheck
+    val () = TypeCheck.turn_on_builtin ()
+    val () = println "Started typechecking ..."
+    val ((prog, _, _), _) = typecheck_prog empty prog
+    val () = println "Finished typechecking"
+    open MergeModules
+    val decls = merge_prog prog []
+    val e = SMakeELet (Teles decls, Expr.ETT dummy)
+    val () = println "Simplifying ..."
+    val e = SimpExpr.simp_e [] e
+    val () = println "Finished simplifying"
+    (* val () = println $ str_e empty ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
+    val () = println "Started translating ..."
+    val e = trans_e e
+    val () = println "Finished translating"
+    val e = export ToStringUtil.empty_ctx e
+    val () = pp_e e
+    val () = println ""
+  in
+    ((* t, e *))
+  end
+  handle NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; raise Impossible "End")
+       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End")
+  (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *)
+  (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *)
+
+fun test_suites dirname =
+  let
+    val suites = [
+      (* test1 *)
+      (* test2 *)
+      (* test3, *)
+      test4
+    ]
+    val () = app (fn f => ignore $ f dirname) suites
+  in
+    ()
+  end
+  
 end
                              
 end

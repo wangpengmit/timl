@@ -32,17 +32,19 @@ fun export_idx_visitor_vtable cast gctx (* : ((* 'this *)string list IV.idx_visi
       in
         map_uvar_bs (#visit_bsort vtable this []) u
       end
-    fun visit_uvar_i this ctx u =
+    fun visit_uvar_i this ctx (u, r) =
       let
         val vtable = cast this
+        val u = map_uvar_i (#visit_bsort vtable this [], #visit_idx vtable this []) u
       in
-        map_uvar_i (#visit_bsort vtable this [], #visit_idx vtable this []) u
+        (u, r)
       end
-    fun visit_uvar_s this ctx u =
+    fun visit_uvar_s this ctx (u, r) =
       let
         val vtable = cast this
+        val u = map_uvar_s (#visit_bsort vtable this [], #visit_sort vtable this []) u
       in
-        map_uvar_s (#visit_bsort vtable this [], #visit_sort vtable this []) u
+        (u, r)       
       end
   in
     IV.default_idx_visitor_vtable
@@ -113,12 +115,14 @@ fun export_type_visitor_vtable cast gctx (* : ((string list * string list) TV.ty
     fun visit_var this (sctx, kctx) x =
       str_var #2 gctx kctx x
     fun for_idx f this (sctx, kctx) data = f gctx sctx data
-    fun visit_uvar_mt this ctx u =
+    fun visit_uvar_mt this ctx (u, r) =
       let
         val vtable = cast this
         val empty_ctx = ([], [])
+        val u = 
+            map_uvar_mt (#visit_bsort vtable this empty_ctx, #visit_kind vtable this empty_ctx, #visit_mtype vtable this empty_ctx) u
       in
-        map_uvar_mt (#visit_bsort vtable this empty_ctx, #visit_kind vtable this empty_ctx, #visit_mtype vtable this empty_ctx) u
+        (u, r)
       end
   in
     TV.default_type_visitor_vtable
@@ -162,7 +166,9 @@ functor ExportExprFn (
   val lookup_module : ToStringUtil.global_context -> string -> string * ToStringUtil.context
   val export_i : ToStringUtil.global_context -> string list -> Params.S.idx -> Params.T.idx
   val export_s : ToStringUtil.global_context -> string list -> Params.S.sort -> Params.T.sort
+  val export_k : Params.S.kind -> Params.T.kind
   val export_mt : ToStringUtil.global_context -> string list * string list -> Params.S.mtype -> Params.T.mtype
+  val export_t : ToStringUtil.global_context -> string list * string list -> Params.S.ty -> Params.T.ty
 ) = struct
 
 open Binders
@@ -200,6 +206,8 @@ fun export_expr_visitor_vtable cast gctx =
       (for_idx export_i)
       (for_idx export_s)
       (for_type export_mt)
+      (for_type export_t)
+      (ignore_this_env export_k)
       visit_noop
   end
 
@@ -214,22 +222,16 @@ fun export_e gctx ctx b =
 
 fun export_decl gctx env b =
   let
-    val visitor as (EV.ExprVisitor vtable) = new_export_expr_visitor gctx
-    val ctx = env2ctx env
-    val b = #visit_decl vtable visitor ctx b
-    val env = !(#current ctx)
+    val visitor = new_export_expr_visitor gctx
   in
-    (b, env)
+    EV.visit_decl_acc visitor (b, env)
   end
 
 fun export_decls gctx env b =
   let
     val visitor = new_export_expr_visitor gctx
-    val ctx = env2ctx env
-    val b = EV.visit_decls visitor ctx b
-    val env = !(#current ctx)
   in
-    (b, env)
+    EV.visit_decls_acc visitor (b, env)
   end
 
 end

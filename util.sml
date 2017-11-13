@@ -113,9 +113,6 @@ fun findWithIdx f xs =
       loop 0 xs
     end
       
-fun findi f xs = findWithIdx (fn (_, x) => f x) xs
-fun index f = Option.map fst o findi f
-                             
 fun findOptionWithIdx f xs =
     let
       fun loop base xs =
@@ -131,6 +128,9 @@ fun findOptionWithIdx f xs =
       loop 0 xs
     end
       
+fun findi f xs = findWithIdx (f o snd) xs
+fun indexOf f = Option.map fst o findi f
+                             
 fun mapPartialWithIdx f xs =
     let
       fun iter (x, (n, acc)) =
@@ -348,6 +348,7 @@ fun exfalso (x : empty) = raise Impossible "type empty shouldn't have inhabitant
 fun push xs x = x :: xs
 fun binop_ref f r x = r := f (!r) x
 fun push_ref r x = binop_ref push r x
+fun copy_ref r = ref $ !r
 
 datatype ('a, 'b) sum = 
          inl of 'a

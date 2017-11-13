@@ -6,6 +6,7 @@ signature EXPR = sig
   type idx
   type sort
   type mtype
+  val get_constr_names : mtype -> Namespaces.name list
   type ptrn_constr_tag
   type ty
   type kind
@@ -34,16 +35,21 @@ signature EXPR = sig
 	   | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option
 	   | ECase of expr * return * (ptrn, expr) Unbound.bind list * Region.region
 	   | ELet of return * (decl Unbound.tele, expr) Unbound.bind * Region.region
+       (* these constructs won't show up in source program *)
+       (* | EAbsT of (sort, expr) tbind_anno * region *)
 
        and decl =
            DVal of Binders.ebinder * (Binders.tbinder list, expr) Unbound.bind Unbound.outer * Region.region Unbound.outer
            | DValPtrn of ptrn * expr Unbound.outer * Region.region Unbound.outer
            | DRec of Binders.ebinder * (Binders.tbinder list * stbind Unbound.tele Unbound.rebind, (mtype * idx) * expr) Unbound.bind Unbound.inner * Region.region Unbound.outer
-           | DIdxDef of Binders.ibinder * sort Unbound.outer * idx Unbound.outer
+           | DIdxDef of Binders.ibinder * sort option Unbound.outer * idx Unbound.outer
            | DAbsIdx2 of Binders.ibinder * sort Unbound.outer * idx Unbound.outer
            | DAbsIdx of (Binders.ibinder * sort Unbound.outer * idx Unbound.outer) * decl Unbound.tele Unbound.rebind * Region.region Unbound.outer
            | DTypeDef of Binders.tbinder * mtype Unbound.outer
            | DOpen of mod_id Unbound.outer * scoping_ctx option
+  (* these constructs won't show up in source program *)
+           | DConstrDef of Binders.cbinder * cvar Unbound.outer
+           (* | DBlock of decl Unbound.tele Unbound.rebind *)
 
   type name = string * Region.region
 

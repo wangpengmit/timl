@@ -225,17 +225,16 @@ fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_vi
     fun visit_var this (sctx, kctx) x =
       on_long_id gctx #2 kctx x
     fun for_idx f this (sctx, kctx) b = f gctx sctx b
-    fun for_bsort f _ _ b = f b
     val vtable = 
         TV.default_type_visitor_vtable
           cast
           extend_i
           extend_t
           visit_var
-          (for_bsort on_bsort)
+          (ignore_this_env on_bsort)
           (for_idx on_idx)
           (for_idx on_sort)
-          (for_bsort on_kind)
+          (ignore_this_env on_kind)
           visit_noop
     fun visit_MtAppI this ctx (data as (t1, i)) =
       let
@@ -497,11 +496,15 @@ fun get_datatype_names (Bind (name, tbinds)) =
 structure EV = ExprVisitorFn (structure S = S
                               structure T = T)
                              
-fun on_i_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
+fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
   let
     fun extend_i this (sctx, kctx, cctx, tctx) name = (Name2str name :: sctx, kctx, cctx, tctx)
     fun extend_t this (sctx, kctx, cctx, tctx) name = (sctx, Name2str name :: kctx, cctx, tctx)
-    fun extend_c this (sctx, kctx, cctx, tctx) name = raise Impossible "import_e/extend_c"
+    (* Extending cctx will be performed by extend_c_data. We still need extend_c (can't just throw Impossible) because the default visit_DTypeDef and visit_SpecTypeDef use extend_c. *)
+    val extend_c = extend_noop 
+    (* fun extend_c this (sctx, kctx, cctx, tctx) name = raise Impossible $ "import_e/extend_c:" ^ Name2str name *)
+    (* fun extend_c this (sctx, kctx, cctx, tctx) name = (sctx, kctx, Name2str name :: cctx, tctx) *)
+    fun extend_c_data (sctx, kctx, cctx, tctx) a = (sctx, kctx, a :: cctx, tctx)
     fun extend_e this (sctx, kctx, cctx, tctx) name = (sctx, kctx, cctx, Name2str name :: tctx)
     fun visit_cvar this (sctx, kctx, cctx, tctx) x =
       on_long_id gctx (map fst o #3) (map fst cctx) x
@@ -520,6 +523,8 @@ fun on_i_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable
           (for_idx on_idx)
           (for_idx on_sort)
           (for_type on_mtype)
+          (for_type on_type)
+          (ignore_this_env on_kind)
           (visit_imposs "import_e/visit_ptrn_constr_tag")
     fun visit_ibinder this env name =
       let
@@ -586,6 +591,7 @@ fun on_i_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable
     val vtable = EV.override_visit_VarP vtable visit_VarP
     fun visit_EVar this (_, _, cctx, tctx) (x, b) =
       case find_constr gctx cctx x of
+          (* Always treat constructors as fully applied. Can't handle partially applied constructors. *)
 	  SOME (x, _) => EAppConstr ((x, b), [], [], ETT $ get_region_long_id x, NONE)
 	| NONE => EVar ((on_long_id gctx #4 tctx x), b)
     val vtable = EV.override_visit_EVar vtable visit_EVar
@@ -667,22 +673,22 @@ fun on_i_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable
         val d = #visit_DRec super_vtable this ctx data
         val (name, bind, r) =
             case d of
-                DRec data => data
+                [DRec data] => data
               | _ => raise Impossible "import_e/visit_DRec"
         val (names, ((t, d), e)) = Unbound.unBind $ unInner bind
         val e = copy_anno (gctx_names gctx) (SOME t, SOME d) e
       in
-        DRec (name, Inner $ Unbound.Bind (names, ((t, d), e)), r)
+        [DRec (name, Inner $ Unbound.Bind (names, ((t, d), e)), r)]
       end
     val vtable = EV.override_visit_DRec vtable visit_DRec
-    fun extend_c_data (sctx, kctx, cctx, tctx) a = (sctx, kctx, a :: cctx, tctx)
     fun visit_DTypeDef this ctx data =
       let
+        (* val () = println "new visit_DTypeDef" *)
         val super_vtable = vtable
         val d = #visit_DTypeDef super_vtable this ctx data
         val () =
           case d of
-               DTypeDef (_, Outer (TDatatype (dt, r))) =>
+               [DTypeDef (_, Outer (TDatatype (dt, r)))] =>
                let
                  val (_, cnames) = get_datatype_names dt
                  val _ = visit_list (visit_binder extend_c_data) ctx $ map Binder cnames
@@ -694,6 +700,24 @@ fun on_i_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable
         d
       end
     val vtable = EV.override_visit_DTypeDef vtable visit_DTypeDef
+    fun visit_SpecTypeDef this ctx data =
+      let
+        val super_vtable = vtable
+        val d = #visit_SpecTypeDef super_vtable this ctx data
+        val () =
+          case d of
+               SpecTypeDef (_, TDatatype (dt, r)) =>
+               let
+                 val (_, cnames) = get_datatype_names dt
+                 val _ = visit_list (visit_binder extend_c_data) ctx $ map Binder cnames
+               in
+                 ()
+               end
+             | _ => ()
+      in
+        d
+      end
+    val vtable = EV.override_visit_SpecTypeDef vtable visit_SpecTypeDef
     fun visit_DOpen this ctx (Outer (m, r), _) =
       let
         val (m, ctxd) =
@@ -723,30 +747,27 @@ fun on_i_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable
                                  tctx
                                 )
       in
-        DOpen (Outer (m, r), SOME ctxd)
+        [DOpen (Outer (m, r), SOME ctxd)]
       end
     val vtable = EV.override_visit_DOpen vtable visit_DOpen
   in
     vtable
   end
 
-fun new_on_i_expr_visitor a = EV.new_expr_visitor on_i_expr_visitor_vtable a
+fun new_on_expr_visitor a = EV.new_expr_visitor on_expr_visitor_vtable a
     
 fun on_expr gctx ctx b =
   let
-    val visitor as (EV.ExprVisitor vtable) = new_on_i_expr_visitor gctx
+    val visitor as (EV.ExprVisitor vtable) = new_on_expr_visitor gctx
   in
     #visit_expr vtable visitor ctx b
   end
     
 fun on_decls gctx env decls =
   let
-    val visitor as (EV.ExprVisitor vtable) = new_on_i_expr_visitor gctx
-    val ctx = env2ctx env
-    val decls = EV.visit_decls visitor ctx decls
-    val env = !(#current ctx)
+    val visitor as (EV.ExprVisitor vtable) = new_on_expr_visitor gctx
   in
-    (decls, env)
+    EV.visit_decls_acc visitor (decls, env)
   end
     
 (* fun on_ptrn gctx (ctx as (sctx, kctx, cctx)) pn = *)
@@ -1040,84 +1061,98 @@ fun on_decls gctx env decls =
 (*       Unbound.Bind (pn, on_expr gctx ctx' e) *)
 (*     end *)
 
-fun on_sig gctx (comps, r) =
+(* fun on_sig gctx (comps, r) = *)
+(*   let *)
+(*     fun on_spec (ctx as (sctx, kctx, cctx, tctx)) spec = *)
+(*       case spec of *)
+(*           S.SpecVal ((name, r), t) => *)
+(*           let *)
+(*             val t = on_type gctx (sctx, kctx) t *)
+(*           in *)
+(*             (SpecVal ((name, r), t), add_typing_skct name ctx) *)
+(*           end *)
+(*         | S.SpecIdx ((name, r), s) => *)
+(*           let *)
+(*             val s = on_sort gctx sctx s *)
+(*           in *)
+(*             (SpecIdx ((name, r), s), add_sorting_skct name ctx) *)
+(*           end *)
+(*         | S.SpecType ((name, r), k) => *)
+(*           let *)
+(*             val k = on_kind k *)
+(*           in *)
+(*             (SpecType ((name, r), k), add_kinding_skct name ctx) *)
+(*           end *)
+(*         | S.SpecTypeDef ((name, r), t) => *)
+(*           (case t of *)
+(*                S.TDatatype (dt, r) => *)
+(*                let *)
+(*                  val dt = on_datatype gctx (sctx, kctx) dt *)
+(*                  val (tname, cnames) = get_datatype_names dt *)
+(*                  val ctx = (sctx, tname :: kctx, rev cnames @ cctx, tctx) *)
+(*                in *)
+(*                  (SpecTypeDef ((name, r), TDatatype (dt, r)), ctx) *)
+(*                end *)
+(*              | _ => *)
+(*                let *)
+(*                  val t = on_mtype gctx (sctx, kctx) t *)
+(*                in *)
+(*                  (SpecTypeDef ((name, r), t), add_kinding_skct name ctx) *)
+(*                end *)
+(*           ) *)
+(*     fun iter (spec, (specs, ctx)) = *)
+(*       let *)
+(*         val (spec, ctx) = on_spec ctx spec *)
+(*       in *)
+(*         (spec :: specs, ctx) *)
+(*       end *)
+(*     val (comps, ctx) = foldl iter ([], empty_ctx) comps *)
+(*     val comps = rev comps *)
+(*   in *)
+(*     ((comps, r), ctx) *)
+(*   end *)
+    
+(* fun on_module gctx m = *)
+(*     case m of *)
+(*         S.ModComponents (comps, r) => *)
+(*         let *)
+(*           val (comps, ctx) = on_decls gctx empty_ctx comps *)
+(*         in *)
+(*           (ModComponents (comps, r), ctx) *)
+(*         end *)
+(*       | S.ModSeal (m, sg) => *)
+(*         let *)
+(*           val (sg, ctx) = on_sig gctx sg *)
+(*           val (m, _) = on_module gctx m *)
+(*         in *)
+(*           (ModSeal (m, sg), ctx) *)
+(*         end *)
+(*       | S.ModTransparentAsc (m, sg) => *)
+(*         let *)
+(*           val (sg, _) = on_sig gctx sg *)
+(*           val (m, ctx) = on_module gctx m *)
+(*         in *)
+(*           (ModTransparentAsc (m, sg), ctx) *)
+(*         end *)
+
+fun on_sig gctx decls =
   let
-    fun on_spec (ctx as (sctx, kctx, cctx, tctx)) spec =
-      case spec of
-          S.SpecVal ((name, r), t) =>
-          let
-            val t = on_type gctx (sctx, kctx) t
-          in
-            (SpecVal ((name, r), t), add_typing_skct name ctx)
-          end
-        | S.SpecIdx ((name, r), s) =>
-          let
-            val s = on_sort gctx sctx s
-          in
-            (SpecIdx ((name, r), s), add_sorting_skct name ctx)
-          end
-        | S.SpecType ((name, r), k) =>
-          let
-            val k = on_kind k
-          in
-            (SpecType ((name, r), k), add_kinding_skct name ctx)
-          end
-        | S.SpecTypeDef ((name, r), t) =>
-          (case t of
-               S.TDatatype (dt, r) =>
-               let
-                 val dt = on_datatype gctx (sctx, kctx) dt
-                 val (tname, cnames) = get_datatype_names dt
-                 val ctx = (sctx, tname :: kctx, rev cnames @ cctx, tctx)
-               in
-                 (SpecTypeDef ((name, r), TDatatype (dt, r)), ctx)
-               end
-             | _ =>
-               let
-                 val t = on_mtype gctx (sctx, kctx) t
-               in
-                 (SpecTypeDef ((name, r), t), add_kinding_skct name ctx)
-               end
-          )
-    fun iter (spec, (specs, ctx)) =
-      let
-        val (spec, ctx) = on_spec ctx spec
-      in
-        (spec :: specs, ctx)
-      end
-    val (comps, ctx) = foldl iter ([], empty_ctx) comps
-    val comps = rev comps
+    val visitor as (EV.ExprVisitor vtable) = new_on_expr_visitor gctx
   in
-    ((comps, r), ctx)
+    EV.visit_sgn_acc visitor (decls, empty_ctx)
+  end
+    
+fun on_module gctx decls =
+  let
+    val visitor as (EV.ExprVisitor vtable) = new_on_expr_visitor gctx
+  in
+    EV.visit_mod_acc visitor (decls, empty_ctx)
   end
     
 fun is_FunctorBind s =
   case s of
       FunctorBind a => SOME a
     | _ => NONE
-
-fun on_module gctx m =
-    case m of
-        S.ModComponents (comps, r) =>
-        let
-          val (comps, ctx) = on_decls gctx empty_ctx comps
-        in
-          (ModComponents (comps, r), ctx)
-        end
-      | S.ModSeal (m, sg) =>
-        let
-          val (sg, ctx) = on_sig gctx sg
-          val (m, _) = on_module gctx m
-        in
-          (ModSeal (m, sg), ctx)
-        end
-      | S.ModTransparentAsc (m, sg) =>
-        let
-          val (sg, _) = on_sig gctx sg
-          val (m, ctx) = on_module gctx m
-        in
-          (ModTransparentAsc (m, sg), ctx)
-        end
 
 fun on_top_bind gctx (name, bind) = 
     case bind of

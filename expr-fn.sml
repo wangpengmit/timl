@@ -5,6 +5,7 @@ signature EXPR_PARAMS = sig
   type idx
   type sort
   type mtype
+  val get_constr_names : mtype -> Namespaces.name list
   type ptrn_constr_tag
   type ty
   type kind
@@ -48,11 +49,12 @@ datatype expr =
          DVal of ebinder * (tbinder list, expr) bind outer * region outer
          | DValPtrn of ptrn * expr outer * region outer
          | DRec of ebinder * (tbinder list * stbind tele rebind, (mtype * idx) * expr) bind inner * region outer
-         | DIdxDef of ibinder * sort outer * idx outer
+         | DIdxDef of ibinder * sort option outer * idx outer
          | DAbsIdx2 of ibinder * sort outer * idx outer
          | DAbsIdx of (ibinder * sort outer * idx outer) * decl tele rebind * region outer
          | DTypeDef of tbinder * mtype outer
          | DOpen of mod_id outer * scoping_ctx option
+         | DConstrDef of cbinder * cvar outer
 
 type name = string * Region.region
 
