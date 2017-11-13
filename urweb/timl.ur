@@ -32,7 +32,7 @@ fun main () =
           <h1>{["TiML"]}</h1>
           <hr/>
           <br/>
-          <ctextarea source={input_source}/>
+          <ctextarea rows=40 cols=160 source={input_source}/>
           <br/>
           <button value="Typecheck" onclick={fn _ => process ()}/><br/>
           <br/>
