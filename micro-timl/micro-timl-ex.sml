@@ -1018,7 +1018,7 @@ fun subst_c_expr_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_
     val shift_e_e = shift_e_e_fn shift_var
     fun visit_EVarConstr this env y =
       let
-        val x = x + unEDepth (get_de env)
+        val x = x + unCDepth (get_dc env)
       in
         case compare_var y x of
             CmpEq =>
@@ -1028,9 +1028,9 @@ fun subst_c_expr_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_
               shift_i_e 0 (unIDepth di) $ shift_t_e 0 (unTDepth dt) $ shift_c_e 0 (unCDepth dc) $ shift_e_e 0 (unEDepth de) v
             end
           | CmpGreater y' =>
-            EVar y'
+            EVarConstr y'
           | _ =>
-            EVar y
+            EVarConstr y
       end
     val vtable = 
         default_expr_visitor_vtable
@@ -1040,7 +1040,7 @@ fun subst_c_expr_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_
           extend_c
           extend_e
           visit_noop
-          (visit_imposs "subst_e_e/visit_cvar")
+          (visit_imposs "subst_c_e/visit_cvar")
           visit_noop
           visit_noop
           visit_noop

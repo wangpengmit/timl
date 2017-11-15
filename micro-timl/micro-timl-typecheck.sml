@@ -706,7 +706,7 @@ fun ctx_names (ictx, tctx, ectx, _) = (map fst ictx, map fst tctx, [], map fst e
 fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
   let
     val () = print "typechecking: "
-    val () = println $ substr 0 40 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
+    val () = println $ substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
     val itctx = (ictx, tctx)
   in
     case e of
@@ -1001,11 +1001,14 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
         let
           val (e1, (name, e2)) = unELetConstr data
           val e = subst0_c_e e1 e2
+          val () = println "After subst0_c_e:"
+          val () = println $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
           val e = eval_constr e
         in
           tc ctx e
         end
-      | _ => raise Impossible $ "tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
+      (* | EPackIs data => *)
+      | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
   end
 
 and tc_against_ty (ctx as (ictx, tctx, _, _)) (e, t) =

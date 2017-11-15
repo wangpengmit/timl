@@ -1,4 +1,7 @@
-stdlib.pkg
+(* basic.timl *)
+list.timl
+
+(* stdlib.pkg *)
 
 (* perversive-list.timl *)
 (* trivial.timl *)
