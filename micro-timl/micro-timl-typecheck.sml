@@ -554,9 +554,9 @@ fun forget01_i_i x = forget_i_i 0 1 x
 fun forget01_i_t x = forget_i_t 0 1 x
 fun forget01_t_t x = forget_t_t 0 1 x
 
-fun collect_TAppI_TAppT_rev t =
+fun collect_TAppIT_rev t =
   let
-    val self = collect_TAppI_TAppT_rev
+    val self = collect_TAppIT_rev
   in
     case t of
         TAppI (t, i) =>
@@ -573,9 +573,10 @@ fun collect_TAppI_TAppT_rev t =
         end
       | _ => (t, [])
   end
-fun collect_TAppI_TAppT t = mapSnd rev $ collect_TAppI_TAppT_rev t
+fun collect_TAppIT t = mapSnd rev $ collect_TAppIT_rev t
 
-fun TAppITs t args = foldl (fn (arg, t) => case arg of inl i => TAppI (t, i) | inr t' => TAppT (t, t')) t args
+fun TAppITs t args =
+  foldl (fn (arg, t) => case arg of inl i => TAppI (t, i) | inr t' => TAppT (t, t')) t args
 
 fun collect_EAbsI_EAbsT e =
   case e of
@@ -751,18 +752,22 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
         end
       | EUnOp (EUFold t', e) =>
         let
-          val (t, args) = collect_TAppI_TAppT t'
+          val (t, args) = collect_TAppIT t'
           val (k, (_, t1)) = case t of
                                  TRec data => unTRec data
                                | _ => raise Error "EFold"
-          val i = tc_against_ty ctx (e, TAppITs (subst0_t_t t t1) args) 
+          val t = TAppITs (subst0_t_t t t1) args
+          val () = println "EFold: before tc_against_ty"
+          val () = println $ "EFold: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t)
+          val i = tc_against_ty ctx (e, t) 
+          val () = println "EFold: after tc_against_ty"
         in
           (t', i)
         end
       | EUnOp (EUUnfold, e) =>
         let
           val (t', i) = tc ctx e
-          val (t, args) = collect_TAppI_TAppT t'
+          val (t, args) = collect_TAppIT t'
           val (k, (_, t1)) = case t of
                                  TRec data => unTRec data
                                | _ => raise Error "EUnfold"
