@@ -775,8 +775,8 @@ fun str_s a =
   (* ToString.SN.strn_s a *)
   const_fun "<sort>" a
 fun pp_t s b =
-  (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
-  str s "<ty>"
+  MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b
+  (* str s "<ty>" *)
 fun pp_e a = MicroTiMLExPP.pp_e_fn (
     str_var,
     str_i,

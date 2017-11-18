@@ -451,6 +451,10 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
       val assert_b = fn b => assert_b "Can't unify types" b
       val t = whnf ctx t
       val t' = whnf ctx t'
+      val () = println $ sprintf "comparing types:\n  $  $" [
+            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t,
+            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t'
+          ]
     in
       case (t, t') of
           (TVar x, TVar x') => assert_b (x = x')
@@ -1040,8 +1044,17 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
 
 and tc_against_ty (ctx as (ictx, tctx, _, _)) (e, t) =
     let
+      val () = println $ sprintf "typechecking against type:\n  $\n  $" [
+            substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e,
+            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t
+          ]
       val (t', i) = tc ctx e
+      val () = println $ sprintf "tc_against_ty() to cmp types:\n  $  $" [
+            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t',
+            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t
+          ]
       val () = is_eq_ty (ictx, tctx) (t', t)
+      val () = println "tc_against_ty() finished"
     in
       i
     end
