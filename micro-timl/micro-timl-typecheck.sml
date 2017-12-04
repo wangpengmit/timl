@@ -945,7 +945,9 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
                                 TQuan (Exists _, data) => unTQuan data
                               | _ => raise Error "EUnpack"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_kinding_full (tname, k) ctx) e2
+          (* val () = println $ "trying to forget: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_kinding_it (tname, k) (ictx, tctx)) t2) *)
           val t2 = forget01_t_t t2
+          (* val () = println "forget finished" *)
         in
           (t2, i1 %+ i2)
         end
@@ -982,8 +984,11 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
                                 TQuanI (Exists _, data) => unTQuanI data
                               | _ => raise Error "EUnpackI"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_sorting_full (iname, s) ctx) e2
+          val () = println $ "trying to forget type: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_sorting_it (iname, s) (ictx, tctx)) t2)
           val t2 = forget01_i_t t2
+          val () = println $ "trying to forget time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (iname :: map fst ictx) i2)
           val i2 = forget01_i_i i2
+          val () = println "forget finished"
         in
           (t2, i1 %+ i2)
         end
