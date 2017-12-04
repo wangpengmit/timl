@@ -457,7 +457,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           ]
     in
       case (t, t') of
-          (TVar x, TVar x') => assert_b (x = x')
+          (TVar x, TVar x') => assert_b (eq_var (x, x'))
         | (TConst c, TConst c') => assert_b (c = c')
         | (TBinOp (opr, t1, t2), TBinOp (opr', t1', t2')) =>
           let
