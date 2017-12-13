@@ -1718,6 +1718,7 @@ and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), (* pcovers, *) (pn, e), t 
       *)
       val () = close_n nps
       val () = close_ctx ctxd
+      val e = EAscTime (EAsc (e, t), d)
     in
       ((pn, e), ((t, d), cover))
     end
