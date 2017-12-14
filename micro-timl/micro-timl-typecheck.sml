@@ -451,10 +451,10 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
       val assert_b = fn b => assert_b "Can't unify types" b
       val t = whnf ctx t
       val t' = whnf ctx t'
-      val () = println $ sprintf "comparing types:\n  $  $" [
-            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t,
-            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t'
-          ]
+      (* val () = println $ sprintf "comparing types:\n  $  $" [ *)
+      (*       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t, *)
+      (*       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t' *)
+      (*     ] *)
     in
       case (t, t') of
           (TVar x, TVar x') => assert_b (eq_var (x, x'))
@@ -715,10 +715,10 @@ fun substr start len s = substring (s, start, min (len, size s - start))
 
 fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
   let
-    val () = print "typechecking: "
-    val () = println $ substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
+    (* val () = print "typechecking: " *)
+    (* val () = println $ substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
     val itctx = (ictx, tctx)
-    val (t, i) = 
+    fun main () =
         case e of
         EVar x =>
         (case nth_error_local ectx x of
@@ -984,11 +984,11 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
                                 TQuanI (Exists _, data) => unTQuanI data
                               | _ => raise Error "EUnpackI"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_sorting_full (iname, s) ctx) e2
-          val () = println $ "trying to forget type: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_sorting_it (iname, s) (ictx, tctx)) t2)
+          (* val () = println $ "trying to forget type: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_sorting_it (iname, s) (ictx, tctx)) t2) *)
           val t2 = forget01_i_t t2
-          val () = println $ "trying to forget time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (iname :: map fst ictx) i2)
+          (* val () = println $ "trying to forget time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (iname :: map fst ictx) i2) *)
           val i2 = forget01_i_i i2
-          val () = println "forget finished"
+          (* val () = println "forget finished" *)
         in
           (t2, i1 %+ i2)
         end
@@ -1034,32 +1034,35 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
         let
           val (e1, (name, e2)) = unELetConstr data
           val e = subst0_c_e e1 e2
-          val () = println "After subst0_c_e:"
-          val () = println $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
+          (* val () = println "After subst0_c_e:" *)
+          (* val () = println $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
           val e = eval_constr e
         in
           tc ctx e
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
-    val () = print "finished typechecking: "
-    val () = println $ substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
+    fun extra_msg () = "when typechecking " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
+    val (t, i) = main ()
+                 handle ForgetError (r, m) => raise Error ("Forgetting error: " ^ m ^ "\n" ^ extra_msg ())
+    (* val () = print "finished typechecking: " *)
+    (* val () = println $ substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
   in
     (t, i)
   end
 
 and tc_against_ty (ctx as (ictx, tctx, _, _)) (e, t) =
     let
-      val () = println $ sprintf "typechecking against type:\n  $\n  $" [
-            substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e,
-            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t
-          ]
+      (* val () = println $ sprintf "typechecking against type:\n  $\n  $" [ *)
+      (*       substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e, *)
+      (*       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
+      (*     ] *)
       val (t', i) = tc ctx e
-      val () = println $ sprintf "tc_against_ty() to cmp types:\n  $  $" [
-            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t',
-            ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t
-          ]
+      (* val () = println $ sprintf "tc_against_ty() to cmp types:\n  $  $" [ *)
+      (*       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t', *)
+      (*       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
+      (*     ] *)
       val () = is_eq_ty (ictx, tctx) (t', t)
-      val () = println "tc_against_ty() finished"
+      (* val () = println "tc_against_ty() finished" *)
     in
       i
     end
@@ -1086,16 +1089,13 @@ fun sort_to_hyps (name, s) =
     | Subset ((b, _), Bind.Bind (_, p), _) => [PropH p, VarH (name, b)]
     | _ => raise Impossible "sort_to_hyps"
       
-fun to_vc (ctx, p) = (rev $ concatMap sort_to_hyps ctx, p)
+fun to_vc (ctx, p) = (concatMap sort_to_hyps ctx, p)
   
 fun runWriter m () =
   let 
-    val () = println "enter runWriter()"
     val () = vcs := []
     val () = admits := []
-    val () = println "before m()"
     val r = m ()
-    val () = println "after m()"
     val vcs = !vcs
     val admits = !admits
     val vcs = map to_vc vcs
@@ -1109,7 +1109,6 @@ fun runWriter m () =
 
 fun typecheck ctx e =
   let
-    val () = println "typecheck()"
   in
     runWriter (fn () => tc ctx e) ()
   end

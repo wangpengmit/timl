@@ -1270,7 +1270,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
           in
             ret
           end
-    fun extra_msg () = ["when type-checking"] @ indent [US.str_e gctxn ctxn e_all]
+    fun extra_msg () = ["when typechecking"] @ indent [US.str_e gctxn ctxn e_all]
     val (e, t, d) = main ()
     handle
     Error (r, msg) => raise Error (r, msg @ extra_msg ())
@@ -1718,7 +1718,7 @@ and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), (* pcovers, *) (pn, e), t 
       *)
       val () = close_n nps
       val () = close_ctx ctxd
-      val e = EAscTime (EAsc (e, t), d)
+      val e = EAscTime (EAsc (e, shift_ctx_mt ctxd t), shift_ctx_i ctxd d)
     in
       ((pn, e), ((t, d), cover))
     end
