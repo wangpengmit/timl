@@ -20,19 +20,19 @@ fun foldl ['a 'b] {m n : Nat} (f : 'a * 'b -- $m --> 'b) acc (l : list 'a {n}) r
       [] => acc
     | x :: xs => foldl f (f (x, acc)) xs
 
-(* (* another version of [foldl] that uses big-O spec *)                      *)
-(* absidx T_foldl : BigO (fn m n => $m * $n) with *)
-(* fun foldl ['a 'b] {m n : Nat} (f : 'a * 'b -- $m --> 'b) y (xs : list 'a {n}) return (* 'b *) using T_foldl m n = *)
-(*         case xs of *)
-(*             [] => y *)
-(*           | x :: xs => foldl f (f (x, y)) xs *)
-(* end *)
+(* another version of [foldl] that uses big-O spec *)
+absidx T_foldl : BigO (fn m n => $m * $n) with
+fun foldl ['a 'b] {m n : Nat} (f : 'a * 'b -- $m --> 'b) y (xs : list 'a {n}) return (* 'b *) using T_foldl m n =
+        case xs of
+            [] => y
+          | x :: xs => foldl f (f (x, y)) xs
+end
 
-(* (* [hd] is a total function that requires its input list to be non-empty *) *)
-(* fun hd {n: Nat | n > 0} (ls: list _ {n}) = *)
-(*     case ls of *)
-(*         x :: _ => x *)
-(*       | _ => never *)
+(* [hd] is a total function that requires its input list to be non-empty *)
+fun hd {n: Nat | n > 0} (ls: list _ {n}) =
+    case ls of
+        x :: _ => x
+      | _ => never
 
 (* (* reverse and append *) *)
 (* fun rev_append {n m : Nat} (l : list _ {n}, acc : list _ {m}) return list _ {n + m} using $n = *)

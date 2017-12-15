@@ -640,6 +640,8 @@ fun outside_arity arity id =
                                                             
 exception MasterTheoremCheckFail of region * string list
 
+structure Unify = UnifyFn (struct exception UnifyError = TypecheckUtil.Error end)
+                          
 local
 exception Succeeded of vc list * vc list
 in

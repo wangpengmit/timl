@@ -1,6 +1,6 @@
 (* unification *)
 
-structure Unify = struct
+functor UnifyFn (exception UnifyError of Region.region * string list) = struct
 open CollectVar
 open ParaSubst
 open Expr
@@ -26,7 +26,7 @@ infixr 1 -->
 infix 1 <->
         
 fun unify_error cls r (s, s') =             
-  Error (r, [sprintf "Can't unify $ " [cls]] @ indent [s] @ ["and"] @ indent [s'])
+  UnifyError (r, [sprintf "Can't unify $ " [cls]] @ indent [s] @ ["and"] @ indent [s'])
 
 (* assumes arguments are already checked for well-formedness *)
 fun unify_bs r (bs, bs') =
@@ -43,7 +43,7 @@ fun unify_bs r (bs, bs') =
         if b = b' then
 	  ()
         else
-	  raise Error (r, [sprintf "Base sort mismatch: $ and $" [str_b b, str_b b']])
+	  raise UnifyError (r, [sprintf "Base sort mismatch: $ and $" [str_b b, str_b b']])
       | _ => raise unify_error "base sort" r (str_bs bs, str_bs bs')
   end
     
@@ -54,14 +54,14 @@ open Util
        
 fun find_injection (eq : 'a -> 'a -> bool) (xs : 'a list) (ys : 'a list) : int list option =
   let
-    exception Error
+    exception FindInjError
     fun f x =
       case findi (fn y => eq x y) ys of
           SOME (n, _) => n
-        | NONE => raise Error
+        | NONE => raise FindInjError
   in
     SOME (map f xs)
-    handle Error => NONE
+    handle FindInjError => NONE
   end
 
 exception UnifyAppUVarFailed of string
@@ -178,7 +178,7 @@ fun is_sub_sort r gctxn ctxn (s : sort, s' : sort) =
       end
     fun structural_compare (s, s') =
       let
-        fun default () = raise Error (r, ["Sort"] @ indent [str_s gctxn ctxn s] @ ["is not a subsort of"] @ indent [str_s gctxn ctxn s'])
+        fun default () = raise UnifyError (r, ["Sort"] @ indent [str_s gctxn ctxn s] @ ["is not a subsort of"] @ indent [str_s gctxn ctxn s'])
       in
         if eq_s s s' then ()
                             (* if one-side is not in a normal form because of uvar, we can't do structural comparison *)
@@ -281,7 +281,7 @@ fun unify_k r (k as (ntargs, sorts), k' as (ntargs', sorts')) =
   in
     ()
   end
-  handle Error _ => raise Error (r, [kind_mismatch (str_k k') str_k k])
+  handle UnifyError _ => raise UnifyError (r, [kind_mismatch (str_k k') str_k k])
                               
 (*      
 fun unify_kind r gctxn sctxn (k, k') =
@@ -294,7 +294,7 @@ fun unify_kind r gctxn sctxn (k, k') =
         in
           ()
         end
-        handle Error _ => raise Error (r, [kind_mismatch gctxn sctxn (str_k gctxn sctxn k) k'])
+        handle UnifyError _ => raise UnifyError (r, [kind_mismatch gctxn sctxn (str_k gctxn sctxn k) k'])
 *)
     
 fun unify_mt r gctx ctx (t, t') =
@@ -485,7 +485,7 @@ fun is_sub_kindext r gctx ctx (ke as (k, t), ke' as (k', t')) =
         (NONE, NONE) => ()
       | (SOME t, SOME t') => unify_mt r gctx ctx (t, t')
       | (SOME _, NONE) => ()
-      | (_, _) => raise Error (r, [sprintf "Kind $ is not a sub kind of $" [str_ke gctxn (sctxn, kctxn) ke, str_ke gctxn (sctxn, kctxn) ke']])
+      | (_, _) => raise UnifyError (r, [sprintf "Kind $ is not a sub kind of $" [str_ke gctxn (sctxn, kctxn) ke, str_ke gctxn (sctxn, kctxn) ke']])
   end
 
 end

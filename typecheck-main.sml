@@ -11,6 +11,7 @@ open Package
 open TypecheckUtil
 open ToStringRaw
 open UVar
+structure Unify = UnifyFn (struct exception UnifyError = TypecheckUtil.Error end)
 open Unify
 open FreshUVar
 open UVarForget

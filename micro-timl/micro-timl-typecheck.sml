@@ -2,10 +2,16 @@ structure MicroTiMLTypecheck = struct
 
 open UVar
 open TypecheckUtil
-open Unify
 open FreshUVar
 open Expr
 
+exception MTCError of string
+exception MSCError of region * string list
+exception MUnifyError of region * string list
+
+structure Unify = UnifyFn (struct exception UnifyError = MUnifyError end)
+open Unify
+       
 infixr 0 $
 infixr 0 !!
        
@@ -26,9 +32,9 @@ fun is_wf_bsort_UVarBS data = UVarBS data
     
 fun get_bsort_UVarI gctx ctx (data as (x, r)) =
   let
-    val (_, _, bs) = get_uvar_info x !! (fn () => raise Impossible "get_bsort_UVarI")
+    val (_, ctx, bs_ret) = get_uvar_info x !! (fn () => raise Impossible "get_bsort_UVarI")
   in
-    (UVarI data, bs)
+    (UVarI data, foldl (fn ((_, bs_arg), acc) => BSArrow (bs_arg, acc)) bs_ret ctx)
   end
 
 fun match_BSArrow gctx ctx r bs =
@@ -70,7 +76,7 @@ structure Sortcheck = SortcheckFn (structure U = Expr
                                    val open_close = open_close
                                    val add_sorting = add_sorting
                                    val update_bs = update_bs
-                                   exception Error = Error
+                                   exception Error = MSCError
                                    val get_base = get_base
                                    val gctx_names = gctx_names
                                    val normalize_s = normalize_s
@@ -89,8 +95,6 @@ open MicroTiMLEx
 fun sc_against_sort ctx (i, s) = ignore $ check_sort Gctx.empty (ctx, i, s)
 
 fun is_wf_sort ctx s = ignore $ Sortcheck.is_wf_sort Gctx.empty (ctx, s)
-
-exception Error of string
 
 fun INat n = ConstIN (n, dummy)
 fun IMax (i1, i2) = BinOpI (MaxI, i1, i2)
@@ -177,7 +181,7 @@ fun is_eq_sort ctx (s, s') =
       in
         ()
       end
-    | _ => raise Error "is_eq_sort"
+    | _ => raise MTCError "is_eq_sort"
                                        
 fun is_eq_kind (k, k') =
   case (k, k') of
@@ -196,7 +200,7 @@ fun is_eq_kind (k, k') =
       in
         ()
       end
-    | _ => raise Error "can't unify kinds" 
+    | _ => raise MTCError "can't unify kinds" 
        
 fun get_ty_const_kind c =
   case c of
@@ -222,7 +226,7 @@ fun get_ty_bin_op_res_kind opr =
 fun nth_error_local ls x =
   case x of
       ID (n, _) => nth_error ls n
-    | QID _ => raise Error "nth_error QID"
+    | QID _ => raise MTCError "nth_error QID"
                       
 type icontext = (string * sort) list
 type tcontext = (string * bsort kind) list
@@ -235,7 +239,7 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t : bsort kind =
       TVar x =>
       (case nth_error_local tctx x of
            SOME (_, k) => k
-         | NONE => raise Error "unbound type variable"
+         | NONE => raise MTCError "unbound type variable"
       )
     | TConst c => get_ty_const_kind c
     | TBinOp (opr, t1, t2) =>
@@ -265,7 +269,7 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t : bsort kind =
         val k' = kc ctx t
         val (b, k) = case k' of
                          KArrow data => data
-                       | _ => raise Error "TAppI"
+                       | _ => raise MTCError "TAppI"
         val () = sc_against_sort ictx (i, BasicSort b)
       in
         k
@@ -282,7 +286,7 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t : bsort kind =
         val k' = kc ctx t1
         val (k1, k2) = case k' of
                          KArrowT data => data
-                       | _ => raise Error "TAppT"
+                       | _ => raise MTCError "TAppT"
         val () = kc_against_kind ctx (t2, k1)
       in
         k2
@@ -422,12 +426,12 @@ val str = PP.string
 fun str_var x = LongId.str_raw_long_id id(*str_int*) x
 fun str_i a =
   (* ToStringRaw.str_raw_i a *)
-  (* ToString.SN.strn_i a *)
-  const_fun "<idx>" a
+  ToString.SN.strn_i a
+  (* const_fun "<idx>" a *)
 fun str_s a =
   (* ToStringRaw.str_raw_s a *)
-  (* ToString.SN.strn_s a *)
-  const_fun "<sort>" a
+  ToString.SN.strn_s a
+  (* const_fun "<sort>" a *)
 fun pp_t_to s b =
   MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b
   (* str s "<ty>" *)
@@ -544,7 +548,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           in
             ()
           end
-        | _ => raise Error $ sprintf "unknown case in is_eq_ty:\n  $  $"
+        | _ => raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
                      [
                        ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t,
                        ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t'
@@ -723,20 +727,20 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
         EVar x =>
         (case nth_error_local ectx x of
              SOME (_, t) => (t, T0)
-           | NONE => raise Error "Unbound term variable"
+           | NONE => raise MTCError "Unbound term variable"
         )
       | EConst c => (get_expr_const_type c, T0)
       | ELoc l =>
         (case HeapMap.find (hctx, l) of
              SOME (t, i) => (TArr (t, i), T0)
-           | NONE => raise Error "Unbound location"
+           | NONE => raise MTCError "Unbound location"
         )
       | EUnOp (EUProj proj, e) =>
         let
           val (t, i) = tc ctx e
           val (t1, t2) = case t of
                              TBinOp (TBProd, t1, t2) => (t1, t2)
-                           | _ => raise Error "EProj"
+                           | _ => raise MTCError "EProj"
           fun choose (t1, t2) proj =
             case proj of
                 ProjFst => t1
@@ -759,12 +763,12 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t, args) = collect_TAppIT t'
           val (k, (_, t1)) = case t of
                                  TRec data => unTRec data
-                               | _ => raise Error "EFold"
+                               | _ => raise MTCError "EFold"
           val t = TAppITs (subst0_t_t t t1) args
-          val () = println "EFold: before tc_against_ty"
-          val () = println $ "EFold: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t)
+          (* val () = println "EFold: before tc_against_ty" *)
+          (* val () = println $ "EFold: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t) *)
           val i = tc_against_ty ctx (e, t) 
-          val () = println "EFold: after tc_against_ty"
+          (* val () = println "EFold: after tc_against_ty" *)
         in
           (t', i)
         end
@@ -774,7 +778,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t, args) = collect_TAppIT t'
           val (k, (_, t1)) = case t of
                                  TRec data => unTRec data
-                               | _ => raise Error "EUnfold"
+                               | _ => raise MTCError "EUnfold"
         in
           (TAppITs (subst0_t_t t t1) args, i)
         end
@@ -792,7 +796,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t, i1) = tc ctx e1
           val (t1, i, t2) = case t of
                                 TArrow data => data
-                              | _ => raise Error "EApp"
+                              | _ => raise MTCError "EApp"
           val i2 = tc_against_ty ctx (e2, t1)
         in
           (t2, i1 %+ i2 %+ T1 %+ i)
@@ -809,7 +813,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t1, j1) = tc ctx e1
           val i = case t1 of
                       TNat i => i
-                    | _ => raise Error "ENew"
+                    | _ => raise MTCError "ENew"
           val (t, j2) = tc ctx e2
         in
           (TArr (t, i), j1 %+ j2)
@@ -819,11 +823,11 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t1, j1) = tc ctx e1
           val (t, i1) = case t1 of
                             TArr data => data
-                          | _ => raise Error "ERead 1"
+                          | _ => raise MTCError "ERead 1"
           val (t2, j2) = tc ctx e2
           val i2 = case t2 of
                        TNat i => i
-                     | _ => raise Error "ERead 2"
+                     | _ => raise MTCError "ERead 2"
           val () = check_prop ictx (i2 %< i1)
         in
           (t, j1 %+ j2)
@@ -833,11 +837,11 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t1, j1) = tc ctx e1
           val i1 = case t1 of
                        TNat i => i
-                     | _ => raise Error "ENatAdd 1"
+                     | _ => raise MTCError "ENatAdd 1"
           val (t2, j2) = tc ctx e2
           val i2 = case t2 of
                        TNat i => i
-                     | _ => raise Error "ENatAdd 2"
+                     | _ => raise MTCError "ENatAdd 2"
         in
           (TNat (i1 %+ i2), j1 %+ j2)
         end
@@ -846,11 +850,11 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t1, j1) = tc ctx e1
           val (t, i1) = case t1 of
                             TArr data => data
-                          | _ => raise Error "ERead 1"
+                          | _ => raise MTCError "ERead 1"
           val (t2, j2) = tc ctx e2
           val i2 = case t2 of
                        TNat i => i
-                     | _ => raise Error "ERead 2"
+                     | _ => raise MTCError "ERead 2"
           val () = check_prop ictx (i2 %< i1)
           val j3 = tc_against_ty ctx (e3, t)
         in
@@ -862,7 +866,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t, i) = tc ctx e
           val (t1, t2) = case whnf itctx t of
                              TBinOp (TBSum, t1, t2) => (t1, t2)
-                           | _ => raise Error $ "ECase: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (map fst ictx, map fst tctx) t)
+                           | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (map fst ictx, map fst tctx) t)
           val (t1, i1) = tc (add_typing_full (name1, t1) ctx) e1
           val (t2, i2) = tc (add_typing_full (name2, t2) ctx) e2
           val () = is_eq_ty itctx (t1, t2)
@@ -883,7 +887,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (_, e') = collect_EAbsI_EAbsT e
           val () = case e' of
                        EAbs _ => ()
-                     | _ => raise Error "ERec"
+                     | _ => raise MTCError "ERec"
           val () = kc_against_kind itctx (t, KType)
           val () = tc_against_ty_time (add_typing_full (name, t) ctx) (e, t, T0)
         in
@@ -902,7 +906,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t', i) = tc ctx e
           val (_, (_, t)) = case t' of
                                 TQuan (Forall, data) => unTQuan data
-                              | _ => raise Error "EAppT"
+                              | _ => raise MTCError "EAppT"
           val () = kc_against_kind itctx (t1, KType)
         in
           (subst0_t_t t1 t, i)
@@ -921,7 +925,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t', j) = tc ctx e
           val (s, (_, t)) = case t' of
                                 TQuanI (Forall, data) => unTQuanI data
-                              | _ => raise Error "EAppT"
+                              | _ => raise MTCError "EAppT"
           val () = sc_against_sort ictx (i, s)
         in
           (subst0_i_t i t, j)
@@ -931,7 +935,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val () = kc_against_kind itctx (t', KType)
           val (k, (_, t)) = case t' of
                                 TQuan (Exists _, data) => unTQuan data
-                              | _ => raise Error "EPack"
+                              | _ => raise MTCError "EPack"
           val () = kc_against_kind itctx (t1, k)
           val i = tc_against_ty ctx (e, subst0_t_t t1 t)
         in
@@ -943,7 +947,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t', i1) = tc ctx e1
           val (k, (_, t)) = case t' of
                                 TQuan (Exists _, data) => unTQuan data
-                              | _ => raise Error "EUnpack"
+                              | _ => raise MTCError "EUnpack"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_kinding_full (tname, k) ctx) e2
           (* val () = println $ "trying to forget: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_kinding_it (tname, k) (ictx, tctx)) t2) *)
           val t2 = forget01_t_t t2
@@ -956,7 +960,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val () = kc_against_kind itctx (t', KType)
           val (s, (_, t)) = case t' of
                                 TQuanI (Exists _, data) => unTQuanI data
-                              | _ => raise Error "EPackI"
+                              | _ => raise MTCError "EPackI"
           val () = sc_against_sort ictx (i, s)
           val j = tc_against_ty ctx (e, subst0_i_t i t)
         in
@@ -971,7 +975,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
               let
                 val (_, (_, t')) = case t of
                                       TQuanI (Exists _, data) => unTQuanI data
-                                    | _ => raise Error "EPackIs"
+                                    | _ => raise MTCError "EPackIs"
               in
                 tc ctx $ EPackI (t, i, EPackIs (subst0_i_t i t', is, e))
               end
@@ -982,7 +986,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t', i1) = tc ctx e1
           val (s, (_, t)) = case t' of
                                 TQuanI (Exists _, data) => unTQuanI data
-                              | _ => raise Error "EUnpackI"
+                              | _ => raise MTCError "EUnpackI"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_sorting_full (iname, s) ctx) e2
           (* val () = println $ "trying to forget type: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_sorting_it (iname, s) (ictx, tctx)) t2) *)
           val t2 = forget01_i_t t2
@@ -1041,9 +1045,13 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           tc ctx e
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
-    fun extra_msg () = "when typechecking " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
+    fun extra_msg () = "\nwhen typechecking " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
     val (t, i) = main ()
-                 handle ForgetError (r, m) => raise Error ("Forgetting error: " ^ m ^ "\n" ^ extra_msg ())
+                 handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
+                      | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())
+                      | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
+                      | MTCError m => raise MTCError (m ^ extra_msg ())
+                      | Impossible m => raise Impossible (m ^ extra_msg ())
     (* val () = print "finished typechecking: " *)
     (* val () = println $ substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
   in
@@ -1218,8 +1226,8 @@ fun test1 dirname =
   in
     ((* t, e *))
   end
-  handle MicroTiMLTypecheck.Error msg => (println $ "MTiMLTC.Error: " ^ msg; fail ())
-       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End")
+  handle MicroTiMLTypecheck.MTCError msg => (println $ "MTiMLTC.MTCError: " ^ msg; fail ())
+       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; fail ())
     
 val test_suites = [
       test1
