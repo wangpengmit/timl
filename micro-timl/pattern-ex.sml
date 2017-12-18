@@ -594,11 +594,11 @@ fun remove_constr_k params (p, pk) =
 
 fun remove_constr (params as (shift_i_e, str_e)) p =
   let
-    val str_pn = str_pn str_e
-    val () = println $ "before remove_constr: " ^ str_pn p
+    (* val str_pn = str_pn str_e *)
+    (* val () = println $ "before remove_constr: " ^ str_pn p *)
     val p = fst $ remove_constr_k params (p, PnTT $ Outer dummy)
-    val () = println $ "after remove_constr: " ^ str_pn p
-    val () = println ""
+    (* val () = println $ "after remove_constr: " ^ str_pn p *)
+    (* val () = println "" *)
   in
     p
   end
@@ -652,7 +652,6 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
     fun is_all_TT ps = app (fn p => case p of PnTT _ => () | PnWildcard => () | _ => raise Impossible "is_all_TT()") ps
     fun is_all_Pair ps = unzip $ map (fn p => case p of PnPair p => p | PnWildcard => (PnWildcard, PnWildcard) | _ => raise Impossible "is_all_Pair()") ps
     fun is_all_Unfold ps = map (fn p => case p of PnUnfold p => p | PnWildcard => PnWildcard | _ => raise Impossible "is_all_Unfold()") ps
-    fun is_all_UnpackI ps = map (fn p => case p of PnUnpackI (_, p) => p | PnWildcard => PnWildcard | _ => raise Impossible "is_all_UnpackI()") ps
     fun group_inj n ps =
       let
         fun do_group (p, acc) =
@@ -753,8 +752,20 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                         val matchees = map (shift_i_e 0 1) matchees
                         val pks = map (shift_e_pn 0 1) pks
                         (* don't need to (shift_i_pn pks) because pks already know the index var *)
-                        val (pns, pks) = split_first_column pks
-                        val pns = is_all_UnpackI pns
+                        fun shift_i_pn x n p = shift_i_pn_fn shift_i_e (shift_imposs "remove_deep/shift_i_mt()") x n p
+                        fun is_all_UnpackI ps =
+                          unzip $ map
+                                (fn p =>
+                                    case p of
+                                        PnPair (p1, p2) =>
+                                        (case p1 of
+                                             PnUnpackI (_, p) => (p, p2)
+                                           | PnWildcard => (PnWildcard, shift_i_pn 0 1 p2)
+                                           | _ => raise Impossible "is_all_UnpackI()"
+                                        )
+                                      | _ => raise Impossible "is_all_UnpakcI()/split"
+                                ) ps
+                        val (pns, pks) = is_all_UnpackI pks
                         val ename = lazy_default fresh_name $ get_alias pns
                       in
                         EUnpackI (matchee, BindSimp (iname, BindSimp (ename, remove_deep_many (EV 0 :: matchees) (add_column pns pks))))
@@ -769,7 +780,6 @@ fun get_and_inc r =
   let
     val v = !r
     val () = r := v + 1
-    val () = if v = 14 then println "hit x14" else ()
   in
     v
   end
@@ -787,13 +797,13 @@ fun remove_deep params matchee =
   
 fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e)) matchee branches : ('var, 'idx, 'sort, 'kind, 'ty) expr =
   let
-    val str_pn = str_pn str_e
-    val () = println $ "before to_expr: " ^ str_ls str_pn branches
+    (* val str_pn = str_pn str_e *)
+    (* val () = println $ "before to_expr: " ^ str_ls str_pn branches *)
     val branches = map remove_anno branches
     val branches = map (remove_constr (shift_i_e, str_e)) branches
     val branches = map remove_var branches
     val e = remove_deep params matchee branches
-    val () = println $ "after to_expr: " ^ str_e e
+    (* val () = println $ "after to_expr: " ^ str_e e *)
   in
     e
   end
