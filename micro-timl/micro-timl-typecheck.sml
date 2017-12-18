@@ -1138,14 +1138,15 @@ infixr 0 $
 infixr 0 !!
          
 fun short_to_long_id x = ID (x, dummy)
-fun export_var sel ctx id =
+fun export_var (sel : 'ctx -> string list) (ctx : 'ctx) id =
   let
     fun unbound s = "__unbound_" ^ s
     (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
   in
     case id of
         ID (x, _) =>
-        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+        (* short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x) *)
+        short_to_long_id $ str_int x
       | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
   end
 (* val export_i = return2 *)

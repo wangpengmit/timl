@@ -355,6 +355,50 @@ fun on_e (e : S.expr) =
         val name = default (EName ("__x", dummy)) $ firstSuccess get_pn_alias $ map fst rules
         val pns = map PnBind rules
         val pns = map (shift_e_pn 0 1) pns
+        (* val shift_i_e = fn x => fn n => fn e => *)
+        (*   let *)
+        (*     val e' = shift_i_e x n e *)
+        (*     val () =  *)
+        (*         case (e, e') of *)
+        (*             (EVar y, EVar y') => *)
+        (*             let *)
+        (*               val () = println $ sprintf "shift_i EVar: n=$, e=$, e'=$" [str_int n, LongId.str_raw_long_id str_int y, LongId.str_raw_long_id str_int y'] *)
+        (*             in *)
+        (*               () *)
+        (*             end *)
+        (*           | _ => () *)
+        (*   in *)
+        (*     e' *)
+        (*   end *)
+        val shift_e_e = fn x => fn n => fn e =>
+          let
+            val e' = shift_e_e x n e
+            fun str_var x = LongId.str_raw_long_id str_int x
+            fun str_i a =
+              (* ToStringRaw.str_raw_i a *)
+              (* ToString.SN.strn_i a *)
+              const_fun "<idx>" a
+            fun str_s a =
+              (* ToStringRaw.str_raw_s a *)
+              (* ToString.SN.strn_s a *)
+              const_fun "<sort>" a
+            val str = PP.string
+            fun pp_t_to s b =
+              (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
+              str s "<ty>"
+            fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
+            fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
+            fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
+                str_var,
+                str_i,
+                str_s,
+                const_fun "<kind>",
+                pp_t_to
+              ) a
+            val () = println $ sprintf "shift_e: x=$, n=$, e=$, e'=$" [str_int x, str_int n, pp_e_to_string e, pp_e_to_string e']
+          in
+            e'
+          end
         val e2 = to_expr (shift_i_e, shift_e_e, subst_e_e, EV) (EV 0) pns
       in
         ELet (e, BindSimp (name, e2))
@@ -754,7 +798,7 @@ structure U = UnderscoredExpr
 (* val src = TDatatype (, ()) *)
 
 fun short_to_long_id x = ID (x, dummy)
-fun export_var sel ctx id =
+fun export_var (sel : 'ctx -> string list) (ctx : 'ctx) id =
   let
     (* fun unbound s = "__unbound_" ^ s *)
     fun unbound s = raise Impossible $ "Unbound identifier: " ^ s
@@ -762,6 +806,7 @@ fun export_var sel ctx id =
     case id of
         ID (x, _) =>
         short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+        (* short_to_long_id $ str_int x *)
       | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
   end
 (* val export_i = return2 *)

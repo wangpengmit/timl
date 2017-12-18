@@ -483,9 +483,9 @@ fun remove_var_ptrn_visitor_vtable cast ()
     : ('this, 'env, 'expr, 'mtype, 'expr, 'mtype) ptrn_visitor_vtable =
   let
     fun visit_PnVar this env data =
-      if fst (unBinderName data) = "_" then
-        PnWildcard
-      else
+      (* if fst (unBinderName data) = "_" then *)
+      (*   PnWildcard *)
+      (* else *)
         PnAlias (data, PnWildcard, Outer dummy)
     val vtable =
         default_ptrn_visitor_vtable
@@ -663,7 +663,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV)
     fun split_first_column ps = unzip $ map (fn p => case p of PnPair p => p | _ => raise Impossible "split_first_column()") ps
     fun add_column ps pks = map PnPair $ zip (ps, pks)
     (* val () = println $ "before " ^ str_int (length matchees) *)
-    (* val () = println $ str_ls str_pn pks *)
+    val () = println $ str_ls str_pn pks
     val result =
         case matchees of
             [] =>
@@ -728,6 +728,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV)
                         val matchees = map (shift_e_e 0 1) matchees
                         val matchees = map (shift_i_e 0 1) matchees
                         val pks = map (shift_e_pn 0 1) pks
+                        (* don't need to (shift_i_pn pks) because pks already know the index var *)
                         val (pns, pks) = split_first_column pks
                         val pns = is_all_UnpackI pns
                         val ename = lazy_default fresh_name $ get_alias pns
