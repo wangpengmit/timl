@@ -325,6 +325,33 @@ end
                  
 fun EV n = EVar (ID (n, dummy))
 
+structure PP_E = struct
+
+fun str_var x = LongId.str_raw_long_id str_int x
+fun str_i a =
+  ToStringRaw.str_raw_i a
+(* ToString.SN.strn_i a *)
+(* const_fun "<idx>" a *)
+fun str_s a =
+  (* ToStringRaw.str_raw_s a *)
+  (* ToString.SN.strn_s a *)
+  const_fun "<sort>" a
+val str = PP.string
+fun pp_t_to s b =
+  (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
+  str s "<ty>"
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
+fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
+fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
+    str_var,
+    str_i,
+    str_s,
+    const_fun "<kind>",
+    pp_t_to
+  ) a
+                                                                   
+end
+                   
 fun on_e (e : S.expr) =
   case e of
       S.EVar (x, _) => EVar x
@@ -370,36 +397,14 @@ fun on_e (e : S.expr) =
         (*   in *)
         (*     e' *)
         (*   end *)
-        val shift_e_e = fn x => fn n => fn e =>
-          let
-            val e' = shift_e_e x n e
-            fun str_var x = LongId.str_raw_long_id str_int x
-            fun str_i a =
-              (* ToStringRaw.str_raw_i a *)
-              (* ToString.SN.strn_i a *)
-              const_fun "<idx>" a
-            fun str_s a =
-              (* ToStringRaw.str_raw_s a *)
-              (* ToString.SN.strn_s a *)
-              const_fun "<sort>" a
-            val str = PP.string
-            fun pp_t_to s b =
-              (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
-              str s "<ty>"
-            fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
-            fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
-            fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
-                str_var,
-                str_i,
-                str_s,
-                const_fun "<kind>",
-                pp_t_to
-              ) a
-            val () = println $ sprintf "shift_e: x=$, n=$, e=$, e'=$" [str_int x, str_int n, pp_e_to_string e, pp_e_to_string e']
-          in
-            e'
-          end
-        val e2 = to_expr (shift_i_e, shift_e_e, subst_e_e, EV) (EV 0) pns
+        (* val shift_e_e = fn x => fn n => fn e => *)
+        (*   let *)
+        (*     val e' = shift_e_e x n e *)
+        (*     val () = println $ sprintf "shift_e: x=$, n=$, e=$, e'=$" [str_int x, str_int n, pp_e_to_string e, pp_e_to_string e'] *)
+        (*   in *)
+        (*     e' *)
+        (*   end *)
+        val e2 = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, PP_E.pp_e_to_string) (EV 0) pns
       in
         ELet (e, BindSimp (name, e2))
       end

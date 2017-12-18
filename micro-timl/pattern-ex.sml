@@ -56,19 +56,23 @@ fun from_TiML_ptrn p =
 local
   fun get_name (Binder (_, (name, _))) = name
 in
-fun str_pn p =
-  case p of
-      PnVar name => sprintf "PnVar $" [get_name name]
-    | PnTT _ => "PnTT"
-    | PnPair (p1, p2) => sprintf "PnPair ($, $)" [str_pn p1, str_pn p2]
-    | PnAlias (name, p, _) => sprintf "PnAlias ($, $)" [get_name name, str_pn p]
-    | PnConstr (Outer inj, names, p, _) => sprintf "PnConstr ($, $, $)" [str_pair (str_int, str_int) inj, str_ls get_name names, str_pn p]
-    | PnAnno (p, _) => sprintf "PnAnno ($, <mtype>)" [str_pn p]
-    | PnInj (Outer inj, p) => sprintf "PnInj ($, $)" [str_pair (str_int, str_int) inj, str_pn p]
-    | PnUnfold p => sprintf "PnUnfold ($)" [str_pn p]
-    | PnUnpackI (name, p) => sprintf "PnUnpackI ($, $)" [get_name name, str_pn p]
-    | PnExpr _ => "PnExpr <expr>"
-    | PnWildcard => "PnWildcard"
+fun str_pn str_e p =
+  let
+    val str_pn = str_pn str_e
+  in
+    case p of
+        PnVar name => sprintf "PnVar $" [get_name name]
+      | PnTT _ => "PnTT"
+      | PnPair (p1, p2) => sprintf "PnPair ($, $)" [str_pn p1, str_pn p2]
+      | PnAlias (name, p, _) => sprintf "PnAlias ($, $)" [get_name name, str_pn p]
+      | PnConstr (Outer inj, names, p, _) => sprintf "PnConstr ($, $, $)" [str_pair (str_int, str_int) inj, str_ls get_name names, str_pn p]
+      | PnAnno (p, _) => sprintf "PnAnno ($, <mtype>)" [str_pn p]
+      | PnInj (Outer inj, p) => sprintf "PnInj ($, $)" [str_pair (str_int, str_int) inj, str_pn p]
+      | PnUnfold p => sprintf "PnUnfold ($)" [str_pn p]
+      | PnUnpackI (name, p) => sprintf "PnUnpackI ($, $)" [get_name name, str_pn p]
+      | PnExpr e => sprintf "PnExpr $" [str_e $ unInner e(* "<expr>" *)]
+      | PnWildcard => "PnWildcard"
+  end
 end
 
 (* fun PnInj (inj, p) = PnUnOp (PnUOInj inj, p) *)
@@ -516,16 +520,25 @@ fun shift_imposs msg _ _ _ = raise Impossible msg
 
 fun PnUnpackIMany (names, p) = foldr PnUnpackI p names
                                     
-fun remove_constr_ptrn_visitor_vtable (cast : 'this -> ('this, ('mtype, 'expr) ptrn ref, 'mtype, 'expr, 'mtype2, 'expr) ptrn_visitor_interface) shift_i_e
+fun remove_constr_ptrn_visitor_vtable (cast : 'this -> ('this, ('mtype, 'expr) ptrn ref, 'mtype, 'expr, 'mtype2, 'expr) ptrn_visitor_interface) (shift_i_e, str_e)
     : ('this, ('mtype, 'expr) ptrn ref, 'mtype, 'expr, 'mtype2, 'expr) ptrn_visitor_vtable =
   let
     fun shift_i p = shift_i_pn_fn shift_i_e (shift_imposs "remove_constr/shift_i_mt()") 0 1 p
+    val str_pn = str_pn str_e
     fun visit_PnConstr this (env : ('mtype, 'expr) ptrn ref ctx) data =
       let
         val vtable = cast this
         val (Outer x, inames, p, r) = data
+        (* val () = println $ "before shift_i: " ^ str_pn p *)
+        (* val () = println $ "pk: " ^ str_pn (!(#outer env)) *)
         val p = shift_i p
-        val () = unop_ref shift_i $ #outer env
+        val pk = !(#outer env)
+        val (p, pk) = case shift_i $ PnPair (p, pk) of
+                          PnPair a => a
+                        | _ => raise Impossible "remove_constr()/shift"
+        val () = #outer env := pk
+        (* val () = println $ "after shift_i: " ^ str_pn p *)
+        (* val () = println $ "pk: " ^ str_pn (!(#outer env)) *)
         val p = #visit_ptrn vtable this env p
         val extra_name = "__VC"
         val p = PnUnpackI (Binder $ IName extra_name, p)
@@ -569,9 +582,9 @@ fun remove_constr_ptrn_visitor_vtable (cast : 'this -> ('this, ('mtype, 'expr) p
 fun new_remove_constr_ptrn_visitor params = new_ptrn_visitor remove_constr_ptrn_visitor_vtable params
 
 (* with the 'continuation pattern' *)                                                             
-fun remove_constr_k shift_i_e (p, pk) =
+fun remove_constr_k params (p, pk) =
   let
-    val visitor as (PtrnVisitor vtable) = new_remove_constr_ptrn_visitor shift_i_e
+    val visitor as (PtrnVisitor vtable) = new_remove_constr_ptrn_visitor params
     val env = ref pk
     val p = #visit_ptrn vtable visitor (env2ctx env) p
     val pk = !env
@@ -579,7 +592,15 @@ fun remove_constr_k shift_i_e (p, pk) =
     (p, pk)
   end
 
-fun remove_constr shift_i_e p = fst $ remove_constr_k shift_i_e (p, PnTT $ Outer dummy) 
+fun remove_constr (params as (shift_i_e, str_e)) p =
+  let
+    val str_pn = str_pn str_e
+    (* val () = println $ "before remove_constr: " ^ str_pn p *)
+    val p = fst $ remove_constr_k params (p, PnTT $ Outer dummy)
+    (* val () = println $ "after remove_constr: " ^ str_pn p *)
+  in
+    p
+  end
     
 (***************** the "remove_deep" visitor  **********************)    
 
@@ -592,11 +613,12 @@ fun get_pn_alias p =
              
 open MicroTiMLEx
        
-fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV)) matchees pks =
+fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e)) matchees pks =
   let
     fun shift_e_pn a = shift_e_pn_fn shift_e_e a
     fun subst0_e_pn a = subst0_e_pn_fn subst_e_e a
     val remove_deep_many = remove_deep_many fresh_name params
+    val str_pn = str_pn str_e
     fun remove_top_aliases e p =
       case p of
           PnPair (p1, pk) =>
@@ -663,7 +685,8 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV)
     fun split_first_column ps = unzip $ map (fn p => case p of PnPair p => p | _ => raise Impossible "split_first_column()") ps
     fun add_column ps pks = map PnPair $ zip (ps, pks)
     (* val () = println $ "before " ^ str_int (length matchees) *)
-    val () = println $ str_ls str_pn pks
+    (* val () = println $ str_ls str_pn pks *)
+    (* val () = println "" *)
     val result =
         case matchees of
             [] =>
@@ -760,12 +783,12 @@ fun remove_deep params matchee =
     remove_deep_many fresh_name params [matchee]
   end
   
-fun to_expr (shift_i_e, shift_e_e, subst_e_e, EV) matchee branches : ('var, 'idx, 'sort, 'kind, 'ty) expr =
+fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e)) matchee branches : ('var, 'idx, 'sort, 'kind, 'ty) expr =
   let
     val branches = map remove_anno branches
-    val branches = map (remove_constr shift_i_e) branches
+    val branches = map (remove_constr (shift_i_e, str_e)) branches
     val branches = map remove_var branches
-    val e = remove_deep (shift_i_e, shift_e_e, subst_e_e, EV) matchee branches
+    val e = remove_deep params matchee branches
   in
     e
   end
@@ -788,7 +811,9 @@ fun compare_var y x =
       CmpGreater (y - 1)
     else CmpOther
   end
-    
+
+fun pp_e_to_string e = "<E>"
+                      
 fun test () =
   let
     open Expr
@@ -805,9 +830,9 @@ fun test () =
     val p = PnAnno (PnPair (PnAnno (PnTT dummy, Outer ()), PnAnno (PnTT dummy, Outer ())), Outer ())
     val p1 = remove_anno p
     val p2 = PnConstr (Outer (5,1), [Binder $ IName "a", Binder $ IName "b"], PnPair (PnTT dummy, PnExpr $ Inner (EAppI (EVar 0, IVar 2))), dummy)
-    val p3 = remove_constr shift_i_e p2
+    val p3 = remove_constr (shift_i_e, pp_e_to_string) p2
     val p4 = PnPair (PnConstr (Outer (5,1), [Binder $ IName "a", Binder $ IName "b"], PnTT dummy, dummy), PnExpr $ Inner (EAppI (EVar 0, IVar 2)))
-    val p5 = remove_constr shift_i_e p4
+    val p5 = remove_constr (shift_i_e, pp_e_to_string) p4
   in
     (p, p1, p3, p5)
   end
@@ -836,7 +861,7 @@ fun test2 () =
           (PnConstr (Outer (2, 1), [Binder $ IName "n"], PnPair (PnVar $ Binder $ EName "x", PnVar $ Binder $ EName "xs"), dummy), EAppI (EV 2, IVar 0))
         ]
     val branches = map PnBind branches
-    val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV) (EV 0) branches
+    val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, pp_e_to_string) (EV 0) branches
     open ToStringRaw
     open ToString
     fun str2pp f s t = PP.string s $ f t

@@ -1145,8 +1145,8 @@ fun export_var (sel : 'ctx -> string list) (ctx : 'ctx) id =
   in
     case id of
         ID (x, _) =>
-        (* short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x) *)
-        short_to_long_id $ str_int x
+        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+        (* short_to_long_id $ str_int x *)
       | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
   end
 (* val export_i = return2 *)
@@ -1158,8 +1158,8 @@ val str = PP.string
 fun str_var x = LongId.str_raw_long_id id(*str_int*) x
 fun str_i a =
   (* ToStringRaw.str_raw_i a *)
-  (* ToString.SN.strn_i a *)
-  const_fun "<idx>" a
+  ToString.SN.strn_i a
+  (* const_fun "<idx>" a *)
 fun str_s a =
   (* ToStringRaw.str_raw_s a *)
   (* ToString.SN.strn_s a *)
