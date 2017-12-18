@@ -1229,6 +1229,7 @@ fun test1 dirname =
   end
   handle MicroTiMLTypecheck.MTCError msg => (println $ "MTiMLTC.MTCError: " ^ msg; fail ())
        | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; fail ())
+       | NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; fail ())
     
 val test_suites = [
       test1

@@ -112,7 +112,7 @@ fun str_idx_bin_op opr =
     | MultI => " *"
     | MaxI => "max"
     | MinI => "min"
-    | IApp => ""
+    | IApp => "app"
     | EqI => "=="
     | AndI => "&&"
     | ExpNI => "^"

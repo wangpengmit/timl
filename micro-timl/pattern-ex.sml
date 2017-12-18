@@ -595,9 +595,10 @@ fun remove_constr_k params (p, pk) =
 fun remove_constr (params as (shift_i_e, str_e)) p =
   let
     val str_pn = str_pn str_e
-    (* val () = println $ "before remove_constr: " ^ str_pn p *)
+    val () = println $ "before remove_constr: " ^ str_pn p
     val p = fst $ remove_constr_k params (p, PnTT $ Outer dummy)
-    (* val () = println $ "after remove_constr: " ^ str_pn p *)
+    val () = println $ "after remove_constr: " ^ str_pn p
+    val () = println ""
   in
     p
   end
@@ -768,6 +769,7 @@ fun get_and_inc r =
   let
     val v = !r
     val () = r := v + 1
+    val () = if v = 14 then println "hit x14" else ()
   in
     v
   end
@@ -785,10 +787,13 @@ fun remove_deep params matchee =
   
 fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e)) matchee branches : ('var, 'idx, 'sort, 'kind, 'ty) expr =
   let
+    val str_pn = str_pn str_e
+    val () = println $ "before to_expr: " ^ str_ls str_pn branches
     val branches = map remove_anno branches
     val branches = map (remove_constr (shift_i_e, str_e)) branches
     val branches = map remove_var branches
     val e = remove_deep params matchee branches
+    val () = println $ "after to_expr: " ^ str_e e
   in
     e
   end
