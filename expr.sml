@@ -101,6 +101,7 @@ structure Simp = SimpFn (structure Idx = Expr
                          val subst_i_i = Subst.subst_i_i
                          val subst_i_s = Subst.subst_i_s
                          val substx_i_p = Subst.substx_i_p
+                         val str_p = fn p => ToString.str_p Gctx.empty [] p
                         )
                         
 structure SimpType = SimpTypeFn (structure Type = Expr

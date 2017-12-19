@@ -26,6 +26,7 @@ signature SIMP_PARAMS = sig
   val subst_i_i : Idx.idx -> Idx.idx -> Idx.idx
   val subst_i_s : Idx.idx -> Idx.sort -> Idx.sort
   val substx_i_p : int -> int -> Idx.idx -> Idx.prop -> Idx.prop
+  val str_p : Idx.prop -> string
 end
 
 functor SimpFn (Params : SIMP_PARAMS) = struct
@@ -273,7 +274,7 @@ local
   fun passp p =
     let
       fun r () = get_region_p p
-                              (* val () = println $ str_p [] [] p *)
+      val () = println $ str_p p
     in
       case p of
 	  BinConn (opr, p1, p2) =>
@@ -510,7 +511,7 @@ local
             val _ = unset ()
             (* val () = println "before f()" *)
             val a = f a
-                      (* val () = println "after f()" *)
+            (* val () = println "after f()" *)
           in
 	    if !changed then loop a
 	    else a
@@ -546,10 +547,10 @@ fun simp_i_with_plugin plugin i =
     
 fun simp_p p =
   let
-    (* val () = println $ "Before simp_p: " ^ str_p [] [] p *)
+    (* val () = println $ "Before simp_p: " (* ^ str_p [] [] p *) *)
     val p = until_unchanged passp p
-                            (* val () = println $ "After simp_p:  " ^ str_p [] [] p *)
-                            (* val () = println "" *)
+    (* val () = println $ "After simp_p:  " (* ^ str_p [] [] p *) *)
+    val () = println ""
   in
     p      
   end

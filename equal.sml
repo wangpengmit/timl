@@ -60,7 +60,7 @@ fun eq_idx_const c c' =
   case c of
       ICBool b => (case c' of ICBool b' => b = b' | _ => false)
     | ICTT => (case c' of ICTT => true | _ => false)
-    | ICAdmit => false
+    | ICAdmit => raise Impossible "can't compare index ICAdmit"
     | ICNat n => (case c' of ICNat n' => n = n' | _ => false)
     | ICTime x => (case c' of ICTime x' => TimeType.time_eq (x, x') | _ => false)
     
