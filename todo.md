@@ -105,7 +105,12 @@
 - [ ] Generalization has some problems with higher-order uvars.
 - [ ] Simplify modules in output.
 
-# To-do Examples:
+# To-do for MicroTiML
+
+- [ ] remove let x = ... when x is "_", because such case can only be from translation of wildcard patterns
+- [ ] remove duplicate EAsc and EAscTime
+
+# To-do for Examples:
 
 - [x] Binary search with arrays.
 - [x] binary heap with arrays.

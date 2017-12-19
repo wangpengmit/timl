@@ -985,6 +985,7 @@ Module Type TIML (Time : TIME) (BigO :BIG_O Time).
   (* ============================================================= *)
 
   (* the 'value' predicate defines when a term is a value *)
+  (* todo: EAppI (EAppT ... ERec _) should also be value *)
   Inductive value : expr -> Prop :=
   | VConst cn :
       value (EConst cn)

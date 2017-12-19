@@ -1,0 +1,3 @@
+- Preprocessor, macros or extensible syntax
+- Call stack at stop/pause (to debug a diverging program)
+- Call stack at exception

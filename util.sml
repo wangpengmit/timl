@@ -46,6 +46,7 @@ fun option2list a =
       SOME a => [a]
     | NONE => []
 
+fun min (a, b) = if a < b then a else b
                                       
 val join = String.concatWith
 fun prefix fix s = fix ^ s
@@ -55,6 +56,7 @@ fun indent msg = map (fn s => "  " ^ s) msg
 fun join_lines ls = (join "" o map (suffix "\n")) ls
 fun join_prefix fix ls = (join "" o map (prefix fix)) ls
 fun join_suffix fix ls = (join "" o map (suffix fix)) ls
+fun substr start len s = substring (s, start, min (len, size s - start))
                                                       
 fun str_ls f ls = (surround "[" "]" o join ", " o map f) ls
 fun str_pair (f, g) (a, b) = sprintf "($, $)" [f a, g b]

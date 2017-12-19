@@ -586,23 +586,44 @@ fun collect_TAppIT t = mapSnd rev $ collect_TAppIT_rev t
 fun TAppITs t args =
   foldl (fn (arg, t) => case arg of inl i => TAppI (t, i) | inr t' => TAppT (t, t')) t args
 
-fun collect_EAbsI_EAbsT e =
+fun collect_EAbsIT e =
   case e of
       EAbsI data =>
       let
         val (s, (name, e)) = unEAbsI data
-        val (binds, e) = collect_EAbsI_EAbsT e
+        val (binds, e) = collect_EAbsIT e
       in
         (inl (name, s) :: binds, e)
       end
     | EAbsT data =>
       let
         val (k, (name, e)) = unEAbsT data
-        val (binds, e) = collect_EAbsI_EAbsT e
+        val (binds, e) = collect_EAbsIT e
       in
         (inr (name, k) :: binds, e)
       end
     | _ => ([], e)
+
+fun collect_EAppIT_rev e =
+  let
+    val self = collect_EAppIT_rev
+  in
+    case e of
+        EAppI (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inl i :: args)
+        end
+      | EAppT (e, t) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inr t :: args)
+        end
+      | _ => (e, [])
+  end
+fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
 
 fun is_value e =
   case e of
@@ -614,15 +635,18 @@ fun is_value e =
     | EAbsI _ => true
     | EPack (_, _, e) => is_value e
     | EPackI (_, _, e) => is_value e
+    | EPackIs (_, _, e) => is_value e
     | EUnOp (EUFold _, e) => is_value e
     | ELoc _ => true
-    | ERec data =>
-      let
-        val (_, (_, e)) = unERec data
-      in
-        is_value e
-      end
-    | _ => false
+    | _ =>
+      case collect_EAppIT e of
+          (ERec data, args) =>
+          let
+            val (_, (_, e)) = unERec data
+          in
+            is_value e
+          end
+        | _ => false
 
 fun get_expr_const_type c =
   case c of
@@ -713,14 +737,10 @@ fun eval_constr b =
     #visit_expr vtable visitor () b
   end
 
-fun min (a, b) = if a < b then a else b
-                                        
-fun substr start len s = substring (s, start, min (len, size s - start))
-
 fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
   let
-    (* val () = print "typechecking: " *)
-    (* val () = println $ substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
+    val () = print "typechecking: "
+    val () = println $ substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
     val itctx = (ictx, tctx)
     fun main () =
         case e of
@@ -886,7 +906,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
       | ERec data =>
         let
           val (t, (name, e)) = unERec data
-          val (_, e') = collect_EAbsI_EAbsT e
+          val (_, e') = collect_EAbsIT e
           val () = case e' of
                        EAbs _ => ()
                      | _ => raise MTCError "ERec"
@@ -898,7 +918,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
       | EAbsT data =>
         let
           val (k, (name, e)) = unEAbsT data
-          val () = assert_b "EAbsT" $ is_value e
+          val () = assert_b "EAbsT: is_value e" $ is_value e
           val t = tc_against_time (add_kinding_full (name, k) ctx) (e, T0)
         in
           (MakeTForall (k, name, t), T0)
@@ -1049,15 +1069,15 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           tc ctx e
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
-    fun extra_msg () = "\nwhen typechecking " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
+    fun extra_msg () = "\nwhen typechecking " ^ (substr 0 200 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
     val (t, i) = main ()
                  handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
                       | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())
                       | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
                       | MTCError m => raise MTCError (m ^ extra_msg ())
                       | Impossible m => raise Impossible (m ^ extra_msg ())
-    (* val () = print "finished typechecking: " *)
-    (* val () = println $ substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
+    (* val () = print "tc-done: " *)
+    (* val () = println $ substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
   in
     (t, i)
   end
@@ -1108,11 +1128,15 @@ fun runWriter m () =
     val () = vcs := []
     val () = admits := []
     val r = m ()
+    val () = println "after m ()"
     val vcs = !vcs
     val admits = !admits
     val vcs = map to_vc vcs
+    val () = println "after to_vc"
     val vcs = concatMap simp_vc_vcs vcs
+    val () = println "before simp vcs"
     val vcs = map VC.simp_vc vcs
+    val () = println "after simp vcs"
     val vcs = TrivialSolver.simp_and_solve_vcs vcs
     val admits = map to_vc admits
   in 
@@ -1231,7 +1255,7 @@ fun test1 dirname =
   in
     ((* t, e *))
   end
-  handle MicroTiMLTypecheck.MTCError msg => (println $ "MTiMLTC.MTCError: " ^ msg; fail ())
+  handle MicroTiMLTypecheck.MTCError msg => (println $ "MTiMLTC.MTCError: " ^ substr 0 1000 msg; fail ())
        | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; fail ())
        | NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; fail ())
     
