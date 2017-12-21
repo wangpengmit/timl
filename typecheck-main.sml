@@ -840,7 +840,7 @@ fun is_value (e : U.expr) : bool =
     open U
   in
     case e of
-        EVar _ => true
+        EVar _ => true (* todo: is this right? *)
       | EConst (c, _) =>
         (case c of
              ECTT => true

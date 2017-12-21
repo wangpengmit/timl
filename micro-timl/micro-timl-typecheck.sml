@@ -644,12 +644,13 @@ fun is_value e =
     | ELoc _ => true
     | _ =>
       case collect_EAppIT e of
-          (ERec data, args) =>
+          (ERec data, _) =>
           let
             val (_, (_, e)) = unERec data
           in
             is_value e
           end
+        | (EVar _, _) => true (* todo: is this right? *)
         | _ => false
 
 fun get_expr_const_type c =
@@ -1088,7 +1089,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           tc ctx e
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
-    fun extra_msg () = "\nwhen typechecking " ^ (substr 0 400 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
+    fun extra_msg () = "\nwhen typechecking " ^ (substr 0 300 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
     val (t, i) = main ()
                  handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
                       | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())
@@ -1154,11 +1155,12 @@ fun runWriter m () =
     val () = println "after to_vc; calling simp_vc_vcs"
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
     val vcs_len = length vcs
-    val vcs = concatMapi (fn (i, vc) => (println (sprintf "vc $ @ $" [str_int vcs_len, str_int i]); simp_vc_vcs vc)) vcs
-    val () = println "before simp vcs"
-    val vcs = map VC.simp_vc vcs
-    val () = println "after simp vcs"
-    val vcs = TrivialSolver.simp_and_solve_vcs vcs
+    val () = println $ "#VCs: " ^ str_int vcs_len
+    (* val vcs = concatMapi (fn (i, vc) => (println (sprintf "vc $ @ $" [str_int vcs_len, str_int i]); simp_vc_vcs vc)) vcs *)
+    (* val () = println "before simp vcs" *)
+    (* val vcs = map VC.simp_vc vcs *)
+    (* val () = println "after simp vcs" *)
+    (* val vcs = TrivialSolver.simp_and_solve_vcs vcs *)
     val admits = map to_vc admits
   in 
     (r, vcs, admits) 
@@ -1262,8 +1264,8 @@ fun test1 dirname =
     val () = println "Started translating ..."
     val e = trans_e e
     val () = println "Finished translating"
-    val () = pp_e $ export ToStringUtil.empty_ctx e
-    val () = println ""
+    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking ..."
@@ -1273,8 +1275,9 @@ fun test1 dirname =
     val () = pp_t $ export_t ([], []) t
     val () = println "Time:"
     val () = println $ ToString.str_i Gctx.empty [] i
-    val () = println "VCs:"
-    val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs
+    val () = println $ "#VCs: " ^ str_int (length vcs)
+    (* val () = println "VCs:" *)
+    (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
   in
     ((* t, e *))
   end

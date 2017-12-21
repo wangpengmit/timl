@@ -525,8 +525,8 @@ and make_constr (pos, ts, is, e, dt) =
       (* val () = println "result_is after:" *)
       (* val () = println $ str_ls (ToString.str_i Gctx.empty []) result_is *)
       val fold_anno = TAppIs (TAppTs (t_rec, map on_mt ts), result_is)
-      val () = println "fold_anno:"
-      val () = println $ PP_E.pp_t_to_string fold_anno
+      (* val () = println "fold_anno:" *)
+      (* val () = println $ PP_E.pp_t_to_string fold_anno *)
       fun unroll t_rec_apps =
         let
           fun collect_until_TRec t =
@@ -562,9 +562,8 @@ and make_constr (pos, ts, is, e, dt) =
           t
         end
       val unrolled = unroll fold_anno
-      val () = println "unrolled:"
-      (* val () = pp_t unrolled *)
-      val () = println $ PP_E.pp_t_to_string unrolled
+      (* val () = println "unrolled:" *)
+      (* val () = println $ PP_E.pp_t_to_string unrolled *)
       val inj_anno = unTSums unrolled
       (* val () = println $ sprintf "$, $" [str_int $ length inj_anno, str_int pos] *)
       val pack_anno = nth_error inj_anno pos !! (fn () => raise Impossible $ sprintf "to-micro-timl/AppConstr: nth_error inj_anno: $, $" [str_int $ length inj_anno, str_int pos])
@@ -583,7 +582,7 @@ and on_decls (decls, e_body) =
         TeleNil => on_e e_body
       | TeleCons (decl, Rebind decls) =>
         let
-          val () = println "translating decl"
+          (* val () = println "translating decl" *)
           (* val () = println $ sprintf "translating: $" [fst $ ToString.str_decl Gctx.empty ToStringUtil.empty_ctx decl] *)
         in
           case decl of
