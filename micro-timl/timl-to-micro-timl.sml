@@ -335,7 +335,8 @@ fun str_i a =
 fun str_s a =
   (* ToStringRaw.str_raw_s a *)
   (* ToString.SN.strn_s a *)
-  const_fun "<sort>" a
+  ToString.str_s Gctx.empty [] a
+  (* const_fun "<sort>" a *)
 val str = PP.string
 fun pp_t_to s b =
   (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
@@ -505,7 +506,7 @@ and make_constr (pos, ts, is, e, dt) =
       open ToStringRaw
       open ToString
       (* fun str_var (_, (x, _)) = str_int x *)
-      (* fun str_var x = LongId.str_raw_long_id str_int x                                         *)
+      (* fun str_var x = LongId.str_raw_long_id str_int x *)
       (* val pp_t = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_raw_i, str_raw_s, const_fun "<kind>") *)
       val t = TDatatype (dt, dummy)
       val t_rec = on_mt t
@@ -516,10 +517,16 @@ and make_constr (pos, ts, is, e, dt) =
       val constr_decl as (_, core, _) = nth_error constr_decls pos !! (fn () => raise Impossible "to-micro-timl/AppConstr: nth_error constr_decls")
       val (name_sorts, (_, result_is)) = unfold_binds core
       val () = assert (fn () => length is = length name_sorts) "length is = length name_sorts"
-      val result_is = foldl (fn (v, b) => map (subst_i_i v) b) result_is is
+      (* val () = println "result_is:" *)
+      (* val () = println $ str_ls (ToString.str_i Gctx.empty []) result_is *)
+      (* val () = println "is:" *)
+      (* val () = println $ str_ls (ToString.str_i Gctx.empty []) is *)
+      (* val result_is = foldl (fn (v, b) => map (subst_i_i v) b) result_is is *)
+      (* val () = println "result_is after:" *)
+      (* val () = println $ str_ls (ToString.str_i Gctx.empty []) result_is *)
       val fold_anno = TAppIs (TAppTs (t_rec, map on_mt ts), result_is)
-      (* val () = println "fold_anno:" *)
-      (* val () = pp_t fold_anno *)
+      val () = println "fold_anno:"
+      val () = println $ PP_E.pp_t_to_string fold_anno
       fun unroll t_rec_apps =
         let
           fun collect_until_TRec t =
@@ -555,8 +562,9 @@ and make_constr (pos, ts, is, e, dt) =
           t
         end
       val unrolled = unroll fold_anno
-      (* val () = println "unrolled:" *)
+      val () = println "unrolled:"
       (* val () = pp_t unrolled *)
+      val () = println $ PP_E.pp_t_to_string unrolled
       val inj_anno = unTSums unrolled
       (* val () = println $ sprintf "$, $" [str_int $ length inj_anno, str_int pos] *)
       val pack_anno = nth_error inj_anno pos !! (fn () => raise Impossible $ sprintf "to-micro-timl/AppConstr: nth_error inj_anno: $, $" [str_int $ length inj_anno, str_int pos])

@@ -740,7 +740,7 @@ fun eval_constr b =
 fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
   let
     val () = print "typechecking: "
-    val () = println $ substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
+    val () = println $ (* substr 0 100 $  *)ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
     val itctx = (ictx, tctx)
     fun main () =
         case e of
@@ -1133,6 +1133,7 @@ fun runWriter m () =
     val admits = !admits
     val vcs = map to_vc vcs
     val () = println "after to_vc"
+    (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
     val vcs = concatMap simp_vc_vcs vcs
     val () = println "before simp vcs"
     val vcs = map VC.simp_vc vcs
@@ -1190,11 +1191,11 @@ fun str_i a =
   (* const_fun "<idx>" a *)
 fun str_s a =
   (* ToStringRaw.str_raw_s a *)
-  (* ToString.SN.strn_s a *)
-  const_fun "<sort>" a
+  ToString.SN.strn_s a
+  (* const_fun "<sort>" a *)
 fun pp_t_to s b =
-  (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
-  str s "<ty>"
+  MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b
+  (* str s "<ty>" *)
 fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
 fun pp_e a = MicroTiMLExPP.pp_e_fn (
     str_var,

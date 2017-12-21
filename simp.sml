@@ -274,7 +274,7 @@ local
   fun passp p =
     let
       fun r () = get_region_p p
-      val () = println $ str_p p
+      (* val () = println $ str_p p *)
     in
       case p of
 	  BinConn (opr, p1, p2) =>
