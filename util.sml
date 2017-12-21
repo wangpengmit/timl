@@ -317,6 +317,7 @@ fun trim s =
     end
       
 fun concatMap f ls = (List.concat o map f) ls
+fun concatMapi f ls = (List.concat o mapi f) ls
 
 fun inc r = r := !r + 1
 fun dec r = r := !r - 1
