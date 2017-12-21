@@ -161,6 +161,7 @@ and is_wf_prop gctx (ctx, p) =
 	  let 
             val (i1, bs1) = get_bsort (ctx, i1)
 	    val (i2, bs2) = get_bsort (ctx, i2)
+            (* val () = println $ sprintf "is_wf_prop()/EqP: $ vs $" [str_bs bs1, str_bs bs2] *)
             val () = unify_bs (U_get_region_p p) (bs1, bs2)
 	  in
             BinPred (EqP, i1, i2)

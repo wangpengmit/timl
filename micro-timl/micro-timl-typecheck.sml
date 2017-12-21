@@ -92,6 +92,7 @@ open MicroTiMLExLongId
 open MicroTiMLExUtil
 open MicroTiMLEx
 
+fun sc ctx i = get_bsort Gctx.empty (ctx, i)
 fun sc_against_sort ctx (i, s) = ignore $ check_sort Gctx.empty (ctx, i, s)
 
 fun is_wf_sort ctx s = ignore $ Sortcheck.is_wf_sort Gctx.empty (ctx, s)
@@ -294,6 +295,7 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t : bsort kind =
     | TQuanI (_, data) =>
       let
         val (s, (name, t)) = unTQuanI data
+        val () = is_wf_sort ictx s
         val () = kc_against_kind (add_sorting_it (name, s) ctx) (t, KType)
       in
         KType
@@ -427,16 +429,18 @@ fun str_var x = LongId.str_raw_long_id id(*str_int*) x
 fun str_i a =
   (* ToStringRaw.str_raw_i a *)
   ToString.SN.strn_i a
-  (* const_fun "<idx>" a *)
+(* const_fun "<idx>" a *)
+fun str_bs a =
+  ToStringRaw.str_raw_bs a
 fun str_s a =
   (* ToStringRaw.str_raw_s a *)
   ToString.SN.strn_s a
   (* const_fun "<sort>" a *)
 fun pp_t_to s b =
-  MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b
+  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
   (* str s "<ty>" *)
-fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
-fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
 fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
     str_var,
     str_i,
@@ -739,8 +743,8 @@ fun eval_constr b =
 
 fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
   let
-    val () = print "typechecking: "
-    val () = println $ (* substr 0 100 $  *)ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e
+    (* val () = print "typechecking: " *)
+    (* val () = println $ (* substr 0 100 $  *)ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
     val itctx = (ictx, tctx)
     fun main () =
         case e of
@@ -770,6 +774,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
+          val () = kc_against_kind itctx (t', KType)
           val (t, i) = tc ctx e
           fun inject (t, t') inj =
             case inj of
@@ -780,6 +785,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
         end
       | EUnOp (EUFold t', e) =>
         let
+          val () = kc_against_kind itctx (t', KType)
           val t' = whnf itctx t'
           val (t, args) = collect_TAppIT t'
           val (k, (_, t1)) = case t of
@@ -990,6 +996,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
         end
       | EPackIs (t, is, e) =>
         let
+          val () = kc_against_kind itctx (t, KType)
         in
           case is of
               [] => (t, tc_against_ty ctx (e, t))
@@ -1036,8 +1043,18 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
         in
           (t2, i)
         end
-      | ENever t => (t, T0)
-      | EBuiltin t => (t, T0)
+      | ENever t =>
+        let
+          val () = kc_against_kind itctx (t, KType)
+        in
+          (t, T0)
+        end
+      | EBuiltin t =>
+        let
+          val () = kc_against_kind itctx (t, KType)
+        in
+          (t, T0)
+        end
       | ELet data =>
         let
           val (e1, (name, e2)) = unELet data
@@ -1049,12 +1066,14 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
       | ELetType data =>
         let
           val (t, (name, e)) = unELetType data
+          val _ = kc itctx t
         in
           tc ctx $ subst0_t_e t e (* todo: record type aliasing in ctx *)
         end
       | ELetIdx data =>
         let
           val (i, (name, e)) = unELetIdx data
+          val _ = sc ictx i
         in
           tc ctx $ subst0_i_e i e (* todo: record index aliasing in ctx *)
         end
@@ -1069,7 +1088,7 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           tc ctx e
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
-    fun extra_msg () = "\nwhen typechecking " ^ (substr 0 200 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
+    fun extra_msg () = "\nwhen typechecking " ^ (substr 0 400 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e)
     val (t, i) = main ()
                  handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
                       | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())
@@ -1132,7 +1151,7 @@ fun runWriter m () =
     val vcs = !vcs
     val admits = !admits
     val vcs = map to_vc vcs
-    val () = println "after to_vc"
+    val () = println "after to_vc; calling simp_vc_vcs"
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
     val vcs = concatMap simp_vc_vcs vcs
     val () = println "before simp vcs"
@@ -1189,14 +1208,16 @@ fun str_i a =
   (* ToStringRaw.str_raw_i a *)
   ToString.SN.strn_i a
   (* const_fun "<idx>" a *)
+fun str_bs a =
+  ToStringRaw.str_raw_bs a
 fun str_s a =
   (* ToStringRaw.str_raw_s a *)
   ToString.SN.strn_s a
   (* const_fun "<sort>" a *)
 fun pp_t_to s b =
-  MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b
+  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
   (* str s "<ty>" *)
-fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
 fun pp_e a = MicroTiMLExPP.pp_e_fn (
     str_var,
     str_i,
@@ -1225,9 +1246,9 @@ fun test1 dirname =
     val (prog, _, _) = resolve_prog empty prog
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
-    val () = println "Started typechecking ..."
+    val () = println "Started TiML typechecking ..."
     val ((prog, _, _), _) = typecheck_prog empty prog
-    val () = println "Finished typechecking"
+    val () = println "Finished TiML typechecking"
     open MergeModules
     val decls = merge_prog prog []
     open TiML2MicroTiML

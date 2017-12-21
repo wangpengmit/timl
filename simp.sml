@@ -274,7 +274,7 @@ local
   fun passp p =
     let
       fun r () = get_region_p p
-      (* val () = println $ str_p p *)
+      val () = println $ str_p p
     in
       case p of
 	  BinConn (opr, p1, p2) =>
@@ -550,7 +550,7 @@ fun simp_p p =
     (* val () = println $ "Before simp_p: " (* ^ str_p [] [] p *) *)
     val p = until_unchanged passp p
     (* val () = println $ "After simp_p:  " (* ^ str_p [] [] p *) *)
-    val () = println ""
+    (* val () = println "" *)
   in
     p      
   end
