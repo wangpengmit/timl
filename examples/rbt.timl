@@ -292,6 +292,15 @@ fun lookup ['v] {size : Nat} (tr : rb_tree 'v {size}) (k: key) return option 'v 
         end
 end
 
+(* fun foo () = *)
+(*   let *)
+(*     val m = empty *)
+(*     val value : key = builtin *)
+(*     val MayGrowOne m = insert m (value, true) *)
+(*   in *)
+(*     () *)
+(*   end *)
+    
 end
 
 (* test the functor *)
@@ -310,16 +319,21 @@ structure IntRbt = Rbt (IntKey)
 
 structure TestIntRbt = struct
 open IntRbt
-       
-val m = empty
-val MayGrowOne m = insert m (77, true)
-val r1 = lookup m 77
-val r1 = case r1 of
-             SOME true => true
-           | _ => false
-val r2 = lookup m 88
-val r2 = case r2 of
-             NONE => true
-           | _ => false
+
+fun test1 () =
+  let
+    val m = empty
+    val MayGrowOne m = insert m (77, true)
+    val r1 = lookup m 77 using 2.0 + T_lookup 1
+    val r1 = case r1 of
+                 SOME true => true
+               | _ => false
+    val r2 = lookup m 88 using 2.0 + T_lookup 1
+    val r2 = case r2 of
+                 NONE => true
+               | _ => false
+  in
+    ()
+  end
 
 end

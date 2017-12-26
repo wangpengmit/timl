@@ -1020,11 +1020,10 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
                                 TQuanI (Exists _, data) => unTQuanI data
                               | _ => raise MTCError $ mismatch "EUnpackI" (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names itctx) t') "TQuanI (Exists, _)"
           val (t2, i2) = tc (add_typing_full (ename, t) $ add_sorting_full (iname, s) ctx) e2
-          (* val () = println $ "trying to forget type: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_sorting_it (iname, s) itctx) t2) *)
           val t2 = forget01_i_t t2
-          (* val () = println $ "trying to forget time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (iname :: map fst ictx) i2) *)
+                   handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_sorting_it (iname, s) itctx) t2))
           val i2 = forget01_i_i i2
-          (* val () = println "forget finished" *)
+                   handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (iname :: map fst ictx) i2))
         in
           (t2, i1 %+ i2)
         end
@@ -1264,8 +1263,8 @@ fun test1 dirname =
     val () = println "Started translating ..."
     val e = trans_e e
     val () = println "Finished translating"
-    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
-    (* val () = println "" *)
+    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = println ""
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking ..."
@@ -1274,6 +1273,7 @@ fun test1 dirname =
     val () = println "Type:"
     val () = pp_t $ export_t ([], []) t
     val () = println "Time:"
+    val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
     val () = println $ "#VCs: " ^ str_int (length vcs)
     (* val () = println "VCs:" *)
