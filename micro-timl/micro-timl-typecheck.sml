@@ -1304,7 +1304,14 @@ fun test1 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started TiML typechecking ..."
-    val ((prog, _, _), _) = typecheck_prog empty prog
+    val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
+    val vcs = VCSolver.vc_solver filename vcs
+    val () = if null vcs then ()
+             else
+               raise curry TypeCheck.Error dummy $ (* str_error "Error" filename dummy *) [sprintf "Typecheck Error: $ Unproved obligations:" [str_int $ length vcs], ""] @ (
+               (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *)
+               concatMap (VCSolver.print_unsat true filename) vcs
+             )
     val () = println "Finished TiML typechecking"
     open MergeModules
     val decls = merge_prog prog []

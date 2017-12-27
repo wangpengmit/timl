@@ -181,6 +181,7 @@ micro-timl/micro-timl.sml
 nouvar-expr.sml
 visitor.sml                                 
 parse-filename.sml
+vc-solver.sml
 micro-timl/micro-timl-visitor.sml
 micro-timl/micro-timl-pp.sml
 micro-timl/micro-timl-ex.t.sml
