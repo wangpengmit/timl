@@ -70,6 +70,7 @@ fun idx_bin_op_type opr =
     | AddI => raise Impossible "idx_bin_op_type ()"
     | MultI => raise Impossible "idx_bin_op_type ()"
     | BoundedMinusI => raise Impossible "idx_bin_op_type ()"
+    | MinusI => raise Impossible "idx_bin_op_type()/MinusI"
 
 fun sort_mismatch gctx ctx i expect have =  "Sort mismatch for " ^ str_i gctx ctx i ^ ": expect " ^ expect ^ " have " ^ str_s gctx ctx have
 
@@ -301,6 +302,7 @@ and get_bsort gctx (ctx, i) =
                   end
                 | AddI => overloaded [Nat, Time] NONE
                 | BoundedMinusI => overloaded [Nat, Time] NONE
+                | MinusI => overloaded [Nat, Time] NONE
                 | MultI => overloaded [Nat, Time] NONE
                 | MaxI => overloaded [Nat, Time] NONE
                 | MinI => overloaded [Nat, Time] NONE

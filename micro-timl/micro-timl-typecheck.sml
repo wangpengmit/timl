@@ -1027,13 +1027,68 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
         in
           (t2, i1 %+ i2)
         end
-      | EAscTime (e, i2) =>
+      | EAscTime (e, i) =>
         let
-          val (t, i1) = tc ctx e
-          val () = sc_against_sort ictx (i2, STime)
-          val () = check_prop ictx (i1 %<= i2)
+          fun collect_EAscType_rev e =
+            let
+              val self = collect_EAscType_rev
+            in
+              case e of
+                  EAscType (e, t) =>
+                  let
+                    val (e, args) = self e
+                  in
+                    (e, t :: args)
+                  end
+                | _ => (e, [])
+            end
+          fun collect_EAscType e = mapSnd rev $ collect_EAscType_rev e
+          fun EAscTypes (e, ts) = foldl (swap EAscType) e ts
+          val (e, ts) = collect_EAscType e
         in
-          (t, i2)
+          (* propagate time annotations *)
+          case e of
+              ELet data =>
+              let
+                val (e1, (name, e2)) = unELet data
+                val (t1, i1) = tc ctx e1
+                val e2 = EAscTypes (e2, ts)
+                val e2 = EAscTime (e2, BinOpI (MinusI, i, i1))
+                val (t2, _) = tc (add_typing_full (name, t1) ctx) e2
+              in
+                (t2, i)
+              end
+            | _ =>
+              let
+                val e = case e of
+                            EUnpackI data =>
+                            let
+                              val (e1, (iname, ename, e2)) = unEUnpack data
+                              val e2 = if is_value e1 then EAscTime (e2, shift_i_i i) else e2
+                            in
+                              MakeEUnpackI (e1, (iname, dummy), (ename, dummy), e2)
+                            end
+                          | _ => e
+                val e = EAscTypes (e, ts)
+                val (t, i1) = tc ctx e
+                val () = sc_against_sort ictx (i, STime)
+                fun assert_cons ls =
+                  case ls of
+                      x :: xs => (x, xs)
+                    | [] => raise Impossible "assert_cons fails"
+                fun check_le_with_subtractions ictx (i, i') =
+                  let
+                    val collect_MinusI_left = collect_BinOpI_left MinusI
+                    val (i', is) = assert_cons $ collect_MinusI_left i'
+                    val i = combine_AddI_nonempty i is
+                    val () = check_prop ictx (i %<= i')
+                  in
+                    ()
+                  end
+                val () = check_le_with_subtractions ictx (i1, i)
+              in
+                (t, i)
+              end
         end
       | EAscType (e, t2) =>
         let

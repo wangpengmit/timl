@@ -292,15 +292,6 @@ fun lookup ['v] {size : Nat} (tr : rb_tree 'v {size}) (k: key) return option 'v 
         end
 end
 
-(* fun foo () = *)
-(*   let *)
-(*     val m = empty *)
-(*     val value : key = builtin *)
-(*     val MayGrowOne m = insert m (value, true) *)
-(*   in *)
-(*     () *)
-(*   end *)
-    
 end
 
 (* test the functor *)

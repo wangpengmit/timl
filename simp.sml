@@ -227,6 +227,7 @@ local
                 def ()
               | BoundedMinusI =>
                 def ()
+              | MinusI => raise Impossible "simp_p()/MinusI"
           end
         | Ite (i, i1, i2, r) =>
           if eq_i i (TrueI dummy) then

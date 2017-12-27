@@ -32,6 +32,7 @@ datatype idx_bin_op =
          | LtI
          | GeI
          | BoundedMinusI
+         | MinusI (* only used internally for annotation propagation *)
 
 (* binary logical connectives *)
 datatype bin_conn =
@@ -119,6 +120,7 @@ fun str_idx_bin_op opr =
     | LtI => "<"
     | GeI => ">="
     | BoundedMinusI => "-"
+    | MinusI => "MinusI"
 
 fun str_bin_conn opr =
   case opr of

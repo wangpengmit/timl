@@ -572,7 +572,7 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
         end
   end
 
-(* If i1 or i2 is fresh, do unification instead of VC generation. Could be unsound. *)
+(* If i1 or i2 is fresh, do unification instead of VC generation. Could be too aggressive. *)
 fun smart_write_le gctx ctx (i1, i2, r) =
   let
     (* val () = println $ sprintf "Check Le : $ <= $" [str_i ctx i1, str_i ctx i2] *)
@@ -1152,8 +1152,9 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	    val (t, d) = forget_or_check_return (get_region_e e) gctx ctx ctxd (t, d) return 
             val () = close_n nps
             val () = close_ctx ctxd
+            val e = EAsc (e, shift_ctx_mt ctxd t)
           in
-	    (ELet (return, Unbound.Bind (Teles decls, e), r), t, d)
+	    (ELet ((SOME t, SOME d), Unbound.Bind (Teles decls, e), r), t, d)
 	  end
 	| U.EAbsI (bind, r_all) => 
 	  let 

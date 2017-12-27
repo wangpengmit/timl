@@ -812,9 +812,9 @@ fun solve_exists (vc as (hs, p), vcs) =
         handle Error => ()
     val () = 
         let
-          (* ToDo: a bit unsound inference strategy: infer [i] from [p1] and substitute for [i] in [p2] (assuming that [p2] doesn't contribute to inferring [i]) *)
+          (* ToDo: a bit too aggressive inference strategy: infer [i] from [p1] and substitute for [i] in [p2] (assuming that [p2] doesn't contribute to inferring [i]) *)
           val (p1, p2) = split_and p
-          val () = println "This inference may be unsound. "
+          val () = println "This inference may be too aggressive. "
                            (* val () = println $ sprintf "It assumes this proposition doesn't contribute to inference of $:" [name] *)
                            (* val () = app println $ (str_vc false "" (VarH (name, TimeFun arity) :: hs, p2) @ [""]) *)
                            (* val () = println "and it only uses this proposition to do the inference:" *)
