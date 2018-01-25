@@ -1,0 +1,29 @@
+structure Util = struct
+
+  fun subBy b a = a - b
+  fun addBy b a = a + b
+
+end
+
+contract MyToken = contract
+
+  open Util
+
+  (* This creates an array with all balances *)
+  (* 'amap' stands for 'address mapping' *)
+  public val balanceOf : amap uint256 = amap_empty
+
+  (* Initializes contract with initial supply tokens to the creator of the contract *)
+  fun init (initialSupply : uint256) =
+    amap_set (balanceOf, get_msg_sender(), initialSupply);              (* Give the creator all initial tokens *)
+    ()
+
+  (* Send coins *)
+  fun transfer(_to : address, _value : uint256) =
+    require(amap_get (balanceOf, get_msg_sender()) >= _value);           (* Check if the sender has enough *)
+    require(amap_get (balanceOf, _to) + _value >= amap_get (balanceOf, _to)); (* Check for overflows *)
+    amap_modify (balanceOf, get_msg_sender(), subBy _value);                    (* Subtract from the sender *)
+    amap_modify (balanceOf, _to, addBy _value);                           (* Add the same to the recipient *)
+    ()                                                            
+
+end
