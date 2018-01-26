@@ -1,0 +1,99 @@
+pragma etiml ^0.1
+
+interface token = interface 
+  fun transfer(receiver : address, amount : uint)
+end
+
+contract Crowdsale = contract
+
+  open Util
+       
+  public val beneficiary : ref address = ref 0
+  public val fundingGoal : ref uint = ref 0
+  public val amountRaised : ref uint = ref 0
+  public val deadline : ref uint = ref 0
+  public val price : ref uint = ref 0
+  public val tokenReward : ref option token = ref NONE
+  public val balanceOf : amap uint256 = amap_empty
+  val fundingGoalReached : ref bool = ref false
+  val crowdsaleClosed : ref bool = ref false
+
+  event GoalReached(recipient : address, totalAmountRaised : uint)
+  event FundTransfer(backer : address, amount : uint, isContribution : bool)
+
+  (**
+   * Constrctor function
+   *
+   * Setup the owner
+   *)
+  fun init(
+        ifSuccessfulSendTo : address,
+        fundingGoalInEthers : uint,
+        durationInMinutes : uint,
+        etherCostOfEachToken : uint,
+        addressOfTokenUsedAsReward : address
+    ) =
+    beneficiary := ifSuccessfulSendTo;
+    fundingGoal := fundingGoalInEthers * 1 ether;
+    deadline := now + durationInMinutes * 1 minutes;
+    price := etherCostOfEachToken * 1 ether;
+    tokenReward := token(addressOfTokenUsedAsReward)
+
+  (**
+   * Fallback function
+   *
+   * The function without name is the default function that is called whenever anyone sends funds to a contract
+   *)
+  fun default() guardedby payable =
+    require(not crowdsaleClosed);
+    let amount : uint = msg_value;
+    amap_modify balanceOf msg_sender (+= amount);
+    modify amountRaised (+= amount);
+    transfer(valOf tokenReward, msg_sender, amount / price);
+    FundTransfer(msg_sender, amount, true)
+
+  fun afterDeadline k = if now >= deadline then k () else throw endif
+
+  (**
+   * Check if goal was reached
+   *
+   * Checks if the goal or time limit has been reached and ends the campaign
+   *)
+  fun checkGoalReached() guardedby afterDeadline =
+    if amountRaised >= fundingGoal then
+      fundingGoalReached := true;
+      GoalReached(beneficiary, amountRaised)
+    else
+      crowdsaleClosed := true
+    endif
+
+
+  (**
+    * Withdraw the funds
+    *
+    * Checks to see if goal or time limit has been reached, and if so, and the funding goal was reached,
+    * sends the entire amount to the beneficiary. If goal was not reached, each contributor can withdraw
+    * the amount they contributed.
+    *)
+  fun safeWithdrawal() guardedby afterDeadline =
+    if not fundingGoalReached then
+      let amount : uint = amap_get balanceOf msg_sender;
+      amap_set balanceOf msg_sender 0;
+      if amount > 0 then
+        if send(msg_sender, amount) then
+          FundTransfer(msg.sender, amount, false)
+        else 
+          amap_set balanceOf msg_sender amount
+        endif
+      endif
+    endif;
+    if fundingGoalReached && beneficiary = msg.sender then
+      if send(beneficiary, amountRaised) then
+        FundTransfer(beneficiary, amountRaised, false)
+      else 
+        (* If we fail to send the funds to beneficiary, unlock funders balance *)
+        fundingGoalReached := false
+      endif
+    endif
+
+end    
