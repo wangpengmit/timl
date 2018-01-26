@@ -1,7 +1,7 @@
 pragma etiml ^0.1
 
 interface tokenRecipient = interface
-  public fun receiveApproval(_from : address, _value : uint256, _token : address, _extraData : bytes)
+  public fun receiveApproval (_from : address, _value : uint256, _token : address, _extraData : bytes)
 end
 
 contract TokenERC20 = contract
@@ -31,7 +31,7 @@ contract TokenERC20 = contract
    *
    * Initializes contract with initial supply tokens to the creator of the contract
    *)
-  public fun init(
+  public fun init (
         initialSupply : uint256,
         tokenName : string,
         tokenSymbol : string
@@ -44,7 +44,7 @@ contract TokenERC20 = contract
   (**
    * Internal transfer, only can be called by this contract
    *)
-  internal fun _transfer(_from : address, _to : address, _value : uint) =
+  internal fun _transfer (_from : address, _to : address, _value : uint) =
     (* Prevent transfer to 0x0 address. Use burn() instead *)
     require(_to <> 0x0);
     (* Check if the sender has enough *)
@@ -69,7 +69,7 @@ contract TokenERC20 = contract
    * @param _to The address of the recipient
    * @param _value the amount to send
    *)
-  public fun transfer(_to : address, _value : uint256) =
+  public fun transfer (_to : address, _value : uint256) =
     _transfer(msg_sender, _to, _value)
 
   (**
@@ -81,7 +81,7 @@ contract TokenERC20 = contract
    * @param _to The address of the recipient
    * @param _value the amount to send
    *)
-  public fun transferFrom(_from : address, _to : address, _value : uint256) returns bool =
+  public fun transferFrom (_from : address, _to : address, _value : uint256) returns bool =
     require(_value <= a2map_get allowance _from msg_sender);     (* Check allowance *)
     a2map_modify allowance _from msg_sender (subBy _value);
     _transfer(_from, _to, _value);
@@ -95,7 +95,7 @@ contract TokenERC20 = contract
    * @param _spender The address authorized to spend
    * @param _value the max amount they can spend
    *)
-  public fun approve(_spender : address, _value : uint256) returns bool =
+  public fun approve (_spender : address, _value : uint256) returns bool =
     a2map_set allowance msg_sender _spender _value;
     true
 
@@ -108,7 +108,7 @@ contract TokenERC20 = contract
    * @param _value the max amount they can spend
    * @param _extraData some extra information to send to the approved contract
    *)
-  public fun approveAndCall(_spender : address, _value : uint256, _extraData : bytes) =
+  public fun approveAndCall (_spender : address, _value : uint256, _extraData : bytes) =
     let spender : tokenRecipient = tokenRecipient(_spender);
     if approve(_spender, _value) then
       receiveApproval(spender, msg_sender, _value, this, _extraData);
@@ -122,7 +122,7 @@ contract TokenERC20 = contract
    *
    * @param _value the amount of money to burn
    *)
-  public fun burn(_value : uint256) returns bool =
+  public fun burn (_value : uint256) returns bool =
     require(amap_get balanceOf msg_sender >= _value);   (* Check if the sender has enough *)
     amap_modify balanceOf msg_sender (subBy _value);            (* Subtract from the sender *)
     modify totalSupply (subBy _value);                      (* Updates totalSupply *)
@@ -137,7 +137,7 @@ contract TokenERC20 = contract
    * @param _from the address of the sender
    * @param _value the amount of money to burn
    *)
-  public fun burnFrom(_from : address, _value : uint256) returns bool =
+  public fun burnFrom (_from : address, _value : uint256) returns bool =
     require(amap_get balanceOf _from >= _value);                (* Check if the targeted balance is enough *)
     require(_value <= a2map_get allowance _from msg_sender);    (* Check allowance *)
     amap_modify balanceOf _from (subBy _value);                         (* Subtract from the targeted balance *)

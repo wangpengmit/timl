@@ -1,0 +1,294 @@
+pragma etiml ^0.1
+
+contract owned = contract
+  public val owner : ref address = ref 0
+
+  public fun init () =
+    owner := msg_sender
+
+  public fun onlyOwner k =
+    require(msg_sender = !owner);
+    k ()
+
+  public fun transferOwnership (newOwner : address) guardedby onlyOwner =
+    owner := newOwner
+
+end
+
+contract tokenRecipient = contract
+    event receivedEther(sender : address, amount : uint)
+    event receivedTokens(_from : address, _value : uint256, _token : address, _extraData : bytes);
+
+    public fun receiveApproval (_from : address, _value : uint256, _token : address, _extraData : bytes) =
+      let t : Token = Token(_token);
+      require(transferFrom(t, _from, this, _value));
+      receivedTokens(_from, _value, _token, _extraData)
+
+    public fun default () guardedby payable =
+      receivedEther(msg_sender, msg_value)
+
+end
+
+interface Token = interface
+  public fun transferFrom(_from : address, _to : address, _value : uint256) returns bool
+end
+
+contract Congress = contract inheritedfrom (owned, tokenRecipient)
+  (* Contract Variables and events *)
+  public val minimumQuorum : ref uint = ref 0
+  public val debatingPeriodInMinutes : ref uint = ref 0
+  public val majorityMargin : ref int = ref 0
+  public val proposals : vector Proposal = vector_empty
+  public val numProposals : ref uint = ref 0
+  public val memberId : amap uint = amap_empty
+  public val members : vector Member = vector_empty
+
+  event ProposalAdded(proposalID : uint, recipient : address, amount : uint, description : string)
+  event Voted(proposalID : uint, position : bool, voter : address, justification : string)
+  event ProposalTallied(proposalID : uint, result : int, quorum : uint, active : bool)
+  event MembershipChanged(member : address, isMember : bool)
+  event ChangeOfRules(newMinimumQuorum : uint, newDebatingPeriodInMinutes : uint, newMajorityMargin : int)
+
+  type Proposal = {
+    recipient : address,
+    amount : uint,
+    description : string,
+    votingDeadline : uint,
+    executed : bool,
+    proposalPassed : bool,
+    numberOfVotes : uint,
+    currentResult : int,
+    proposalHash : bytes32,
+    votes : vector Vote,
+    voted : amap bool,
+  }
+
+  type Member = {
+    member : address,
+    name : string,
+    memberSince : uint,
+  }
+
+  type Vote = {
+    inSupport : bool,
+    voter : address,
+    justification : string,
+  }
+
+  (* Modifier that allows only shareholders to vote and create new proposals *)
+  fun onlyMembers k =
+    require(amap_get memberId msg_sender != 0);
+    k ()
+
+  (**
+   * Constructor function
+   *)
+  public fun init (
+        minimumQuorumForProposals : uint,
+        minutesForDebate : uint,
+        marginOfVotesForMajority : int
+    ) guardedby payable =
+    changeVotingRules(minimumQuorumForProposals, minutesForDebate, marginOfVotesForMajority);
+    (* It’s necessary to add an empty first member *)
+    addMember(0, "");
+    (* and let's add the founder, to save a step later *)
+    addMember(owner, 'founder')
+
+  (**
+   * Add member
+   *
+   * Make `targetMember` a member named `memberName`
+   *
+   * @param targetMember ethereum address to be added
+   * @param memberName public name for that member
+   *)
+  public fun addMember (targetMember : address, memberName : string) guardedby onlyOwner =
+    let id : ref uint = ref $ amap_get memberId targetMember;
+    if !id = 0 then
+      amap_set memberId targetMember (vector_length members);
+      id := vector_length members;
+      vector_push_back members (default_value Memeber)
+    endif;
+
+    vector_set members id (Member {member: targetMember, memberSince: now, name: memberName});
+    MembershipChanged(targetMember, true)
+
+   (**
+    * Remove member
+    *
+    * @notice Remove membership from `targetMember`
+    *
+    * @param targetMember ethereum address to be removed
+    *)
+  public fun removeMember (targetMember : address) guardedby onlyOwner =
+    require(amap_get memberId targetMember != 0);
+    for (i : uint = amap_get memberId targetMember; i<members.length-1; inc)
+      vector_set members i (vector_get members (i+1))
+    endfor;
+    vector_remove_back members
+
+  (**
+   * Change voting rules
+   *
+   * Make so that proposals need to be discussed for at least `minutesForDebate/60` hours,
+   * have at least `minimumQuorumForProposals` votes, and have 50% + `marginOfVotesForMajority` votes to be executed
+   *
+   * @param minimumQuorumForProposals how many members must vote on a proposal for it to be executed
+   * @param minutesForDebate the minimum amount of delay between when a proposal is made and when it can be executed
+   * @param marginOfVotesForMajority the proposal needs to have 50% plus this number
+   *)
+  public fun changeVotingRules (
+        minimumQuorumForProposals : uint,
+        minutesForDebate : uint,
+        marginOfVotesForMajority int
+    ) guardedby onlyOwner =
+    minimumQuorum := minimumQuorumForProposals;
+    debatingPeriodInMinutes := minutesForDebate;
+    majorityMargin := marginOfVotesForMajority;
+
+    ChangeOfRules(minimumQuorum, debatingPeriodInMinutes, majorityMargin)
+
+  (**
+   * Add Proposal
+   *
+   * Propose to send `weiAmount / 1e18` ether to `beneficiary` for `jobDescription`. `transactionBytecode ? Contains : Does not contain` code.
+   *
+   * @param beneficiary who to send the ether to
+   * @param weiAmount amount of ether to send, in wei
+   * @param jobDescription Description of job
+   * @param transactionBytecode bytecode of transaction
+   *)
+  public fun newProposal (
+        beneficiary : address,
+        weiAmount : uint,
+        jobDescription : string,
+        transactionBytecode : bytes
+    )
+        guardedby onlyMembers 
+        returns uint =
+    let proposalID = vector_length proposals;
+    vector_push_back proposals (Proposal {
+      recipient = beneficiary,
+      amount = weiAmount,
+      description = jobDescription,
+      proposalHash = keccak256(beneficiary, weiAmount, transactionBytecode),
+      votingDeadline = now + debatingPeriodInMinutes * 1 minutes,
+      executed = false,
+      proposalPassed = false,
+      numberOfVotes = 0,
+    });
+    ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription);
+    numProposals := proposalID+1;
+    proposalID
+
+      (*here*)
+    /**
+     * Add proposal in Ether
+     *
+     * Propose to send `etherAmount` ether to `beneficiary` for `jobDescription`. `transactionBytecode ? Contains : Does not contain` code.
+     * This is a convenience function to use if the amount to be given is in round number of ether units.
+     *
+     * @param beneficiary who to send the ether to
+     * @param etherAmount amount of ether to send
+     * @param jobDescription Description of job
+     * @param transactionBytecode bytecode of transaction
+     */
+    function newProposalInEther(
+        address beneficiary,
+        uint etherAmount,
+        string jobDescription,
+        bytes transactionBytecode
+    )
+        onlyMembers public
+        returns (uint proposalID)
+    {
+        return newProposal(beneficiary, etherAmount * 1 ether, jobDescription, transactionBytecode);
+    }
+
+    /**
+     * Check if a proposal code matches
+     *
+     * @param proposalNumber ID number of the proposal to query
+     * @param beneficiary who to send the ether to
+     * @param weiAmount amount of ether to send
+     * @param transactionBytecode bytecode of transaction
+     */
+    function checkProposalCode(
+        uint proposalNumber,
+        address beneficiary,
+        uint weiAmount,
+        bytes transactionBytecode
+    )
+        constant public
+        returns (bool codeChecksOut)
+    {
+        Proposal storage p = proposals[proposalNumber];
+        return p.proposalHash == keccak256(beneficiary, weiAmount, transactionBytecode);
+    }
+
+    /**
+     * Log a vote for a proposal
+     *
+     * Vote `supportsProposal? in support of : against` proposal #`proposalNumber`
+     *
+     * @param proposalNumber number of proposal
+     * @param supportsProposal either in favor or against it
+     * @param justificationText optional justification text
+     */
+    function vote(
+        uint proposalNumber,
+        bool supportsProposal,
+        string justificationText
+    )
+        onlyMembers public
+        returns (uint voteID)
+    {
+        Proposal storage p = proposals[proposalNumber];         // Get the proposal
+        require(!p.voted[msg.sender]);         // If has already voted, cancel
+        p.voted[msg.sender] = true;                     // Set this voter as having voted
+        p.numberOfVotes++;                              // Increase the number of votes
+        if (supportsProposal) {                         // If they support the proposal
+            p.currentResult++;                          // Increase score
+        } else {                                        // If they don't
+            p.currentResult--;                          // Decrease the score
+        }
+
+        // Create a log of this event
+        Voted(proposalNumber,  supportsProposal, msg.sender, justificationText);
+        return p.numberOfVotes;
+    }
+
+    /**
+     * Finish vote
+     *
+     * Count the votes proposal #`proposalNumber` and execute it if approved
+     *
+     * @param proposalNumber proposal number
+     * @param transactionBytecode optional: if the transaction contained a bytecode, you need to send it
+     */
+    function executeProposal(uint proposalNumber, bytes transactionBytecode) public {
+        Proposal storage p = proposals[proposalNumber];
+
+        require(now > p.votingDeadline                                            // If it is past the voting deadline
+            && !p.executed                                                         // and it has not already been executed
+            && p.proposalHash == keccak256(p.recipient, p.amount, transactionBytecode)  // and the supplied code matches the proposal
+            && p.numberOfVotes >= minimumQuorum);                                  // and a minimum quorum has been reached...
+
+        // ...then execute result
+
+        if (p.currentResult > majorityMargin) {
+            // Proposal passed; execute the transaction
+
+            p.executed = true; // Avoid recursive calling
+            require(p.recipient.call.value(p.amount)(transactionBytecode));
+
+            p.proposalPassed = true;
+        } else {
+            // Proposal failed
+            p.proposalPassed = false;
+        }
+
+        // Fire Events
+        ProposalTallied(proposalNumber, p.currentResult, p.numberOfVotes, p.proposalPassed);
+    }
+}

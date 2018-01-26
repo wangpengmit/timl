@@ -26,7 +26,7 @@ contract Crowdsale = contract
    *
    * Setup the owner
    *)
-  fun init(
+  fun init (
         ifSuccessfulSendTo : address,
         fundingGoalInEthers : uint,
         durationInMinutes : uint,
@@ -44,7 +44,7 @@ contract Crowdsale = contract
    *
    * The function without name is the default function that is called whenever anyone sends funds to a contract
    *)
-  fun default() guardedby payable =
+  fun default () guardedby payable =
     require(not crowdsaleClosed);
     let amount : uint = msg_value;
     amap_modify balanceOf msg_sender (+= amount);
@@ -59,7 +59,7 @@ contract Crowdsale = contract
    *
    * Checks if the goal or time limit has been reached and ends the campaign
    *)
-  fun checkGoalReached() guardedby afterDeadline =
+  fun checkGoalReached () guardedby afterDeadline =
     if amountRaised >= fundingGoal then
       fundingGoalReached := true;
       GoalReached(beneficiary, amountRaised)
@@ -75,7 +75,7 @@ contract Crowdsale = contract
     * sends the entire amount to the beneficiary. If goal was not reached, each contributor can withdraw
     * the amount they contributed.
     *)
-  fun safeWithdrawal() guardedby afterDeadline =
+  fun safeWithdrawal () guardedby afterDeadline =
     if not fundingGoalReached then
       let amount : uint = amap_get balanceOf msg_sender;
       amap_set balanceOf msg_sender 0;

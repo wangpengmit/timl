@@ -20,7 +20,7 @@ contract MyToken = contract
     amap_set balanceOf msg_sender initialSupply              (* Give the creator all initial tokens *)
 
   (* Send coins *)
-  fun transfer(_to : address, _value : uint256) =
+  fun transfer (_to : address, _value : uint256) =
     require(amap_get balanceOf msg_sender >= _value);           (* Check if the sender has enough *)
     require(amap_get balanceOf _to + _value >= amap_get balanceOf _to); (* Check for overflows *)
     amap_modify balanceOf msg_sender (subBy _value);                    (* Subtract from the sender *)
