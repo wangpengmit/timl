@@ -107,7 +107,7 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
     if !id = 0 then
       amap_set memberId targetMember (vector_length members);
       id := vector_length members;
-      vector_push_back members (default_value Memeber)
+      vector_push_back members (zero_value Memeber)
     endif;
 
     vector_set members id (Member {member: targetMember, memberSince: now, name: memberName});
@@ -211,6 +211,12 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
    * @param weiAmount amount of ether to send
    * @param transactionBytecode bytecode of transaction
    *)
+ (* According to http://solidity.readthedocs.io/en/latest/miscellaneous.html#modifiers :
+    pure for functions: Disallows modification or access of state - this is not enforced yet.
+    view for functions: Disallows modification of state - this is not enforced yet.
+    constant for state variables: Disallows assignment (except initialisation), does not occupy storage slot.
+    constant for functions: Same as view.
+  *) 
   public constant fun checkProposalCode (
         proposalNumber : uint,
         beneficiary : address,
