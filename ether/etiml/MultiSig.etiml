@@ -409,7 +409,7 @@ contract Wallet = contract inherited_from (multisig, multiowned, daylimit) {
     for (i : uint = 0; i < length; inc)
       map_modify m_txs (vector_get m_pendingIndex i) zerofy
     endfor;
-    super.clearPending()
+    super clearPending()
 
   (* FIELDS *)
 
