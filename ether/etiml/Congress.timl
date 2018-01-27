@@ -21,7 +21,7 @@ contract tokenRecipient = contract
 
     public fun receiveApproval (_from : address, _value : uint256, _token : address, _extraData : bytes) =
       let t : Token = Token(_token);
-      require(transferFrom(t, _from, this, _value));
+      require(transferFrom t ( _from, this, _value));
       receivedTokens(_from, _value, _token, _extraData)
 
     public fun default () guardedby payable =
