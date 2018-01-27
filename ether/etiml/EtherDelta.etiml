@@ -23,11 +23,11 @@ end
 
 contract Token = contract
   (* @return total amount of tokens *)
-  constant fun totalSupply () returns uint256
+  fun totalSupply () constant returns uint256
 
   (* @param _owner The address from which the balance will be retrieved *)
   (* @return The balance *)
-  constant fun balanceOf (_owner : address) returns uint256
+  fun balanceOf (_owner : address) constant returns uint256
 
   (*
   /// @notice send `_value` token to `_to` from `msg.sender`
@@ -59,7 +59,7 @@ contract Token = contract
   /// @param _spender The address of the account able to transfer the tokens
   /// @return Amount of remaining tokens allowed to spent
   *)
-  constant fun allowance (_owner : address, _spender : address) returns uint256
+  fun allowance (_owner : address, _spender : address) constant returns uint256
 
   event Transfer(indexed _from : address, indexed _to : address, _value : uint256)
   event Approval(indexed _owner : address, indexed _spender : address, _value : uint256)
@@ -77,7 +77,7 @@ contract StandardToken = contract inherited_from Token
     //Replace the if with this one instead.
     *)
     if balances[msg.sender] >= _value && balances[_to] + _value > balances[_to] then
-    (* if (balances[msg.sender] >= _value && _value > 0) { *)
+    (* //if (balances[msg.sender] >= _value && _value > 0) { *)
       modify balances[msg.sender] -= _value;
       modify balances[_to] += _value;
       Transfer(msg.sender, _to, _value);
@@ -86,236 +86,223 @@ contract StandardToken = contract inherited_from Token
       false
     endif
 
-  function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-    //same as above. Replace this line with the following if you want to protect against wrapping uints.
-    if (balances[_from] >= _value && allowed[_from][msg.sender] >= _value && balances[_to] + _value > balances[_to]) {
-    //if (balances[_from] >= _value && allowed[_from][msg.sender] >= _value && _value > 0) {
-      balances[_to] += _value;
-      balances[_from] -= _value;
-      allowed[_from][msg.sender] -= _value;
+  fun transferFrom (_from : address, _to : address, _value : uint256) returns bool =
+    (* same as above. Replace this line with the following if you want to protect against wrapping uints. *)
+    if balances[_from] >= _value && allowed[_from][msg.sender] >= _value && balances[_to] + _value > balances[_to] then
+    (* //if (balances[_from] >= _value && allowed[_from][msg.sender] >= _value && _value > 0) { *)
+      modify balances[_to] += _value;
+      modify balances[_from] -= _value;
+      modify allowed[_from][msg.sender] -= _value;
       Transfer(_from, _to, _value);
-      return true;
-    } else { return false; }
-  }
+      true
+    else
+      false
+    endif
 
-  function balanceOf(address _owner) constant returns (uint256 balance) {
-    return balances[_owner];
-  }
+  fun balanceOf (_owner : address) constant returns uint256 =
+    balances[_owner]
 
-  function approve(address _spender, uint256 _value) returns (bool success) {
-    allowed[msg.sender][_spender] = _value;
+  fun approve (_spender : address, _value : uint256) returns bool =
+    set allowed[msg.sender][_spender] _value;
     Approval(msg.sender, _spender, _value);
-    return true;
-  }
+    true
 
-  function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
-    return allowed[_owner][_spender];
-  }
+  fun allowance (_owner : address, _spender : address) constant returns uint256 =
+    allowed[_owner][_spender]
 
-  mapping(address => uint256) balances;
+  val balances : map address uint256
 
-  mapping (address => mapping (address => uint256)) allowed;
+  val allowed : map address address uint256
 
-  uint256 public totalSupply;
-}
+  public val totalSupply : ref uint256
 
-contract ReserveToken is StandardToken, SafeMath {
-  address public minter;
-  function ReserveToken() {
-    minter = msg.sender;
-  }
-  function create(address account, uint amount) {
-    if (msg.sender != minter) throw;
-    balances[account] = safeAdd(balances[account], amount);
-    totalSupply = safeAdd(totalSupply, amount);
-  }
-  function destroy(address account, uint amount) {
-    if (msg.sender != minter) throw;
-    if (balances[account] < amount) throw;
+end_contract    
+
+contract ReserveToken = contract inherited_from (StandardToken, SafeMath)
+
+  open SafeMath
+         
+  public val minter : ref address
+
+  fun init () =
+    minter := msg.sender
+
+  fun create (account : address, amount : uint) =
+    if msg.sender != minter.v then throw endif;
+    set balances[account] safeAdd(balances[account], amount);
+    totalSupply := safeAdd(totalSupply, amount)
+  
+  fun destroy (account : address, amount : uint) =
+    if msg.sender != minter.v then throw endif;
+    if balances[account] < amount then throw endif;
     set balances[account] safeSub(balances[account], amount);
-    totalSupply = safeSub(totalSupply, amount);
-  }
-}
+    totalSupply := safeSub(totalSupply, amount)
 
-contract AccountLevels {
+end_contract
+
+contract AccountLevels = contract
+  (*                           
   //given a user, returns an account level
   //0 = regular user (pays take fee and make fee)
   //1 = market maker silver (pays take fee, no make fee, gets rebate)
   //2 = market maker gold (pays take fee, no make fee, gets entire counterparty's take fee as rebate)
-  function accountLevel(address user) constant returns(uint) {}
+  *)
+  fun accountLevel (user : address) constant returns uint
 }
 
-contract AccountLevelsTest is AccountLevels {
-  mapping (address => uint) public accountLevels;
+contract AccountLevelsTest = contract inherited_from AccountLevels 
+  public val accountLevels : map address uint
 
-  function setAccountLevel(address user, uint level) {
-    accountLevels[user] = level;
-  }
+  fun setAccountLevel (user : address, level : uint) =
+    set accountLevels[user] level
 
-  function accountLevel(address user) constant returns(uint) {
-    return accountLevels[user];
-  }
-}
+  fun accountLevel (user : address) constant returns uint =
+    accountLevels[user]
 
-contract EtherDelta is SafeMath {
-  address public admin; //the admin address
-  address public feeAccount; //the account that will receive fees
-  address public accountLevelsAddr; //the address of the AccountLevels contract
-  uint public feeMake; //percentage times (1 ether)
-  uint public feeTake; //percentage times (1 ether)
-  uint public feeRebate; //percentage times (1 ether)
-  mapping (address => mapping (address => uint)) public tokens; //mapping of token addresses to mapping of account balances (token=0 means Ether)
-  mapping (address => mapping (bytes32 => bool)) public orders; //mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature)
-  mapping (address => mapping (bytes32 => uint)) public orderFills; //mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
+end_contract
 
-  event Order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user);
-  event Cancel(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s);
-  event Trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address get, address give);
-  event Deposit(address token, address user, uint amount, uint balance);
-  event Withdraw(address token, address user, uint amount, uint balance);
+contract EtherDelta = contract
+  open SafeMath
+  public val admin : ref address (* the admin address *)
+  public val feeAccount : ref address  (* the account that will receive fees *)
+  public val accountLevelsAddr : ref address (* the address of the AccountLevels contract *)
+  public val feeMake : ref uint  (* percentage times (1 ether) *)
+  public val feeTake : ref uint  (* percentage times (1 ether) *)
+  public val feeRebate : ref uint  (* percentage times (1 ether) *)
+  public val tokens : map address address uint  (* mapping of token addresses to mapping of account balances (token=0 means Ether) *)
+  public val orders : map address bytes32 bool  (* mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature) *)
+  public val orderFills : map bytes32 uint  (* mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled) *)
 
-  function EtherDelta(address admin_, address feeAccount_, address accountLevelsAddr_, uint feeMake_, uint feeTake_, uint feeRebate_) {
-    admin = admin_;
-    feeAccount = feeAccount_;
-    accountLevelsAddr = accountLevelsAddr_;
-    feeMake = feeMake_;
-    feeTake = feeTake_;
-    feeRebate = feeRebate_;
-  }
+  event Order(tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address)
+  event Cancel(tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address, v : uint8, r : bytes32, s : bytes32)
+  event Trade(tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, get : address, give : address)
+  event Deposit(token : address, user : address, amount : uint, balance : uint)
+  event Withdraw(token : address, user : address, amount : uint, balance : uint)
 
-  function() {
-    throw;
-  }
+  fun EtherDelta (admin_ : address, feeAccount_ : address, accountLevelsAddr_ : address, feeMake_ : uint, feeTake_ : uint, feeRebate_ : uint) =
+    admin := admin_;
+    feeAccount := feeAccount_;
+    accountLevelsAddr := accountLevelsAddr_;
+    feeMake := feeMake_;
+    feeTake := feeTake_;
+    feeRebate := feeRebate_
 
-  function changeAdmin(address admin_) {
-    if (msg.sender != admin) throw;
-    admin = admin_;
-  }
+  fun default () =
+    throw
 
-  function changeAccountLevelsAddr(address accountLevelsAddr_) {
-    if (msg.sender != admin) throw;
-    accountLevelsAddr = accountLevelsAddr_;
-  }
+  fun changeAdmin (admin_ : address) =
+    if msg.sender != admin.v then throw endif;
+    admin := admin_
 
-  function changeFeeAccount(address feeAccount_) {
-    if (msg.sender != admin) throw;
-    feeAccount = feeAccount_;
-  }
+  fun changeAccountLevelsAddr (accountLevelsAddr_ : address) =
+    if (msg.sender != admin.v) then throw endif;
+    accountLevelsAddr := accountLevelsAddr_
 
-  function changeFeeMake(uint feeMake_) {
-    if (msg.sender != admin) throw;
-    if (feeMake_ > feeMake) throw;
-    feeMake = feeMake_;
-  }
+  fun changeFeeAccount (feeAccount_ : address) =
+    if (msg.sender != admin.v) then throw endif;
+    feeAccount := feeAccount_
 
-  function changeFeeTake(uint feeTake_) {
-    if (msg.sender != admin) throw;
-    if (feeTake_ > feeTake || feeTake_ < feeRebate) throw;
-    feeTake = feeTake_;
-  }
+  fun changeFeeMake (feeMake_ : uint) =
+    if (msg.sender != admin.v) then throw endif;
+    if (feeMake_ > feeMake) then throw endif;
+    feeMake := feeMake_
 
-  function changeFeeRebate(uint feeRebate_) {
-    if (msg.sender != admin) throw;
-    if (feeRebate_ < feeRebate || feeRebate_ > feeTake) throw;
-    feeRebate = feeRebate_;
-  }
+  fun changeFeeTake (feeTake_ : uint) =
+    if (msg.sender != admin.v) then throw endif;
+    if (feeTake_ > feeTake.v || feeTake_ < feeRebate.v) then throw endif;
+    feeTake := feeTake_
 
-  function deposit() payable {
-    tokens[0][msg.sender] = safeAdd(tokens[0][msg.sender], msg.value);
-    Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]);
-  }
+  fun changeFeeRebate (feeRebate_ : uint) {
+    if (msg.sender != admin.v) then throw endif;
+    if (feeRebate_ < feeRebate.v || feeRebate_ > feeTake.v) then throw endif;
+    feeRebate := feeRebate_
 
-  function withdraw(uint amount) {
-    if (tokens[0][msg.sender] < amount) throw;
-    tokens[0][msg.sender] = safeSub(tokens[0][msg.sender], amount);
-    if (!msg.sender.call.value(amount)()) throw;
-    Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
-  }
+  payable fun deposit () =
+    set tokens[0][msg.sender] safeAdd(tokens[0][msg.sender], msg.value);
+    Deposit(0, msg.sender, msg.value, tokens[0][msg.sender])
 
-  function depositToken(address token, uint amount) {
-    //remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
-    if (token==0) throw;
-    if (!Token(token).transferFrom(msg.sender, this, amount)) throw;
-    tokens[token][msg.sender] = safeAdd(tokens[token][msg.sender], amount);
-    Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
-  }
+  fun withdraw (amount : uint) =
+    if (tokens[0][msg.sender] < amount) then throw endif;
+    set tokens[0][msg.sender] safeSub(tokens[0][msg.sender], amount);
+    if (not call_with_value (msg.sender, amount)) then throw endif;
+    Withdraw(0, msg.sender, amount, tokens[0][msg.sender])
 
-  function withdrawToken(address token, uint amount) {
-    if (token==0) throw;
-    if (tokens[token][msg.sender] < amount) throw;
-    tokens[token][msg.sender] = safeSub(tokens[token][msg.sender], amount);
-    if (!Token(token).transfer(msg.sender, amount)) throw;
-    Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
-  }
+  fun depositToken (token : address, amount : uint) =
+    (*remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.*)
+    if (token==0) then throw endif;
+    if (not Token(token).transferFrom(msg.sender, this, amount)) then throw endif;
+    set tokens[token][msg.sender] safeAdd(tokens[token][msg.sender], amount);
+    Deposit(token, msg.sender, amount, tokens[token][msg.sender])
 
-  function balanceOf(address token, address user) constant returns (uint) {
-    return tokens[token][user];
-  }
+  fun withdrawToken (token : address, amount : uint) =
+    if (token==0) then throw endif;
+    if (tokens[token][msg.sender] < amount) then throw endif;
+    set tokens[token][msg.sender] safeSub(tokens[token][msg.sender], amount);
+    if (not Token(token).transfer(msg.sender, amount)) then throw endif;
+    Withdraw(token, msg.sender, amount, tokens[token][msg.sender])
 
-  function order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce) {
-    bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    orders[msg.sender][hash] = true;
-    Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender);
-  }
+  fun balanceOf (token : address, user : address) constant returns uint =
+    tokens[token][user]
 
-  function trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s, uint amount) {
-    //amount is in amountGet terms
-    bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    if (!(
+  fun order (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint) =
+    let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
+    set orders[msg.sender][hash] true;
+    Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender)
+
+  fun trade (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address, v : uint8, r : bytes32, s : bytes32, amount : uint) =
+    (*amount is in amountGet terms*)
+    let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
+    if (not (
       (orders[user][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
       block.number <= expires &&
       safeAdd(orderFills[user][hash], amount) <= amountGet
-    )) throw;
+    )) then throw endif;
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
-    orderFills[user][hash] = safeAdd(orderFills[user][hash], amount);
-    Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender);
-  }
+    set orderFills[user][hash] safeAdd(orderFills[user][hash], amount);
+    Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender)
 
-  function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
-    uint feeMakeXfer = safeMul(amount, feeMake) / (1 ether);
-    uint feeTakeXfer = safeMul(amount, feeTake) / (1 ether);
-    uint feeRebateXfer = 0;
-    if (accountLevelsAddr != 0x0) {
-      uint accountLevel = AccountLevels(accountLevelsAddr).accountLevel(user);
-      if (accountLevel==1) feeRebateXfer = safeMul(amount, feeRebate) / (1 ether);
-      if (accountLevel==2) feeRebateXfer = feeTakeXfer;
-    }
-    tokens[tokenGet][msg.sender] = safeSub(tokens[tokenGet][msg.sender], safeAdd(amount, feeTakeXfer));
-    tokens[tokenGet][user] = safeAdd(tokens[tokenGet][user], safeSub(safeAdd(amount, feeRebateXfer), feeMakeXfer));
-    tokens[tokenGet][feeAccount] = safeAdd(tokens[tokenGet][feeAccount], safeSub(safeAdd(feeMakeXfer, feeTakeXfer), feeRebateXfer));
-    tokens[tokenGive][user] = safeSub(tokens[tokenGive][user], safeMul(amountGive, amount) / amountGet);
-    tokens[tokenGive][msg.sender] = safeAdd(tokens[tokenGive][msg.sender], safeMul(amountGive, amount) / amountGet);
-  }
+  private fun tradeBalances (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, user : address, amount : uint) =
+    let feeMakeXfer : uint = safeMul(amount, feeMake) / (1 ether);
+    let feeTakeXfer : uint = safeMul(amount, feeTake) / (1 ether);
+    let feeRebateXfer : ref uint = ref 0;
+    if (accountLevelsAddr.v != 0x0) then
+      let accountLevel : uint = AccountLevels(accountLevelsAddr.v).accountLevel(user);
+      if (accountLevel==1) then feeRebateXfer := safeMul(amount, feeRebate) / (1 ether) endif;
+      if (accountLevel==2) then feeRebateXfer := feeTakeXfer endif;
+    endif;
+    set tokens[tokenGet][msg.sender] safeSub(tokens[tokenGet][msg.sender], safeAdd(amount, feeTakeXfer));
+    set tokens[tokenGet][user] safeAdd(tokens[tokenGet][user], safeSub(safeAdd(amount, feeRebateXfer.v), feeMakeXfer));
+    set tokens[tokenGet][feeAccount] safeAdd(tokens[tokenGet][feeAccount], safeSub(safeAdd(feeMakeXfer, feeTakeXfer), feeRebateXfer.v));
+    set tokens[tokenGive][user] safeSub(tokens[tokenGive][user], safeMul(amountGive, amount) / amountGet);
+    set tokens[tokenGive][msg.sender] safeAdd(tokens[tokenGive][msg.sender], safeMul(amountGive, amount) / amountGet)
 
-  function testTrade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s, uint amount, address sender) constant returns(bool) {
-    if (!(
+  fun testTrade (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address, v : uint8, r : bytes32, s : bytes32, amount : uint, sender : address) constant returns bool =
+    if (not (
       tokens[tokenGet][sender] >= amount &&
       availableVolume(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, user, v, r, s) >= amount
-    )) return false;
-    return true;
-  }
+       )) then false
+    else true
+    endif
 
-  function availableVolume(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s) constant returns(uint) {
-    bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    if (!(
+  fun availableVolume (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address, v : uint8, r : bytes32, s : bytes32) constant returns uint =
+    let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
+    if (not (
       (orders[user][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
       block.number <= expires
-    )) return 0;
-    uint available1 = safeSub(amountGet, orderFills[user][hash]);
-    uint available2 = safeMul(tokens[tokenGive][user], amountGet) / amountGive;
-    if (available1<available2) return available1;
-    return available2;
-  }
+    )) then return 0 endif;
+    let available1 : uint = safeSub(amountGet, orderFills[user][hash]);
+    let available2 : uint = safeMul(tokens[tokenGive][user], amountGet) / amountGive;
+    if (available1<available2) then return available1 endif;
+    available2
 
-  function amountFilled(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s) constant returns(uint) {
-    bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    return orderFills[user][hash];
-  }
+  fun amountFilled (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address, v : uint8, r : bytes32, s : bytes32) constant returns uint =
+    let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
+    orderFills[user][hash]
 
-  function cancelOrder(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, uint8 v, bytes32 r, bytes32 s) {
-    bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    if (!(orders[msg.sender][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == msg.sender)) throw;
-    orderFills[msg.sender][hash] = amountGet;
-    Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
-  }
-}
+  fun cancelOrder (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, v : uint8, r : bytes32, s : bytes32) =
+    let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
+    if (not (orders[msg.sender][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == msg.sender)) then throw endif;
+    set orderFills[msg.sender][hash] amountGet;
+    Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s)
+
+end_contract

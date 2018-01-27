@@ -51,7 +51,7 @@
   "Set font-lock–related settings for ETiML."
   (setq prettify-symbols-alist etiml-prettify-symbols-alist)
   (let ((etiml-builtins '("BigO" "ceil" "floor" "b2n" "forall" "never" "log2" "log10"))
-        (etiml-keywords '("return" "using" "absidx" "returns" "public" "private" "external" "internal" "guarded_by" "forward_to" "inherited_from" "contract" "endcontract" "interface" "endinterface" "endif" "for" "endfor" "while" "endwhile" "constant" "pure" "event" "map" "array" "vector" "address" "uint" "uint256" "bytes" "bytes32" "bool" "true" "false" "sha3" "super" "ref" "zerofy" "set" "modify" "days" "assert" "require" "throw" "pragma" "not" "indexed" "string")))
+        (etiml-keywords '("return" "using" "absidx" "returns" "public" "private" "external" "internal" "payable" "guarded_by" "forward_to" "inherited_from" "contract" "endcontract" "end_contract" "interface" "endinterface" "end_interface" "endif" "for" "endfor" "while" "endwhile" "constant" "pure" "event" "map" "array" "vector" "address" "uint" "uint256" "bytes" "bytes32" "bool" "true" "false" "sha3" "sha256" "ecrecover" "super" "ref" "zero_value" "empty" "set" "modify" "days" "ether" "assert" "require" "throw" "pragma" "not" "indexed" "string")))
     (font-lock-add-keywords
      nil
      `(("\\_<'[a-z]\\_>" 0 '((:slant italic)))

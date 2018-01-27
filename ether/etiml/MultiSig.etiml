@@ -189,8 +189,8 @@ contract multiowned = contract
       (* ok - check if count is enough to go ahead. *)
       if !pending.yetNeeded <= 1 then
         (* enough confirmations: reset and run interior. *)
-        vector_modify m_pendingIndex ((map_get m_pending _operation).index) zerofy;
-        map_modify modify m_pending _operation zerofy;
+        vector_set m_pendingIndex ((map_get m_pending _operation).index) zero_value;
+        map_set m_pending _operation zero_value;
         true
       else
         (* not enough: record that this owner in particular confirmed. *)
@@ -219,10 +219,10 @@ contract multiowned = contract
     let length : uint = vector_length m_pendingIndex;
     for (i : uint = 0; i < length; inc)
       if vector_get m_pendingIndex i != 0 then
-        modify m_pending (vector_get m_pendingIndex i) zerofy
+        map_set m_pending (vector_get m_pendingIndex i) zero_value
       endif
     endfor;
-    zerofy m_pendingIndex
+    empty m_pendingIndex
 
   (* FIELDS *)
 
@@ -396,7 +396,7 @@ contract Wallet = contract inherited_from (multisig, multiowned, daylimit) {
     if !(map_get m_txs _h).to != 0 then
       call_with_value (!(map_get m_txs _h).to, !(map_get m_txs _h).value, !(map_get m_txs _h).data);
       MultiTransact(msg.sender, _h, !(map_get m_txs _h).value, !(map_get m_txs _h).to, !(map_get m_txs _h).data);
-      map_modify m_txs _h zerofy;
+      map_set m_txs _h zero_value;
       true
     else
       false
@@ -407,7 +407,7 @@ contract Wallet = contract inherited_from (multisig, multiowned, daylimit) {
   internal fun clearPending () =
     let length : uint = vector_length m_pendingIndex;
     for (i : uint = 0; i < length; inc)
-      map_modify m_txs (vector_get m_pendingIndex i) zerofy
+      map_set m_txs (vector_get m_pendingIndex i) zero_value
     endfor;
     super clearPending()
 
