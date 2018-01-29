@@ -266,8 +266,6 @@ contract KittyBase = contract inherited_from KittyAccessControl
     generation : uint16,
   }
 
-                 (*here*)
-                 
   (*** CONSTANTS ***)
 
   (*/ @dev A lookup table indicating the cooldown duration after any successful*)
@@ -276,7 +274,7 @@ contract KittyBase = contract inherited_from KittyAccessControl
   (*/  is bred, encouraging owners not to just keep breeding the same cat over*)
   (*/  and over again. Caps out at one week (a cat can breed an unbounded number*)
   (*/  of times, and the maximum cooldown is always seven days).*)
-  uint32[14] public cooldowns = [
+  public val cooldowns : array uint32 {14} = {
     uint32(1 minutes),
     uint32(2 minutes),
     uint32(5 minutes),
@@ -291,10 +289,10 @@ contract KittyBase = contract inherited_from KittyAccessControl
     uint32(2 days),
     uint32(4 days),
     uint32(7 days)
-  ];
+  };
 
   (* An approximation of currently how many seconds are in between blocks.*)
-  uint256 public secondsPerBlock = 15;
+  public val secondsPerBlock : ref uint256 = ref 15
 
   (*** STORAGE ***)
 
@@ -303,35 +301,35 @@ contract KittyBase = contract inherited_from KittyAccessControl
   (*/  the unKitty, the mythical beast that is the parent of all gen0 cats. A bizarre*)
   (*/  creature that is both matron and sire... to itself! Has an invalid genetic code.*)
   (*/  In other words, cat ID 0 is invalid... ;-)*)
-  Kitty[] kitties;
+  Kitty[] kitties
 
   (*/ @dev A mapping from cat IDs to the address that owns them. All cats have*)
   (*/  some valid owner address, even gen0 cats are created with a non-zero owner.*)
-  mapping (uint256 => address) public kittyIndexToOwner;
+  mapping (uint256 => address) public kittyIndexToOwner
 
   (* @dev A mapping from owner address to count of tokens that address owns.*)
   (*  Used internally inside balanceOf() to resolve ownership count.*)
-  mapping (address => uint256) ownershipTokenCount;
+  mapping (address => uint256) ownershipTokenCount
 
   (*/ @dev A mapping from KittyIDs to an address that has been approved to call*)
   (*/  transferFrom(). Each Kitty can only have one approved address for transfer*)
   (*/  at any time. A zero value means no approval is outstanding.*)
-  mapping (uint256 => address) public kittyIndexToApproved;
+  mapping (uint256 => address) public kittyIndexToApproved
 
   (*/ @dev A mapping from KittyIDs to an address that has been approved to use*)
   (*/  this Kitty for siring via breedWith(). Each Kitty can only have one approved*)
   (*/  address for siring at any time. A zero value means no approval is outstanding.*)
-  mapping (uint256 => address) public sireAllowedToAddress;
+  mapping (uint256 => address) public sireAllowedToAddress
 
   (*/ @dev The address of the ClockAuction contract that handles sales of Kitties. This*)
   (*/  same contract handles both peer-to-peer sales as well as the gen0 sales which are*)
   (*/  initiated every 15 minutes.*)
-  SaleClockAuction public saleAuction;
+  SaleClockAuction public saleAuction
 
   (*/ @dev The address of a custom ClockAuction subclassed contract that handles siring*)
   (*/  auctions. Needs to be separate from saleAuction because the actions taken on success*)
   (*/  after a sales and siring auction are quite different.*)
-  SiringClockAuction public siringAuction;
+  SiringClockAuction public siringAuction
 
   (*/ @dev Assigns ownership of a specific Kitty to an address.*)
   fun _transfer (_from : address, _to : address, _tokenId : uint256) internal {
