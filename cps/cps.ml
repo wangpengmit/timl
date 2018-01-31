@@ -45,9 +45,9 @@ let rec cps (e, t_e) (k, j_k) =
       let x1 = fresh_evar () in
       let x2 = fresh_evar () in
       let e = EAppTuple (EAppI (EV x1, IV j_k), [EV x2, EV k]) in
-      let e = EAbs $ close_e_e_anno ((x2, "x2", t_e2), e) in
       let t_x2 = cps_t t_e2 in
-      let (e, i_e) = cps (e2, t_x2) (e, blowup_time (i, j_k)) in
+      let e = EAbs $ close_e_e_anno ((x2, "x2", t_x2), e) in
+      let (e, i_e) = cps (e2, t_e2) (e, blowup_time (i, j_k)) in
       let t_x1 = cps_t t_e1 in
       let e = EAbs $ close_e_e_anno ((x1, "x1", t_x1), e) in
       cps (e1, t_e1) (e, i_e)
@@ -86,6 +86,7 @@ let rec cps (e, t_e) (k, j_k) =
       let e = EAbsT $ close_t_e_anno ((alpha, name_alpha, kd_alpha), e) in
       (k $$ e, j_k +% T1)
     | S.AppT (e, i) ->
+       (* [[ e[t] ]](k) = [[e]](\x. x[t]{k.j}(k)) *)
       let (e, t_e) = assert_EAsc e in
       let (t_e2, i, _) = assert_TArrow t_e1 in
       let x = fresh_evar () in
@@ -94,6 +95,7 @@ let rec cps (e, t_e) (k, j_k) =
       let c = EAbs $ close_e_e ((x, "x", t_x), c) in
       cps (e, t_e) (c, blowup_time_t j)
     | S.EUnOp (EUFold t_fold, e) ->
+       (* [[ fold e ]](k) = [[e]](\x. k (fold x)) *)
       let (e, t_e) = assert_EAsc e in
       let x = fresh_evar () in
       let t_fold = cps_t t_fold in
@@ -103,6 +105,7 @@ let rec cps (e, t_e) (k, j_k) =
       let c = EAbs $ close_e_e_anno ((x, "x", t_x), c) in
       cps (e, t_e) (c, j_k +% T1)
     | S.EUnOp (EUUnfold, e) ->
+       (* [[ unfold e ]](k) = [[e]](\x. k (unfold x)) *)
       let (e, t_e) = assert_EAsc e in
       let x = fresh_evar () in
       let c = EUnfold (EV x) in
