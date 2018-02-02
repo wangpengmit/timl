@@ -16,8 +16,8 @@ infix 6 %+
          
 fun IV x = VarI $ Free x
 fun EV x = EVar $ Free x
-val T0 = T0 dummy
-val T1 = T1 dummy
+val T_0 = T0 dummy
+val T_1 = T1 dummy
 
 fun unBindAnno2 data =
   let
@@ -88,7 +88,62 @@ fun assert_and_reduce_beta e =
         subst0_e_e e2 e1
       end
     | _ => raise assert_fail "assert_and_reduce_beta"
-      
+
+structure ExportPP = struct
+
+open LongId
+open Util
+open MicroTiML
+open MicroTiMLVisitor
+open MicroTiMLExLongId
+open MicroTiMLEx
+       
+infixr 0 $
+infixr 0 !!
+         
+fun short_to_long_id x = ID (x, dummy)
+fun export_var sel ctx id =
+  let
+    fun unbound s = "__unbound_" ^ s
+    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
+  in
+    case id of
+        ID (x, _) =>
+        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
+  end
+(* val export_i = return2 *)
+fun export_i a = ToString.export_i Gctx.empty a
+fun export_s a = ToString.export_s Gctx.empty a
+fun export_t a = export_t_fn (export_var snd, export_i, export_s) a
+fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
+val str = PP.string
+fun str_var x = LongId.str_raw_long_id id(*str_int*) x
+fun str_i a =
+  (* ToStringRaw.str_raw_i a *)
+  ToString.SN.strn_i a
+(* const_fun "<idx>" a *)
+fun str_bs a =
+  ToStringRaw.str_raw_bs a
+fun str_s a =
+  (* ToStringRaw.str_raw_s a *)
+  ToString.SN.strn_s a
+  (* const_fun "<sort>" a *)
+fun pp_t_to s b =
+  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
+  (* str s "<ty>" *)
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
+    str_var,
+    str_i,
+    str_s,
+    const_fun "<kind>",
+    pp_t_to
+  ) a
+
+end
+
 fun blowup_time (i : idx, j : idx) = i
 fun blowup_time_t (j : idx) = j
   
@@ -113,7 +168,7 @@ fun cps_t t =
         val t = cps_t t
         val j = fresh_ivar ()
         val t = TArrow (t, IV j, TUnit)
-        val t = TArrow (t, IV j %+ T1, TUnit)
+        val t = TArrow (t, IV j %+ T_1, TUnit)
         val t = TForallTimeClose ((j, "j"), t)
       in
         TForall $ close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
@@ -131,7 +186,7 @@ fun cps (e, t_e) (k, j_k) =
   case e of
       S.EVar x =>
       (* [[ x ]](k) = k x *)
-      (k $$ EVar x, j_k %+ T1)
+      (k $$ EVar x, j_k %+ T_1)
     | S.EAbs bind =>
       (* [[ \x.e ]](k) = k (\\j. \(x, c). [[e]](c) |> blowup_time(i, j))
          where [i] is the time bound of [e], blowup_time(i,j) = b(i+1)+2i+1+j, [b] is blow-up factor *)
@@ -150,7 +205,7 @@ fun cps (e, t_e) (k, j_k) =
         val e = EAbsPairClose (((x, name_x, t_x), (c, "c", t_c)), e)
         val e = EAbsTimeClose ((j, "j"), e)
       in
-        (k $$ e, j_k %+ T1)
+        (k $$ e, j_k %+ T_1)
       end
     | S.EBinOp (EBApp, e1, e2) =>
       (* [[ e1 e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. x1 {k.j} (x2, k))) *)
@@ -170,7 +225,7 @@ fun cps (e, t_e) (k, j_k) =
       end
     | S.EConst c =>
       (* [[ x ]](c) = k c *)
-      (k $$ EConst c, j_k %+ T1)
+      (k $$ EConst c, j_k %+ T_1)
     | S.ERec bind =>
       (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
       let
@@ -179,12 +234,12 @@ fun cps (e, t_e) (k, j_k) =
         val e = open0_e_e x e
         val t_x = cps_t t_e
         val () = assert_b "cps/ERec/1" $ is_value e
-        val (e, i_e) = cps (e, t_e) (Eid t_x, T0) (* CPS with id is not strictly legal, since id doesn't return unit. It's OK because e should be a value. Values can be CPSed with continuations that return non-unit. *)
+        val (e, i_e) = cps (e, t_e) (Eid t_x, T_0) (* CPS with id is not strictly legal, since id doesn't return unit. It's OK because e should be a value. Values can be CPSed with continuations that return non-unit. *)
         val e = assert_and_reduce_beta e
         val () = assert_b "cps/ERec/2" $ is_value e
         val e = ERec $ close0_e_e_anno ((x, name_x, t_x), e)
       in
-        (k $$ e, j_k %+ T1)
+        (k $$ e, j_k %+ T_1)
       end
     | S.EAbsT bind =>
       (* [[ \\alpha.e ]](k) = k (\\alpha. \\j. \c. [[e]](c)) *)
@@ -205,7 +260,7 @@ fun cps (e, t_e) (k, j_k) =
         val e = EAbsTimeClose ((j, "j"), e)
         val e = EAbsT $ close0_t_e_anno ((alpha, name_alpha, kd_alpha), e)
       in
-        (k $$ e, j_k %+ T1)
+        (k $$ e, j_k %+ T_1)
       end
     | S.EAppT (e, t) =>
       (* [[ e[t] ]](k) = [[e]](\x. x[t]{k.j}(k)) *)
@@ -229,7 +284,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_x = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
       in
-        cps (e, t_e) (c, j_k %+ T1)
+        cps (e, t_e) (c, j_k %+ T_1)
       end
     | S.EUnOp (EUUnfold, e) =>
       (* [[ unfold e ]](k) = [[e]](\x. k (unfold x)) *)
@@ -241,7 +296,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_x = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
       in
-        cps (e, t_e) (c, j_k %+ T1)
+        cps (e, t_e) (c, j_k %+ T_1)
       end
     | S.EPack (t_pack, t, e) =>
       (* [[ pack <t, e> ]](k) = [[e]](\x. k (pack <t, x>)) *)
@@ -255,7 +310,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_x = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
       in
-        cps (e, t_e) (c, j_k %+ T1)
+        cps (e, t_e) (c, j_k %+ T_1)
       end
     | S.EUnpack (e1, bind) =>
       (* [[ unpack e1 as <alpha, x> in e2 ]](k) = [[e1]](\x1. unpack x1 as <alpha, x> in [[e2]](k)) *)
@@ -286,7 +341,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_x2 = cps_t t_e2
         val e = k $$ EPair (EV x1, EV x2)
         val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
-        val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T1)
+        val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T_1)
         val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e)
       in
         cps (e1, t_e1) (e, i_e)
@@ -301,7 +356,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_x = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
       in
-        cps (e, t_e) (c, j_k %+ T1)
+        cps (e, t_e) (c, j_k %+ T_1)
       end
     | S.EUnOp (EUInj (inj, t_other), e) =>
       (* [[ l.e ]](k) = [[e]](\x. k (l.x)) *)
@@ -315,7 +370,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_x = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
       in
-        cps (e, t_e) (c, j_k %+ T1)
+        cps (e, t_e) (c, j_k %+ T_1)
       end
     | S.ECase (e, bind1, bind2) =>
       (* [[ case e (x.e1) (x.e2) ]](k) = [[e]](\y. case y (x. [[e1]](k)) (x. [[e2]](k))) *)
@@ -339,7 +394,7 @@ fun cps (e, t_e) (k, j_k) =
         cps (e, t_e) (c, i_c)
       end
     | S.ELet (e1, bind) =>
-      (* [[ let x = e1 e2 ]](k) = [[e1]](\x. [[e2]](k)) *)
+      (* [[ let x = e1 in e2 ]](k) = [[e1]](\x. [[e2]](k)) *)
       let
         val (e1, t_e1) = assert_EAscType e1
         val t_res = t_e
@@ -367,7 +422,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_x2 = cps_t t_e2
         val e = k $$ EBinOp (EBPrim opr, EV x1, EV x2)
         val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
-        val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T1)
+        val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T_1)
         val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e)
       in
         cps (e1, t_e1) (e, i_e)
@@ -383,7 +438,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_x2 = cps_t t_e2
         val e = k $$ EBinOp (EBRead, EV x1, EV x2)
         val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
-        val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T1)
+        val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T_1)
         val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e)
       in
         cps (e1, t_e1) (e, i_e)
@@ -402,13 +457,177 @@ fun cps (e, t_e) (k, j_k) =
         val t_x3 = cps_t t_e3
         val e = k $$ EWrite (EV x1, EV x2, EV x3)
         val e = EAbs $ close0_e_e_anno ((x3, "x3", t_x3), e)
-        val (e, i_e) = cps (e3, t_e3) (e, j_k %+ T1)
+        val (e, i_e) = cps (e3, t_e3) (e, j_k %+ T_1)
         val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
         val (e, i_e) = cps (e2, t_e2) (e, i_e)
         val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e)
       in
         cps (e1, t_e1) (e, i_e)
       end
-    | _ => raise Unimpl "cps"
+    (* extensions from MicroTiML *)
+    | S.ELetConstr (e1, bind) =>
+      (* [[ let constr x = e1 in e2 ]](k) = [[e1]](\y. let constr x = y in [[e2]](k)) *)
+      (* here *)
+      let
+        val (e1, t_e1) = assert_EAscType e1
+        val t_res = t_e
+        val (name_x, e2) = unBindSimp2 bind
+        val x = fresh_evar ()
+        val e2 = open0_e_e x e2
+        val (c, i_c) = cps (e2, t_res) (k, j_k)
+        val t_x = cps_t t_e1
+        val c = EAbs $ close0_e_e_anno ((x, name_x, t_x), c)
+      in
+        cps (e1, t_e1) (c, i_c)
+      end
+    | _ =>
+      let
+        val s = (* substr 0 100 $  *)ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e
+      in
+        raise Unimpl $ "cps() on: " ^ s
+      end
       
 end
+
+structure CPSUnitTest = struct
+
+structure TestUtil = struct
+
+open CPS
+open LongId
+open Util
+open MicroTiML
+open MicroTiMLVisitor
+open MicroTiMLExLongId
+open MicroTiMLEx
+       
+infixr 0 $
+infixr 0 !!
+         
+fun short_to_long_id x = ID (x, dummy)
+fun export_var (sel : 'ctx -> string list) (ctx : 'ctx) id =
+  let
+    fun unbound s = "__unbound_" ^ s
+    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
+  in
+    case id of
+        ID (x, _) =>
+        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+        (* short_to_long_id $ str_int x *)
+      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
+  end
+(* val export_i = return2 *)
+fun export_i a = ToString.export_i Gctx.empty a
+fun export_s a = ToString.export_s Gctx.empty a
+fun export_t a = export_t_fn (export_var snd, export_i, export_s) a
+fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
+val str = PP.string
+fun str_var x = LongId.str_raw_long_id id(*str_int*) x
+fun str_i a =
+  (* ToStringRaw.str_raw_i a *)
+  ToString.SN.strn_i a
+  (* const_fun "<idx>" a *)
+fun str_bs a =
+  ToStringRaw.str_raw_bs a
+fun str_s a =
+  (* ToStringRaw.str_raw_s a *)
+  ToString.SN.strn_s a
+  (* const_fun "<sort>" a *)
+fun pp_t_to s b =
+  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
+  (* str s "<ty>" *)
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_e a = MicroTiMLExPP.pp_e_fn (
+    str_var,
+    str_i,
+    str_s,
+    const_fun "<kind>",
+    pp_t_to
+  ) a
+fun fail () = OS.Process.exit OS.Process.failure
+                   
+end
+
+open TestUtil
+
+infixr 0 $
+infixr 0 !!
+         
+fun test1 dirname =
+  let
+    val filename = join_dir_file (dirname, "cps-test1.pkg")
+    val filenames = ParseFilename.expand_pkg (fn msg => raise Impossible msg) filename
+    open Parser
+    val prog = concatMap parse_file filenames
+    open Elaborate
+    val prog = elaborate_prog prog
+    open NameResolve
+    val (prog, _, _) = resolve_prog empty prog
+                                    
+    open TypeCheck
+    val () = TypeCheck.turn_on_builtin ()
+    val () = println "Started TiML typechecking ..."
+    val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
+    val vcs = VCSolver.vc_solver filename vcs
+    val () = if null vcs then ()
+             else
+               raise curry TypeCheck.Error dummy $ (* str_error "Error" filename dummy *) [sprintf "Typecheck Error: $ Unproved obligations:" [str_int $ length vcs], ""] @ (
+               (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *)
+               concatMap (VCSolver.print_unsat true filename) vcs
+             )
+    val () = println "Finished TiML typechecking"
+                     
+    open MergeModules
+    val decls = merge_prog prog []
+    open TiML2MicroTiML
+    val e = SMakeELet (Teles decls, Expr.ETT dummy)
+    val () = println "Simplifying ..."
+    val e = SimpExpr.simp_e [] e
+    val () = println "Finished simplifying"
+    (* val () = println $ str_e empty ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
+    val () = println "Started translating ..."
+    val e = trans_e e
+    val () = println "Finished translating"
+    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = println ""
+                     
+    open MicroTiMLTypecheck
+    open TestUtil
+    val () = println "Started MicroTiML typechecking #1 ..."
+    val ((t, i), vcs, admits) = typecheck ([], [], [], HeapMap.empty) e
+    val () = println "Finished MicroTiML typechecking #1"
+    val () = println "Type:"
+    val () = pp_t $ export_t ([], []) t
+    val () = println "Time:"
+    val i = simp_i i
+    val () = println $ ToString.str_i Gctx.empty [] i
+    (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
+    (* val () = println "VCs:" *)
+    (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
+                     
+    val () = println "Started CPS conversion ..."
+    val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)
+    val () = println "Finished CPS conversion ..."
+    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = println ""
+    val () = println "Started MicroTiML typechecking #2 ..."
+    val ((t, i), vcs, admits) = typecheck ([], [], [], HeapMap.empty) e
+    val () = println "Finished MicroTiML typechecking #2"
+    val () = println "Type:"
+    val () = pp_t $ export_t ([], []) t
+    val () = println "Time:"
+    val i = simp_i i
+    val () = println $ ToString.str_i Gctx.empty [] i
+  in
+    ((* t, e *))
+  end
+  handle MicroTiMLTypecheck.MTCError msg => (println $ "MTiMLTC.MTCError: " ^ substr 0 1000 msg; fail ())
+       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; fail ())
+       | NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; fail ())
+    
+val test_suites = [
+      test1
+]
+                            
+end                  
