@@ -1,11 +1,21 @@
-structure CPS = struct
-
 (* Continuation-Passing-Style (CPS) Conversion *)
 
+structure CPS = struct
+
+open MicroTiMLExUtil
+open MicroTiMLEx
+structure S = MicroTiMLEx
+
+fun fresh_ivar () = ()
+
+fun IV x = ()
+
+fun blowup_time (i, j) = i
+  
 (* CPS conversion on types *)
 fun cps_t t =
   case t of
-    | TArrow (t1, i, t2) =>
+      TArrow (t1, i, t2) =>
       let
         val t1 = cps_t t1
         val t2 = cps_t t2
@@ -37,7 +47,7 @@ fun cps_t t =
 (* the 'unit' part can be relaxed if e is a value *)
 fun cps (e, t_e) (k, j_k) =
   case e of
-    | S.EVar x =>
+      S.EVar x =>
       (* [[ x ]](k) = k x *)
       (k $$ EV x, j_k %+ T1)
     | S.EAbs bind =>

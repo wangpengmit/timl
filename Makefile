@@ -29,8 +29,8 @@ main.cm: generate-file-list.rb
 
 %.t.sml: %.sml
 	cp $< $@
-	sed -i '1i(* Auto-generated. Do not edit! *)' $@
 	# cat $< | ruby preprocess.rb > $@
+	sed -i '1i(* Auto-generated. Do not edit! *)' $@
 
 clean:
 	rm -f main
