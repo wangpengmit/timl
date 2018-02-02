@@ -194,7 +194,8 @@ remove-open.sml
 merge-modules.sml
 micro-timl/timl-to-micro-timl.sml
 micro-timl/micro-timl-typecheck.sml
-# cps/cps.sml
+micro-timl/micro-timl-ex-locally-nameless.sml
+cps/cps.sml
 unit-test.sml
 main.sml
 }

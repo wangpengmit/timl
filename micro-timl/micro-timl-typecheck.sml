@@ -98,25 +98,11 @@ fun sc_against_sort ctx (i, s) = ignore $ check_sort Gctx.empty (ctx, i, s)
 fun is_wf_sort ctx s = ignore $ Sortcheck.is_wf_sort Gctx.empty (ctx, s)
 
 fun INat n = ConstIN (n, dummy)
-fun IMax (i1, i2) = BinOpI (MaxI, i1, i2)
 val TInt = TConst TCInt
-fun unTRec data =
-  let
-    val ((name, anno), t) = unBindAnno data
-    val name = Name2str name
-  in
-    (anno, (name, t))
-  end
 val unTQuan = unTRec
 val unTQuanI = unTRec
 val unTAbsT = unTRec
 val unTAbsI = unTRec
-fun unBindSimp t =
-  let
-    val (Binder name, t) = unBind t
-  in
-    (name, t)
-  end
 fun unELetIdx (def, bind) =
   let
     val (name, e) = unBindSimp bind
@@ -136,7 +122,6 @@ fun unEUnpack (def, bind) =
 val unEAbsI = unTRec
 val unEAbsT = unTRec
 val unEAbs = unTRec
-val unERec = unTRec
 fun unECase (e, bind1, bind2) =
   let
     val (name1, e1) = unBindSimp bind1
@@ -394,8 +379,6 @@ fun whnf ctx t =
       | TVar x => TVar x (* todo: look up type aliasing in ctx *)
       | _ => t
 
-fun assert_b msg b = Util.assert (fn () => b) msg
-    
 structure ExportPP = struct
 
 open LongId
@@ -608,51 +591,6 @@ fun collect_EAbsIT e =
       end
     | _ => ([], e)
 
-fun collect_EAppIT_rev e =
-  let
-    val self = collect_EAppIT_rev
-  in
-    case e of
-        EAppI (e, i) =>
-        let
-          val (e, args) = self e
-        in
-          (e, inl i :: args)
-        end
-      | EAppT (e, t) =>
-        let
-          val (e, args) = self e
-        in
-          (e, inr t :: args)
-        end
-      | _ => (e, [])
-  end
-fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
-
-fun is_value e =
-  case e of
-      EConst _ => true
-    | EBinOp (EBPair, e1, e2) => is_value e1 andalso is_value e2
-    | EUnOp (EUInj _, e) => is_value e
-    | EAbs _ =>  true
-    | EAbsT _ => true
-    | EAbsI _ => true
-    | EPack (_, _, e) => is_value e
-    | EPackI (_, _, e) => is_value e
-    | EPackIs (_, _, e) => is_value e
-    | EUnOp (EUFold _, e) => is_value e
-    | ELoc _ => true
-    | _ =>
-      case collect_EAppIT e of
-          (ERec data, _) =>
-          let
-            val (_, (_, e)) = unERec data
-          in
-            is_value e
-          end
-        | (EVar _, _) => true (* todo: is this right? *)
-        | _ => false
-
 fun get_expr_const_type c =
   case c of
       ECTT => TUnit
@@ -766,10 +704,6 @@ fun tc (ctx as (ictx, tctx, ectx, hctx)) e : mtiml_ty * idx =
           val (t1, t2) = case whnf itctx t of
                              TBinOp (TBProd, t1, t2) => (t1, t2)
                            | _ => raise MTCError "EProj"
-          fun choose (t1, t2) proj =
-            case proj of
-                ProjFst => t1
-              | ProjSnd => t2
         in
           (choose (t1, t2) proj, i)
         end

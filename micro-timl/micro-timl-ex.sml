@@ -1150,5 +1150,59 @@ fun export_e_fn params ctx e =
     #visit_expr vtable visitor ctx e
   end
 
+fun collect_EAppIT_rev e =
+  let
+    val self = collect_EAppIT_rev
+  in
+    case e of
+        EAppI (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inl i :: args)
+        end
+      | EAppT (e, t) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inr t :: args)
+        end
+      | _ => (e, [])
+  end
+fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
+
+fun unTRec data =
+  let
+    val ((name, anno), t) = unBindAnno data
+    val name = Name2str name
+  in
+    (anno, (name, t))
+  end
+val unERec = unTRec
+               
+fun is_value e =
+  case e of
+      EConst _ => true
+    | EBinOp (EBPair, e1, e2) => is_value e1 andalso is_value e2
+    | EUnOp (EUInj _, e) => is_value e
+    | EAbs _ =>  true
+    | EAbsT _ => true
+    | EAbsI _ => true
+    | EPack (_, _, e) => is_value e
+    | EPackI (_, _, e) => is_value e
+    | EPackIs (_, _, e) => is_value e
+    | EUnOp (EUFold _, e) => is_value e
+    | ELoc _ => true
+    | _ =>
+      case collect_EAppIT e of
+          (ERec data, _) =>
+          let
+            val (_, (_, e)) = unERec data
+          in
+            is_value e
+          end
+        | (EVar _, _) => true (* todo: is this right? *)
+        | _ => false
+
 end
                         
