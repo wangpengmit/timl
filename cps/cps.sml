@@ -51,6 +51,7 @@ fun ECaseClose (e, ((x1, name1), e1), ((x2, name2), e2)) =
   ECase (e, EBind ((name1, dummy), close0_e_e x1 e1), EBind ((name2, dummy), close0_e_e x2 e2))
 fun EUnpackClose (e1, (a, name_a), (x, name_x), e2) =
   EUnpack (e1, curry TBind (name_a, dummy) $ curry EBind (name_x, dummy) $ close0_t_e a $ close0_e_e x e2)
+fun ELetConstrClose ((x, name), e1, e2) = MakeELetConstr (e1, (name, dummy), close0_c_e x e2)
   
 fun Eid t = EAbs $ EBindAnno ((("x", dummy), t), EVar $ Bound 0)
         
@@ -467,16 +468,17 @@ fun cps (e, t_e) (k, j_k) =
     (* extensions from MicroTiML *)
     | S.ELetConstr (e1, bind) =>
       (* [[ let constr x = e1 in e2 ]](k) = [[e1]](\y. let constr x = y in [[e2]](k)) *)
-      (* here *)
       let
         val (e1, t_e1) = assert_EAscType e1
         val t_res = t_e
         val (name_x, e2) = unBindSimp2 bind
-        val x = fresh_evar ()
-        val e2 = open0_e_e x e2
+        val x = fresh_cvar ()
+        val e2 = open0_c_e x e2
         val (c, i_c) = cps (e2, t_res) (k, j_k)
-        val t_x = cps_t t_e1
-        val c = EAbs $ close0_e_e_anno ((x, name_x, t_x), c)
+        val y = fresh_evar ()
+        val c = ELetConstrClose ((x, name_x), EV y, c)
+        val t_y = cps_t t_e1
+        val c = EAbs $ close0_e_e_anno ((y, "y", t_y), c)
       in
         cps (e1, t_e1) (c, i_c)
       end

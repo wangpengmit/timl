@@ -5,35 +5,6 @@ open MicroTiMLEx
        
 infixr 0 $
 
-(***************** the "open_e_e" visitor  **********************)    
-    
-fun open_e_expr_visitor_vtable cast (open_var, n) : ('this, int, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable =
-  let
-    fun extend_e this env _ = env + 1
-    fun visit_var this env data = open_var env n data
-  in
-    default_expr_visitor_vtable
-      cast
-      extend_noop
-      extend_noop
-      extend_noop
-      extend_e
-      visit_var
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
-  end
-
-fun new_open_e_expr_visitor params = new_expr_visitor open_e_expr_visitor_vtable params
-    
-fun open_e_e_fn open_var x n b =
-  let
-    val visitor as (ExprVisitor vtable) = new_open_e_expr_visitor (open_var, n)
-  in
-    #visit_expr vtable visitor x b
-  end
-
 (* (* locally nameless variable *) *)
 (* datatype ('bound, 'free) lnl_var = *)
 (*          Bound of 'bound *)
@@ -62,8 +33,10 @@ fun close_var x free var =
         var
     | ID _ => var
 
+fun open_c_e a = shift_c_e_fn open_var a
 fun open_e_e a = shift_e_e_fn open_var a
 
+fun close_c_e a = shift_c_e_fn close_var a
 fun close_e_e a = shift_e_e_fn close_var a
 
 fun adapt f x env = f (x + env)
@@ -112,11 +85,14 @@ fun close0_t_t a = close_t_t 0 a
 fun close0_i_e a = close_i_e 0 a
 fun close0_t_e a = close_t_e 0 a
 
+fun open0_c_e a = open_c_e 0 a
 fun open0_e_e a = open_e_e 0 a
+fun close0_c_e a = close_c_e 0 a
 fun close0_e_e a = close_e_e 0 a
 
 val ivar_counter = ref 0
 val tvar_counter = ref 0
+val cvar_counter = ref 0
 val evar_counter = ref 0
                        
 fun fresh_var counter =
@@ -129,6 +105,7 @@ fun fresh_var counter =
     
 fun fresh_ivar () = fresh_var ivar_counter 
 fun fresh_tvar () = fresh_var tvar_counter 
+fun fresh_cvar () = fresh_var cvar_counter 
 fun fresh_evar () = fresh_var evar_counter 
 
 end
