@@ -1174,7 +1174,7 @@ fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
 fun unTRec data =
   let
     val ((name, anno), t) = unBindAnno data
-    val name = Name2str name
+    val name = unName name
   in
     (anno, (name, t))
   end
