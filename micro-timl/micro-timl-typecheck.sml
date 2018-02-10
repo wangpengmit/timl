@@ -101,7 +101,6 @@ fun INat n = ConstIN (n, dummy)
 val TInt = TConst TCInt
 val unTQuan = unTRec
 val unTQuanI = unTRec
-val unTAbsT = unTRec
 val unTAbsI = unTRec
 fun unELetIdx (def, bind) =
   let
@@ -342,37 +341,6 @@ fun subst_i_t_fn substs d x v b =
   in
     #visit_ty vtable visitor 0 b
   end
-
-fun whnf ctx t =
-    case t of
-        TAppT (t1, t2) =>
-        let
-          val t1 = whnf ctx t1
-        in
-          case t1 of
-              TAbsT data =>
-              let
-                val (_, (_, t1)) = unTAbsT data
-              in
-                whnf ctx $ subst0_t_t t2 t1
-              end
-            | _ => TAppT (t1, t2)
-        end
-      | TAppI (t, i) =>
-        let
-          val t = whnf ctx t
-        in
-          case t of
-              TAbsI data =>
-              let
-                val (_, (_, t)) = unTAbsT data
-              in
-                whnf ctx $ subst0_i_t i t
-              end
-            | _ => TAppI (t, i)
-        end
-      | TVar x => TVar x (* todo: look up type aliasing in ctx *)
-      | _ => t
 
 structure ExportPP = struct
 
@@ -1081,7 +1049,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
           tc ctx e
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input)
-    fun extra_msg () = "\nwhen typechecking " ^ (substr 0 300 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input)
+    fun extra_msg () = "\nwhen typechecking " ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input)
     val (e_output, t, i) = main ()
                  handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
                       | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())

@@ -59,47 +59,6 @@ fun Eid t = EAbs $ EBindAnno ((("x", dummy), t), EVar $ Bound 0)
 infixr 0 $$
 fun a $$ b = EApp (a, b)
 
-fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
-                             
-fun assert_TArrow t =
-  case t of
-      TArrow a => a
-    | _ => raise assert_fail "assert_TArrow"
-fun assert_TProd t =
-  case t of
-      TBinOp (TBProd, t1, t2) => (t1, t2)
-    | _ => raise assert_fail "assert_TProd"
-fun assert_TSum t =
-  case t of
-      TBinOp (TBSum, t1, t2) => (t1, t2)
-    | _ => raise assert_fail "assert_TSum"
-fun assert_TAbsT t =
-  case t of
-      TAbsT bind => unBindAnno bind
-    | _ => raise assert_fail "assert_TAbsT"
-fun assert_TAbsI t =
-  case t of
-      TAbsI bind => unBindAnno bind
-    | _ => raise assert_fail "assert_TAbsI"
-fun assert_EAscType e =
-  let
-    val (e, is) = collect_EAscTime e
-  in
-    case e of
-        EAscType (e, t) => (EAscTimes (e, is), t)
-      | _ => raise assert_fail "assert_EAscType"
-  end
-
-fun assert_and_reduce_beta e =
-  case e of
-      EBinOp (EBApp, EAbs bind, e2) =>
-      let
-        val (_, e1) = unBindAnno bind
-      in
-        subst0_e_e e2 e1
-      end
-    | _ => raise assert_fail "assert_and_reduce_beta"
-
 structure ExportPP = struct
 
 open LongId
@@ -155,6 +114,57 @@ fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
 
 end
 
+fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
+                             
+fun assert_TArrow t =
+  case t of
+      TArrow a => a
+    | _ => raise assert_fail "assert_TArrow"
+fun assert_TProd t =
+  case t of
+      TBinOp (TBProd, t1, t2) => (t1, t2)
+    | _ => raise assert_fail "assert_TProd"
+fun assert_TSum t =
+  case t of
+      TBinOp (TBSum, t1, t2) => (t1, t2)
+    | _ => raise assert_fail "assert_TSum"
+fun assert_TAbsT t =
+  case t of
+      TAbsT bind => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TAbsT; got: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+fun assert_TAbsI t =
+  case t of
+      TAbsI bind => unBindAnno bind
+    | _ => raise assert_fail "assert_TAbsI"
+fun assert_TForall t =
+  case t of
+      TQuan (Forall, bind) => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TForall; got: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+fun assert_TForallI t =
+  case t of
+      TQuanI (Forall, bind) => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+fun assert_EAscType e =
+  let
+    val (e, is) = collect_EAscTime e
+  in
+    case e of
+        EAscType (e, t) => (EAscTimes (e, is), t)
+      | _ => raise assert_fail "assert_EAscType"
+  end
+
+fun assert_and_reduce_beta e =
+  case e of
+      EBinOp (EBApp, EAbs bind, e2) =>
+      let
+        val (_, e1) = unBindAnno bind
+      in
+        subst0_e_e e2 e1
+      end
+    | _ => raise assert_fail "assert_and_reduce_beta"
+
+val whnf = fn t => whnf ([], []) t
+                       
 fun blowup_time (i : idx, j : idx) = i
 fun blowup_time_t (j : idx) = j
 fun blowup_time_i (j : idx) = j
@@ -162,9 +172,9 @@ fun blowup_time_i (j : idx) = j
 (* CPS conversion on types *)
 fun cps_t t =
   (* let *)
-  (*   val t = whnf ([], []) t *)
+  (*   val t = whnf t *)
   (* in *)
-  case t of
+  case whnf t of
       TArrow (t1, i, t2) =>
       (* [[ t1 --i--> t2 ]] = \\j. [[t1]]*([[t2]] --j--> unit) -- blowup_time(i, j) --> unit *)
       let
@@ -274,6 +284,9 @@ fun cont_type (t, i) = TArrow (t, i, TUnit)
 (* pre: ... |- k : [[t_e]] --j_k-=> unit |> 0 *)
 (* the 'unit' part can be relaxed if e is a value *)
 fun cps (e, t_e) (k, j_k) =
+  let
+    val () = println $ "CPS on " ^ (substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
+  in
   case e of
       S.EVar x =>
       (* [[ x ]](k) = k x *)
@@ -283,6 +296,7 @@ fun cps (e, t_e) (k, j_k) =
          where [i] is the time bound of [e], blowup_time(i,j) = b(i+1)+2i+1+j, [b] is blow-up factor *)
       let
         val ((name_x, _), e) = unBindAnno2 bind
+        val t_e = whnf t_e
         val (t_x, i, t_e) = assert_TArrow t_e
         val x = fresh_evar ()
         val e = open0_e_e x e
@@ -302,6 +316,7 @@ fun cps (e, t_e) (k, j_k) =
       (* [[ e1 e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. x1 {k.j} (x2, k))) *)
       let
         val (e1, t_e1) = assert_EAscType e1
+        val t_e1 = whnf t_e1
         val (t_e2, i, _) = assert_TArrow t_e1
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
@@ -336,7 +351,8 @@ fun cps (e, t_e) (k, j_k) =
       (* [[ \\alpha.e ]](k) = k (\\alpha. \\j. \c. [[e]](c)) *)
       let
         val ((name_alpha, kd_alpha), e) = unBindAnno2 bind
-        val (_, t_e) = assert_TAbsT t_e
+        val t_e = whnf t_e
+        val (_, t_e) = assert_TForall t_e
         val alpha = fresh_tvar ()
         val e = open0_t_e alpha e
         val t_e = open0_t_t alpha t_e
@@ -357,7 +373,8 @@ fun cps (e, t_e) (k, j_k) =
       (* [[ \\a.e ]](k) = k (\\a. \\j. \c. [[e]](c)) *)
       let
         val ((name_a, s_a), e) = unBindAnno2 bind
-        val (_, t_e) = assert_TAbsI t_e
+        val t_e = whnf t_e
+        val (_, t_e) = assert_TForallI t_e
         val a = fresh_ivar ()
         val e = open0_i_e a e
         val t_e = open0_i_t a t_e
@@ -499,6 +516,7 @@ fun cps (e, t_e) (k, j_k) =
               in
                 ((e1, e2), (t_e1, t_e2))
               end
+        val t_e = whnf t_e
         val ((e1, e2), (t_e1, t_e2)) = get_comp_types (e1, e2) t_e
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
@@ -557,6 +575,7 @@ fun cps (e, t_e) (k, j_k) =
     | S.EUnOp (EUInj (inj, t_other), e) =>
       (* [[ l.e ]](k) = [[e]](\x. k (l.x)) *)
       let
+        val t_e = whnf t_e
         val t1_t2 = assert_TSum t_e
         val t_e = choose_inj t1_t2 inj
         val x = fresh_evar ()
@@ -651,6 +670,7 @@ fun cps (e, t_e) (k, j_k) =
       in
         raise Unimpl $ "cps() on: " ^ s
       end
+    end
       
 end
 
@@ -754,8 +774,8 @@ fun test1 dirname =
     val () = println "Started translating ..."
     val e = trans_e e
     val () = println "Finished translating"
-    val () = pp_e $ export ToStringUtil.empty_ctx e
-    val () = println ""
+    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
                      
     open MicroTiMLTypecheck
     open TestUtil
@@ -770,7 +790,8 @@ fun test1 dirname =
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    val () = pp_e $ export ToStringUtil.empty_ctx e
+    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)

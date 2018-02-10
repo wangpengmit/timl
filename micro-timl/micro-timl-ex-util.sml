@@ -116,6 +116,41 @@ fun collect_EAscTime e = mapSnd rev $ collect_EAscTime_rev e
                                 
 fun EAscTypes (e, ts) = foldl (swap EAscType) e ts
 fun EAscTimes (e, is) = foldl (swap EAscTime) e is
-                              
+
+open MicroTiMLExLongId
+       
+val unTAbsT = unTRec
+                
+fun whnf ctx t =
+    case t of
+        TAppT (t1, t2) =>
+        let
+          val t1 = whnf ctx t1
+        in
+          case t1 of
+              TAbsT data =>
+              let
+                val (_, (_, t1)) = unTAbsT data
+              in
+                whnf ctx $ subst0_t_t t2 t1
+              end
+            | _ => TAppT (t1, t2)
+        end
+      | TAppI (t, i) =>
+        let
+          val t = whnf ctx t
+        in
+          case t of
+              TAbsI data =>
+              let
+                val (_, (_, t)) = unTAbsT data
+              in
+                whnf ctx $ subst0_i_t i t
+              end
+            | _ => TAppI (t, i)
+        end
+      | TVar x => TVar x (* todo: look up type aliasing in ctx *)
+      | _ => t
+
 end
                                  
