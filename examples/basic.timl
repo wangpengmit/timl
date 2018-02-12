@@ -4,16 +4,16 @@ structure Basic = struct
 
 datatype bool = true | false
 
-(* indexed boolean *)                         
+(* indexed boolean *)
 datatype ibool : {Bool} =
-         True of ibool {true} 
-         | False of ibool {false} 
+         True of ibool {true}
+         | False of ibool {false}
 
 datatype option 'a =
          NONE
-         | SOME of 'a --> option 'a 
+         | SOME of 'a --> option 'a
 
 datatype le {a b : Nat} =
-         LE {a <= b} of le {a} {b} 
+         LE {a <= b} of le {a} {b}
                    
 end

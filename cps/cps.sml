@@ -41,7 +41,7 @@ fun EAbsPairClose (((x1, name1, t1), (x2, name2, t2)), e) =
   let
     val x = fresh_evar ()
     val e = ELetClose ((x2, name2, ESnd (EV x)), e)
-    val e = ELetClose ((x1, name1, ESnd (EV x)), e)
+    val e = ELetClose ((x1, name1, EFst (EV x)), e)
   in
     EAbs $ close0_e_e_anno ((x, "x", TProd (t1, t2)), e)
   end
@@ -171,10 +171,11 @@ fun blowup_time_i (j : idx) = j
   
 (* CPS conversion on types *)
 fun cps_t t =
-  (* let *)
-  (*   val t = whnf t *)
-  (* in *)
-  case whnf t of
+  let
+    val () = println $ "cps_t() on: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+    (* val t = whnf t *)
+    val t =                                         
+    case whnf t of
       TArrow (t1, i, t2) =>
       (* [[ t1 --i--> t2 ]] = \\j. [[t1]]*([[t2]] --j--> unit) -- blowup_time(i, j) --> unit *)
       let
@@ -184,7 +185,7 @@ fun cps_t t =
         val t = TProd (t1, TArrow (t2, IV j, TUnit))
         val t = TArrow (t, blowup_time (i, IV j), TUnit)
       in
-        TForallTimeClose ((j, "j"), t)
+        TForallTimeClose ((j, "j1"), t)
       end
     | TQuan (Forall, bind) =>
       (* [[ \\alpha.t ]] = \\alpha. \\j. ([[t]] --j--> unit) -- blowup_time_t(j) --> unit *)
@@ -196,7 +197,7 @@ fun cps_t t =
         val j = fresh_ivar ()
         val t = TArrow (t, IV j, TUnit)
         val t = TArrow (t, IV j %+ T_1, TUnit)
-        val t = TForallTimeClose ((j, "j"), t)
+        val t = TForallTimeClose ((j, "j2"), t)
       in
         TForall $ close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
       end
@@ -205,12 +206,15 @@ fun cps_t t =
       let
         val ((name_a, s_a), t) = unBindAnno2 bind
         val a = fresh_ivar ()
+        val () = println $ "a=" ^ str_int a
+        val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
         val t = open0_i_t a t
+        val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
         val t = cps_t t
         val j = fresh_ivar ()
         val t = TArrow (t, IV j, TUnit)
         val t = TArrow (t, IV j %+ T_1, TUnit)
-        val t = TForallTimeClose ((j, "j"), t)
+        val t = TForallTimeClose ((j, "j3"), t)
       in
         TForallI $ close0_i_t_anno ((a, name_a, s_a), t)
       end
@@ -276,7 +280,11 @@ fun cps_t t =
     (*     val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t *)
     (*   in *)
     (*     raise Unimpl $ "cps_t() on: " ^ s *)
-    (*   end *)
+  (*   end *)
+    val () = println $ "cps_t() result: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+  in
+    t
+  end
 
 fun cont_type (t, i) = TArrow (t, i, TUnit)
 
@@ -285,7 +293,7 @@ fun cont_type (t, i) = TArrow (t, i, TUnit)
 (* the 'unit' part can be relaxed if e is a value *)
 fun cps (e, t_e) (k, j_k) =
   let
-    val () = println $ "CPS on " ^ (substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
+    (* val () = println $ "CPS on " ^ (substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
   in
   case e of
       S.EVar x =>
@@ -790,8 +798,8 @@ fun test1 dirname =
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
-    (* val () = println "" *)
+    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = println ""
                      
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)

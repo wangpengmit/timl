@@ -18,7 +18,8 @@ fun parse_filename (on_file, on_error) filename =
           val filenames = List.filter (fn s => not (String.isPrefix "(*" s andalso String.isSuffix "*)" s)) filenames
           (* val () = app println filenames *)
           val filenames = List.filter (fn s => s <> "") filenames
-          val filenames = map (curry join_dir_file dir) filenames
+          (* val filenames = map (curry join_dir_file dir) filenames *)
+          val filenames = map (curry OS.Path.concat dir) filenames
         in
           parse_filenames (on_file, on_error) filenames
         end

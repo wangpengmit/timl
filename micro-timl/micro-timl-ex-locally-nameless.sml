@@ -12,7 +12,7 @@ infixr 0 $
 
 (* hijack [long_id] to be used as locally nameless variable *)
 open LongId
-fun Free x = QID (("", dummy), (x, dummy))
+fun Free x = QID (("__Free", dummy), (x, dummy))
 fun Bound x = ID (x, dummy)
                  
 fun open_var x free var = 
@@ -39,13 +39,13 @@ fun open_e_e a = shift_e_e_fn open_var a
 fun close_c_e a = shift_c_e_fn close_var a
 fun close_e_e a = shift_e_e_fn close_var a
 
-fun adapt f x env = f (x + env)
+fun adapt f x n env = f (x + env) n
 
-fun adapted_open_var m = adapt $ open_var m
+fun adapted_open_var m = adapt open_var m
                             
-fun open_i_i m x = Subst.IdxShiftVisitor.on_i_i $ adapted_open_var m x
-fun open_i_p m x = Subst.IdxShiftVisitor.on_i_p $ adapted_open_var m x
-fun open_i_s m x = Subst.IdxShiftVisitor.on_i_s $ adapted_open_var m x
+fun open_i_i x free = Subst.IdxShiftVisitor.on_i_i $ adapted_open_var x free
+fun open_i_p x free = Subst.IdxShiftVisitor.on_i_p $ adapted_open_var x free
+fun open_i_s x free = Subst.IdxShiftVisitor.on_i_s $ adapted_open_var x free
 
 fun open_i_t a = shift_i_t_fn (open_i_i, open_i_s) a
 fun open_t_t a = shift_t_t_fn open_var a
@@ -53,11 +53,11 @@ fun open_t_t a = shift_t_t_fn open_var a
 fun open_i_e a = shift_i_e_fn (open_i_i, open_i_s, open_i_t) a
 fun open_t_e a = shift_t_e_fn open_t_t a
 
-fun adapted_close_var m = adapt $ close_var m
+fun adapted_close_var m = adapt close_var m
                             
-fun close_i_i m x = Subst.IdxShiftVisitor.on_i_i $ adapted_close_var m x
-fun close_i_p m x = Subst.IdxShiftVisitor.on_i_p $ adapted_close_var m x
-fun close_i_s m x = Subst.IdxShiftVisitor.on_i_s $ adapted_close_var m x
+fun close_i_i x free = Subst.IdxShiftVisitor.on_i_i $ adapted_close_var x free
+fun close_i_p x free = Subst.IdxShiftVisitor.on_i_p $ adapted_close_var x free
+fun close_i_s x free = Subst.IdxShiftVisitor.on_i_s $ adapted_close_var x free
 
 fun close_i_t a = shift_i_t_fn (close_i_i, close_i_s) a
 fun close_t_t a = shift_t_t_fn close_var a
@@ -108,4 +108,91 @@ fun fresh_tvar () = fresh_var tvar_counter
 fun fresh_cvar () = fresh_var cvar_counter 
 fun fresh_evar () = fresh_var evar_counter 
 
+structure UnitTest = struct
+
+structure ExportPP = struct
+
+open LongId
+open Util
+open MicroTiML
+open MicroTiMLVisitor
+open MicroTiMLExLongId
+open MicroTiMLEx
+       
+infixr 0 $
+infixr 0 !!
+         
+fun short_to_long_id x = ID (x, dummy)
+fun export_var sel ctx id =
+  let
+    fun unbound s = "__unbound_" ^ s
+    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
+  in
+    case id of
+        ID (x, _) =>
+        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
+  end
+(* val export_i = return2 *)
+fun export_i a = ToString.export_i Gctx.empty a
+fun export_s a = ToString.export_s Gctx.empty a
+fun export_t a = export_t_fn (export_var snd, export_i, export_s) a
+fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
+val str = PP.string
+fun str_var x = LongId.str_raw_long_id id(*str_int*) x
+fun str_i a =
+  (* ToStringRaw.str_raw_i a *)
+  ToString.SN.strn_i a
+(* const_fun "<idx>" a *)
+fun str_bs a =
+  ToStringRaw.str_raw_bs a
+fun str_s a =
+  (* ToStringRaw.str_raw_s a *)
+  ToString.SN.strn_s a
+  (* const_fun "<sort>" a *)
+fun pp_t_to s b =
+  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
+  (* str s "<ty>" *)
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
+    str_var,
+    str_i,
+    str_s,
+    const_fun "<kind>",
+    pp_t_to
+  ) a
+
+end
+
+infix 4 %=
+        
+fun test1 dirname =
+    let
+      open Expr
+      open MicroTiMLExUtil
+      val t = TNat $ VarI $ ID (1, dummy)
+      val s = Subset ((Base Nat, dummy), Bind.Bind (("_VC", dummy), ConstIN (0, dummy) %= VarI (ID (1, dummy))), dummy)
+      val t = MakeTForallI (s, ("_VC", dummy), t)
+      val t = MakeTForallI (SNat, ("_i0", dummy), t)
+      val t0 = t
+      val () = println $ "before open_i_s(): " ^ (ExportPP.str_s $ ExportPP.export_s [] s)
+      val s = open_i_s 1 999 s
+      val () = println $ "after open_i_s(): " ^ (ExportPP.str_s $ ExportPP.export_s [] s)
+      val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+      val t = open0_i_t 999 t
+      val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+      val t = t0
+      val t = MicroTiMLExLongId.shift_i_t 0 999 t
+      val () = println $ "after shift0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+    in
+      ()
+    end
+
+val test_suites = [
+      test1
+]
+
+end
+                       
 end
