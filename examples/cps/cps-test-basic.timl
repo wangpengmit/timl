@@ -10,9 +10,9 @@ val z = x + y + x
               
 val a = true
           
-val f = fn (y : unit) => y
+val f = fn y => y + 1
           
-val neg =
+val neg1 =
  fn b =>
     case b of
         true => false
@@ -22,6 +22,8 @@ fun neg b =
     case b of
         true => false
       | false => true
+
+val a = neg a
 
 fun id x = x
              

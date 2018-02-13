@@ -621,6 +621,8 @@ fun eval_constr b =
 
 infixr 0 %:
 fun a %: b = EAscType (a, b)
+infixr 0 |>
+fun a |> b = EAscTime (a, b)
 
 fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
   let
@@ -937,8 +939,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
                 val e2 = EAscTypes (e2, ts)
                 val e2 = EAscTime (e2, BinOpI (MinusI, i, i1))
                 val (e2, t2, _) = tc (add_typing_full (fst name, t1) ctx) e2
+                val e = MakeELet (e1 %: t1, name, e2)
               in
-                (MakeELet (e1 %: t1, name, e2), t2, i)
+                (e |> i, t2, i)
               end
             | _ =>
               let
@@ -969,7 +972,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
                   end
                 val () = check_le_with_subtractions ictx (i1, i)
               in
-                (e, t, i)
+                (e |> i, t, i)
               end
         end
       | EAscType (e, t2) =>

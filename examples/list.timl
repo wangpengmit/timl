@@ -8,11 +8,13 @@ datatype list 'a : {Nat} =
        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1}
 
 fun length [a] {n : Nat} (l : list a {n}) = 0
+
+val a = length (1 :: [])
                                   
-(* fun length [a] {n : Nat} (l : list a {n}) return using $(2 * n) = *)
-(*     case l of *)
-(*         [] => 0 *)
-(*       | _ :: xs => 1 + length xs *)
+fun length [a] {n : Nat} (l : list a {n}) return using $(2 * n) =
+    case l of
+        [] => 0
+      | _ :: xs => 1 + length xs
                                   
 (* absidx T_map : BigO (fn m n => $m * $n) with *)
 (* fun map ['a 'b] {m n : Nat} (f : 'a -- $m --> 'b) (ls : list (* 'a *)_ {n}) return list (* 'b *)_ {n} using T_map m n = *)

@@ -11,8 +11,18 @@ structure S = MicroTiMLEx
 
 infixr 0 $
 
+infix 9 %@
+infix 8 %^
+infix 7 %*
 infix 6 %+ 
-         
+infix 4 %<=
+infix 4 %>=
+infix 4 %=
+infixr 3 /\
+infixr 2 \/
+infixr 1 -->
+infix 1 <->
+        
 fun IV x = VarI $ make_Free_i x
 fun EV x = EVar $ make_Free_e x
 val T_0 = T0 dummy
@@ -58,20 +68,23 @@ fun Eid t = EAbs $ EBindAnno ((("x", dummy), t), EVar $ Bound 0)
 
 infixr 0 %:
 fun a %: b = EAscType (a, b)
+infix 0 |>
+fun a |> b = EAscTime (a, b)
                       
 fun EAppK (e1, e2) =
     case e1 of
         EAbs bind =>
         let
           val (t_x, (name_x, e_body)) = unBindAnnoName bind
-          val e = MakeELet (e2 %: t_x, name_x, e_body)
+          val e = MakeELet (e2 (* %: t_x *), name_x, e_body)
         in
           e
         end
-      | _ => EApp (e1, e2)
+      | _ =>
+        MakeELet (e2, ("x", dummy), EApp (shift01_e_e e1, EVar $ ID (0, dummy)))
         
-infixr 0 $$
-fun a $$ b = EApp (a, b)
+(* infixr 0 $$ *)
+(* fun a $$ b = EApp (a, b) *)
 
 infixr 0 $%
 fun a $% b = EAppK (a, b)
@@ -200,9 +213,9 @@ fun assert_and_reduce_letxx e =
 
 val whnf = fn t => whnf ([], []) t
                        
-fun blowup_time (i : idx, j : idx) = i
-fun blowup_time_t (j : idx) = j
-fun blowup_time_i (j : idx) = j
+fun blowup_time (i : idx, j : idx) = i %* ConstIT (TimeType.fromInt 999, dummy) %+ j
+fun blowup_time_t (j : idx) = j %* ConstIT (TimeType.fromInt 888, dummy)
+fun blowup_time_i (j : idx) = j %* ConstIT (TimeType.fromInt 777, dummy)
   
 (* CPS conversion on types *)
 fun cps_t t =
@@ -220,7 +233,7 @@ fun cps_t t =
         val t = TProd (t1, TArrow (t2, IV j, TUnit))
         val t = TArrow (t, blowup_time (i, IV j), TUnit)
       in
-        TForallTimeClose ((j, "j1"), t)
+        TForallTimeClose ((j, "j"), t)
       end
     | TQuan (Forall, bind) =>
       (* [[ \\alpha.t ]] = \\alpha. \\j. ([[t]] --j--> unit) -- blowup_time_t(j) --> unit *)
@@ -232,7 +245,7 @@ fun cps_t t =
         val j = fresh_ivar ()
         val t = TArrow (t, IV j, TUnit)
         val t = TArrow (t, IV j %+ T_1, TUnit)
-        val t = TForallTimeClose ((j, "j2"), t)
+        val t = TForallTimeClose ((j, "j"), t)
       in
         TForall $ close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
       end
@@ -241,15 +254,15 @@ fun cps_t t =
       let
         val ((name_a, s_a), t) = unBindAnno2 bind
         val a = fresh_ivar ()
-        val () = println $ "a=" ^ str_int (unFree_i a)
-        val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+        (* val () = println $ "a=" ^ str_int (unFree_i a) *)
+        (* val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
         val t = open0_i_t a t
-        val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+        (* val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
         val t = cps_t t
         val j = fresh_ivar ()
         val t = TArrow (t, IV j, TUnit)
         val t = TArrow (t, IV j %+ T_1, TUnit)
-        val t = TForallTimeClose ((j, "j3"), t)
+        val t = TForallTimeClose ((j, "j"), t)
       in
         TForallI $ close0_i_t_anno ((a, name_a, s_a), t)
       end
@@ -363,7 +376,7 @@ fun cps (e, t_e) (k, j_k) =
         val (t_e2, i, _) = assert_TArrow t_e1
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
-        val e = EAppI (EV x1, j_k) $$ EPair (EV x2, k)
+        val e = EAppI (EV x1, j_k) $% EPair (EV x2, k)
         val t_x2 = cps_t t_e2
         val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
         val (e, i_e) = cps (e2, t_e2) (e, blowup_time (i, j_k))
@@ -443,7 +456,7 @@ fun cps (e, t_e) (k, j_k) =
       let
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
-        val c = EAppI (EAppT (EV x, t), j_k) $$ k
+        val c = EAppI (EAppT (EV x, t), j_k) $% k
         val t_x = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
       in
@@ -454,7 +467,7 @@ fun cps (e, t_e) (k, j_k) =
       let
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
-        val c = EAppI (EAppI (EV x, i), j_k) $$ k
+        val c = EAppI (EAppI (EV x, i), j_k) $% k
         val t_x = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
       in
@@ -672,7 +685,12 @@ fun cps (e, t_e) (k, j_k) =
     | S.EAscType (e, t) =>
       cps (e, t) (k, j_k)  (* todo: may need to do more *)
     | S.EAscTime (e, i) =>
-      cps (e, t_e) (k, j_k) (* todo: may need to do more *)
+      let
+        val (e, i') = cps (e, t_e) (k, j_k)
+        val i = blowup_time (i, j_k)
+      in
+        (e |> i' |> i, i)
+      end
     | S.EWrite (e1, e2, e3) =>
       (* [[ write e1 e2 e3 ]](k) = [[e1]] (\x1. [[e2]] (\x2. [[e3]] (\x3. k (write x1 x2 x3)))) *)
       let
@@ -821,8 +839,8 @@ fun test1 dirname =
     val () = println "Started translating ..."
     val e = trans_e e
     val () = println "Finished translating"
-    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
-    (* val () = println "" *)
+    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = println ""
                      
     open MicroTiMLTypecheck
     open TestUtil
