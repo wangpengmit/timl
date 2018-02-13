@@ -16,18 +16,23 @@ fun length [a] {n : Nat} (l : list a {n}) return using $(2 * n) =
         [] => 0
       | _ :: xs => 1 + length xs
                                   
-(* absidx T_map : BigO (fn m n => $m * $n) with *)
-(* fun map ['a 'b] {m n : Nat} (f : 'a -- $m --> 'b) (ls : list (* 'a *)_ {n}) return list (* 'b *)_ {n} using T_map m n = *)
-(*           case ls of *)
-(*               Nil => Nil *)
-(*             | Cons (x, xs) => Cons (f x, map f xs) *)
-(* end *)
+fun length [a] {n : Nat} (l : list a {n}) return nat {n} using $(2 * n) =
+    case l of
+        [] => #0
+      | _ :: xs => #1 #+ length xs
+                                  
+absidx T_map : BigO (fn m n => $m * $n) with
+fun map ['a 'b] {m n : Nat} (f : 'a -- $m --> 'b) (ls : list (* 'a *)_ {n}) return list (* 'b *)_ {n} using T_map m n =
+          case ls of
+              Nil => Nil
+            | Cons (x, xs) => Cons (f x, map f xs)
+end
 
-(* (* fold-left *) *)
-(* fun foldl ['a 'b] {m n : Nat} (f : 'a * 'b -- $m --> 'b) acc (l : list 'a {n}) return (* 'b *) using $(m + 4) * $n = *)
-(*   case l of *)
-(*       [] => acc *)
-(*     | x :: xs => foldl f (f (x, acc)) xs *)
+(* fold-left *)
+fun foldl ['a 'b] {m n : Nat} (f : 'a * 'b -- $m --> 'b) acc (l : list 'a {n}) return (* 'b *) using $(m + 4) * $n =
+  case l of
+      [] => acc
+    | x :: xs => foldl f (f (x, acc)) xs
 
 (* (* another version of [foldl] that uses big-O spec *) *)
 (* absidx T_foldl : BigO (fn m n => $m * $n) with *)

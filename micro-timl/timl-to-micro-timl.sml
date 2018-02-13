@@ -218,6 +218,7 @@ fun on_bin_op opr =
     | Op.EBAdd => EBPrim PEBIntAdd
     | Op.EBNew => EBNew
     | Op.EBRead => EBRead
+    | Op.EBNatAdd => EBNatAdd
 
 fun on_base_type t =
   case t of

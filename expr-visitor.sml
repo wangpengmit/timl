@@ -76,6 +76,7 @@ type ('this, 'env) expr_visitor_vtable =
        visit_EApp : 'this -> 'env -> expr * expr -> T.expr,
        visit_EPair : 'this -> 'env -> expr * expr -> T.expr,
        visit_EAdd : 'this -> 'env -> expr * expr -> T.expr,
+       visit_ENatAdd : 'this -> 'env -> expr * expr -> T.expr,
        visit_ENew : 'this -> 'env -> expr * expr -> T.expr,
        visit_ERead : 'this -> 'env -> expr * expr -> T.expr,
        visit_EAppI : 'this -> 'env -> expr * idx -> T.expr,
@@ -184,6 +185,7 @@ fun default_expr_visitor_vtable
           | EBAdd => #visit_EAdd vtable this env data
           | EBNew => #visit_ENew vtable this env data
           | EBRead => #visit_ERead vtable this env data
+          | EBNatAdd => #visit_ENatAdd vtable this env data
       end
     fun visit_EApp this env data =
       let
@@ -211,6 +213,15 @@ fun default_expr_visitor_vtable
         val e2 = #visit_expr vtable this env e2
       in
         T.EBinOp (EBAdd, e1, e2)
+      end
+    fun visit_ENatAdd this env data =
+      let
+        val vtable = cast this
+        val (e1, e2) = data
+        val e1 = #visit_expr vtable this env e1
+        val e2 = #visit_expr vtable this env e2
+      in
+        T.EBinOp (EBNatAdd, e1, e2)
       end
     fun visit_ENew this env data =
       let
@@ -863,6 +874,7 @@ fun default_expr_visitor_vtable
       visit_EApp = visit_EApp,
       visit_EPair = visit_EPair,
       visit_EAdd = visit_EAdd,
+      visit_ENatAdd = visit_ENatAdd,
       visit_ENew = visit_ENew,
       visit_ERead = visit_ERead,
       visit_EAppT = visit_EAppT,
@@ -986,6 +998,7 @@ fun override_visit_ConstrP (record : ('this, 'env) expr_visitor_vtable) new : ('
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1053,6 +1066,7 @@ fun override_visit_VarP (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1120,6 +1134,7 @@ fun override_visit_EVar (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1187,6 +1202,7 @@ fun override_visit_EBinOp (record : ('this, 'env) expr_visitor_vtable) new : ('t
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1254,6 +1270,7 @@ fun override_visit_EApp (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_EApp = new,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1321,6 +1338,7 @@ fun override_visit_EEI (record : ('this, 'env) expr_visitor_vtable) new : ('this
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1388,6 +1406,7 @@ fun override_visit_EAppI (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = new,
@@ -1455,6 +1474,7 @@ fun override_visit_EAscTime (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1522,6 +1542,7 @@ fun override_visit_EAsc (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1589,6 +1610,7 @@ fun override_visit_ECase (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1656,6 +1678,7 @@ fun override_visit_DRec (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1723,6 +1746,7 @@ fun override_visit_DTypeDef (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1790,6 +1814,7 @@ fun override_visit_DOpen (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,
@@ -1857,6 +1882,7 @@ fun override_visit_SpecTypeDef (record : ('this, 'env) expr_visitor_vtable) new 
     visit_EApp = #visit_EApp record,
     visit_EPair = #visit_EPair record,
     visit_EAdd = #visit_EAdd record,
+    visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
     visit_ERead = #visit_ERead record,
     visit_EAppI = #visit_EAppI record,

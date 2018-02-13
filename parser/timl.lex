@@ -131,6 +131,7 @@ id_init = ({alpha}|[_']);
 <INITIAL>">=" => (T.GE (make_region (yypos, size yytext)));
 <INITIAL>">" => (T.GT (make_region (yypos, size yytext)));
 <INITIAL>"+" => (T.PLUS (make_region (yypos, size yytext)));
+<INITIAL>"#+" => (T.NAT_PLUS (make_region (yypos, size yytext)));
 <INITIAL>"-" => (T.MINUS (make_region (yypos, size yytext)));
 <INITIAL>"*" => (T.MULT (make_region (yypos, size yytext)));
 <INITIAL>"/" => (T.DIV (make_region (yypos, size yytext)));

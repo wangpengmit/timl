@@ -859,6 +859,7 @@ fun is_value (e : U.expr) : bool =
            | EBNew => false
            | EBRead => false
            | EBAdd => false
+           | EBNatAdd => false
         )
       | ETriOp _ => false
       | EEI (opr, e, i) =>
@@ -1030,6 +1031,16 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val () = write_le (i2, i1, r)
                in
                  (EBinOp (EBRead, e1, e2), t, d1 %+ d2)
+               end
+	     | EBNatAdd =>
+               let
+                 val r = U.get_region_e e_all
+                 val i1 = fresh_i gctx sctx (Base Time) r
+                 val i2 = fresh_i gctx sctx (Base Time) r
+                 val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
+                 val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
+               in
+                 (EBinOp (EBNatAdd, e1, e2), TyNat (i1 %+ i2, r), d1 %+ d2 %+ T1 r)
                end
 	     | EBAdd =>
 	       let val (e1, _, d1) = check_mtype (ctx, e1, BaseType (Int, dummy))
