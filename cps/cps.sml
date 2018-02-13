@@ -13,8 +13,8 @@ infixr 0 $
 
 infix 6 %+ 
          
-fun IV x = VarI $ Free x
-fun EV x = EVar $ Free x
+fun IV x = VarI $ make_Free_i x
+fun EV x = EVar $ make_Free_e x
 val T_0 = T0 dummy
 val T_1 = T1 dummy
 
@@ -206,7 +206,7 @@ fun cps_t t =
       let
         val ((name_a, s_a), t) = unBindAnno2 bind
         val a = fresh_ivar ()
-        val () = println $ "a=" ^ str_int a
+        val () = println $ "a=" ^ str_int (unFree_i a)
         val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
         val t = open0_i_t a t
         val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)

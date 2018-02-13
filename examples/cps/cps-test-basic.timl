@@ -17,4 +17,6 @@ fun neg b =
         true => false
       | false => true
 
+fun id x = x
+             
 end
