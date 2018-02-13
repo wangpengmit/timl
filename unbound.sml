@@ -185,4 +185,26 @@ fun str2binder2 ns s = Binder (ns, (s, dummy))
 fun str2ibinder s = str2binder2 Namespaces.IdxNS s
 fun str2ebinder s = str2binder2 Namespaces.ExprNS s
 
+fun unBindAnnoName bind =
+  let
+    val ((name, anno), t) = unBindAnno bind
+    val name = unName name
+  in
+    (anno, (name, t))
+  end
+               
+fun unBindSimp t =
+  let
+    val (Binder name, t) = unBind t
+  in
+    (name, t)
+  end
+    
+fun unBindSimpName bind =
+  let
+    val (name, e) = unBindSimp bind
+  in
+    (unName name, e)
+  end
+    
 end                                     

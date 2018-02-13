@@ -99,15 +99,11 @@ fun is_wf_sort ctx s = ignore $ Sortcheck.is_wf_sort Gctx.empty (ctx, s)
 
 fun INat n = ConstIN (n, dummy)
 val TInt = TConst TCInt
-val unTQuan = unTRec
-val unTQuanI = unTRec
-val unTAbsI = unTRec
+val unTQuan = unBindAnnoName
+val unTQuanI = unBindAnnoName
+val unTAbsI = unBindAnnoName
 fun unELetIdx (def, bind) =
-  let
-    val (name, e) = unBindSimp bind
-  in
-    (def, (unName name, e))
-  end
+    (def, unBindSimpName bind)
 val unELetType = unELetIdx
 val unELet = unELetIdx
 val unELetConstr = unELetIdx
@@ -118,9 +114,7 @@ fun unEUnpack (def, bind) =
   in
     (def, (unName name1, unName name2, e))
   end
-val unEAbsI = unTRec
-val unEAbsT = unTRec
-val unEAbs = unTRec
+val unEAbs = unBindAnnoName
 fun unECase (e, bind1, bind2) =
   let
     val (name1, e1) = unBindSimp bind1
@@ -288,7 +282,7 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t : bsort kind =
       end
     | TRec data =>
       let
-        val (k, (name, t)) = unTRec data
+        val (k, (name, t)) = unBindAnnoName data
         val () = kc_against_kind (add_kinding_it (fst name, k) ctx) (t, k)
       in
         k
@@ -536,24 +530,6 @@ fun collect_TAppIT t = mapSnd rev $ collect_TAppIT_rev t
 fun TAppITs t args =
   foldl (fn (arg, t) => case arg of inl i => TAppI (t, i) | inr t' => TAppT (t, t')) t args
 
-fun collect_EAbsIT e =
-  case e of
-      EAbsI data =>
-      let
-        val (s, (name, e)) = unEAbsI data
-        val (binds, e) = collect_EAbsIT e
-      in
-        (inl (name, s) :: binds, e)
-      end
-    | EAbsT data =>
-      let
-        val (k, (name, e)) = unEAbsT data
-        val (binds, e) = collect_EAbsIT e
-      in
-        (inr (name, k) :: binds, e)
-      end
-    | _ => ([], e)
-
 fun get_expr_const_type c =
   case c of
       ECTT => TUnit
@@ -691,7 +667,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
           val t' = whnf itctx t'
           val (t, args) = collect_TAppIT t'
           val (k, (_, t1)) = case t of
-                                 TRec data => unTRec data
+                                 TRec data => unBindAnnoName data
                                | _ => raise MTCError "EFold"
           val t = TAppITs (subst0_t_t t t1) args
           (* val () = println "EFold: before tc_against_ty" *)
@@ -707,7 +683,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
           val t_e = whnf itctx t_e
           val (t, args) = collect_TAppIT t_e
           val (k, (_, t1)) = case t of
-                                 TRec data => unTRec data
+                                 TRec data => unBindAnnoName data
                                | _ => raise MTCError "EUnfold"
         in
           (EUnfold (e %: t_e), TAppITs (subst0_t_t t t1) args, i)
@@ -821,10 +797,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
         end
       | ERec data =>
         let
-          val (t, (name, e)) = unERec data
+          val (t, (name, e)) = unBindAnnoName data
           val () = case snd $ collect_EAbsIT e of
                        EAbs _ => ()
-                     | _ => raise MTCError "ERec"
+                     | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"
           val () = kc_against_kind itctx (t, KType)
           val e = tc_against_ty_time (add_typing_full (fst name, t) ctx) (e, t, T0)
         in

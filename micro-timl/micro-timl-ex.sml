@@ -1171,15 +1171,6 @@ fun collect_EAppIT_rev e =
   end
 fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
 
-fun unTRec data =
-  let
-    val ((name, anno), t) = unBindAnno data
-    val name = unName name
-  in
-    (anno, (name, t))
-  end
-val unERec = unTRec
-               
 fun is_value e =
   case e of
       EConst _ => true
@@ -1192,12 +1183,14 @@ fun is_value e =
     | EPackI (_, _, e) => is_value e
     | EPackIs (_, _, e) => is_value e
     | EUnOp (EUFold _, e) => is_value e
+    | EAscType (e, _) => is_value e
+    | EAscTime (e, _) => is_value e
     | ELoc _ => true
     | _ =>
       case collect_EAppIT e of
           (ERec data, _) =>
           let
-            val (_, (_, e)) = unERec data
+            val (_, (_, e)) = unBindAnnoName data
           in
             is_value e
           end

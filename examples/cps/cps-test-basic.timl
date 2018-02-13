@@ -3,7 +3,13 @@ structure CPSTestBasic = struct
 open Basic
        
 val a = ()
+          
+val x = 1 + 2
+val y = x + 1
+val z = x + y + x
+              
 val a = true
+          
 val f = fn (y : unit) => y
           
 val neg =
