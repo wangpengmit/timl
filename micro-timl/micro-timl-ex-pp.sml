@@ -117,13 +117,13 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
   in
     case e of
         EVar x =>
-        (
-          open_hbox ();
-          str "EVar";
-          space ();
-          str $ str_var x;
-          close_box ()
-        )
+        (* ( *)
+        (*   open_hbox (); *)
+        (*   str "EVar"; *)
+        (*   space (); *)
+          str $ str_var x
+        (*   close_box () *)
+        (* ) *)
       | EVarConstr x =>
         (
           open_hbox ();
@@ -215,6 +215,30 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           str $ str_expr_un_op (const_fun "<ty>") opr;
           comma ();
           pp_e e;
+          str ")";
+          close_box ()
+        )
+      | EBinOp (EBApp, e1, e2) =>
+        (
+          open_hbox ();
+          str "EApp";
+          space ();
+          str "(";
+          pp_e e1;
+          comma ();
+          pp_e e2;
+          str ")";
+          close_box ()
+        )
+      | EBinOp (EBPrim PEBIntAdd, e1, e2) =>
+        (
+          open_hbox ();
+          str "EAdd";
+          space ();
+          str "(";
+          pp_e e1;
+          comma ();
+          pp_e e2;
           str ")";
           close_box ()
         )

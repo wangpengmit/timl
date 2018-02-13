@@ -188,6 +188,7 @@ micro-timl/micro-timl-ex.t.sml
 micro-timl/micro-timl-ex-pp.sml
 micro-timl/pattern-ex.sml
 micro-timl/micro-timl-ex-long-id.sml
+micro-timl/micro-timl-visitor2.sml
 micro-timl/micro-timl-ex-util.sml
 micro-timl/post-process.sml
 remove-open.sml

@@ -1,5 +1,5 @@
-basic.timl
-cps/cps-test-basic.timl
+(* basic.timl *)
+(* cps/cps-test-basic.timl *)
 list.timl
 
 (* stdlib.pkg *)

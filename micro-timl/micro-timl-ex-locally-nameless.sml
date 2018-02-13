@@ -199,16 +199,22 @@ fun test1 dirname =
       val s = Subset ((Base Nat, dummy), Bind.Bind (("_VC", dummy), ConstIN (0, dummy) %= VarI (ID (1, dummy))), dummy)
       val t = MakeTForallI (s, ("_VC", dummy), t)
       val t = MakeTForallI (SNat, ("_i0", dummy), t)
-      val t0 = t
+      (* val t0 = t *)
+      val s_expected = s
       val () = println $ "before open_i_s(): " ^ (ExportPP.str_s $ ExportPP.export_s [] s)
       val s = open_i_s 1 (Free_i 999) s
       val () = println $ "after open_i_s(): " ^ (ExportPP.str_s $ ExportPP.export_s [] s)
+      val () = assert_b "" $ Equal.eq_s s s_expected
+                        
+      val t_expected = t
       val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
       val t = open0_i_t (Free_i 999) t
       val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
-      val t = t0
-      val t = MicroTiMLExLongId.shift_i_t 0 999 t
-      val () = println $ "after shift0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+      val () = assert_b "" $ eq_t t t_expected
+                        
+      (* val t = t0 *)
+      (* val t = MicroTiMLExLongId.shift_i_t 0 999 t *)
+      (* val () = println $ "after shift0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
     in
       ()
     end

@@ -65,8 +65,6 @@ fun MakeTForall (s, name, t) = MakeTQuan (Forall, s, name, t)
 fun EAbsTKind (name, e) = MakeEAbsT (name, KType, e) 
 fun EAbsTKind_Many (names, e) = foldr EAbsTKind e names
 
-fun assert_b msg b = Util.assert (fn () => b) msg
-
 fun choose (t1, t2) proj =
   case proj of
       ProjFst => t1
@@ -152,5 +150,7 @@ fun whnf ctx t =
       | TVar x => TVar x (* todo: look up type aliasing in ctx *)
       | _ => t
 
+fun eq_t a = MicroTiMLVisitor2.eq_t_fn (curry Equal.eq_var, Equal.eq_bs, Equal.eq_i, Equal.eq_s) a
+                     
 end
                                  

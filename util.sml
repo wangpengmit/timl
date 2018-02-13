@@ -401,6 +401,7 @@ fun b2o b = if b then SOME () else NONE
 fun b2i b = if b then 1 else 0
                                      
 fun assert p msg = if p () then () else raise Impossible $ "Assert failed: " ^ msg
+fun assert_b msg b = assert (fn () => b) msg
 
 fun find_unique ls name =
   if not (mem op= name ls) then
