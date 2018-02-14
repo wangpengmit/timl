@@ -1087,14 +1087,14 @@ fun runWriter m () =
     val () = vcs := []
     val () = admits := []
     val r = m ()
-    val () = println "after m ()"
+    (* val () = println "after m ()" *)
     val vcs = !vcs
     val admits = !admits
     val vcs = map to_vc vcs
-    val () = println "after to_vc; calling simp_vc_vcs"
+    (* val () = println "after to_vc; calling simp_vc_vcs" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
     val vcs_len = length vcs
-    val () = println $ "#VCs: " ^ str_int vcs_len
+    (* val () = println $ "#VCs: " ^ str_int vcs_len *)
     (* val vcs = concatMapi (fn (i, vc) => (println (sprintf "vc $ @ $" [str_int vcs_len, str_int i]); simp_vc_vcs vc)) vcs *)
     (* val () = println "before simp vcs" *)
     (* val vcs = map VC.simp_vc vcs *)

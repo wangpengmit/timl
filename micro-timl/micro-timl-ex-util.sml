@@ -108,27 +108,6 @@ fun collect_EAscTime e = mapSnd rev $ collect_EAscTime_rev e
 fun EAscTypes (e, ts) = foldl (swap EAscType) e ts
 fun EAscTimes (e, is) = foldl (swap EAscTime) e is
 
-fun collect_EAscTypeTime_rev e =
-  let
-    val self = collect_EAscTypeTime_rev
-  in
-    case e of
-        EAscType (e, t) =>
-        let
-          val (e, args) = self e
-        in
-          (e, inl t :: args)
-        end
-      | EAscTime (e, i) =>
-        let
-          val (e, args) = self e
-        in
-          (e, inr i :: args)
-        end
-      | _ => (e, [])
-  end
-fun collect_EAscTypeTime e = mapSnd rev $ collect_EAscTypeTime_rev e
-                                
 val unEAbsI = unBindAnnoName
 val unEAbsT = unBindAnnoName
                 

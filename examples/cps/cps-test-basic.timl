@@ -8,9 +8,13 @@ val x = 1 + 2
 val y = x + 1
 val z = x + y + x
               
-val a = true
-          
 val f = fn y => y + 1
+          
+fun f x y = x + y
+
+val a = f 1 2
+
+val a = true
           
 val neg1 =
  fn b =>

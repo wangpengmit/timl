@@ -513,19 +513,19 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           close_box ()
         )
       | EAscType (e, t) =>
-        (* ( *)
-	(*   open_vbox_noindent (); *)
-        (*   open_hbox (); *)
-        (*   str "EAscType"; *)
-        (*   space (); *)
-        (*   str "("; *)
-        (*   pp_t t; *)
-        (*   close_box (); *)
-        (*   comma (); *)
-          pp_e e(* ; *)
-        (*   str ")"; *)
-        (*   close_box () *)
-        (* ) *)
+        (
+	  open_vbox_noindent ();
+          open_hbox ();
+          str "EAscType";
+          space ();
+          str "(";
+          pp_t t;
+          close_box ();
+          comma ();
+          pp_e e;
+          str ")";
+          close_box ()
+        )
       | ENever t =>
         (
           open_hbox ();

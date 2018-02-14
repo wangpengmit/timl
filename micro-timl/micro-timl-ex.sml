@@ -1171,6 +1171,27 @@ fun collect_EAppIT_rev e =
   end
 fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
 
+fun collect_EAscTypeTime_rev e =
+  let
+    val self = collect_EAscTypeTime_rev
+  in
+    case e of
+        EAscType (e, t) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inl t :: args)
+        end
+      | EAscTime (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inr i :: args)
+        end
+      | _ => (e, [])
+  end
+fun collect_EAscTypeTime e = mapSnd rev $ collect_EAscTypeTime_rev e
+                                
 fun is_value e =
   case e of
       EConst _ => true
@@ -1187,14 +1208,14 @@ fun is_value e =
     | EAscTime (e, _) => is_value e
     | ELoc _ => true
     | _ =>
-      case collect_EAppIT e of
-          (ERec data, _) =>
+      case fst $ collect_EAscTypeTime $ fst $ collect_EAppIT e of
+          ERec data =>
           let
             val (_, (_, e)) = unBindAnnoName data
           in
             is_value e
           end
-        | (EVar _, _) => true (* todo: is this right? *)
+        | EVar _ => true (* todo: is this right? *)
         | _ => false
 
 end

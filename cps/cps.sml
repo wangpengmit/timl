@@ -376,7 +376,9 @@ fun cps (e, t_e) (k, j_k) =
         val (t_e2, i, _) = assert_TArrow t_e1
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
-        val e = EAppI (EV x1, j_k) $% EPair (EV x2, k)
+        val xk = fresh_evar ()
+        val e = EAppI (EV x1, j_k) $% EPair (EV x2, EV xk)
+        val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
         val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
         val (e, i_e) = cps (e2, t_e2) (e, blowup_time (i, j_k))
@@ -388,6 +390,12 @@ fun cps (e, t_e) (k, j_k) =
     | S.EConst c =>
       (* [[ x ]](c) = k c *)
       (k $% EConst c, j_k %+ T_1)
+    | S.ENever t =>
+      (* [[ never ]](k) = k(never) *)
+      (k $% ENever t, j_k %+ T_1)
+    | S.EBuiltin t =>
+      (* [[ builtin ]](k) = k(builtin) *)
+      (k $% EBuiltin t, j_k %+ T_1)
     | S.ERec bind =>
       (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
       let
@@ -418,7 +426,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_e = open0_t_t alpha t_e
         val j = fresh_ivar ()
         val c = fresh_evar ()
-        val () = assert_b "cps/EAbsT" $ is_value e
+        val () = assert_b_m (fn () => "cps/EAbsT/is_value: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e
         val (e, _) = cps (e, t_e) (EV c, IV j)
         val e = EAscTime (e, blowup_time_t (IV j))
         val t_e = cps_t t_e
@@ -683,6 +691,15 @@ fun cps (e, t_e) (k, j_k) =
         cps (e1, t_e1) (c, i_c)
       end
     | S.EAscType (e, t) =>
+      (* let *)
+      (*   val x = fresh_evar () *)
+      (*   val t = cps_t t *)
+      (*   val t_x = cps_t t_e *)
+      (*   val k = k $% (EV x %: t) *)
+      (*   val k = EAbs $ close0_e_e_anno ((x, "x", t_x), k) *)
+      (* in *)
+      (*   cps (e, t) (k, j_k) *)
+      (* end *)
       cps (e, t) (k, j_k)  (* todo: may need to do more *)
     | S.EAscTime (e, i) =>
       let
@@ -839,8 +856,8 @@ fun test1 dirname =
     val () = println "Started translating ..."
     val e = trans_e e
     val () = println "Finished translating"
-    val () = pp_e $ export ToStringUtil.empty_ctx e
-    val () = println ""
+    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
                      
     open MicroTiMLTypecheck
     open TestUtil
@@ -855,8 +872,8 @@ fun test1 dirname =
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    val () = pp_e $ export ToStringUtil.empty_ctx e
-    val () = println ""
+    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)

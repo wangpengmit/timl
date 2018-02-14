@@ -400,8 +400,10 @@ fun b2o b = if b then SOME () else NONE
                                      
 fun b2i b = if b then 1 else 0
                                      
-fun assert p msg = if p () then () else raise Impossible $ "Assert failed: " ^ msg
-fun assert_b msg b = assert (fn () => b) msg
+fun assert_m p msg = if p () then () else raise Impossible $ "Assert failed: " ^ msg ()
+fun assert_b_m msg b = assert_m (const_fun b) msg
+fun assert p msg = assert_m p (const_fun msg)
+fun assert_b msg b = assert (const_fun b) msg
 
 fun find_unique ls name =
   if not (mem op= name ls) then

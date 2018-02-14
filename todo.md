@@ -110,6 +110,7 @@
 
 - [ ] remove let x = ... when x is "_", because such case can only be from translation of wildcard patterns
 - [ ] remove duplicate EAsc and EAscTime
+- [ ] analysing the form of expr is complicated by the pervasion of EAscType and EAscTime; need some principled way to transparently ignore EAscType/Time.
 
 # To-do for Examples:
 
