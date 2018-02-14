@@ -1150,27 +1150,6 @@ fun export_e_fn params ctx e =
     #visit_expr vtable visitor ctx e
   end
 
-fun collect_EAppIT_rev e =
-  let
-    val self = collect_EAppIT_rev
-  in
-    case e of
-        EAppI (e, i) =>
-        let
-          val (e, args) = self e
-        in
-          (e, inl i :: args)
-        end
-      | EAppT (e, t) =>
-        let
-          val (e, args) = self e
-        in
-          (e, inr t :: args)
-        end
-      | _ => (e, [])
-  end
-fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
-
 fun collect_EAscTypeTime_rev e =
   let
     val self = collect_EAscTypeTime_rev
@@ -1191,7 +1170,29 @@ fun collect_EAscTypeTime_rev e =
       | _ => (e, [])
   end
 fun collect_EAscTypeTime e = mapSnd rev $ collect_EAscTypeTime_rev e
-                                
+
+(* will ignore EAscType/Time except those for the core *)
+fun collect_EAppIT_rev e =
+  let
+    val self = collect_EAppIT_rev
+  in
+    case fst $ collect_EAscTypeTime e of
+        EAppI (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inl i :: args)
+        end
+      | EAppT (e, t) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inr t :: args)
+        end
+      | _ => (e, [])
+  end
+fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
+
 fun is_value e =
   case e of
       EConst _ => true
