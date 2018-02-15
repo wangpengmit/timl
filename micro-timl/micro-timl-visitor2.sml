@@ -17,7 +17,7 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'va
        visit2_KArrow : 'this -> 'env -> 'bsort * 'bsort kind -> 'bsort2 kind -> 'bsort3 kind,
        visit2_KArrowT : 'this -> 'env -> 'bsort kind * 'bsort kind -> 'bsort2 kind -> 'bsort3 kind,
        visit2_ty : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
-       visit2_TVar : 'this -> 'env -> 'var -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
+       visit2_TVar : 'this -> 'env -> 'var * 'bsort kind list -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TConst : 'this -> 'env -> ty_const -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TBinOp : 'this -> 'env -> ty_bin_op * ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TArrow : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * 'idx * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
@@ -154,6 +154,7 @@ fun override_visit2_TAppI (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
 open VisitorUtil
        
 fun visit2_pair visit2_fst visit2_snd env (a, b) (a', b') = (visit2_fst env a a', visit2_snd env b b')
+fun visit2_list visit env = map2 (visit env)
                                                   
 fun visit2_abs visit2_'p env (Abs p1) (Abs p1') =
   Abs $ visit2_'p (env2ctx env) p1 p1'
@@ -265,7 +266,7 @@ fun default_ty_visitor2_vtable
       in
         case other of
             TVar data' =>
-            TVar $ #visit2_var vtable this env data data'
+            TVar $ visit2_pair (#visit2_var vtable this) (visit2_list (#visit2_kind vtable this)) env data data'
           | _ => error (TVar data) other
       end
     fun visit2_TConst this env data other =
@@ -500,11 +501,13 @@ fun eq_t_fn params b b' =
 
 structure UnitTest = struct
 
+fun TV x = TVar (x, [])
+                
 fun test1 dirname =
     let
       fun eq_t a = eq_t_fn (curry op=, Equal.eq_bs, Equal.eq_i, Equal.eq_s) a
-      val t1 = TBinOp (TBProd, TVar 0, TVar 1)
-      val t2 = TBinOp (TBProd, TVar 0, TVar 2)
+      val t1 = TBinOp (TBProd, TV 0, TV 1)
+      val t2 = TBinOp (TBProd, TV 0, TV 2)
       val () = assert_b "" $ eq_t t1 t1
       val () = assert_b "" $ eq_t t2 t2
       val () = assert_b "" $ not $ eq_t t1 t2

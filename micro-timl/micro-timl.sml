@@ -26,7 +26,7 @@ datatype ty_bin_op =
 
 (* type *)
 datatype ('var, 'bsort, 'idx, 'sort) ty =
-         TVar of 'var
+         TVar of 'var * 'bsort kind list
          | TConst of ty_const
          | TBinOp of ty_bin_op * ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
          | TArrow of ('var, 'bsort, 'idx, 'sort) ty * 'idx * ('var, 'bsort, 'idx, 'sort) ty

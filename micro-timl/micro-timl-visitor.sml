@@ -17,7 +17,7 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_
        visit_KArrow : 'this -> 'env -> 'bsort * 'bsort kind -> 'bsort2 kind,
        visit_KArrowT : 'this -> 'env -> 'bsort kind * 'bsort kind -> 'bsort2 kind,
        visit_ty : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
-       visit_TVar : 'this -> 'env -> 'var -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
+       visit_TVar : 'this -> 'env -> 'var * 'bsort kind list -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
        visit_TConst : 'this -> 'env -> ty_const -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
        visit_TBinOp : 'this -> 'env -> ty_bin_op * ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
        visit_TArrow : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * 'idx * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
@@ -214,7 +214,7 @@ fun default_ty_visitor_vtable
       let
         val vtable = cast this
       in
-        TVar $ #visit_var vtable this env data
+        TVar $ visit_pair (#visit_var vtable this) (visit_list (#visit_kind vtable this)) env data
       end
     fun visit_TConst this env data =
       let
@@ -806,7 +806,7 @@ fun subst_t_ty_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_i_
     fun get_dt (di, dt) = dt
     val shift_i_t = shift_i_t_fn (shift_i_i, shift_i_s)
     val shift_t_t = shift_t_t_fn shift_var
-    fun visit_TVar this env y =
+    fun visit_TVar this env (y, anno) =
       let
         val x = x + unTDepth (get_dt env)
       in
@@ -818,9 +818,9 @@ fun subst_t_ty_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_i_
               shift_i_t 0 (unIDepth di) $ shift_t_t 0 (unTDepth dt) v
             end
           | CmpGreater y' =>
-            TVar y'
+            TVar (y', anno)
           | _ =>
-            TVar y
+            TVar (y, anno)
       end
     val vtable = 
         default_ty_visitor_vtable
