@@ -66,7 +66,7 @@ fun ELetConstrClose ((x, name), e1, e2) = MakeELetConstr (e1, (name, dummy), clo
   
 fun Eid t = EAbs $ EBindAnno ((("x", dummy), t), EVar $ Bound 0)
 
-infixr 0 %:
+infix 0 %:
 fun a %: b = EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)

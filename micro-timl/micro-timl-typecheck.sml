@@ -619,9 +619,9 @@ fun eval_constr b =
     #visit_expr vtable visitor () b
   end
 
-infixr 0 %:
+infix 0 %:
 fun a %: b = EAscType (a, b)
-infixr 0 |>
+infix 0 |>
 fun a |> b = EAscTime (a, b)
 
 fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
@@ -633,7 +633,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
         case e_input of
         EVar x =>
         (case nth_error_local ectx x of
-             SOME (_, t) => (e_input, t, T0)
+             SOME (_, t) => (e_input %: t, t, T0)
            | NONE => raise MTCError "Unbound term variable"
         )
       | EConst c => (e_input, get_expr_const_type c, T0)
@@ -794,8 +794,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
           val (t1 : mtiml_ty, (name, e)) = unEAbs data
           val () = kc_against_kind itctx (t1, KType)
           val (e, t2, i) = tc (add_typing_full (fst name, t1) ctx) e
+          val e = MakeEAbs (name, t1, e %: t2 |> i)
         in
-          (MakeEAbs (name, t1, e), TArrow (t1, i, t2), T0)
+          (e, TArrow (t1, i, t2), T0)
         end
       | ERec data =>
         let
