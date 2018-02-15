@@ -64,7 +64,7 @@ and cc_abs e_all =
     in
       case e of
           ERec bind => cc_ERec e_all binds bind
-        | EAbs bind => cc_EAbs e_all binds bind
+        (* | EAbs bind => cc_EAbs e_all binds bind *)
     end
 
 and cc_ERec e_all outer_binds bind =
@@ -79,51 +79,53 @@ and cc_ERec e_all outer_binds bind =
       val (_, t_arrow) = assert_TForallIT_open t_x
       val (_, i, _) = assert_TArrow t_arrow
       val (ys, sigmas) = unzip $ free_vars_with_anno e_all
-      val betas = free_tvars e_all
+      val betas = free_tvars_with_anno e_all
       val t_env = cc_t $ TRecord sigmas
       val t_z = cc_t t_z
       val t_arrow = TArrow (TProd (t_env, t_z), i, TUnit)
-      (* val t_rawcode = TForallITClose (betas @ outer_binds @ inner_binds, t_arrow) *)
-      val t_code = TForallITClose (inner_binds, t_arrow)
+      val z_code = fresh_evar ()
       val z_env = fresh_evar ()
+      val def_x = EPack (cc_t t_x, t_env, EPair (EAppIT (EV z_code, betas @ outer_binds), EV z_env))
       val len_ys = length ys
       val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ERecordProj (len_ys, i) $ EV z_env)) ys
-      val z_code = fresh_evar ()
-      val e_x = EPack (cc_t t_x, t_env, EPair (EV z_code, EV z_env))
-      val e = ELetManyClose ((x, name_x, e_x) :: ys_defs, cc e)
+      val e = ELetManyClose ((x, name_x, def_x) :: ys_defs, cc e)
       val e = EAbsPairClose ((z_env, "z_env", t_env), (z, name_z, t_z), e)
-      val e = ERec $ close0_e_e_anno ((z_code, "z_code", t_code), e)
-      val v_code = EAbsITClose (betas @ outer_binds, e)
+      val e = EAbsITClose (betas @ outer_binds @ inner_binds, e)
+      val t_rawcode = TForallITClose (betas @ outer_binds @ inner_binds, t_arrow)
+      (* val t_code = TForallITClose (inner_binds, t_arrow) *)
+      val v_code = ERec $ close0_e_e_anno ((z_code, name_x ^ "_code", t_rawcode), e)
       val v_env = ERecord ys
-      val e = EPack (cc_t $ TForallIT (outer_binds, t_x), t_env, EPair (EAppIT (v_code, betas), v_env))
+      (* val x_code = fresh_evar () *)
+      val e = EPack (cc_t $ TForallIT (outer_binds, t_x), t_env, EPair (EAppIT ((* EV x_code *)v_code, betas), v_env))
+      (* val e = ELetClose ((x_code, name_x ^ "_code", v_code), e) *)
     in
       e
     end
 
-and cc_EAbs e_all outer_binds bind =
-    let
-      val (t_z, (name_z, e)) = unBindAnnoName bind
-      val z = fresh_evar ()
-      val e = open0_e_e z e
-      val (e, i) = assert_EAscTime e
-      val t_e_all = TForallIT (outer_binds, TArrow (t_z, i, TUnit))
-      val (ys, sigmas) = unzip $ free_vars_with_anno e_all
-      val betas = free_tvars e_all
-      val t_env = cc_t $ TRecord sigmas
-      val t_z = cc_t t_z
-      val t_arrow = TArrow (TProd (t_env, t_z), i, TUnit)
-      (* val t_rawcode = TForallITClose (betas @ outer_binds, t_arrow) *)
-      (* val t_code = TForallITClose (outer_binds, t_arrow) *)
-      val z_env = fresh_evar ()
-      val len_ys = length ys
-      val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ERecordProj (len_ys, i) $ EV z_env)) ys
-      val e = ELetManyClose (ys_defs, cc e)
-      val e = EAbsPairClose ((z_env, "z_env", t_env), (z, name_z, t_z), e)
-      val v_code = EAbsITClose (betas @ outer_binds, e)
-      val v_env = ERecord ys
-      val e = EPack (cc_t $ t_e_all, t_env, EPair (EAppIT (v_code, betas), v_env))
-    in
-      e
-    end
+(* and cc_EAbs e_all outer_binds bind = *)
+(*     let *)
+(*       val (t_z, (name_z, e)) = unBindAnnoName bind *)
+(*       val z = fresh_evar () *)
+(*       val e = open0_e_e z e *)
+(*       val (e, i) = assert_EAscTime e *)
+(*       val t_e_all = TForallIT (outer_binds, TArrow (t_z, i, TUnit)) *)
+(*       val (ys, sigmas) = unzip $ free_vars_with_anno e_all *)
+(*       val betas = free_tvars e_all *)
+(*       val t_env = cc_t $ TRecord sigmas *)
+(*       val t_z = cc_t t_z *)
+(*       val t_arrow = TArrow (TProd (t_env, t_z), i, TUnit) *)
+(*       (* val t_rawcode = TForallITClose (betas @ outer_binds, t_arrow) *) *)
+(*       (* val t_code = TForallITClose (outer_binds, t_arrow) *) *)
+(*       val z_env = fresh_evar () *)
+(*       val len_ys = length ys *)
+(*       val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ERecordProj (len_ys, i) $ EV z_env)) ys *)
+(*       val e = ELetManyClose (ys_defs, cc e) *)
+(*       val e = EAbsPairClose ((z_env, "z_env", t_env), (z, name_z, t_z), e) *)
+(*       val v_code = EAbsITClose (betas @ outer_binds, e) *)
+(*       val v_env = ERecord ys *)
+(*       val e = EPack (cc_t $ t_e_all, t_env, EPair (EAppIT (v_code, betas), v_env)) *)
+(*     in *)
+(*       e *)
+(*     end *)
 
 end
