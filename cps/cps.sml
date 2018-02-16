@@ -3,6 +3,7 @@
 structure CPS = struct
 
 open Expr
+open CompilerUtil
 open MicroTiMLExLongId
 open MicroTiMLExLocallyNameless
 open MicroTiMLExUtil
@@ -24,7 +25,7 @@ infixr 1 -->
 infix 1 <->
         
 fun IV x = VarI $ make_Free_i x
-fun EV x = EVar $ make_Free_e x
+                
 val T_0 = T0 dummy
 val T_1 = T1 dummy
 
@@ -38,30 +39,10 @@ fun unBindAnno2 data =
 
 fun unBindSimp2 bind = mapFst Name2str $ unBindSimp bind
             
-fun close0_anno bind close ((x, name, anno), b) = bind (((name, dummy), anno), close x b)
-fun close0_i_t_anno a = close0_anno IBindAnno close0_i_t a
-fun close0_t_t_anno a = close0_anno TBindAnno close0_t_t a
-fun close0_i_e_anno a = close0_anno IBindAnno close0_i_e a
-fun close0_t_e_anno a = close0_anno TBindAnno close0_t_e a
-fun close0_e_e_anno a = close0_anno EBindAnno close0_e_e a
-
 fun TForallTimeClose ((x, name), t) = TForallI $ close0_i_t_anno ((x, name, STime), t)
-fun ELetClose ((x, name, e1), e2) = MakeELet (e1, (name, dummy), close0_e_e x e2)
-fun EAbsPairClose (((x1, name1, t1), (x2, name2, t2)), e) =
-  let
-    val x = fresh_evar ()
-    val e = ELetClose ((x2, name2, ESnd (EV x)), e)
-    val e = ELetClose ((x1, name1, EFst (EV x)), e)
-  in
-    EAbs $ close0_e_e_anno ((x, "x", TProd (t1, t2)), e)
-  end
 fun EAbsTimeClose ((x, name), e) = EAbsI $ close0_i_e_anno ((x, name, STime), e)
 fun ECaseClose (e, ((x1, name1), e1), ((x2, name2), e2)) =
   ECase (e, EBind ((name1, dummy), close0_e_e x1 e1), EBind ((name2, dummy), close0_e_e x2 e2))
-fun EUnpackClose (e1, (a, name_a), (x, name_x), e2) =
-  EUnpack (e1, curry TBind (name_a, dummy) $ curry EBind (name_x, dummy) $ close0_t_e a $ close0_e_e x e2)
-fun EUnpackIClose (e1, (a, name_a), (x, name_x), e2) =
-  EUnpackI (e1, curry IBind (name_a, dummy) $ curry EBind (name_x, dummy) $ close0_i_e a $ close0_e_e x e2)
 fun ELetConstrClose ((x, name), e1, e2) = MakeELetConstr (e1, (name, dummy), close0_c_e x e2)
   
 fun Eid t = EAbs $ EBindAnno ((("x", dummy), t), EVar $ Bound 0)
@@ -141,12 +122,6 @@ fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
 
 end
 
-fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
-                             
-fun assert_TArrow t =
-  case t of
-      TArrow a => a
-    | _ => raise assert_fail "assert_TArrow"
 fun assert_TProd t =
   case t of
       TBinOp (TBProd, t1, t2) => (t1, t2)
