@@ -52,7 +52,7 @@ fun strn_i i =
   (*     SOME ((x, _), args) => sprintf "($ ...)" [str_uvar_i (str_bs, str_i []) x] *)
   (*   | NONE => *)
   case i of
-      VarI x => x
+      VarI (x, _) => x
     | IConst (c, _) => str_idx_const c
     | UnOpI (opr, i, _) =>
       (case opr of
@@ -108,7 +108,7 @@ fun strn_s s =
         fun default () = sprintf "{ $ : $ | $ }" [name, strn_bs bs, strn_p p]
       in
         case (is_time_fun bs, p) of
-            (SOME arity, BinPred (BigO, VarI x, i2)) =>
+            (SOME arity, BinPred (BigO, VarI (x, _), i2)) =>
             if x = name then
               sprintf "BigO $ $" [str_int arity, strn_i i2]
             else

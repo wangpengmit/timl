@@ -11,7 +11,7 @@ infixr 0 $
          
 fun get_region_i i =
   case i of
-      VarI x => get_region_var x
+      VarI (x, _) => get_region_var x
     | IConst (_, r) => r
     | UnOpI (_, _, r) => r
     | BinOpI (_, i1, i2) => combine_region (get_region_i i1) (get_region_i i2)
@@ -21,7 +21,7 @@ fun get_region_i i =
 
 fun set_region_i i r =
   case i of
-      VarI x => VarI $ set_region_var x r
+      VarI (x, anno) => VarI (set_region_var x r, anno)
     | IConst (a, _) => IConst (a, r)
     | UnOpI (opr, i, _) => UnOpI (opr, i, r)
     | BinOpI (opr, i1, i2) => BinOpI (opr, set_region_i i1 r, set_region_i i2 r)

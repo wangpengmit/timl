@@ -68,7 +68,7 @@ fun eq_i i i' =
   let
     fun loop i i' =
       case i of
-          VarI x => (case i' of VarI x' => eq_var (x, x') | _ => false)
+          VarI (x, _) => (case i' of VarI (x', _) => eq_var (x, x') | _ => false)
         | IConst (c, _) => (case i' of IConst (c', _) => eq_idx_const c c' | _ => false)
         | UnOpI (opr, i, _) => (case i' of UnOpI (opr', i', _) => opr = opr' andalso loop i i' | _ => false)
         | BinOpI (opr, i1, i2) => (case i' of BinOpI (opr', i1', i2') => opr = opr' andalso loop i1 i1' andalso loop i2 i2' | _ => false)

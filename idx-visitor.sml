@@ -25,7 +25,7 @@ type ('this, 'env) idx_visitor_vtable =
        visit_BSArrow : 'this -> 'env -> bsort * bsort -> T.bsort,
        visit_UVarBS : 'this -> 'env -> bsort uvar_bs -> T.bsort,
        visit_idx : 'this -> 'env -> idx -> T.idx,
-       visit_VarI : 'this -> 'env -> var -> T.idx,
+       visit_VarI : 'this -> 'env -> var * sort list -> T.idx,
        visit_IConst : 'this -> 'env -> Operators.idx_const * region -> T.idx,
        visit_UnOpI : 'this -> 'env -> Operators.idx_un_op * idx * region -> T.idx,
        visit_BinOpI : 'this -> 'env -> Operators.idx_bin_op * idx * idx -> T.idx,
@@ -402,7 +402,7 @@ fun default_idx_visitor_vtable
     fun visit_VarI this env data =
       let
         val vtable = cast this
-        val data = #visit_var vtable this env data
+        val data = visit_pair (#visit_var vtable this) (visit_list (#visit_sort vtable this)) env data
       in
         T.VarI data
       end

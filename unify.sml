@@ -47,7 +47,7 @@ fun unify_bs r (bs, bs') =
       | _ => raise unify_error "base sort" r (str_bs bs, str_bs bs')
   end
     
-fun V r n = VarI (ID (n, r))
+fun V r n = VarI (ID (n, r), [])
 fun TV r n = MtVar (ID (n, r))
 
 open Util
@@ -92,7 +92,7 @@ fun unify_IApp r i i' =
     (* val i' = normalize_i i' *)
 
                          
-    val inj = find_injection eq_i (map VarI vars') (rev args) !! (fn () => raise UnifyAppUVarFailed "")
+    val inj = find_injection eq_i (map (fn y => VarI (y, [])) vars') (rev args) !! (fn () => raise UnifyAppUVarFailed "")
     val i' = psubst_is_i vars' (map (V r) inj) i'
     val (name, ctx, b) = get_uvar_info x !! (fn () => raise Impossible "unify_IApp(): shouldn't be [Refined]")
     val b = update_bs b
@@ -165,7 +165,7 @@ fun is_sub_sort r gctxn ctxn (s : sort, s' : sort) =
         open CollectUVar
         val () = if mem op= x (map #1 $ collect_uvar_s_s s') then raise UnifyAppUVarFailed "" else ()
         val vars' = dedup eq_var $ collect_var_i_s s'
-        val inj = find_injection eq_i (map VarI vars') (rev args) !! (fn () => raise UnifyAppUVarFailed "")
+        val inj = find_injection eq_i (map (fn y => VarI (y, [])) vars') (rev args) !! (fn () => raise UnifyAppUVarFailed "")
         val s' = psubst_is_s vars' (map (V r) inj) s'
         val (_, ctx) = get_uvar_info x !! (fn () => raise Impossible "unify_s()/SApp: shouldn't be [Refined]")
         val () = if length args <= length ctx then () else raise Impossible "unify_SApp(): #args shouldn't be larger than #ctx"
@@ -316,7 +316,7 @@ fun unify_mt r gctx ctx (t, t') =
                                        
                                        
         open CollectVar
-        val uncovered = List.filter (fn var => not (List.exists (fn arg => eq_i (VarI var) arg) i_args)) i_vars'
+        val uncovered = List.filter (fn var => not (List.exists (fn arg => eq_i (VarI (var, [])) arg) i_args)) i_vars'
         fun forget_nonconsuming (var : var) b =
           let
             val x = case var of
@@ -340,7 +340,7 @@ fun unify_mt r gctx ctx (t, t') =
         val () = if mem op= x (map #1 $ CollectUVar.collect_uvar_t_mt t') then raise UnifyAppUVarFailed "[x] is in [t']" else ()
         val i_vars' = dedup eq_var $ collect_var_i_mt t'
         val t_vars' = dedup eq_var $ collect_var_t_mt t'
-        val i_inj = find_injection eq_i (map VarI i_vars') (rev i_args) !! (fn () => raise UnifyAppUVarFailed "find_inject(i_args) failed")
+        val i_inj = find_injection eq_i (map (fn y => VarI (y, [])) i_vars') (rev i_args) !! (fn () => raise UnifyAppUVarFailed "find_inject(i_args) failed")
         val t_inj = find_injection eq_mt (map MtVar t_vars') (rev t_args) !! (fn () => raise UnifyAppUVarFailed "find_inject(t_args) failed")
         val () = assert (fn () => length t_vars' = length t_inj) "length t_vars' = length t_inj"
         val t' = psubst_ts_mt t_vars' (map (TV r) t_inj) t'

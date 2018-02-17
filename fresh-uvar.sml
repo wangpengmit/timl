@@ -59,7 +59,7 @@ fun refine_UVarS_to_Basic (x, r, info, args) =
     b
   end
 
-fun V r n = VarI (ID (n, r))
+fun V r n = VarI (ID (n, r), [])
 fun TV r n = MtVar (ID (n, r))
 
 fun fresh_uvar_i ctx bsort = ref (Fresh (inc (), ctx, bsort))
@@ -88,7 +88,7 @@ fun get_ctx_and_args sel make_arg on_snd package gctx ctx_local r =
     (ctx_total, args_total)
   end
 
-fun get_sctx_and_args x = get_ctx_and_args #1 VarI x
+fun get_sctx_and_args x = get_ctx_and_args #1 (fn y => VarI (y, [])) x
 fun get_kctx_and_args x = get_ctx_and_args #2 MtVar x
 
 fun fresh_i gctx ctx bsort r = 

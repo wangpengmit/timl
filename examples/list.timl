@@ -11,10 +11,10 @@ fun length [a] {n : Nat} (l : list a {n}) = 0
 
 val a = length (1 :: [])
                                   
-fun length [a] {n : Nat} (l : list a {n}) return using $(2 * n) =
+fun length_i [a] {n : Nat} (l : list a {n}) return using $(2 * n) =
     case l of
         [] => 0
-      | _ :: xs => 1 + length xs
+      | _ :: xs => 1 + length_i xs
                                   
 fun length [a] {n : Nat} (l : list a {n}) return nat {n} using $(2 * n) =
     case l of

@@ -53,7 +53,7 @@ fun spec2decl mid (sctx, kctx, cctx, tctx) spec =
         let
           val n = indexOf (curry op= $ fst iname) sctx !! (fn () => raise Impossible "spec2decl/SpecIdx")
         in
-          MakeDIdxDef (iname, SOME s, VarI $ V n)
+          MakeDIdxDef (iname, SOME s, VarI (V n, []))
         end
       | SpecType (tname, k) =>
         let

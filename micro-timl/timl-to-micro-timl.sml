@@ -283,7 +283,7 @@ fun on_mt (t : S.mtype) =
             val ibinds = on_i_ibinds shiftx_i_s (on_pair (shiftx_i_mt, on_list shiftx_i_i)) 0 len_bsorts ibinds
             val (name_sorts, (t, is)) = unfold_binds ibinds
             val () = assert (fn () => length is = len_bsorts) "length is = len_bsorts"
-            val formal_iargs = map (fn x => VarI (int2var x)) $ rev $ range $ len_bsorts
+            val formal_iargs = map (fn x => VarI (int2var x, [])) $ rev $ range $ len_bsorts
             val t = shiftx_i_mt 0 1 t
             val is = map (shiftx_i_i 0 1) is
             val formal_iargs = map (shiftx_i_i 0 (length name_sorts + 1)) formal_iargs
@@ -482,7 +482,7 @@ and add_constr_decls (dt, e_body) =
           val (name_sorts, _) = unfold_binds core
           val inames = map fst name_sorts
           val ilen = length name_sorts
-          fun IV n = S.VarI $ ID (n, dummy)
+          fun IV n = S.VarI (ID (n, dummy), [])
           fun TV n = S.MtVar $ ID (n, dummy)
           val ts = rev $ Range.map TV (0, tlen)
           val is = rev $ Range.map IV (0, ilen)

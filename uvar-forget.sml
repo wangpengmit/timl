@@ -89,7 +89,7 @@ fun forget_i_i x n b =
         val on_v = forget_v
       in
         case b of
-	    VarI y => VarI $ on_v_long_id on_v x n y
+	    VarI (y, anno) => VarI (on_v_long_id on_v x n y, [])
           | IConst _ => b
           | UnOpI (opr, i, r) => UnOpI (opr, f x n i, r)
 	  | BinOpI (opr, i1, i2) => BinOpI (opr, f x n i1, f x n i2)

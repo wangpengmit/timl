@@ -332,7 +332,7 @@ local
                 fun def () = try_forget (forget_i_p 0 1) p
               in
                 case p of
-                    BinConn (Imply, BinPred (BigO, VarI (ID (x, _)), f), p) =>
+                    BinConn (Imply, BinPred (BigO, VarI (ID (x, _), _), f), p) =>
                     if x = 0 then
                       (* ignore this variable if the only thing mentioning it is a BigO premise *)
                       (case (try_forget (forget_i_p 0 1) p, try_forget (forget_i_i 0 1) f) of
@@ -382,7 +382,7 @@ local
                        fun is_var_equals x p =
                          let
                            fun find_var (i1, i2) =
-                             if eq_i i1 (VarI (ID (x, dummy))) then
+                             if eq_i i1 (VarI (ID (x, dummy), [])) then
                                SOME (forget_i_i x 1 i2) handle ForgetError _ => NONE
                              else NONE
                          in

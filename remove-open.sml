@@ -30,7 +30,7 @@ fun remove_DOpen_expr_visitor_vtable cast () : ('this, unit) expr_visitor_vtable
         val (sctx, kctx, cctx, tctx) = octx !! (fn () => raise Impossible "remove_DOpen: octx must be SOME")
         val decls = []
         fun V i = QID (m, (i, dummy))
-        val decls = mapi (fn (i, name) => DIdxDef (name, Outer NONE, Outer $ VarI $ V i)) sctx @ decls
+        val decls = mapi (fn (i, name) => DIdxDef (name, Outer NONE, Outer $ VarI (V i, []))) sctx @ decls
         val decls = mapi (fn (i, name) => DTypeDef (name, Outer $ MtVar $ V i)) kctx @ decls
         val decls = mapi (fn (i, name) => DConstrDef (name, Outer $ V i)) cctx @ decls
         val decls = mapi (fn (i, name) => MakeDVal (unBinderName name, [], EVar (V i, true), dummy)) tctx @ decls

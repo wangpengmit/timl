@@ -18,11 +18,11 @@ fun psubst_long_id d x get_v default y =
       SOME (n, _) => get_v n
     | NONE => default
 
-fun visit_VarI (d, x, v) env y =
+fun visit_VarI (d, x, v) visit_sort env (y, anno) =
   let
     val d = d + env
   in
-    psubst_long_id d x (fn n => shiftx_i_i 0 d (List.nth (v, n))) (VarI y) y
+    psubst_long_id d x (fn n => shiftx_i_i 0 d (List.nth (v, n))) (VarI (y, map visit_sort anno)) y
   end
     
 val subst_i_params = visit_VarI

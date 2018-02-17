@@ -137,9 +137,11 @@ open IdxVisitor
 (* fun substx_list f d x v b = map (f d x v) b *)
 
 (* depth [d] is used for shifting value [v] *)
-fun subst_i_idx_visitor_vtable cast visit_VarI : ('this, int) idx_visitor_vtable =
+fun subst_i_idx_visitor_vtable cast visit_VarI_param : ('this, int) idx_visitor_vtable =
   let
     fun extend_i this d _ = d + 1
+    fun visit_VarI this env (y, anno) =
+        visit_VarI_param (#visit_sort (cast this) this env) env (y, anno)
     val vtable = 
         default_idx_visitor_vtable
           cast
@@ -149,7 +151,7 @@ fun subst_i_idx_visitor_vtable cast visit_VarI : ('this, int) idx_visitor_vtable
           visit_noop
           visit_noop
           visit_noop
-    val vtable = override_visit_VarI vtable (ignore_this visit_VarI)
+    val vtable = override_visit_VarI vtable visit_VarI
   in
     vtable
   end
@@ -180,7 +182,7 @@ fun subst_i_s_fn params b =
 end
                                  
 functor IdxSubstFn (structure Idx : IDX
-                    val visit_VarI : int * int * Idx.idx -> int -> Idx.var -> Idx.idx
+                    val visit_VarI : int * int * Idx.idx -> (Idx.sort -> Idx.sort) -> int -> Idx.var * Idx.sort list -> Idx.idx
                    ) = struct
 
 open Idx

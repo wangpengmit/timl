@@ -388,7 +388,7 @@ fun forget_ctx_d r gctx (sctx, _, _, _) (sctxd, _, _, _) d =
               val ps = collect_And p1
               fun change (p, (d, p2)) =
                 case p of
-                    BinPred (EqP, VarI (ID (x, _)), i) =>
+                    BinPred (EqP, VarI (ID (x, _), _), i) =>
                     (substx_i_i_nonconsuming x i d,
                      substx_i_p_nonconsuming x i p2)
                   | _ => (d, p2)
@@ -754,7 +754,7 @@ fun add_prop r s p =
     | SApp _ => raise Error (r, ["unsolved unification variable in module (unnormalized application)"])
                              
 fun sort_add_idx_eq r s' i =
-  add_prop r s' (VarI (ID (0, r)) %= shift_i_i i)
+  add_prop r s' (VarI (ID (0, r), []) %= shift_i_i i)
            
 type typing_info = decl list * context * idx list * context
 
@@ -1506,7 +1506,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), decl) =
               val i = check_sort gctx (sctx, i, s)
               val ctxd = ctx_from_sorting (name, s)
               val () = open_ctx ctxd
-              val ps = [BinPred (EqP, VarI (ID (0, r)), shift_ctx_i ctxd i)]
+              val ps = [BinPred (EqP, VarI (ID (0, r), []), shift_ctx_i ctxd i)]
               val () = open_premises ps
             in
               (DAbsIdx2 (Binder $ IName (name, r), Outer s, Outer i), ctxd, length ps, [])
@@ -1539,7 +1539,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), decl) =
               (* val () = println $ sprintf "sort and value of absidx $: \n$\n$" [name, str_s (gctx_names gctx) (sctx_names sctx) s, str_i (gctx_names gctx) (sctx_names sctx) i] *)
               val ctxd = ctx_from_sorting (name, s)
               val () = open_ctx ctxd
-              val ps = [BinPred (EqP, VarI (ID (0, r)), shift_ctx_i ctxd i)]
+              val ps = [BinPred (EqP, VarI (ID (0, r), []), shift_ctx_i ctxd i)]
               val () = open_premises ps
               val (decls, ctxd2, nps, ds, _) = check_decls (add_ctx ctxd ctx, decls)
               val () = if nps = 0 then ()
@@ -1560,8 +1560,8 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), decl) =
               fun link_module (m, r) (sctx, kctx, cctx, tctx) =
                 let
                   fun sort_set_idx_eq s' i =
-                    set_prop r s' (VarI (ID (0, r)) %= shift_i_i i)
-                  val sctx = mapWithIdx (fn (i, (name, s)) => (name, sort_set_idx_eq s $ VarI $ QID ((m, r), (i, r)))) sctx
+                    set_prop r s' (VarI (ID (0, r), []) %= shift_i_i i)
+                  val sctx = mapWithIdx (fn (i, (name, s)) => (name, sort_set_idx_eq s $ VarI (QID ((m, r), (i, r)), []))) sctx
                   fun kind_set_type_eq (k, _) t = (k, SOME t)
                   val kctx = mapWithIdx (fn (i, (name, k)) => (name, kind_set_type_eq k $ MtVar $ QID ((m, r), (i, r)))) kctx
                 in
@@ -1776,7 +1776,7 @@ fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
         (* val () = println $ sprintf "before fetch_sort_by_name $.$" [str_v (names gctxn) $ fst m, name] *)
         val (x, s) = fetch_sort_by_name gctx [] $ QID (m, (name, r))
         val () = is_sub_sort r gctxn (sctx_names sctx') (s, s')
-        val s' = sort_add_idx_eq r s' (VarI x)
+        val s' = sort_add_idx_eq r s' (VarI (x, []))
         val sctx' = open_and add_sorting (name, s') sctx'
       in
         sctx'

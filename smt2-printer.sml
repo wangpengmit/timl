@@ -30,7 +30,7 @@ fun print_idx_bin_op opr =
         
 fun print_i ctx i =
   case i of
-      VarI id =>
+      VarI (id, _) =>
       (case id of
            ID (n, _) =>
            (List.nth (ctx, n) handle Subscript => raise SMTError $ "Unbound variable: " ^ str_int n)
@@ -239,8 +239,8 @@ fun conv_base_sort b =
       case b of
           UnitSort => (UnitSort, NONE)
         | BoolSort => (BoolSort, NONE)
-        | Nat => (Nat, SOME (BinPred (LeP, ConstIN (0, dummy), VarI (ID (0, dummy)))))
-        | Time => (Time, SOME (BinPred (LeP, ConstIT (TimeType.zero, dummy), VarI (ID (0, dummy)))))
+        | Nat => (Nat, SOME (BinPred (LeP, ConstIN (0, dummy), VarI (ID (0, dummy), []))))
+        | Time => (Time, SOME (BinPred (LeP, ConstIT (TimeType.zero, dummy), VarI (ID (0, dummy), []))))
 
 fun conv_bsort bsort =
   case bsort of

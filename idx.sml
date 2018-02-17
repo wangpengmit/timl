@@ -22,7 +22,7 @@ datatype bsort =
          | UVarBS of bsort uvar_bs
                            
 datatype idx =
-	 VarI of var
+	 VarI of var * sort list
          | IConst of idx_const * region
          | UnOpI of idx_un_op * idx * region
          | BinOpI of idx_bin_op * idx * idx
@@ -30,14 +30,14 @@ datatype idx =
          | IAbs of bsort * (name * idx) ibind * region
          | UVarI of (bsort, idx) uvar_i * region
 
-datatype prop =
+and prop =
 	 PTrueFalse of bool * region
          | BinConn of bin_conn * prop * prop
          | Not of prop * region
 	 | BinPred of bin_pred * idx * idx
          | Quan of idx exists_anno (*for linking idx inferer with types*) quan * bsort * (name * prop) ibind * region
 
-datatype sort =
+and sort =
 	 Basic of bsort * region
 	 | Subset of (bsort * region) * (name * prop) ibind * region
          | UVarS of (bsort, sort) uvar_s * region

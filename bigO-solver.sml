@@ -181,7 +181,7 @@ fun summarize (is_outer, on_error) i =
           M.empty
         | IConst (ICNat _, _) =>
           M.empty
-        | VarI x =>
+        | VarI (x, _) =>
           if is_outer x then
             M.empty
           else
@@ -259,7 +259,7 @@ fun timefun_le is_outer hs a b =
       find_hyp id (fn (a, b) => (shift_i_i a, shift_i_i b)) match_bigO () hyps
     fun use_bigO_hyp hyps i =
       case find_bigO_hyp i hyps of
-          SOME ((VarI (ID (f', _)), g), _) =>
+          SOME ((VarI (ID (f', _), _), g), _) =>
           let
             val g = simp_i g
             val i' = simp_i $ ParaSubst.psubst_is_i [(ID (f', dummy))] [g] i
@@ -307,7 +307,7 @@ fun timefun_eq is_outer hs a b = timefun_le is_outer hs a b andalso timefun_le i
 
 fun is_VarI i =
   case i of
-      VarI x => SOME x
+      VarI (x, _) => SOME x
     | _ => NONE
 
 fun somes ls = List.mapPartial id ls
@@ -324,7 +324,7 @@ fun by_master_theorem uvar (hs, p) =
     val (uvar_name, uvar_ctx, b) = get_uvar_info uvar !! (fn () => raise Error "not fresh uvar")
     (* val () = println $ sprintf "Running bigO inference for ?$" [str_int uvar_name] *)
     fun ask_smt p = ask_smt_vc (hs, p)
-    fun V n = VarI (ID (n, dummy))
+    fun V n = VarI (ID (n, dummy), [])
     fun to_real i = UnOpI (ToReal, i, dummy)
     val rV = to_real o V
     val use_bigO_hyp = use_bigO_hyp hs
@@ -430,7 +430,7 @@ fun by_master_theorem uvar (hs, p) =
       exp c n %* exp k (UnOpI (Log2, n, dummy))
     (* is a variable appears as an argument to [uvar] but not among the last [arity] arguments, then it is seen as an "outer" parameter  *)
     fun is_outer x =
-      case findi (eq_i (VarI x)) (main_arg :: rev args) of
+      case findi (eq_i (VarI (x, []))) (main_arg :: rev args) of
           SOME (n, _) => n >= arity andalso not (contains main_arg x)
         | NONE => false
     val summarize = summarize (is_outer, fn s => raise Error s)
@@ -438,7 +438,7 @@ fun by_master_theorem uvar (hs, p) =
     fun get_main_arg_class classes =
       let
         val uncovered = diff eq_var (domain classes) $ somes args_v
-        val () = app (fn x => if ask_smt (VarI x %<= main_arg) then () else raise Error $ sprintf "not_covered > main_arg, not_covered=$, main_arg=$, is_outer(not_covered)=$" [str_i empty hs_ctx (VarI x), str_i empty hs_ctx main_arg, str_bool (is_outer x)]) uncovered
+        val () = app (fn x => if ask_smt (VarI (x, []) %<= main_arg) then () else raise Error $ sprintf "not_covered > main_arg, not_covered=$, main_arg=$, is_outer(not_covered)=$" [str_i empty hs_ctx (VarI (x, [])), str_i empty hs_ctx main_arg, str_bool (is_outer x)]) uncovered
         val main_arg_class = mult_class_entries $ map (get_class classes) uncovered
       in
         main_arg_class
@@ -728,7 +728,7 @@ fun solve_exists (vc as (hs, p), vcs) =
         val args = map normalize_i args
         open CollectVar
         val vars = dedup eq_var $ collect_var_i_i value_side
-        val uncovered = List.filter (fn var => not (List.exists (fn arg => eq_i (VarI var) arg) args)) vars
+        val uncovered = List.filter (fn var => not (List.exists (fn arg => eq_i (VarI (var, [])) arg) args)) vars
         fun forget_nonconsuming (var : var) b =
           let
             val x = case var of
@@ -736,7 +736,7 @@ fun solve_exists (vc as (hs, p), vcs) =
                        | QID _ =>
                          raise Error "can't forget decorated variable"
             open UVarForget
-            val () = println $ sprintf "forgeting $ in $" [str_i empty hs_ctx (VarI var), str_i empty hs_ctx b]
+            val () = println $ sprintf "forgeting $ in $" [str_i empty hs_ctx (VarI (var, [])), str_i empty hs_ctx b]
             val b = forget_i_i x 1 b
             val b = shiftx_i_i x 1 b
           in
@@ -871,7 +871,7 @@ fun solve_fun_compare (vc as (hs, p)) =
             val is = collect_AddI i
             fun par i =
               case i of
-                  BinOpI (IApp, VarI (ID (f, _)), n) =>
+                  BinOpI (IApp, VarI (ID (f, _), _), n) =>
                   SOME (f, n)
                 | _ => NONE
             val (apps, rest) = partitionOption par is

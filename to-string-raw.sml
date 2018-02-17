@@ -30,7 +30,7 @@ fun str_raw_bs b =
 
 fun str_raw_i i =
   case i of
-      VarI x => sprintf "VarI ($)" [str_raw_var x]
+      VarI (x, _) => sprintf "VarI ($)" [str_raw_var x]
     | IConst (c, _) => sprintf "IConst ($)" [str_idx_const c]
     | UnOpI (opr, i, _) => sprintf "UnOpI ($, $)" [str_idx_un_op opr, str_raw_i i]
     | BinOpI (opr, i1, i2) => sprintf "BinOpI ($, $, $)" [str_idx_bin_op opr, str_raw_i i1, str_raw_i i2]

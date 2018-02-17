@@ -49,8 +49,8 @@ local
                else if x = "_" then
                  UVarI ((), r)
 	       else
-		 VarI $ to_long_id id
-             | SOME _ => VarI $ to_long_id id
+		 VarI (to_long_id id, [])
+             | SOME _ => VarI (to_long_id id, [])
           )
 	| S.ConstIN n =>
 	  ConstIN n
@@ -121,7 +121,7 @@ local
               let
                 val name = "__f"
               in
-                Subset (bs, Bind ((name, r), BinPred (BigO, VarI (ID (name, r)), i)), r)
+                Subset (bs, Bind ((name, r), BinPred (BigO, VarI (ID (name, r), []), i)), r)
               end
           in
             if name = "BigO" then

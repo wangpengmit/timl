@@ -195,8 +195,8 @@ fun test1 dirname =
     let
       open Expr
       open MicroTiMLExUtil
-      val t = TNat $ VarI $ ID (1, dummy)
-      val s = Subset ((Base Nat, dummy), Bind.Bind (("_VC", dummy), ConstIN (0, dummy) %= VarI (ID (1, dummy))), dummy)
+      val t = TNat $ VarI (ID (1, dummy), [])
+      val s = Subset ((Base Nat, dummy), Bind.Bind (("_VC", dummy), ConstIN (0, dummy) %= VarI (ID (1, dummy), [])), dummy)
       val t = MakeTForallI (s, ("_VC", dummy), t)
       val t = MakeTForallI (SNat, ("_i0", dummy), t)
       (* val t0 = t *)

@@ -32,12 +32,12 @@ fun forget_above_i_i x b = forget_i_i x 100000000 b
 
 exception Error of string
 
-fun visit_VarI (d, x, v) env y =
+fun visit_VarI (d, x, v) visit_sort env (y, anno) =
   let
     val x = x + env
     val d = d + env
   in
-    substx_var VarI x (fn () => shiftx_i_i 0 d v) y
+    substx_var (fn y => VarI (y, map visit_sort anno)) x (fn () => shiftx_i_i 0 d v) y
   end
 
 structure IdxSubst = IdxSubstFn (structure Idx = Idx

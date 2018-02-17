@@ -218,12 +218,32 @@ and get_bsort gctx (ctx, i) =
       val check_bsort = check_bsort gctx
       fun main () =
         case i of
-	    U.VarI x =>
+	    U.VarI (x, sorts) =>
             let
-              val s = fetch_sort gctx (ctx, x)
-              fun error r gctx ctx () = Error (r, [sprintf "Can't figure out base sort of $" [str_s gctx ctx s]])
+              fun get_base_from_sort s =
+                  let
+                    fun error r gctx ctx () = Error (r, [sprintf "Can't figure out base sort of $" [str_s gctx ctx s]])
+                  in
+                    get_base (fn _ => raise error (U_get_region_i i) (gctx_names gctx) (sctx_names ctx) ()) s
+                  end
             in
-              (VarI x, get_base (fn _ => raise error (U_get_region_i i) (gctx_names gctx) (sctx_names ctx) ()) s)
+              case sorts of
+                 s :: sorts =>
+                 let
+                   val s = is_wf_sort (ctx, s)
+                   val i = check_sort gctx (ctx, U.VarI (x, sorts), s)
+                   val (x, sorts) = case i of
+                                VarI a => a
+                              | _ => raise Impossible "get_bsort/VarI"
+                 in
+                   (VarI (x, s :: sorts), get_base_from_sort s)
+                 end
+               | [] =>
+                 let
+                   val s = fetch_sort gctx (ctx, x)
+                 in
+                   (VarI (x, [s]), get_base_from_sort s)
+                 end
             end
           | U.IConst (c, r) =>
             (case c of
@@ -359,9 +379,6 @@ and check_bsort gctx (ctx, i : U.idx, bs : bsort) : idx =
       i
     end
 
-fun is_wf_sorts gctx (ctx, sorts : U.sort list) : sort list = 
-  map (fn s => is_wf_sort gctx (ctx, s)) sorts
-      
 (* fun subst_uvar_error r body i ((fresh, fresh_ctx), x) = *)
 (*   Error (r, *)
 (*          sprintf "Can't substitute for $ in unification variable $ in $" [str_v fresh_ctx x, fresh, body] :: *)
@@ -369,7 +386,7 @@ fun is_wf_sorts gctx (ctx, sorts : U.sort list) : sort list =
 (*            sprintf "because the context of $ is [$] which contains $" [fresh, join ", " $ fresh_ctx, str_v fresh_ctx x] *)
 (*         ]) *)
 
-fun check_sort gctx (ctx, i : U.idx, s : sort) : idx =
+and check_sort gctx (ctx, i : U.idx, s : sort) : idx =
   let 
     (* val () = println $ sprintf "sortchecking $ against $" [U_str_i (gctx_names gctx) (sctx_names ctx) i, str_s (gctx_names gctx) (sctx_names ctx) s] *)
     val (i, bs') = get_bsort gctx (ctx, i)
@@ -432,4 +449,7 @@ fun check_sort gctx (ctx, i : U.idx, s : sort) : idx =
     i
   end
 
+fun is_wf_sorts gctx (ctx, sorts : U.sort list) : sort list = 
+  map (fn s => is_wf_sort gctx (ctx, s)) sorts
+      
 end

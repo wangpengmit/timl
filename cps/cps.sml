@@ -24,7 +24,7 @@ infixr 2 \/
 infixr 1 -->
 infix 1 <->
         
-fun IV x = VarI $ make_Free_i x
+fun IV x = VarI (make_Free_i x, [])
                 
 val T_0 = T0 dummy
 val T_1 = T1 dummy
