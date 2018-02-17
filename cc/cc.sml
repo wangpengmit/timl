@@ -72,6 +72,100 @@ fun override_visit_EAscType (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 't
     extend_e = #extend_e record
   }
 
+fun override_visit_ERec (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 'ty2) expr_visitor_vtable) new : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 'ty2) expr_visitor_vtable =
+  {
+    visit_expr = #visit_expr record,
+    visit_EVar = #visit_EVar record,
+    visit_EConst = #visit_EConst record,
+    (* visit_ELoc = #visit_ELoc record, *)
+    visit_EUnOp = #visit_EUnOp record,
+    visit_EBinOp = #visit_EBinOp record,
+    visit_EWrite = #visit_EWrite record,
+    visit_ECase = #visit_ECase record,
+    visit_EAbs = #visit_EAbs record,
+    visit_ERec = new,
+    visit_EAbsT = #visit_EAbsT record,
+    visit_EAppT = #visit_EAppT record,
+    visit_EAbsI = #visit_EAbsI record,
+    visit_EAppI = #visit_EAppI record,
+    visit_EPack = #visit_EPack record,
+    visit_EUnpack = #visit_EUnpack record,
+    visit_EPackI = #visit_EPackI record,
+    visit_EPackIs = #visit_EPackIs record,
+    visit_EUnpackI = #visit_EUnpackI record,
+    visit_EAscTime = #visit_EAscTime record,
+    visit_EAscType = #visit_EAscType record,
+    visit_ENever = #visit_ENever record,
+    visit_EBuiltin = #visit_EBuiltin record,
+    visit_ELet = #visit_ELet record,
+    visit_ELetConstr = #visit_ELetConstr record,
+    visit_EAbsConstr = #visit_EAbsConstr record,
+    visit_EAppConstr = #visit_EAppConstr record,
+    visit_EVarConstr = #visit_EVarConstr record,
+    visit_ELetType = #visit_ELetType record,
+    visit_ELetIdx = #visit_ELetIdx record,
+    visit_EMatchSum = #visit_EMatchSum record,
+    visit_EMatchPair = #visit_EMatchPair record,
+    visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_var = #visit_var record,
+    visit_cvar = #visit_cvar record,
+    visit_idx = #visit_idx record,
+    visit_sort = #visit_sort record,
+    visit_kind = #visit_kind record,
+    visit_ty = #visit_ty record,
+    extend_i = #extend_i record,
+    extend_t = #extend_t record,
+    extend_c = #extend_c record,
+    extend_e = #extend_e record
+  }
+
+fun override_visit_EAbs (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 'ty2) expr_visitor_vtable) new : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 'ty2) expr_visitor_vtable =
+  {
+    visit_expr = #visit_expr record,
+    visit_EVar = #visit_EVar record,
+    visit_EConst = #visit_EConst record,
+    (* visit_ELoc = #visit_ELoc record, *)
+    visit_EUnOp = #visit_EUnOp record,
+    visit_EBinOp = #visit_EBinOp record,
+    visit_EWrite = #visit_EWrite record,
+    visit_ECase = #visit_ECase record,
+    visit_EAbs = new,
+    visit_ERec = #visit_ERec record,
+    visit_EAbsT = #visit_EAbsT record,
+    visit_EAppT = #visit_EAppT record,
+    visit_EAbsI = #visit_EAbsI record,
+    visit_EAppI = #visit_EAppI record,
+    visit_EPack = #visit_EPack record,
+    visit_EUnpack = #visit_EUnpack record,
+    visit_EPackI = #visit_EPackI record,
+    visit_EPackIs = #visit_EPackIs record,
+    visit_EUnpackI = #visit_EUnpackI record,
+    visit_EAscTime = #visit_EAscTime record,
+    visit_EAscType = #visit_EAscType record,
+    visit_ENever = #visit_ENever record,
+    visit_EBuiltin = #visit_EBuiltin record,
+    visit_ELet = #visit_ELet record,
+    visit_ELetConstr = #visit_ELetConstr record,
+    visit_EAbsConstr = #visit_EAbsConstr record,
+    visit_EAppConstr = #visit_EAppConstr record,
+    visit_EVarConstr = #visit_EVarConstr record,
+    visit_ELetType = #visit_ELetType record,
+    visit_ELetIdx = #visit_ELetIdx record,
+    visit_EMatchSum = #visit_EMatchSum record,
+    visit_EMatchPair = #visit_EMatchPair record,
+    visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_var = #visit_var record,
+    visit_cvar = #visit_cvar record,
+    visit_idx = #visit_idx record,
+    visit_sort = #visit_sort record,
+    visit_kind = #visit_kind record,
+    visit_ty = #visit_ty record,
+    extend_i = #extend_i record,
+    extend_t = #extend_t record,
+    extend_c = #extend_c record,
+    extend_e = #extend_e record
+  }
+
 fun free_ivars_with_anno_idx_visitor_vtable cast output =
   let
     fun visit_VarI this env (data as (var, sorts)) =
@@ -385,6 +479,81 @@ fun map_inl_inr f1 f2 s =
         inl e => inl $ f1 e
       | inr e => inr $ f2 e
 
+infixr 0 %$
+fun a %$ b = EApp (a, b)
+
+fun unBindSimpOpen_t bind =
+    let
+      val (name, b) = unBindSimpName bind
+      val x = fresh_tvar ()
+      val b = open0_t_e x b
+    in
+      (x, name, b)
+    end
+                      
+fun unBindSimpOpen_e bind =
+    let
+      val (name, b) = unBindSimpName bind
+      val x = fresh_evar ()
+      val b = open0_e_e x b
+    in
+      (x, name, b)
+    end
+
+fun EAbsIT (bind, e) =
+    case bind of
+        inl bind => EAbsI $ IBindAnno (bind, e)
+      | inr bind => EAbsT $ TBindAnno (bind, e)
+fun EAbsITs (binds, e) = foldr EAbsIT e binds
+                                      
+fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
+  let
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_ERec this env bind =
+        let
+          val (t_x, (name_x, e)) = unBindAnnoName bind
+          val (binds, e) = collect_EAbsIT e
+          val (t_y, (name_y, e)) = assert_EAbs e
+          val e = #visit_expr (cast this) this env e
+          val e = EAbs $ EBindAnno ((name_y, t_y), e)
+        in
+          ERec $ EBindAnno ((name_x, t_x), EAbsITs (binds, e))
+        end
+    fun visit_EAbs this env bind =
+      let
+        val (t_y, (name_y, e)) = unBindAnnoName bind
+        val ((_, t_e), i) = mapFst assert_EAscType $ assert_EAscTime e
+        val e = #visit_expr (cast this) this env e
+        val e = EAbs $ EBindAnno ((name_y, t_y), e)
+      in
+        ERec $ EBindAnno ((("__f", dummy), TArrow (t_y, i, t_e)), shift01_e_e e)
+      end
+    val vtable = override_visit_ERec vtable visit_ERec
+    val vtable = override_visit_EAbs vtable visit_EAbs
+  in
+    vtable
+  end
+
+fun new_convert_EAbs_to_ERec_expr_visitor params = new_expr_visitor convert_EAbs_to_ERec_expr_visitor_vtable params
+
+fun convert_EAbs_to_ERec b =
+  let
+    val visitor as (ExprVisitor vtable) = new_convert_EAbs_to_ERec_expr_visitor ()
+  in
+    #visit_expr vtable visitor () b
+  end
+
 fun cc_t t =
   case t of
       TArrow _ =>
@@ -412,9 +581,6 @@ and cc_t_arrow t =
     in
       t
     end
-
-infixr 0 %$
-fun a %$ b = EApp (a, b)
 
 fun cc_expr_un_op opr =
     case opr of
@@ -450,16 +616,54 @@ fun cc e =
       | ELet (e1, bind) =>
         let
           val e1 = cc e1
-          val (name, e2) = unBindSimpName bind
-          val x = fresh_evar ()
-          val e2 = open0_e_e x e2
+          val (x, name, e2) = unBindSimpOpen_e bind
           val e2 = cc e2
         in
           ELetClose ((x, fst name, e1), e2)
         end
+      | ECase (e, bind1, bind2) =>
+        let
+          val e = cc e
+          val (x1, name1, e1) = unBindSimpOpen_e bind1
+          val (x2, name2, e2) = unBindSimpOpen_e bind2
+        in
+          ECaseClose (e, ((x1, fst name1), e1), ((x2, fst name2), e2))
+        end
+      | EPack (tp, t, e) => EPack (cc_t tp, cc_t t, cc e)
+      | EUnpack (e1, bind) =>
+        let
+          val e1 = cc e1
+          val (name_a, bind) = unBindSimpName bind
+          val (name_x, e2) = unBindSimpName bind
+          val a = fresh_tvar ()
+          val x = fresh_evar ()
+          val e2 = open0_t_e a e2
+          val e2 = open0_e_e x e2
+          val e2 = cc e2
+        in
+          EUnpackClose (e1, (a, fst name_a), (x, fst name_x), e2)
+        end
+      | EPackI (tp, i, e) => EPackI (cc_t tp, i, cc e)
+      | EUnpackI (e1, bind) =>
+        let
+          val e1 = cc e1
+          val (name_a, bind) = unBindSimpName bind
+          val (name_x, e2) = unBindSimpName bind
+          val a = fresh_ivar ()
+          val x = fresh_evar ()
+          val e2 = open0_i_e a e2
+          val e2 = open0_e_e x e2
+          val e2 = cc e2
+        in
+          EUnpackIClose (e1, (a, fst name_a), (x, fst name_x), e2)
+        end
       | EVar _ => e
       | EConst _ => e
       | EUnOp (opr, e) => EUnOp (cc_expr_un_op opr, cc e)
+      | EAscType (e, t) => EAscType (cc e, cc_t t)
+      | EAscTime (e, i) => EAscTime (cc e, i)
+      | ENever t => ENever (cc_t t)
+      | EBuiltin t => EBuiltin (cc_t t)
       | _ => raise Unimpl "cc"
 
 and cc_abs e_all =
@@ -547,5 +751,7 @@ and cc_ERec e_all outer_binds bind =
 (*     let *)
 (*     in *)
 (*     end *)
-      
+
+val cc = fn e => cc $ convert_EAbs_to_ERec e
+                    
 end

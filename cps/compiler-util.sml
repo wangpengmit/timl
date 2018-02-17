@@ -19,6 +19,24 @@ fun assert_TArrow t =
       TArrow a => a
     | _ => raise assert_fail "assert_TArrow"
                  
+fun assert_EAscType e =
+  let
+    val (e, is) = collect_EAscTime e
+  in
+    case e of
+        EAscType (e, t) => (EAscTimes (e, is), t)
+      | _ => raise assert_fail "assert_EAscType"
+  end
+    
+fun assert_EAscTime e =
+  let
+    val (e, ts) = collect_EAscType e
+  in
+    case e of
+        EAscTime (e, i) => (EAscTypes (e, ts), i)
+      | _ => raise assert_fail "assert_EAscTime"
+  end
+    
 fun EV x = EVar $ make_Free_e x
                 
 fun ELetClose ((x, name, e1), e2) = MakeELet (e1, (name, dummy), close0_e_e x e2)
@@ -36,4 +54,7 @@ fun EUnpackClose (e1, (a, name_a), (x, name_x), e2) =
 fun EUnpackIClose (e1, (a, name_a), (x, name_x), e2) =
     EUnpackI (e1, curry IBind (name_a, dummy) $ curry EBind (name_x, dummy) $ close0_i_e a $ close0_e_e x e2)
              
+fun ECaseClose (e, ((x1, name1), e1), ((x2, name2), e2)) =
+    ECase (e, EBind ((name1, dummy), close0_e_e x1 e1), EBind ((name2, dummy), close0_e_e x2 e2))
+          
 end

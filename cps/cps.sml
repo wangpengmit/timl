@@ -41,8 +41,6 @@ fun unBindSimp2 bind = mapFst Name2str $ unBindSimp bind
             
 fun TForallTimeClose ((x, name), t) = TForallI $ close0_i_t_anno ((x, name, STime), t)
 fun EAbsTimeClose ((x, name), e) = EAbsI $ close0_i_e_anno ((x, name, STime), e)
-fun ECaseClose (e, ((x1, name1), e1), ((x2, name2), e2)) =
-  ECase (e, EBind ((name1, dummy), close0_e_e x1 e1), EBind ((name2, dummy), close0_e_e x2 e2))
 fun ELetConstrClose ((x, name), e1, e2) = MakeELetConstr (e1, (name, dummy), close0_c_e x e2)
   
 fun Eid t = EAbs $ EBindAnno ((("x", dummy), t), EVar $ Bound 0)
@@ -146,14 +144,6 @@ fun assert_TForallI t =
   case t of
       TQuanI (Forall, bind) => unBindAnno bind
     | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
-fun assert_EAscType e =
-  let
-    val (e, is) = collect_EAscTime e
-  in
-    case e of
-        EAscType (e, t) => (EAscTimes (e, is), t)
-      | _ => raise assert_fail "assert_EAscType"
-  end
 
 (* fun assert_and_reduce_beta e = *)
 (*   case e of *)
