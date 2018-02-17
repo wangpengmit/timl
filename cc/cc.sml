@@ -482,14 +482,14 @@ fun map_inl_inr f1 f2 s =
 infixr 0 %$
 fun a %$ b = EApp (a, b)
 
-fun unBindSimpOpen_t bind =
-    let
-      val (name, b) = unBindSimpName bind
-      val x = fresh_tvar ()
-      val b = open0_t_e x b
-    in
-      (x, name, b)
-    end
+(* fun unBindSimpOpen_t bind = *)
+(*     let *)
+(*       val (name, b) = unBindSimpName bind *)
+(*       val x = fresh_tvar () *)
+(*       val b = open0_t_e x b *)
+(*     in *)
+(*       (x, name, b) *)
+(*     end *)
                       
 fun unBindSimpOpen_e bind =
     let
@@ -565,7 +565,55 @@ fun cc_t t =
     | TVar _ => t
     | TConst _ => t
     | TBinOp (opr, t1, t2) => TBinOp (opr, cc_t t1, cc_t t2)
-    | _ => raise Unimpl "cc_t"
+    | TQuan (q, bind) =>
+      let
+        val (k, (name, t)) = unBindAnnoName bind
+        val a = fresh_tvar ()
+        val t = open0_t_t a t
+        val t = cc_t t
+      in
+        TQuan (q, TBindAnno ((name, k), t))
+      end
+    | TQuanI (q, bind) =>
+      let
+        val (s, (name, t)) = unBindAnnoName bind
+        val a = fresh_ivar ()
+        val t = open0_i_t a t
+        val t = cc_t t
+      in
+        TQuanI (q, IBindAnno ((name, s), t))
+      end
+    | TRec bind =>
+      let
+        val (k, (name, t)) = unBindAnnoName bind
+        val a = fresh_tvar ()
+        val t = open0_t_t a t
+        val t = cc_t t
+      in
+        TRec $ TBindAnno ((name, k), t)
+      end
+    | TAbsT bind =>
+      let
+        val (k, (name, t)) = unBindAnnoName bind
+        val a = fresh_tvar ()
+        val t = open0_t_t a t
+        val t = cc_t t
+      in
+        TAbsT $ TBindAnno ((name, k), t)
+      end
+    | TAbsI bind =>
+      let
+        val (s, (name, t)) = unBindAnnoName bind
+        val a = fresh_ivar ()
+        val t = open0_i_t a t
+        val t = cc_t t
+      in
+        TAbsI $ IBindAnno ((name, s), t)
+      end
+    | TNat _ => t
+    | TAppT (t, t') => TAppT (cc_t t, cc_t t')
+    | TAppI (t, i) => TAppI (cc_t t, i)
+    | TArr (t, i) => TArr (cc_t t, i)
 
 and cc_t_arrow t =
     let
@@ -753,5 +801,162 @@ and cc_ERec e_all outer_binds bind =
 (*     end *)
 
 val cc = fn e => cc $ convert_EAbs_to_ERec e
-                    
+
+structure UnitTest = struct
+
+structure TestUtil = struct
+
+open CPS
+open LongId
+open Util
+open MicroTiML
+open MicroTiMLVisitor
+open MicroTiMLExLongId
+open MicroTiMLEx
+       
+infixr 0 $
+infixr 0 !!
+         
+fun short_to_long_id x = ID (x, dummy)
+fun export_var (sel : 'ctx -> string list) (ctx : 'ctx) id =
+  let
+    fun unbound s = "__unbound_" ^ s
+    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
+  in
+    case id of
+        ID (x, _) =>
+        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+        (* short_to_long_id $ str_int x *)
+      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
+  end
+(* val export_i = return2 *)
+fun export_i a = ToString.export_i Gctx.empty a
+fun export_s a = ToString.export_s Gctx.empty a
+fun export_t a = export_t_fn (export_var snd, export_i, export_s) a
+fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
+val str = PP.string
+fun str_var x = LongId.str_raw_long_id id(*str_int*) x
+fun str_i a =
+  (* ToStringRaw.str_raw_i a *)
+  ToString.SN.strn_i a
+  (* const_fun "<idx>" a *)
+fun str_bs a =
+  ToStringRaw.str_raw_bs a
+fun str_s a =
+  (* ToStringRaw.str_raw_s a *)
+  ToString.SN.strn_s a
+  (* const_fun "<sort>" a *)
+fun pp_t_to s b =
+  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
+  (* str s "<ty>" *)
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_e a = MicroTiMLExPP.pp_e_fn (
+    str_var,
+    str_i,
+    str_s,
+    const_fun "<kind>",
+    pp_t_to
+  ) a
+fun fail () = OS.Process.exit OS.Process.failure
+                   
+end
+
+open TestUtil
+       
+fun test1 dirname =
+  let
+    val filename = join_dir_file (dirname, "cc-test1.pkg")
+    val filenames = ParseFilename.expand_pkg (fn msg => raise Impossible msg) filename
+    open Parser
+    val prog = concatMap parse_file filenames
+    open Elaborate
+    val prog = elaborate_prog prog
+    open NameResolve
+    val (prog, _, _) = resolve_prog empty prog
+                                    
+    open TypeCheck
+    val () = TypeCheck.turn_on_builtin ()
+    val () = println "Started TiML typechecking ..."
+    val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
+    val vcs = VCSolver.vc_solver filename vcs
+    val () = if null vcs then ()
+             else
+               raise curry TypeCheck.Error dummy $ (* str_error "Error" filename dummy *) [sprintf "Typecheck Error: $ Unproved obligations:" [str_int $ length vcs], ""] @ (
+               (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *)
+               concatMap (VCSolver.print_unsat true filename) vcs
+             )
+    val () = println "Finished TiML typechecking"
+                     
+    open MergeModules
+    val decls = merge_prog prog []
+    open TiML2MicroTiML
+    val e = SMakeELet (Teles decls, Expr.ETT dummy)
+    val () = println "Simplifying ..."
+    val e = SimpExpr.simp_e [] e
+    val () = println "Finished simplifying"
+    (* val () = println $ str_e empty ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
+    val () = println "Started translating ..."
+    val e = trans_e e
+    val () = println "Finished translating"
+    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
+                     
+    open MicroTiMLTypecheck
+    open TestUtil
+    val () = println "Started MicroTiML typechecking #1 ..."
+    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val () = println "Finished MicroTiML typechecking #1"
+    val () = println "Type:"
+    val () = pp_t $ export_t ([], []) t
+    val () = println "Time:"
+    val i = simp_i i
+    val () = println $ ToString.str_i Gctx.empty [] i
+    (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
+    (* val () = println "VCs:" *)
+    (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
+    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
+                     
+    val () = println "Started CPS conversion ..."
+    val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)
+    val () = println "Finished CPS conversion"
+    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = println ""
+    val () = println "Started MicroTiML typechecking #2 ..."
+    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val () = println "Finished MicroTiML typechecking #2"
+    val () = println "Type:"
+    val () = pp_t $ export_t ([], []) t
+    val () = println "Time:"
+    val i = simp_i i
+    val () = println $ ToString.str_i Gctx.empty [] i
+                     
+    val () = println "Started CC ..."
+    val e = cc e
+    val () = println "Finished CC"
+    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = println ""
+    val () = println "Started MicroTiML typechecking #3 ..."
+    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val () = println "Finished MicroTiML typechecking #3"
+    val () = println "Type:"
+    val () = pp_t $ export_t ([], []) t
+    val () = println "Time:"
+    val i = simp_i i
+    val () = println $ ToString.str_i Gctx.empty [] i
+                     
+  in
+    ((* t, e *))
+  end
+  handle MicroTiMLTypecheck.MTCError msg => (println $ "MTiMLTC.MTCError: " ^ substr 0 1000 msg; fail ())
+       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; fail ())
+       | NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; fail ())
+    
+val test_suites = [
+      test1
+]
+                            
+end
+                       
 end
