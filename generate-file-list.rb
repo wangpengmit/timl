@@ -198,7 +198,7 @@ micro-timl/micro-timl-typecheck.sml
 micro-timl/micro-timl-ex-locally-nameless.sml
 cps/compiler-util.sml
 cps/cps.sml
-# cc/cc.sml
+cc/cc.sml
 unit-test.sml
 main.sml
 }

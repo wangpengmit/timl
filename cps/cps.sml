@@ -335,7 +335,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_e = cps_t t_e
         val t_c = cont_type (t_e, IV j)
         val t_x = cps_t t_x
-        val e = EAbsPairClose (((x, name_x, t_x), (c, "c", t_c)), e)
+        val e = EAbsPairClose ((x, name_x, t_x), (c, "c", t_c), e)
         val e = EAbsTimeClose ((j, "j"), e)
       in
         (k $$ e, j_k %+ T_1)

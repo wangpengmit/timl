@@ -22,7 +22,7 @@ fun assert_TArrow t =
 fun EV x = EVar $ make_Free_e x
                 
 fun ELetClose ((x, name, e1), e2) = MakeELet (e1, (name, dummy), close0_e_e x e2)
-fun EAbsPairClose (((x1, name1, t1), (x2, name2, t2)), e) =
+fun EAbsPairClose ((x1, name1, t1), (x2, name2, t2), e) =
   let
     val x = fresh_evar ()
     val e = ELetClose ((x2, name2, ESnd (EV x)), e)

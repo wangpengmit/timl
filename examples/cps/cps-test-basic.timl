@@ -30,5 +30,15 @@ fun neg b =
 val a = neg a
 
 fun id x = x
-             
+
+(* fun foo {i : Nat} {j | j > i} () = *)
+(*     let *)
+(*       fun bar (a : nat {i}, b : nat {j}) = *)
+(*           a #+ b *)
+(*       fun bar2 (a : nat {j}, b : nat {i}) = *)
+(*           b #+ a *)
+(*     in *)
+(*       () *)
+(*     end *)
+      
 end

@@ -72,6 +72,95 @@ fun override_visit_EAscType (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 't
     extend_e = #extend_e record
   }
 
+fun free_ivars_with_anno_idx_visitor_vtable cast output =
+  let
+    fun visit_VarI this env (data as (var, sorts)) =
+        case var of
+            QID (_, (x, _)) =>
+            (case sorts of
+                 s :: _ => (output (Free_i x, s); VarI data)
+               | [] => raise Impossible "free_ivars_with_anno_i/VarI/QID/ks=[]"
+            )
+          | _ => VarI data
+    val vtable = 
+        default_idx_visitor_vtable
+          cast
+          extend_noop
+          (visit_imposs "free_ivars_with_anno_i/visit_var")
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    val vtable = override_visit_VarI vtable visit_VarI
+  in
+    vtable
+  end
+
+fun new_free_ivars_with_anno_idx_visitor a = new_idx_visitor free_ivars_with_anno_idx_visitor_vtable a
+    
+fun free_ivars_with_anno_i_fn output b =
+  let
+    val visitor as (IdxVisitor vtable) = new_free_ivars_with_anno_idx_visitor output
+  in
+    #visit_idx vtable visitor () b
+  end
+    
+fun free_ivars_with_anno_s_fn output b =
+  let
+    val visitor as (IdxVisitor vtable) = new_free_ivars_with_anno_idx_visitor output
+  in
+    #visit_sort vtable visitor () b
+  end
+    
+fun free_ivars_with_anno_ty_visitor_vtable cast (output, visit_i, visit_s) =
+    default_ty_visitor_vtable
+      cast
+      extend_noop
+      extend_noop
+      visit_noop
+      visit_noop
+      (ignore_this_env $ visit_i output)
+      (ignore_this_env $ visit_s output)
+      
+fun new_free_ivars_with_anno_ty_visitor params = new_ty_visitor free_ivars_with_anno_ty_visitor_vtable params
+    
+fun free_ivars_with_anno_t_fn output b =
+  let
+    val visitor as (TyVisitor vtable) = new_free_ivars_with_anno_ty_visitor (output, free_ivars_with_anno_i_fn, free_ivars_with_anno_s_fn)
+  in
+    #visit_ty vtable visitor () b
+  end
+
+fun free_ivars_with_anno_expr_visitor_vtable cast (output, visit_i, visit_s, visit_t) =
+    default_expr_visitor_vtable
+      cast
+      extend_noop
+      extend_noop
+      extend_noop
+      extend_noop
+      visit_noop
+      visit_noop
+      (ignore_this_env $ visit_i output)
+      (ignore_this_env $ visit_s output)
+      (ignore_this_env $ visit_t output)
+
+fun new_free_ivars_with_anno_expr_visitor params = new_expr_visitor free_ivars_with_anno_expr_visitor_vtable params
+    
+fun free_ivars_with_anno_e_fn output b =
+  let
+    val visitor as (ExprVisitor vtable) = new_free_ivars_with_anno_expr_visitor (output, free_ivars_with_anno_i_fn, free_ivars_with_anno_s_fn, free_ivars_with_anno_t_fn)
+  in
+    #visit_expr vtable visitor () b
+  end
+
+fun free_ivars_with_anno_e e =
+    let
+      val vars = free_vars_with_anno_0 free_ivars_with_anno_e_fn e
+                                       (* todo: rearrange [vars] to satisfy dependencies between them *)
+    in
+      vars
+    end
+
 fun free_tvars_with_anno_ty_visitor_vtable cast output (* : ('this, unit, 'var, 'bsort, 'idx, 'sort, 'var, 'bsort, 'idx, 'sort) ty_visitor_vtable *) =
   let
     fun visit_TVar this env (data as (var, ks)) =
@@ -79,7 +168,7 @@ fun free_tvars_with_anno_ty_visitor_vtable cast output (* : ('this, unit, 'var, 
             QID (_, (x, _)) =>
             (case ks of
                  k :: _ => (output (Free_t x, k); TVar data)
-               | [] => raise Impossible "free_tvars_with_anno_t/EVar/QID/ks=[]"
+               | [] => raise Impossible "free_tvars_with_anno_t/TVar/QID/ks=[]"
             )
           | _ => TVar data
     val vtable = 
@@ -87,7 +176,7 @@ fun free_tvars_with_anno_ty_visitor_vtable cast output (* : ('this, unit, 'var, 
           cast
           extend_noop
           extend_noop
-          visit_noop
+          (visit_imposs "free_tvars_with_anno_t/visit_var")
           visit_noop
           visit_noop
           visit_noop
@@ -182,7 +271,7 @@ fun open_collect_TForallIT t =
         val t = open0_i_t x t
         val (binds, t) = open_collect_TForallIT t
       in
-        (inl (x, name, s) :: binds, t)
+        (inl (x, fst name, s) :: binds, t)
       end
     | TQuan (Forall, bind) =>
       let
@@ -191,7 +280,7 @@ fun open_collect_TForallIT t =
         val t = open0_t_t x t
         val (binds, t) = open_collect_TForallIT t
       in
-        (inr (x, name, k) :: binds, t)
+        (inr (x, fst name, k) :: binds, t)
       end
     | _ => ([], t)
 
@@ -204,7 +293,7 @@ fun open_collect_EAbsIT e =
         val e = open0_i_e x e
         val (binds, e) = open_collect_EAbsIT e
       in
-        (inl (x, name, s) :: binds, e)
+        (inl (x, fst name, s) :: binds, e)
       end
     | EAbsT bind =>
       let
@@ -213,22 +302,23 @@ fun open_collect_EAbsIT e =
         val e = open0_t_e x e
         val (binds, e) = open_collect_EAbsIT e
       in
-        (inr (x, name, k) :: binds, e)
+        (inr (x, fst name, k) :: binds, e)
       end
     | _ => ([], e)
 
 fun close_TForallIT (bind, t) =
     case bind of
-        inl (x, name, s) => TForallI $ close0_i_t_anno ((x, fst name, s), t)
-      | inr (x, name, k) => TForall $ close0_t_t_anno ((x, fst name, k), t)
+        inl (x, name, s) => TForallI $ close0_i_t_anno ((x, name, s), t)
+      | inr (x, name, k) => TForall $ close0_t_t_anno ((x, name, k), t)
 fun close_TForallITs (binds, t) = foldr close_TForallIT t binds
                                       
 fun close_EAbsIT (bind, e) =
     case bind of
-        inl (x, name, s) => EAbsI $ close0_i_e_anno ((x, fst name, s), e)
-      | inr (x, name, k) => EAbsT $ close0_t_e_anno ((x, fst name, k), e)
+        inl (x, name, s) => EAbsI $ close0_i_e_anno ((x, name, s), e)
+      | inr (x, name, k) => EAbsT $ close0_t_e_anno ((x, name, k), e)
 fun close_EAbsITs (binds, t) = foldr close_EAbsIT t binds
                                       
+fun IV (x, s) = VarI (make_Free_i x, [s])
 fun TV (x, k) = TVar (make_Free_t x, [k])
 
 fun TExists bind = TQuan (Exists (), bind)
@@ -289,6 +379,11 @@ fun map_inr f a =
     case a of
         inl _ => a
       | inr b => inr $ f b
+
+fun map_inl_inr f1 f2 s =
+    case s of
+        inl e => inl $ f1 e
+      | inr e => inr $ f2 e
 
 fun cc_t t =
   case t of
@@ -368,24 +463,34 @@ and cc_ERec e_all outer_binds bind =
       val (_, t_arrow) = open_collect_TForallIT t_x
       val (_, i, _) = assert_TArrow t_arrow
       val (ys, sigmas) = unzip $ free_evars_with_anno e_all
-      val betas = free_itvars_with_anno_e e_all
+      fun add_name prefix (i, (a, b)) = (a, prefix ^ str_int (1+i), b)
+      val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e_all
+      val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e_all
+      val betas = map inl free_ivars @ map inr free_tvars
       val t_env = cc_t $ TRecord sigmas
       val t_z = cc_t t_z
       val t_arrow = TArrow (TProd (t_env, t_z), i, TUnit)
       val z_code = fresh_evar ()
       val z_env = fresh_evar ()
-      val def_x = EPack (cc_t t_x, t_env, EPair (EAppITs (EV z_code, betas @ outer_binds), EV z_env))
+      fun EAppITs_binds (e, binds) =
+          let
+            (* fun proj_3_1 (a1, _, _) = a1 *)
+            fun make_var f (x, _, anno) = f (x, anno)
+          in
+            EAppITs (e, map (map_inl_inr (make_var IV) (make_var TV)) binds)
+          end
+      val def_x = EPack (cc_t t_x, t_env, EPair (EAppITs_binds (EV z_code, betas @ outer_binds), EV z_env))
       val len_ys = length ys
       val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ERecordProj (len_ys, i) $ EV z_env)) ys
-      val e = ELetManyClose ((x, name_x, def_x) :: ys_defs, cc e)
-      val e = EAbsPairClose ((z_env, "z_env", t_env), (z, name_z, t_z), e)
+      val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, cc e)
+      val e = EAbsPairClose ((z_env, "z_env", t_env), (z, fst name_z, t_z), e)
       val e = close_EAbsITs (betas @ outer_binds @ inner_binds, e)
       val t_rawcode = close_TForallITs (betas @ outer_binds @ inner_binds, t_arrow)
       (* val t_code = TForallITClose (inner_binds, t_arrow) *)
-      val v_code = ERec $ close0_e_e_anno ((z_code, name_x ^ "_code", t_rawcode), e)
-      val v_env = ERecord ys
+      val v_code = ERec $ close0_e_e_anno ((z_code, fst name_x ^ "_code", t_rawcode), e)
+      val v_env = ERecord $ map EV ys
       (* val x_code = fresh_evar () *)
-      val e = EPack (cc_t $ close_TForallITs (outer_binds, t_x), t_env, EPair (EAppITs ((* EV x_code *)v_code, betas), v_env))
+      val e = EPack (cc_t $ close_TForallITs (outer_binds, t_x), t_env, EPair (EAppITs_binds ((* EV x_code *)v_code, betas), v_env))
       (* val e = ELetClose ((x_code, name_x ^ "_code", v_code), e) *)
     in
       e
@@ -417,4 +522,9 @@ and cc_ERec e_all outer_binds bind =
 (*       e *)
 (*     end *)
 
+(* fun free_itvars_with_anno_e e = *)
+(*     let *)
+(*     in *)
+(*     end *)
+      
 end
