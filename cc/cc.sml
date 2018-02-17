@@ -241,16 +241,55 @@ fun EAppITs (f, args) = foldl (swap EAppIT) f args
                      
 fun ELetManyClose (ds, e) = foldr ELetClose e ds
 
+val ETT = EConst ECTT
+
+fun ceil_half n = (n + 1) div 2
+
+fun callcc (f : ('a -> unit) -> 'a) : 'a = Cont.callcc (fn k => f (fn v => Cont.throw k v))
+                                
+(* convert lists to Unsafe.Array to support random access *)
+fun make_Record_k make_Prod make_Unit ls return =
+    let
+      val make_Record = make_Record make_Prod make_Unit
+      val len = length ls
+      val () = if len = 0 then return make_Unit else ()
+      val () = if len = 1 then return $ hd ls else ()
+      val len_fst_half = ceil_half len
+      val fst_half = take len_fst_half ls
+      val snd_half = drop len_fst_half ls
+    in
+      make_Prod (make_Record fst_half, make_Record snd_half)
+    end
+
+and make_Record make_Prod make_Unit ls = callcc $ make_Record_k make_Prod make_Unit ls
+
+fun TRecord a = make_Record TProd TUnit a
+fun ERecord a = make_Record EPair ETT a
+
+fun ERecordProj_k (len, i) e return =
+    let
+      val () = if len = 0 then return ETT else ()
+      val () = if len = 1 then return e else ()
+      val len_fst_half = ceil_half len
+    in
+      if i < len_fst_half then
+        ERecordProj (len_fst_half, i) $ EFst e
+      else
+        ERecordProj (len - len_fst_half, i - len_fst_half) $ ESnd e
+    end
+
+and ERecordProj (len, i) e = callcc $ ERecordProj_k (len, i) e
+      
+fun assert_EAbs e =
+  case e of
+      EAbs bind => unBindAnnoName bind
+    | _ => raise assert_fail "assert_EAbs"
+                 
 fun map_inr f a =
     case a of
         inl _ => a
       | inr b => inr $ f b
 
-fun assert_EAbs e =
-  case e of
-      EAbs bind => unBindAnno bind
-    | _ => raise assert_fail "assert_EAbs"
-                 
 fun cc_t t =
   case t of
       TArrow _ =>
@@ -329,7 +368,7 @@ and cc_ERec e_all outer_binds bind =
       val (_, t_arrow) = open_collect_TForallIT t_x
       val (_, i, _) = assert_TArrow t_arrow
       val (ys, sigmas) = unzip $ free_evars_with_anno e_all
-      val betas = free_tvars_with_anno_e e_all
+      val betas = free_itvars_with_anno_e e_all
       val t_env = cc_t $ TRecord sigmas
       val t_z = cc_t t_z
       val t_arrow = TArrow (TProd (t_env, t_z), i, TUnit)
