@@ -30,7 +30,7 @@ fun override_visit_EAscType (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 't
     visit_expr = #visit_expr record,
     visit_EVar = #visit_EVar record,
     visit_EConst = #visit_EConst record,
-    visit_ELoc = #visit_ELoc record,
+    (* visit_ELoc = #visit_ELoc record, *)
     visit_EUnOp = #visit_EUnOp record,
     visit_EBinOp = #visit_EBinOp record,
     visit_EWrite = #visit_EWrite record,
@@ -416,6 +416,13 @@ and cc_t_arrow t =
 infixr 0 %$
 fun a %$ b = EApp (a, b)
 
+fun cc_expr_un_op opr =
+    case opr of
+        EUProj _ => opr
+      | EUInj (inj, t) => EUInj (inj, cc_t t)
+      | EUFold t => EUFold $ cc_t t
+      | EUUnfold => opr
+
 fun cc e =
     case e of
         EBinOp (EBApp, e1, e2) =>
@@ -435,10 +442,24 @@ fun cc e =
         in
           e
         end
+      | EBinOp (opr, e1, e2) => EBinOp (opr, cc e1, cc e2)
       | EAbsT _ => cc_abs e
       | EAbsI _ => cc_abs e
       | EAbs _ => cc_abs e
       | ERec _ => cc_abs e
+      | ELet (e1, bind) =>
+        let
+          val e1 = cc e1
+          val (name, e2) = unBindSimpName bind
+          val x = fresh_evar ()
+          val e2 = open0_e_e x e2
+          val e2 = cc e2
+        in
+          ELetClose ((x, fst name, e1), e2)
+        end
+      | EVar _ => e
+      | EConst _ => e
+      | EUnOp (opr, e) => EUnOp (cc_expr_un_op opr, cc e)
       | _ => raise Unimpl "cc"
 
 and cc_abs e_all =

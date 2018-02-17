@@ -371,7 +371,7 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        visit_expr : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EVar : 'this -> 'env -> 'var -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EConst : 'this -> 'env -> Operators.expr_const -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
-       visit_ELoc : 'this -> 'env -> loc -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       (* visit_ELoc : 'this -> 'env -> loc -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr, *)
        visit_EUnOp : 'this -> 'env -> 'ty expr_un_op * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EBinOp : 'this -> 'env -> expr_bin_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EWrite : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
@@ -408,7 +408,7 @@ fun override_visit_EVar (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_expr = #visit_expr record,
     visit_EVar = new,
     visit_EConst = #visit_EConst record,
-    visit_ELoc = #visit_ELoc record,
+    (* visit_ELoc = #visit_ELoc record, *)
     visit_EUnOp = #visit_EUnOp record,
     visit_EBinOp = #visit_EBinOp record,
     visit_EWrite = #visit_EWrite record,
@@ -459,7 +459,7 @@ fun default_expr_visitor_vtable
         case data of
             EVar data => #visit_EVar vtable this env data
           | EConst data => #visit_EConst vtable this env data
-          | ELoc data => #visit_ELoc vtable this env data
+          (* | ELoc data => #visit_ELoc vtable this env data *)
           | EUnOp data => #visit_EUnOp vtable this env data
           | EBinOp data => #visit_EBinOp vtable this env data
           | EWrite data => #visit_EWrite vtable this env data
@@ -486,7 +486,7 @@ fun default_expr_visitor_vtable
         EVar $ #visit_var vtable this env data
       end
     fun visit_EConst this env data = EConst data
-    fun visit_ELoc this env data = ELoc data
+    (* fun visit_ELoc this env data = ELoc data *)
     fun visit_un_op this env opr = 
       let
         val vtable = cast this
@@ -665,7 +665,7 @@ fun default_expr_visitor_vtable
       visit_expr = visit_expr,
       visit_EVar = visit_EVar,
       visit_EConst = visit_EConst,
-      visit_ELoc = visit_ELoc,
+      (* visit_ELoc = visit_ELoc, *)
       visit_EUnOp = visit_EUnOp,
       visit_EBinOp = visit_EBinOp,
       visit_EWrite = visit_EWrite,

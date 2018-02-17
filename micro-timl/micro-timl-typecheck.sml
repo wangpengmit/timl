@@ -400,7 +400,7 @@ fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
 end
 
 fun itctx_names (ictx, tctx) = (map fst ictx, map fst tctx)
-fun ctx_names (ictx, tctx, ectx, _) = (map fst ictx, map fst tctx, [], map fst ectx)
+fun ctx_names (ictx, tctx, ectx(* , _ *)) = (map fst ictx, map fst tctx, [], map fst ectx)
                                    
 fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
     let
@@ -566,15 +566,15 @@ val shift01_i_i = shift_i_i
 fun shift01_i_t a = shift_i_t 0 1 a
 fun shift01_t_t a = shift_t_t 0 1 a
   
-structure IntMap = IntBinaryMap
-structure HeapMap = IntMap
+(* structure IntMap = IntBinaryMap *)
+(* structure HeapMap = IntMap *)
 
 type mtiml_ty = (Expr.var, bsort, idx, sort) ty
 type econtext = (string * mtiml_ty) list
                                                       
-fun add_sorting_full new (ictx, tctx, ectx, hctx) = (new :: ictx, tctx, map (mapSnd shift01_i_t) ectx, HeapMap.map (mapPair (shift01_i_t, shift01_i_i)) hctx)
-fun add_kinding_full new (ictx, tctx, ectx, hctx) = (ictx, new :: tctx, map (mapSnd shift01_t_t) ectx, HeapMap.map (mapFst shift01_t_t) hctx)
-fun add_typing_full new (ictx, tctx, ectx, hctx) = (ictx, tctx, new :: ectx, hctx)
+fun add_sorting_full new (ictx, tctx, ectx(* , hctx *)) = (new :: ictx, tctx, map (mapSnd shift01_i_t) ectx(* , HeapMap.map (mapPair (shift01_i_t, shift01_i_i)) hctx *))
+fun add_kinding_full new (ictx, tctx, ectx(* , hctx *)) = (ictx, new :: tctx, map (mapSnd shift01_t_t) ectx(* , HeapMap.map (mapFst shift01_t_t) hctx *))
+fun add_typing_full new (ictx, tctx, ectx(* , hctx *)) = (ictx, tctx, new :: ectx(* , hctx *))
 
 open Unbound
        
@@ -632,7 +632,7 @@ fun a %: b = EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)
 
-fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
+fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
   let
     (* val () = print "typechecking: " *)
     (* val () = println $ (* substr 0 100 $  *)ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
@@ -645,11 +645,11 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
            | NONE => raise MTCError "Unbound term variable"
         )
       | EConst c => (e_input, get_expr_const_type c, T0)
-      | ELoc l =>
-        (case HeapMap.find (hctx, l) of
-             SOME (t, i) => (e_input, TArr (t, i), T0)
-           | NONE => raise MTCError "Unbound location"
-        )
+      (* | ELoc l => *)
+      (*   (case HeapMap.find (hctx, l) of *)
+      (*        SOME (t, i) => (e_input, TArr (t, i), T0) *)
+      (*      | NONE => raise MTCError "Unbound location" *)
+      (*   ) *)
       | EUnOp (EUProj proj, e) =>
         let
           val (e, t_e, i) = tc ctx e
@@ -1050,7 +1050,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext, hctx)) e_input =
     (e_output, t, i)
   end
 
-and tc_against_ty (ctx as (ictx, tctx, _, _)) (e, t) =
+and tc_against_ty (ctx as (ictx, tctx, _(* , _ *))) (e, t) =
     let
       (* val () = println $ sprintf "typechecking against type:\n  $\n  $" [ *)
       (*       substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e, *)
@@ -1067,7 +1067,7 @@ and tc_against_ty (ctx as (ictx, tctx, _, _)) (e, t) =
       (e, i)
     end
     
-and tc_against_time (ctx as (ictx, tctx, _, _)) (e, i) =
+and tc_against_time (ctx as (ictx, tctx, _(* , _ *))) (e, i) =
     let
       val (e, t, i') = tc ctx e
       val () = check_prop ictx (i' %<= i)
@@ -1075,7 +1075,7 @@ and tc_against_time (ctx as (ictx, tctx, _, _)) (e, i) =
       (e, t)
     end
     
-and tc_against_ty_time (ctx as (ictx, tctx, _, _)) (e, t, i) =
+and tc_against_ty_time (ctx as (ictx, tctx, _(* , _ *))) (e, t, i) =
     let
       val (e, t') = tc_against_time ctx (e, i)
       val () = is_eq_ty (ictx, tctx) (t', t)
@@ -1224,7 +1224,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking ..."
-    val ((_, t, i), vcs, admits) = typecheck ([], [], [], HeapMap.empty) e
+    val ((_, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking"
     val () = println "Type:"
     val () = pp_t $ export_t ([], []) t

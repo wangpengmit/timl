@@ -198,14 +198,14 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           str $ str_expr_const c;
           close_box ()
         )
-      | ELoc l =>
-        (
-          open_hbox ();
-          str "ELoc";
-          space ();
-          str $ str_int l;
-          close_box ()
-        )
+      (* | ELoc l => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "ELoc"; *)
+      (*     space (); *)
+      (*     str $ str_int l; *)
+      (*     close_box () *)
+      (*   ) *)
       | EUnOp (opr, e) =>
         (
           open_hbox ();
