@@ -1,9 +1,11 @@
+unit-test-basic.timl
+            
 (* basic.timl *)
 (* list.timl *)
 
 stdlib.pkg
 
-cps/cps-test-basic.timl
+unit-test-bool.timl
                
 perversive-list.timl
 trivial.timl

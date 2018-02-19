@@ -93,7 +93,7 @@ open MicroTiMLExUtil
 open MicroTiMLEx
 
 fun sc ctx i = get_bsort Gctx.empty (ctx, i)
-fun sc_against_sort ctx (i, s) = ignore $ check_sort Gctx.empty (ctx, i, s)
+fun sc_against_sort ctx (i, s) = check_sort Gctx.empty (ctx, i, s)
 
 fun is_wf_sort ctx s = ignore $ Sortcheck.is_wf_sort Gctx.empty (ctx, s)
 
@@ -234,7 +234,7 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
     | TArrow (t1, i, t2) =>
       let
         val t1 = kc_against_kind ctx (t1, KType)
-        val () = sc_against_sort ictx (i, STime)
+        val i = sc_against_sort ictx (i, STime)
         val t2 = kc_against_kind ctx (t2, KType)
       in
         (TArrow (t1, i, t2), KType)
@@ -252,7 +252,7 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
         val (b, k) = case k' of
                          KArrow data => data
                        | _ => raise MTCError "TAppI"
-        val () = sc_against_sort ictx (i, BasicSort b)
+        val i = sc_against_sort ictx (i, BasicSort b)
       in
         (TAppI (t, i), k)
       end
@@ -297,14 +297,14 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       end
     | TNat i =>
       let
-        val () = sc_against_sort ictx (i, SNat)
+        val i = sc_against_sort ictx (i, SNat)
       in
-        (t_input, KType)
+        (TNat i, KType)
       end
     | TArr (t, i) =>
       let
         val t = kc_against_kind ctx (t, KType)
-        val () = sc_against_sort ictx (i, SNat)
+        val i = sc_against_sort ictx (i, SNat)
       in
         (TArr (t, i), KType)
       end
@@ -852,7 +852,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
           val (s, (_, t)) = case t_e of
                                 TQuanI (Forall, data) => unTQuanI data
                               | _ => raise MTCError "EAppT"
-          val () = sc_against_sort ictx (i, s)
+          val i = sc_against_sort ictx (i, s)
         in
           (EAppI (e %: t_e, i), subst0_i_t i t, j)
         end
@@ -876,7 +876,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
           val (s, (_, t)) = case t' of
                                 TQuanI (Exists _, data) => unTQuanI data
                               | _ => raise MTCError "EPackI"
-          val () = sc_against_sort ictx (i, s)
+          val i = sc_against_sort ictx (i, s)
           val t_e = subst0_i_t i t
           val (e, j) = tc_against_ty ctx (e, t_e)
         in
@@ -965,7 +965,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
                           | _ => e
                 val e = EAscTypes (e, ts)
                 val (e, t, i1) = tc ctx e
-                val () = sc_against_sort ictx (i, STime)
+                val i = sc_against_sort ictx (i, STime)
                 fun assert_cons ls =
                   case ls of
                       x :: xs => (x, xs)
@@ -1022,7 +1022,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
       | ELetIdx data =>
         let
           val (i, (name, e)) = unELetIdx data
-          val _ = sc ictx i
+          val (i, _) = sc ictx i
         in
           tc ctx $ subst0_i_e i e (* todo: record index aliasing in ctx *)
         end

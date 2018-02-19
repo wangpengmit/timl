@@ -1,0 +1,29 @@
+structure CCTestBasic = struct
+
+(* val a = () *)
+          
+(* val x = 1 + 2 *)
+(* val y = x + 1 *)
+(* val z = x + y + x *)
+              
+(* val f = fn y => y + 1 *)
+          
+(* fun f x y = x + y *)
+
+(* val a = f 1 2 *)
+
+(* fun id x = x *)
+
+fun foo {i : Nat} {j | j > i} () =
+    let
+      fun bar (a : nat {i}, b : nat {j}) =
+          a #+ b
+      fun bar2 (a : nat {j}, b : nat {i}) =
+          b #+ a
+      fun bar3 (a : nat {j}, b : nat {i}) =
+          a #+ b
+    in
+      ()
+    end
+      
+end

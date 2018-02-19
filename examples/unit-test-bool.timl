@@ -1,0 +1,20 @@
+structure CPSTestBasic = struct
+
+open Basic
+       
+val a = true
+          
+val neg1 =
+ fn b =>
+    case b of
+        true => false
+      | false => true
+
+fun neg b =
+    case b of
+        true => false
+      | false => true
+
+val a = neg a
+
+end

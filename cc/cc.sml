@@ -173,7 +173,7 @@ fun free_ivars_with_anno_idx_visitor_vtable cast output =
             QID (_, (x, _)) =>
             (case sorts of
                  s :: _ => (output (Free_i x, s); VarI data)
-               | [] => raise Impossible "free_ivars_with_anno_i/VarI/QID/ks=[]"
+               | [] => raise Impossible "free_ivars_with_anno_i/VarI/QID/sorts=[]"
             )
           | _ => VarI data
     val vtable = 
@@ -378,6 +378,32 @@ fun open_collect_TForallIT t =
       end
     | _ => ([], t)
 
+fun collect_TForallIT_open_with vars t =
+  case t of
+      TQuanI (Forall, bind) =>
+      let
+        val (s, (name, t)) = unBindAnnoName bind
+        val (x, vars) = case vars of
+                    inl (x, _, _) :: vars => (x, vars)
+                  | _ => raise Impossible "collect_TForallIT_open_with"
+        val t = open0_i_t x t
+        val (binds, t) = collect_TForallIT_open_with vars t
+      in
+        (inl (x, fst name, s) :: binds, t)
+      end
+    | TQuan (Forall, bind) =>
+      let
+        val (k, (name, t)) = unBindAnnoName bind
+        val (x, vars) = case vars of
+                    inr (x, _, _) :: vars => (x, vars)
+                  | _ => raise Impossible "collect_TForallIT_open_with"
+        val t = open0_t_t x t
+        val (binds, t) = collect_TForallIT_open_with vars t
+      in
+        (inr (x, fst name, k) :: binds, t)
+      end
+    | _ => ([], t)
+
 fun open_collect_EAbsIT e =
   case e of
       EAbsI bind =>
@@ -506,54 +532,6 @@ fun EAbsIT (bind, e) =
       | inr bind => EAbsT $ TBindAnno (bind, e)
 fun EAbsITs (binds, e) = foldr EAbsIT e binds
                                       
-fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
-  let
-    val vtable = 
-        default_expr_visitor_vtable
-          cast
-          extend_noop
-          extend_noop
-          extend_noop
-          extend_noop
-          visit_noop
-          visit_noop
-          visit_noop
-          visit_noop
-          visit_noop
-    fun visit_ERec this env bind =
-        let
-          val (t_x, (name_x, e)) = unBindAnnoName bind
-          val (binds, e) = collect_EAbsIT e
-          val (t_y, (name_y, e)) = assert_EAbs e
-          val e = #visit_expr (cast this) this env e
-          val e = EAbs $ EBindAnno ((name_y, t_y), e)
-        in
-          ERec $ EBindAnno ((name_x, t_x), EAbsITs (binds, e))
-        end
-    fun visit_EAbs this env bind =
-      let
-        val (t_y, (name_y, e)) = unBindAnnoName bind
-        val ((_, t_e), i) = mapFst assert_EAscType $ assert_EAscTime e
-        val e = #visit_expr (cast this) this env e
-        val e = EAbs $ EBindAnno ((name_y, t_y), e)
-      in
-        ERec $ EBindAnno ((("__f", dummy), TArrow (t_y, i, t_e)), shift01_e_e e)
-      end
-    val vtable = override_visit_ERec vtable visit_ERec
-    val vtable = override_visit_EAbs vtable visit_EAbs
-  in
-    vtable
-  end
-
-fun new_convert_EAbs_to_ERec_expr_visitor params = new_expr_visitor convert_EAbs_to_ERec_expr_visitor_vtable params
-
-fun convert_EAbs_to_ERec b =
-  let
-    val visitor as (ExprVisitor vtable) = new_convert_EAbs_to_ERec_expr_visitor ()
-  in
-    #visit_expr vtable visitor () b
-  end
-
 fun cc_t t =
   case t of
       TArrow _ =>
@@ -650,7 +628,7 @@ fun cc e =
           val z = fresh_evar ()
           val z_code = fresh_evar ()
           val z_env = fresh_evar ()
-          val e = EAppITs (e1, map (map_inr cc_t) itargs) %$ EPair (EV z_env, cc e2)
+          val e = EAppITs (EV z_code, map (map_inr cc_t) itargs) %$ EPair (EV z_env, cc e2)
           val e = ELetManyClose ([(z_code, "z_code", EFst $ EV z), (z_env, "z_env", ESnd $ EV z)], e)
           val e = EUnpackClose (cc e1, (gamma, "'c"), (z, "z"), e)
         in
@@ -733,7 +711,7 @@ and cc_ERec e_all outer_binds bind =
       val (t_z, (name_z, e)) = assert_EAbs e
       val z = fresh_evar ()
       val e = open0_e_e z e
-      val (_, t_arrow) = open_collect_TForallIT t_x
+      val (_, t_arrow) = collect_TForallIT_open_with inner_binds t_x
       val (_, i, _) = assert_TArrow t_arrow
       val (ys, sigmas) = unzip $ free_evars_with_anno e_all
       fun add_name prefix (i, (a, b)) = (a, prefix ^ str_int (1+i), b)
@@ -762,9 +740,9 @@ and cc_ERec e_all outer_binds bind =
       (* val t_code = TForallITClose (inner_binds, t_arrow) *)
       val v_code = ERec $ close0_e_e_anno ((z_code, fst name_x ^ "_code", t_rawcode), e)
       val v_env = ERecord $ map EV ys
-      (* val x_code = fresh_evar () *)
-      val e = EPack (cc_t $ close_TForallITs (outer_binds, t_x), t_env, EPair (EAppITs_binds ((* EV x_code *)v_code, betas), v_env))
-      (* val e = ELetClose ((x_code, name_x ^ "_code", v_code), e) *)
+      val x_code = fresh_evar ()
+      val e = EPack (cc_t $ close_TForallITs (outer_binds, t_x), t_env, EPair (EAppITs_binds (EV x_code(* v_code *), betas), v_env))
+      val e = ELetClose ((x_code, fst name_x ^ "_code", v_code), e)
     in
       e
     end
@@ -800,7 +778,111 @@ and cc_ERec e_all outer_binds bind =
 (*     in *)
 (*     end *)
 
+fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
+  let
+    fun visit_ERec this env bind =
+        let
+          val (t_x, (name_x, e)) = unBindAnnoName bind
+          val (binds, e) = collect_EAbsIT e
+          val (t_y, (name_y, e)) = assert_EAbs e
+          val e = #visit_expr (cast this) this env e
+          val e = EAbs $ EBindAnno ((name_y, t_y), e)
+        in
+          ERec $ EBindAnno ((name_x, t_x), EAbsITs (binds, e))
+        end
+    fun visit_EAbs this env bind =
+      let
+        val (t_y, (name_y, e)) = unBindAnnoName bind
+        val ((_, t_e), i) = mapFst assert_EAscType $ assert_EAscTime e
+        val e = #visit_expr (cast this) this env e
+        val e = EAbs $ EBindAnno ((name_y, t_y), e)
+      in
+        ERec $ EBindAnno ((("__f", dummy), TArrow (t_y, i, t_e)), shift01_e_e e)
+      end
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    val vtable = override_visit_ERec vtable visit_ERec
+    val vtable = override_visit_EAbs vtable visit_EAbs
+  in
+    vtable
+  end
+
+fun new_convert_EAbs_to_ERec_expr_visitor params = new_expr_visitor convert_EAbs_to_ERec_expr_visitor_vtable params
+
+fun convert_EAbs_to_ERec b =
+  let
+    val visitor as (ExprVisitor vtable) = new_convert_EAbs_to_ERec_expr_visitor ()
+  in
+    #visit_expr vtable visitor () b
+  end
+
 val cc = fn e => cc $ convert_EAbs_to_ERec e
+
+val forget_var = Subst.forget_var
+val forget_i_i = Subst.forget_i_i
+val forget_i_s = Subst.forget_i_s
+fun forget_i_t a = shift_i_t_fn (forget_i_i, forget_i_s) a
+fun forget_t_t a = shift_t_t_fn forget_var a
+fun forget_i_e a = shift_i_e_fn (forget_i_i, forget_i_s, forget_i_t) a
+fun forget_t_e a = shift_t_e_fn (forget_t_t) a
+fun forget_e_e a = shift_e_e_fn forget_var a
+                               
+fun check_ERec_closed_expr_visitor_vtable cast () =
+  let
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_ERec this env bind =
+        let
+          (* call super *)
+          val e = #visit_ERec vtable this env bind
+          val (_, (name, _)) = unBindAnnoName bind
+          val name = fst name
+          val () =
+              let
+                val large = 1000000000
+                val _ = forget_i_e 0 large e
+                val _ = forget_t_e 0 large e
+                val _ = forget_e_e 0 large e
+              in
+                println $ name ^ " is closed"
+              end
+              handle _ => println $ name ^ " is open"
+        in
+          e
+        end
+    val vtable = override_visit_ERec vtable visit_ERec
+  in
+    vtable
+  end
+
+fun new_check_ERec_closed_expr_visitor params = new_expr_visitor check_ERec_closed_expr_visitor_vtable params
+
+fun check_ERec_closed b =
+  let
+    val visitor as (ExprVisitor vtable) = new_check_ERec_closed_expr_visitor ()
+  in
+    ignore $ #visit_expr vtable visitor () b
+  end
 
 structure UnitTest = struct
 
@@ -921,8 +1003,8 @@ fun test1 dirname =
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)
     val () = println "Finished CPS conversion"
-    val () = pp_e $ export ToStringUtil.empty_ctx e
-    val () = println ""
+    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #2"
@@ -931,12 +1013,15 @@ fun test1 dirname =
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
+    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = println ""
                      
     val () = println "Started CC ..."
     val e = cc e
     val () = println "Finished CC"
     val () = pp_e $ export ToStringUtil.empty_ctx e
     val () = println ""
+    val () = check_ERec_closed e
     val () = println "Started MicroTiML typechecking #3 ..."
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #3"
