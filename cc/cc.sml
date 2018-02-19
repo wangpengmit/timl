@@ -247,12 +247,69 @@ fun free_ivars_with_anno_e_fn output b =
     #visit_expr vtable visitor () b
   end
 
+fun free_ivars_idx_visitor_vtable cast output =
+  let
+    fun visit_VarI this env (data as (var, sorts)) =
+        let
+          val () =
+              case var of
+                  QID (_, (x, _)) => output $ Free_i x
+                | _ => ()
+        in
+          VarI data
+        end
+    val vtable = 
+        default_idx_visitor_vtable
+          cast
+          extend_noop
+          (visit_imposs "free_ivars_i/visit_var")
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    val vtable = override_visit_VarI vtable visit_VarI
+  in
+    vtable
+  end
+
+fun new_free_ivars_idx_visitor a = new_idx_visitor free_ivars_idx_visitor_vtable a
+    
+fun free_ivars_s_fn output b =
+  let
+    val visitor as (IdxVisitor vtable) = new_free_ivars_idx_visitor output
+  in
+    #visit_sort vtable visitor () b
+  end
+    
+fun free_vars_0 f b =
+  let
+    val r = ref []
+    fun output item = push_ref r item
+    val _ = f output b
+  in
+    dedup op= $ !r
+  end
+
+fun free_ivars_s a = free_vars_0 free_ivars_s_fn a
+      
+structure TopoSort = TopoSortFn (structure M = IntBinaryMap
+                                 structure S = IntBinarySet
+                                )
+                                
 fun free_ivars_with_anno_e e =
     let
-      val vars = free_vars_with_anno_0 free_ivars_with_anno_e_fn e
-                                       (* todo: rearrange [vars] to satisfy dependencies between them *)
+      val vars_anno = free_vars_with_anno_0 free_ivars_with_anno_e_fn e
+      val vars_anno = map (mapFst unFree_i) vars_anno
+      fun free_ivars_s_set s = TopoSort.SU.to_set $ map unFree_i $ free_ivars_s s
+      fun make_dep_graph vars_anno = TopoSort.MU.to_map $ map (mapSnd free_ivars_s_set)  vars_anno
+      val in_graph = make_dep_graph vars_anno
+      val var2anno = TopoSort.MU.to_map vars_anno
+      val vars = TopoSort.topo_sort in_graph
+      fun attach_values m ks = map (fn k => (k, IntBinaryMap.find (m, k))) ks
+      val vars_anno = map (mapSnd valOf) $ attach_values var2anno vars
+      val vars_anno = map (mapFst Free_i) vars_anno
     in
-      vars
+      vars_anno
     end
 
 fun free_tvars_with_anno_ty_visitor_vtable cast output (* : ('this, unit, 'var, 'bsort, 'idx, 'sort, 'var, 'bsort, 'idx, 'sort) ty_visitor_vtable *) =
@@ -837,7 +894,7 @@ fun forget_i_e a = shift_i_e_fn (forget_i_i, forget_i_s, forget_i_t) a
 fun forget_t_e a = shift_t_e_fn (forget_t_t) a
 fun forget_e_e a = shift_e_e_fn forget_var a
                                
-fun check_ERec_closed_expr_visitor_vtable cast () =
+fun check_ERec_closed_expr_visitor_vtable cast output =
   let
     val vtable = 
         default_expr_visitor_vtable
@@ -864,9 +921,12 @@ fun check_ERec_closed_expr_visitor_vtable cast () =
                 val _ = forget_t_e 0 large e
                 val _ = forget_e_e 0 large e
               in
-                println $ name ^ " is closed"
+                (* println $ name ^ " is closed" *)
+                ()
               end
-              handle _ => println $ name ^ " is open"
+              handle _ =>
+                     (* println $ name ^ " is open" *)
+                     output name
         in
           e
         end
@@ -879,9 +939,15 @@ fun new_check_ERec_closed_expr_visitor params = new_expr_visitor check_ERec_clos
 
 fun check_ERec_closed b =
   let
-    val visitor as (ExprVisitor vtable) = new_check_ERec_closed_expr_visitor ()
+    val r = ref []
+    fun output item = push_ref r item
+    val visitor as (ExprVisitor vtable) = new_check_ERec_closed_expr_visitor output
+    val _ = #visit_expr vtable visitor () b
+    val opens = !r
   in
-    ignore $ #visit_expr vtable visitor () b
+    if not $ null opens then
+      raise Impossible $ "These ERec's are not closed: " ^ str_ls id opens
+    else ()
   end
 
 structure UnitTest = struct

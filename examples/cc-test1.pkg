@@ -1,7 +1,7 @@
 unit-test-basic.timl
             
-(* basic.timl *)
-(* list.timl *)
+basic.timl
+list.timl
 
 (* stdlib.pkg *)
                

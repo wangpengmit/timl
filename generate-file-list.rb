@@ -165,6 +165,7 @@ collect-mod.sml
 subst-uvar.sml
 update-expr.sml
 sortcheck.sml
+topo-sort-fn.sml
 typecheck-main.sml
 trivial-solver.sml
 derived-trans.sml

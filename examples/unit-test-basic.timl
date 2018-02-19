@@ -1,18 +1,18 @@
 structure CCTestBasic = struct
 
-(* val a = () *)
+val a = ()
           
-(* val x = 1 + 2 *)
-(* val y = x + 1 *)
-(* val z = x + y + x *)
+val x = 1 + 2
+val y = x + 1
+val z = x + y + x
               
-(* val f = fn y => y + 1 *)
+val f = fn y => y + 1
           
-(* fun f x y = x + y *)
+fun f x y = x + y
 
-(* val a = f 1 2 *)
+val a = f 1 2
 
-(* fun id x = x *)
+fun id x = x
 
 fun foo {i : Nat} {j | j > i} () =
     let

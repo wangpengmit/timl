@@ -2001,31 +2001,13 @@ fun collect_mod_sgntr b =
                                              
 structure SU = SetUtilFn (StringBinarySet)
 structure S = StringBinarySet
-                         
+
 fun get_dependency_graph gctx = Gctx.map (SU.to_set o collect_mod_sgntr) gctx
 
-exception TopoSortFailed
-fun topo_sort in_graph =
-  let
-    fun find_empty_nodes g = Gctx.foldli (fn (k, v, acc) => if S.isEmpty v then S.add (acc, k) else acc) S.empty g
-    fun loop (in_graph, done) =
-      if Gctx.length in_graph <= 0 then
-        done
-      else
-        let
-          val nodes = find_empty_nodes in_graph
-          val () = if S.isEmpty nodes then raise TopoSortFailed else ()
-          val in_graph : S.set Gctx.map = remove_many in_graph $ SU.enumerate nodes
-          val in_graph = Gctx.map (fn s => S.difference (s, nodes)) in_graph
-        in
-          loop (in_graph, SU.to_list nodes @ done)
-        end
-    val ret = rev $ loop (in_graph, [])
-    val () = assert (fn () => length ret = Gctx.length in_graph) "length ret = Gctx.length in_graph"
-  in
-    ret
-  end
-
+structure TopoSort = TopoSortFn (structure M = Gctx
+                                 structure S = S
+                                )
+                                
 fun check_prog gctx (binds : U.prog) =
     let
       (* val () = println "Begin check_prog()" *)
@@ -2033,8 +2015,8 @@ fun check_prog gctx (binds : U.prog) =
         let
           val gctx = filter_module gctx
         in
-          app open_module $ find_many gctx $ topo_sort $ Gctx.map (SU.to_set o collect_mod_ctx) $ gctx
-          handle TopoSortFailed =>
+          app open_module $ find_many gctx $ TopoSort.topo_sort $ Gctx.map (SU.to_set o collect_mod_ctx) $ gctx
+          handle TopoSort.TopoSortFailed =>
                  raise Error (dummy, [sprintf "There is circular dependency in models $" [str_ls id $ domain gctx]])
         end
       fun close_gctx gctx =
