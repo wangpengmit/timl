@@ -52,7 +52,7 @@ fun strn_i i =
   (*     SOME ((x, _), args) => sprintf "($ ...)" [str_uvar_i (str_bs, str_i []) x] *)
   (*   | NONE => *)
   case i of
-      VarI (x, _) => x
+      VarI (x, sorts) => x ^ sprintf "[$]" [str_int $ length sorts]
     | IConst (c, _) => str_idx_const c
     | UnOpI (opr, i, _) =>
       (case opr of

@@ -166,6 +166,61 @@ fun override_visit_EAbs (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     extend_e = #extend_e record
   }
 
+structure ExportPP = struct
+
+open LongId
+open Util
+open MicroTiML
+open MicroTiMLVisitor
+open MicroTiMLExLongId
+open MicroTiMLEx
+       
+infixr 0 $
+infixr 0 !!
+         
+fun short_to_long_id x = ID (x, dummy)
+fun export_var sel ctx id =
+  let
+    fun unbound s = "__unbound_" ^ s
+    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
+  in
+    case id of
+        ID (x, _) =>
+        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
+  end
+(* val export_i = return2 *)
+fun export_i a = ToString.export_i Gctx.empty a
+fun export_s a = ToString.export_s Gctx.empty a
+fun export_t a = export_t_fn (export_var snd, export_i, export_s) a
+fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
+val str = PP.string
+fun str_var x = LongId.str_raw_long_id id(*str_int*) x
+fun str_i a =
+  (* ToStringRaw.str_raw_i a *)
+  ToString.SN.strn_i a
+(* const_fun "<idx>" a *)
+fun str_bs a =
+  ToStringRaw.str_raw_bs a
+fun str_s a =
+  (* ToStringRaw.str_raw_s a *)
+  ToString.SN.strn_s a
+  (* const_fun "<sort>" a *)
+fun pp_t_to s b =
+  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
+  (* str s "<ty>" *)
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
+    str_var,
+    str_i,
+    str_s,
+    const_fun "<kind>",
+    pp_t_to
+  ) a
+
+end
+
 fun free_ivars_with_anno_idx_visitor_vtable cast output =
   let
     fun visit_VarI this env (data as (var, sorts)) =
@@ -173,7 +228,7 @@ fun free_ivars_with_anno_idx_visitor_vtable cast output =
             QID (_, (x, _)) =>
             (case sorts of
                  s :: _ => (output (Free_i x, s); VarI data)
-               | [] => raise Impossible "free_ivars_with_anno_i/VarI/QID/sorts=[]"
+               | [] => raise Impossible $ "free_ivars_with_anno_i/VarI/QID/sorts=[]: " ^ str_int x
             )
           | _ => VarI data
     val vtable = 
@@ -607,7 +662,7 @@ fun cc_t t =
         val t = open0_t_t a t
         val t = cc_t t
       in
-        TQuan (q, TBindAnno ((name, k), t))
+        TQuan (q, close0_t_t_anno ((a, fst name, k), t))
       end
     | TQuanI (q, bind) =>
       let
@@ -616,7 +671,7 @@ fun cc_t t =
         val t = open0_i_t a t
         val t = cc_t t
       in
-        TQuanI (q, IBindAnno ((name, s), t))
+        TQuanI (q, close0_i_t_anno ((a, fst name, s), t))
       end
     | TRec bind =>
       let
@@ -625,7 +680,7 @@ fun cc_t t =
         val t = open0_t_t a t
         val t = cc_t t
       in
-        TRec $ TBindAnno ((name, k), t)
+        TRec $ close0_t_t_anno ((a, fst name, k), t)
       end
     | TAbsT bind =>
       let
@@ -634,7 +689,7 @@ fun cc_t t =
         val t = open0_t_t a t
         val t = cc_t t
       in
-        TAbsT $ TBindAnno ((name, k), t)
+        TAbsT $ close0_t_t_anno ((a, fst name, k), t)
       end
     | TAbsI bind =>
       let
@@ -643,7 +698,7 @@ fun cc_t t =
         val t = open0_i_t a t
         val t = cc_t t
       in
-        TAbsI $ IBindAnno ((name, s), t)
+        TAbsI $ close0_i_t_anno ((a, fst name, s), t)
       end
     | TNat _ => t
     | TAppT (t, t') => TAppT (cc_t t, cc_t t')
@@ -673,6 +728,9 @@ fun cc_expr_un_op opr =
       | EUUnfold => opr
 
 fun cc e =
+    let
+      (* val () = println $ "CC on " ^ (substr 0 400 $ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
+    in
     case e of
         EBinOp (EBApp, e1, e2) =>
         let
@@ -710,7 +768,7 @@ fun cc e =
           val (x1, name1, e1) = unBindSimpOpen_e bind1
           val (x2, name2, e2) = unBindSimpOpen_e bind2
         in
-          ECaseClose (e, ((x1, fst name1), e1), ((x2, fst name2), e2))
+          ECaseClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
         end
       | EPack (tp, t, e) => EPack (cc_t tp, cc_t t, cc e)
       | EUnpack (e1, bind) =>
@@ -748,6 +806,7 @@ fun cc e =
       | ENever t => ENever (cc_t t)
       | EBuiltin t => EBuiltin (cc_t t)
       | _ => raise Unimpl "cc"
+    end
 
 and cc_abs e_all =
     let
@@ -772,7 +831,9 @@ and cc_ERec e_all outer_binds bind =
       val (_, i, _) = assert_TArrow t_arrow
       val (ys, sigmas) = unzip $ free_evars_with_anno e_all
       fun add_name prefix (i, (a, b)) = (a, prefix ^ str_int (1+i), b)
+      (* val () = println "before free_ivars" *)
       val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e_all
+      (* val () = println "after free_ivars" *)
       val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e_all
       val betas = map inl free_ivars @ map inr free_tvars
       val t_env = cc_t $ TRecord sigmas
@@ -938,17 +999,17 @@ fun check_ERec_closed_expr_visitor_vtable cast output =
 fun new_check_ERec_closed_expr_visitor params = new_expr_visitor check_ERec_closed_expr_visitor_vtable params
 
 fun check_ERec_closed b =
-  let
-    val r = ref []
-    fun output item = push_ref r item
-    val visitor as (ExprVisitor vtable) = new_check_ERec_closed_expr_visitor output
-    val _ = #visit_expr vtable visitor () b
-    val opens = !r
-  in
-    if not $ null opens then
-      raise Impossible $ "These ERec's are not closed: " ^ str_ls id opens
-    else ()
-  end
+    let
+      val r = ref []
+      fun output item = push_ref r item
+      val visitor as (ExprVisitor vtable) = new_check_ERec_closed_expr_visitor output
+      val _ = #visit_expr vtable visitor () b
+      val opens = !r
+    in
+      if not $ null opens then
+        raise Impossible $ "These ERec's are not closed: " ^ str_ls id opens
+      else ()
+    end
 
 structure UnitTest = struct
 
@@ -1087,6 +1148,7 @@ fun test1 dirname =
     val () = println "Finished CC"
     val () = pp_e $ export ToStringUtil.empty_ctx e
     val () = println ""
+    val () = println "Checking closed-ness of ERec's"
     val () = check_ERec_closed e
     val () = println "Started MicroTiML typechecking #3 ..."
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e

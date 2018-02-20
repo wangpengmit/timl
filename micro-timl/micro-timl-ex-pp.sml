@@ -519,13 +519,14 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           str "EAscType";
           space ();
           str "(";
-          pp_t t;
+          (* pp_t t; *)
           close_box ();
           comma ();
           pp_e e;
           str ")";
           close_box ()
         )
+        (* pp_e e *)
       | ENever t =>
         (
           open_hbox ();

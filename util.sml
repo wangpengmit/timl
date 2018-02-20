@@ -252,13 +252,30 @@ fun write_file (filename, s) =
       ()
     end
 
+(* fun read_file filename = *)
+(*     let *)
+(*       val ins = TextIO.openIn filename *)
+(*       val s = TextIO.input ins *)
+(*       val _ = TextIO.closeIn ins *)
+(*     in *)
+(*       s *)
+(*     end *)
+      
 fun read_file filename =
     let
-      val ins = TextIO.openIn filename
-      val s = TextIO.input ins
-      val _ = TextIO.closeIn ins
+      (* val () = println $ "read_file(): " ^ filename *)
+      open TextIO
+      val ins = openIn filename
+      fun loop lines =
+          case inputLine ins of
+              SOME ln => loop (ln :: lines)
+            | NONE => lines
+      val lines = rev $ loop []
+      val () = closeIn ins
+      val line = String.concat lines
+      (* val () = println line *)
     in
-      s
+      line
     end
       
 fun read_lines filename =

@@ -3,7 +3,9 @@ structure CPSTestBasic = struct
 open Basic
        
 val a = true
-          
+
+fun f () = true
+             
 val neg1 =
  fn b =>
     case b of

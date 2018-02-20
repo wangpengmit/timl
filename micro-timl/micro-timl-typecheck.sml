@@ -95,7 +95,7 @@ open MicroTiMLEx
 fun sc ctx i = get_bsort Gctx.empty (ctx, i)
 fun sc_against_sort ctx (i, s) = check_sort Gctx.empty (ctx, i, s)
 
-fun is_wf_sort ctx s = ignore $ Sortcheck.is_wf_sort Gctx.empty (ctx, s)
+fun is_wf_sort ctx s = Sortcheck.is_wf_sort Gctx.empty (ctx, s)
 
 fun INat n = ConstIN (n, dummy)
 val TInt = TConst TCInt
@@ -276,7 +276,7 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
     | TQuanI (q, data) =>
       let
         val (s, (name, t)) = unTQuanI data
-        val () = is_wf_sort ictx s
+        val s = is_wf_sort ictx s
         val t = kc_against_kind (add_sorting_it (fst name, s) ctx) (t, KType)
       in
         (TQuanI (q, IBindAnno ((name, s), t)), KType)
@@ -627,8 +627,21 @@ fun eval_constr b =
     #visit_expr vtable visitor () b
   end
 
+fun smart_EAscType (e, t) =
+    let
+      val (e, is) = collect_EAscTime e
+      val e = 
+          case e of
+              EAscType (e, _) => e
+            | _ => e
+      val e = EAscTimes (e, is)
+      val e = EAscType (e, t)
+    in
+      e
+    end
+      
 infix 0 %:
-fun a %: b = EAscType (a, b)
+fun a %: b = smart_EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)
 
@@ -828,7 +841,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
       | EAbsI data =>
         let
           val (s, (name, e)) = unEAbsI data
-          val () = is_wf_sort ictx s
+          val s = is_wf_sort ictx s
           val () = assert_b "EAbsI" $ is_value e
           val (e, t) = tc_against_time (add_sorting_full (fst name, s) ctx) (e, T0)
         in
@@ -938,6 +951,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
       | EAscTime (e, i) =>
         let
           val (e, ts) = collect_EAscType e
+          val i = sc_against_sort ictx (i, STime)
         in
           (* propagate time annotations *)
           case e of
@@ -996,13 +1010,13 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
         let
           val t = kc_against_kind itctx (t, KType)
         in
-          (e_input, t, T0)
+          (ENever t, t, T0)
         end
       | EBuiltin t =>
         let
           val t = kc_against_kind itctx (t, KType)
         in
-          (e_input, t, T0)
+          (EBuiltin t, t, T0)
         end
       | ELet data =>
         let

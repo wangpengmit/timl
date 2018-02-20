@@ -63,7 +63,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s t =
           open_hbox ();
           str "TVar";
           space ();
-          str $ str_var x;
+          str $ str_var x ^ sprintf "[$]" [str_int $ length ks];
           close_box ()
         )
       | TConst c =>
@@ -172,14 +172,14 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s t =
         in
           open_hbox ();
           str "TRec";
-          space ();
-          str "(";
-          str name;
-          comma ();
-          str $ str_k k;
-          comma ();
-          pp_t t;
-          str ")";
+          (* space (); *)
+          (* str "("; *)
+          (* str name; *)
+          (* comma (); *)
+          (* str $ str_k k; *)
+          (* comma (); *)
+          (* pp_t t; *)
+          (* str ")"; *)
           close_box ()
         end
       | TNat i =>
@@ -576,7 +576,9 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           open_hbox ();
           str "ENever";
           space ();
+          str "(";
           str $ str_t t;
+          str ")";
           close_box ()
         )
       | ELet (e, branch) =>
