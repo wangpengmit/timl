@@ -569,12 +569,6 @@ fun TV (x, k) = TVar (make_Free_t x, [k])
 
 fun TExists bind = TQuan (Exists (), bind)
                          
-fun EAppIT (e, arg) =
-    case arg of
-        inl i => EAppI (e, i)
-      | inr t => EAppT (e, t)
-fun EAppITs (f, args) = foldl (swap EAppIT) f args
-                     
 fun ELetManyClose (ds, e) = foldr ELetClose e ds
 
 val ETT = EConst ECTT

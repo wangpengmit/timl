@@ -57,4 +57,10 @@ fun EUnpackIClose (e1, (a, name_a), (x, name_x), e2) =
 fun ECaseClose (e, ((x1, name1), e1), ((x2, name2), e2)) =
     ECase (e, EBind ((name1, dummy), close0_e_e x1 e1), EBind ((name2, dummy), close0_e_e x2 e2))
           
+fun EAppIT (e, arg) =
+    case arg of
+        inl i => EAppI (e, i)
+      | inr t => EAppT (e, t)
+fun EAppITs (f, args) = foldl (swap EAppIT) f args
+                     
 end

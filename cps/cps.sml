@@ -198,7 +198,7 @@ fun cps_t t =
         TForallTimeClose ((j, "j"), t)
       end
     | TQuan (Forall, bind) =>
-      (* [[ \\alpha.t ]] = \\alpha. \\j. ([[t]] --j--> unit) -- blowup_time_t(j) --> unit *)
+      (* [[ \\alpha.t ]] = \\j. \\alpha. ([[t]] --j--> unit) -- blowup_time_t(j) --> unit *)
       let
         val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
         val alpha = fresh_tvar ()
@@ -207,12 +207,13 @@ fun cps_t t =
         val j = fresh_ivar ()
         val t = TArrow (t, IV j, TUnit)
         val t = TArrow (t, IV j %+ T_1, TUnit)
+        val t = TForall $ close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
         val t = TForallTimeClose ((j, "j"), t)
       in
-        TForall $ close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
+        t
       end
     | TQuanI (Forall, bind) =>
-      (* [[ \\a.t ]] = \\a. \\j. ([[t]] --j--> unit) -- blowup_time_i(j) --> unit *)
+      (* [[ \\a.t ]] = \\j. \\a. ([[t]] --j--> unit) -- blowup_time_i(j) --> unit *)
       let
         val ((name_a, s_a), t) = unBindAnno2 bind
         val a = fresh_ivar ()
@@ -224,9 +225,10 @@ fun cps_t t =
         val j = fresh_ivar ()
         val t = TArrow (t, IV j, TUnit)
         val t = TArrow (t, IV j %+ T_1, TUnit)
+        val t = TForallI $ close0_i_t_anno ((a, name_a, s_a), t)
         val t = TForallTimeClose ((j, "j"), t)
       in
-        TForallI $ close0_i_t_anno ((a, name_a, s_a), t)
+        t
       end
     | TVar _ => t
     | TConst _ => t
@@ -378,7 +380,7 @@ fun cps (e, t_e) (k, j_k) =
         (k $$ e, j_k %+ T_1)
       end
     | S.EAbsT bind =>
-      (* [[ \\alpha.e ]](k) = k (\\alpha. \\j. \c. [[e]](c)) *)
+      (* [[ \\alpha.e ]](k) = k (\\j. \\alpha. \c. [[e]](c)) *)
       let
         val ((name_alpha, kd_alpha), e) = unBindAnno2 bind
         val t_e = whnf t_e
@@ -394,13 +396,13 @@ fun cps (e, t_e) (k, j_k) =
         val t_e = cps_t t_e
         val t_c = cont_type (t_e, IV j)
         val e = EAbs $ close0_e_e_anno ((c, "c", t_c), e)
-        val e = EAbsTimeClose ((j, "j"), e)
         val e = EAbsT $ close0_t_e_anno ((alpha, name_alpha, kd_alpha), e)
+        val e = EAbsTimeClose ((j, "j"), e)
       in
         (k $$ e, j_k %+ T_1)
       end
     | S.EAbsI bind =>
-      (* [[ \\a.e ]](k) = k (\\a. \\j. \c. [[e]](c)) *)
+      (* [[ \\a.e ]](k) = k (\\j. \\a. \c. [[e]](c)) *)
       let
         val ((name_a, s_a), e) = unBindAnno2 bind
         val t_e = whnf t_e
@@ -416,28 +418,28 @@ fun cps (e, t_e) (k, j_k) =
         val t_e = cps_t t_e
         val t_c = cont_type (t_e, IV j)
         val e = EAbs $ close0_e_e_anno ((c, "c", t_c), e)
-        val e = EAbsTimeClose ((j, "j"), e)
         val e = EAbsI $ close0_i_e_anno ((a, name_a, s_a), e)
+        val e = EAbsTimeClose ((j, "j"), e)
       in
         (k $$ e, j_k %+ T_1)
       end
     | S.EAppT (e, t) =>
-      (* [[ e[t] ]](k) = [[e]](\x. x[t]{k.j}(k)) *)
+      (* [[ e[t] ]](k) = [[e]](\x. x{k.j}[t](k)) *)
       let
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
-        val c = EAppI (EAppT (EV x, t), j_k) $$ k
+        val c = EAppITs (EV x, [inl j_k, inr t]) $$ k
         val t_x = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
       in
         cps (e, t_e) (c, blowup_time_t j_k)
       end
     | S.EAppI (e, i) =>
-      (* [[ e[i] ]](k) = [[e]](\x. x[i]{k.j}(k)) *)
+      (* [[ e[i] ]](k) = [[e]](\x. x{k.j}[i](k)) *)
       let
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
-        val c = EAppI (EAppI (EV x, i), j_k) $$ k
+        val c = EAppITs (EV x, [inl j_k, inl i]) $$ k
         val t_x = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
       in
