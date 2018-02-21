@@ -12,12 +12,72 @@ fun close0_i_e_anno a = close0_anno IBindAnno close0_i_e a
 fun close0_t_e_anno a = close0_anno TBindAnno close0_t_e a
 fun close0_e_e_anno a = close0_anno EBindAnno close0_e_e a
 
+structure ExportPP = struct
+
+open LongId
+open Util
+open MicroTiML
+open MicroTiMLVisitor
+open MicroTiMLExLongId
+open MicroTiMLEx
+       
+infixr 0 $
+infixr 0 !!
+         
+fun short_to_long_id x = ID (x, dummy)
+fun export_var sel ctx id =
+  let
+    fun unbound s = "__unbound_" ^ s
+    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
+  in
+    case id of
+        ID (x, _) =>
+        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
+      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
+  end
+(* val export_i = return2 *)
+fun export_i a = ToString.export_i Gctx.empty a
+fun export_s a = ToString.export_s Gctx.empty a
+fun export_t a = export_t_fn (export_var snd, export_i, export_s) a
+fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
+val str = PP.string
+fun str_var x = LongId.str_raw_long_id id(*str_int*) x
+fun str_i a =
+  (* ToStringRaw.str_raw_i a *)
+  ToString.SN.strn_i a
+(* const_fun "<idx>" a *)
+fun str_bs a =
+  ToStringRaw.str_raw_bs a
+fun str_s a =
+  (* ToStringRaw.str_raw_s a *)
+  ToString.SN.strn_s a
+  (* const_fun "<sort>" a *)
+fun pp_t_to s b =
+  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
+  (* str s "<ty>" *)
+fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
+fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
+    str_var,
+    str_i,
+    str_s,
+    const_fun "<kind>",
+    pp_t_to
+  ) a
+
+end
+
 fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
                              
 fun assert_TArrow t =
   case t of
       TArrow a => a
-    | _ => raise assert_fail "assert_TArrow"
+    | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+                 
+fun assert_EAbs e =
+  case e of
+      EAbs bind => unBindAnnoName bind
+    | _ => raise assert_fail "assert_EAbs"
                  
 fun assert_EAscType e =
   let
@@ -25,7 +85,7 @@ fun assert_EAscType e =
   in
     case e of
         EAscType (e, t) => (EAscTimes (e, is), t)
-      | _ => raise assert_fail "assert_EAscType"
+      | _ => raise assert_fail $ "assert_EAscType; got:\n" ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
   end
     
 fun assert_EAscTime e =
@@ -34,7 +94,7 @@ fun assert_EAscTime e =
   in
     case e of
         EAscTime (e, i) => (EAscTypes (e, ts), i)
-      | _ => raise assert_fail "assert_EAscTime"
+      | _ => raise assert_fail $ "assert_EAscTime; got:\n" ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
   end
     
 fun EV x = EVar $ make_Free_e x
@@ -63,4 +123,143 @@ fun EAppIT (e, arg) =
       | inr t => EAppT (e, t)
 fun EAppITs (f, args) = foldl (swap EAppIT) f args
                      
+fun EAbsIT (bind, e) =
+    case bind of
+        inl bind => EAbsI $ IBindAnno (bind, e)
+      | inr bind => EAbsT $ TBindAnno (bind, e)
+fun EAbsITs (binds, e) = foldr EAbsIT e binds
+                                      
+fun open_collect_TForallIT_whnf whnf t =
+  case t of
+      TQuanI (Forall, bind) =>
+      let
+        val (s, (name, t)) = unBindAnnoName bind
+        val x = fresh_ivar ()
+        val t = open0_i_t x t
+        val (binds, t) = open_collect_TForallIT_whnf whnf t
+      in
+        (inl (x, fst name, s) :: binds, t)
+      end
+    | TQuan (Forall, bind) =>
+      let
+        val (k, (name, t)) = unBindAnnoName bind
+        val x = fresh_tvar ()
+        val t = open0_t_t x t
+        val (binds, t) = open_collect_TForallIT_whnf whnf t
+      in
+        (inr (x, fst name, k) :: binds, t)
+      end
+    | _ => ([], t)
+
+fun collect_TForallIT_open_with_whnf whnf vars t =
+  case t of
+      TQuanI (Forall, bind) =>
+      let
+        val (s, (name, t)) = unBindAnnoName bind
+        val (x, vars) = case vars of
+                    inl (x, _, _) :: vars => (x, vars)
+                  | _ => raise Impossible "collect_TForallIT_open_with_whnf whnf"
+        val t = open0_i_t x t
+        val (binds, t) = collect_TForallIT_open_with_whnf whnf vars t
+      in
+        (inl (x, fst name, s) :: binds, t)
+      end
+    | TQuan (Forall, bind) =>
+      let
+        val (k, (name, t)) = unBindAnnoName bind
+        val (x, vars) = case vars of
+                    inr (x, _, _) :: vars => (x, vars)
+                  | _ => raise Impossible "collect_TForallIT_open_with_whnf whnf"
+        val t = open0_t_t x t
+        val (binds, t) = collect_TForallIT_open_with_whnf whnf vars t
+      in
+        (inr (x, fst name, k) :: binds, t)
+      end
+    | _ => ([], t)
+
+fun open_collect_TForallIT t = open_collect_TForallIT_whnf id t
+fun collect_TForallIT_open_with vars t = collect_TForallIT_open_with_whnf id vars t
+    
+fun open_collect_EAbsIT e =
+  case e of
+      EAbsI bind =>
+      let
+        val (s, (name, e)) = unBindAnnoName bind
+        val x = fresh_ivar ()
+        val e = open0_i_e x e
+        val (binds, e) = open_collect_EAbsIT e
+      in
+        (inl (x, fst name, s) :: binds, e)
+      end
+    | EAbsT bind =>
+      let
+        val (k, (name, e)) = unBindAnnoName bind
+        val x = fresh_tvar ()
+        val e = open0_t_e x e
+        val (binds, e) = open_collect_EAbsIT e
+      in
+        (inr (x, fst name, k) :: binds, e)
+      end
+    | _ => ([], e)
+
+fun close_TForallIT (bind, t) =
+    case bind of
+        inl (x, name, s) => TForallI $ close0_i_t_anno ((x, name, s), t)
+      | inr (x, name, k) => TForall $ close0_t_t_anno ((x, name, k), t)
+fun close_TForallITs (binds, t) = foldr close_TForallIT t binds
+                                      
+fun close_EAbsIT (bind, e) =
+    case bind of
+        inl (x, name, s) => EAbsI $ close0_i_e_anno ((x, name, s), e)
+      | inr (x, name, k) => EAbsT $ close0_t_e_anno ((x, name, k), e)
+fun close_EAbsITs (binds, t) = foldr close_EAbsIT t binds
+                                      
+fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
+  let
+    fun visit_ERec this env bind =
+        let
+          val (t_x, (name_x, e)) = unBindAnnoName bind
+          val (binds, e) = collect_EAbsIT e
+          val (t_y, (name_y, e)) = assert_EAbs e
+          val e = #visit_expr (cast this) this env e
+          val e = EAbs $ EBindAnno ((name_y, t_y), e)
+        in
+          ERec $ EBindAnno ((name_x, t_x), EAbsITs (binds, e))
+        end
+    fun visit_EAbs this env bind =
+      let
+        val (t_y, (name_y, e)) = unBindAnnoName bind
+        val ((_, t_e), i) = mapFst assert_EAscType $ assert_EAscTime e
+        val e = #visit_expr (cast this) this env e
+        val e = EAbs $ EBindAnno ((name_y, t_y), e)
+      in
+        ERec $ EBindAnno ((("__f", dummy), TArrow (t_y, i, t_e)), shift01_e_e e)
+      end
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    val vtable = override_visit_ERec vtable visit_ERec
+    val vtable = override_visit_EAbs vtable visit_EAbs
+  in
+    vtable
+  end
+
+fun new_convert_EAbs_to_ERec_expr_visitor params = new_expr_visitor convert_EAbs_to_ERec_expr_visitor_vtable params
+
+fun convert_EAbs_to_ERec b =
+  let
+    val visitor as (ExprVisitor vtable) = new_convert_EAbs_to_ERec_expr_visitor ()
+  in
+    #visit_expr vtable visitor () b
+  end
+
 end

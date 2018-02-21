@@ -190,6 +190,8 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           str ")";
           close_box ()
         )
+      | EConst ECTT =>
+        str "ETT"
       | EConst c =>
         (
           open_hbox ();

@@ -24,7 +24,7 @@ fun str_raw_bind f (Bind (_, a)) = sprintf "Bind ($)" [f a]
 
 fun str_raw_bs b =
   case b of
-      Base s => sprintf "Base ($)" [str_b s]
+      Base s => (* sprintf "Base ($)" [ *)str_b s(* ] *)
     | BSArrow (s1, s2) => sprintf "BSArrow ($, $)" [str_raw_bs s1, str_raw_bs s2]
     | UVarBS u => "UVarBS"
 

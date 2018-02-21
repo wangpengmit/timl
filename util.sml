@@ -376,6 +376,20 @@ datatype ('a, 'b) sum =
          | inr of 'b
 fun is_inl x = case x of inl a => SOME a | inr _ => NONE
 fun is_inr x = case x of inr a => SOME a | inl _ => NONE
+fun map_inl f s =
+    case s of
+        inl e => inl $ f e
+      | inr _ => s
+
+fun map_inr f s =
+    case s of
+        inl _ => s
+      | inr e => inr $ f e
+
+fun map_inl_inr f1 f2 s =
+    case s of
+        inl e => inl $ f1 e
+      | inr e => inr $ f2 e
 
 fun find_by_snd p ls =
     Option.map fst (List.find (fn (_, y) => p y) ls)

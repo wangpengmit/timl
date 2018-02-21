@@ -59,13 +59,15 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s t =
   in
     case t of
         TVar (x, ks) =>
-        (
-          open_hbox ();
-          str "TVar";
-          space ();
-          str $ str_var x ^ sprintf "[$]" [str_int $ length ks];
-          close_box ()
-        )
+        (* ( *)
+        (*   open_hbox (); *)
+        (*   str "TVar"; *)
+        (*   space (); *)
+          str $ str_var x (* ^ sprintf "[$]" [str_int $ length ks] *)(* ; *)
+        (*   close_box () *)
+        (* ) *)
+      | TConst TCUnit =>
+        str "TUnit"
       | TConst c =>
         (
           open_hbox ();
