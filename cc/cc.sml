@@ -224,13 +224,19 @@ end
 fun free_ivars_with_anno_idx_visitor_vtable cast output =
   let
     fun visit_VarI this env (data as (var, sorts)) =
-        case var of
-            QID (_, (x, _)) =>
-            (case sorts of
-                 s :: _ => (output (Free_i x, s); VarI data)
-               | [] => raise Impossible $ "free_ivars_with_anno_i/VarI/QID/sorts=[]: " ^ str_int x
-            )
-          | _ => VarI data
+        let
+          val sorts = visit_list (#visit_sort (cast this) this) env sorts
+          val () = 
+              case var of
+                  QID (_, (x, _)) =>
+                  (case sorts of
+                       s :: _ => output (Free_i x, s)
+                     | [] => raise Impossible $ "free_ivars_with_anno_i/VarI/QID/sorts=[]: " ^ str_int x
+                  )
+                | _ => ()
+        in
+          VarI data
+        end
     val vtable = 
         default_idx_visitor_vtable
           cast
@@ -360,6 +366,14 @@ fun free_ivars_with_anno_e e =
       val in_graph = make_dep_graph vars_anno
       val var2anno = TopoSort.MU.to_map vars_anno
       val vars = TopoSort.topo_sort in_graph
+                 handle
+                 TopoSortFailed =>
+                 let
+                   val msg = sprintf "topo_sort failed on expr: $\n" [ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e]
+                   val msg = msg ^ sprintf "with dep graph: $\n" [str_ls (str_pair (str_int, str_ls str_int o TopoSort.SU.to_list)) $ IntBinaryMap.listItemsi in_graph]
+                 in
+                   raise Impossible msg
+                 end
       fun attach_values m ks = map (fn k => (k, IntBinaryMap.find (m, k))) ks
       val vars_anno = map (mapSnd valOf) $ attach_values var2anno vars
       val vars_anno = map (mapFst Free_i) vars_anno
@@ -729,7 +743,7 @@ fun cc_expr_un_op opr =
 
 fun cc e =
     let
-      (* val () = println $ "CC on " ^ (substr 0 400 $ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
+      (* val () = println $ "CC on " ^ (substr 0 400 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
     in
     case e of
         EBinOp (EBApp, e1, e2) =>
@@ -821,6 +835,7 @@ and cc_abs e_all =
 and cc_ERec e_all outer_binds bind =
     let
       val (t_x, (name_x, e)) = unBindAnnoName bind
+      val () = println $ "cc() on: " ^ fst name_x
       val x = fresh_evar ()
       val e = open0_e_e x e
       val (inner_binds, e) = open_collect_EAbsIT e

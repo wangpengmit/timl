@@ -15,14 +15,14 @@ stdlib.pkg
 (* bug.timl *)
 (* pldi-2017-review-example.timl *)
 (* braun-tree-sortedness.timl *)
-rbt-sortedness.timl
+(* rbt-sortedness.timl *)
 
 (* ragged-matrix.timl *)
 (* tree.timl *)
 (* msort.timl *)
 (* insertion-sort.timl *)
 (* braun-tree.timl *)
-(* rbt.timl *)
+rbt.timl
 (* dynamic-table.timl *)
 (* functional-queue.timl *)
 (* array-bsearch.timl *)
