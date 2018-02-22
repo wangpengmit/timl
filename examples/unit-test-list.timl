@@ -1,0 +1,9 @@
+structure UnitTestList = struct
+
+open List
+       
+fun foo [a] {n : Nat} (l : list a {n}) = 0
+
+val a = foo (1 :: [])
+                                  
+end

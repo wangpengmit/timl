@@ -60,7 +60,13 @@ fun EAppK (e1, e2) =
           e
         end
       | _ =>
-        MakeELet (e2, ("x", dummy), EApp (shift01_e_e e1, EVar $ ID (0, dummy)))
+        let
+          val e = EApp (EVar $ ID (1, dummy), EVar $ ID (0, dummy))
+          val e = MakeELet (shift01_e_e e2, ("x2", dummy), e)
+          val e = MakeELet (e1, ("x1", dummy), e)
+        in
+          e
+        end
         
 infixr 0 $$
 fun a $$ b = EAppK (a, b)
@@ -502,10 +508,12 @@ fun cps (e, t_e) (k, j_k) =
         val t_res = t_e
         val (e, t_e) = assert_EAscType e
         val t_res = cps_t t_res
-        val (e1, i_e1) = cps (e1, t_res) (k, j_k)
-        val (e2, i_e2) = cps (e2, t_res) (k, j_k)
+        val x_k = fresh_evar ()
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
         val y = fresh_evar ()
         val c = ECaseClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
+        val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
         val c = EAbs $ close0_e_e_anno ((y, "y", t_y), c)
         val i_c = IMax (i_e1, i_e2)
@@ -660,15 +668,6 @@ and cps_abs (e, t_e) (k, j_k) =
         (* CPS with id is not strictly legal, since id doesn't return unit. It's OK because e should be a value. Values can be CPSed with continuations that return non-unit. *)                            
         val t_x = cps_t t_e
         val (e, _) = cps (e, t_e) (Eid t_x, T_0)
-        fun reduce_ELets e =
-            case fst $ collect_EAscTypeTime e of
-                ELet (e1, bind) =>
-                let
-                  val (name_x, e2) = unBindSimpName bind
-                in
-                  reduce_ELets $ subst0_e_e e1 e2
-                end
-              | _ => e
         val e = reduce_ELets e
         val () = assert_b_m (fn () => "cps_abs/_/is_value#2: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e
         val e = close_EAbsITs (outer_binds, e)
@@ -819,8 +818,8 @@ fun test1 dirname =
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
-    (* val () = println "" *)
+    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = println ""
                      
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)

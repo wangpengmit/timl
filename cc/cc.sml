@@ -514,17 +514,26 @@ fun cc e =
       | EAscTime (e, i) => EAscTime (cc e, i)
       | ENever t => ENever (cc_t t)
       | EBuiltin t => EBuiltin (cc_t t)
-      | _ => raise Unimpl "cc"
+      | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
     end
 
 and cc_abs e_all =
     let
-      val (binds, e) = open_collect_EAbsIT e_all
+      val (outer_binds, e) = open_collect_EAbsIT e_all
     in
       case e of
-          ERec bind => cc_ERec e_all binds bind
+          ERec bind => cc_ERec e_all outer_binds bind
         (* | EAbs bind => cc_EAbs e_all binds bind *)
-        | _ => raise Impossible "cc_abs"
+        | _ =>
+          let
+            val () = assert_b_m (fn () => "cc_abs/_/is_value: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e
+            val e = cc e
+            val e = reduce_ELets e
+            val () = assert_b_m (fn () => "cc_abs/_/is_value#2: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e
+            val e = close_EAbsITs (outer_binds, e)
+          in
+            e
+          end
     end
 
 and cc_ERec e_all outer_binds bind =

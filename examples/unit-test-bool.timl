@@ -4,6 +4,12 @@ open Basic
        
 val a = true
 
+val b = case a of
+            true => 10 + 20
+          | false => 30 + 40
+
+val c = b + 1 + 2 + 3 + b
+
 fun f () = true
              
 val neg1 =

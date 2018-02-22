@@ -7,10 +7,6 @@ datatype list 'a : {Nat} =
          Nil of list 'a {0}
        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1}
 
-fun foo [a] {n : Nat} (l : list a {n}) = 0
-
-val a = foo (1 :: [])
-                                  
 fun length_i [a] {n : Nat} (l : list a {n}) return using $(2 * n) =
     case l of
         [] => 0
