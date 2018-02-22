@@ -26,4 +26,10 @@ fun foo {i : Nat} {j | j > i} () =
       ()
     end
       
+val f = id
+
+val a = f 1
+
+val a = f ()
+
 end

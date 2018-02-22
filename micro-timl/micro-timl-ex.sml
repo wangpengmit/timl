@@ -1349,16 +1349,26 @@ fun is_value e =
     | EAscType (e, _) => is_value e
     | EAscTime (e, _) => is_value e
     (* | ELoc _ => true *)
-    | _ =>
-      case fst $ collect_EAscTypeTime $ fst $ collect_EAppIT e of
-          ERec data =>
-          let
-            val (_, (_, e)) = unBindAnnoName data
-          in
-            is_value e
-          end
-        | EVar _ => true (* todo: is this right? *)
-        | _ => false
+    | EAppT (e, _) => is_value e
+    | EAppI (e, _) => is_value e
+    | ERec data =>
+      let
+        val (_, (_, e)) = unBindAnnoName data
+      in
+        is_value e
+      end
+    | EVar _ => true (* variables denote values *)
+    | _ => false
+    (* | _ => *)
+    (*   case fst $ collect_EAscTypeTime $ fst $ collect_EAppIT e of *)
+    (*       ERec data => *)
+    (*       let *)
+    (*         val (_, (_, e)) = unBindAnnoName data *)
+    (*       in *)
+    (*         is_value e *)
+    (*       end *)
+    (*     | EVar _ => true (* todo: is this right? *) *)
+    (*     | _ => false *)
 
 end
                         
