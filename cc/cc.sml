@@ -417,21 +417,16 @@ fun cc_t t =
 and cc_t_arrow t =
     let
       val (binds, t) = open_collect_TForallIT t
+      val (t1, i, t2) = assert_TArrow t
+      val t1 = cc_t t1
+      val t2 = cc_t t2
+      val alpha = fresh_tvar ()
+      val t = TArrow (TProd (TV (alpha, KType), t1), i, t2)
+      val t = close_TForallITs (binds, t)
+      val t = TProd (t, TV (alpha, KType))
+      val t = TExists $ close0_t_t_anno ((alpha, "'a", KType), t)
     in
-      case t of
-          TArrow (t1, i, t2) =>
-          let
-            val t1 = cc_t t1
-            val t2 = cc_t t2
-            val alpha = fresh_tvar ()
-            val t = TArrow (TProd (TV (alpha, KType), t1), i, t2)
-            val t = close_TForallITs (binds, t)
-            val t = TProd (t, TV (alpha, KType))
-            val t = TExists $ close0_t_t_anno ((alpha, "'a", KType), t)
-          in
-            t
-          end
-        | _ => close_TForallITs (binds, cc_t t)
+      t
     end
 
 fun cc_expr_un_op opr =
@@ -498,8 +493,6 @@ fun cc e =
         in
           e
         end
-      | EAppI _ => cc_appIT e
-      | EAppT _ => cc_appIT e
       | EAbsT _ => cc_abs e
       | EAbsI _ => cc_abs e
       | EAbs _ => cc_abs e
@@ -559,73 +552,14 @@ fun cc e =
       | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
     end
 
-and cc_appIT e1 =
-    let
-      val (e1, itargs) = collect_EAppIT e1
-      val (e1, t_e1) = assert_EAscType e1
-      val itargs' = map (map_inr cc_t) itargs
-      val e1 = cc e1
-    in
-      case snd $ collect_TForallIT t_e1 of
-          TArrow _ =>
-          let
-            val gamma = fresh_tvar ()
-            val z = fresh_evar ()
-            val z_code = fresh_evar ()
-            val z_env = fresh_evar ()
-            val e = EAppITs (EV z_code, itargs')
-            val e = EPair (e, EV z_env)
-            val t_pack = apply_TForallIT t_e1 itargs
-            val e = EPack (cc_t t_pack, TV (gamma, KType), e)
-            val e = ELetManyClose ([(z_code, "z_code", EFst $ EV z), (z_env, "z_env", ESnd $ EV z)], e)
-            val e = EUnpackClose (e1, (gamma, "'c"), (z, "z"), e)
-            
-          in
-            e
-          end
-        | _ => EAppITs (e1, itargs')
-    end
-      
 and cc_abs e_all =
     let
-      val (outer_binds, e1) = open_collect_EAbsIT e_all
+      val (binds, e) = open_collect_EAbsIT e_all
     in
-      case e1 of
-          ERec bind => cc_ERec e_all outer_binds bind
+      case e of
+          ERec bind => cc_ERec e_all binds bind
         (* | EAbs bind => cc_EAbs e_all binds bind *)
-        | _ =>
-          let
-            val () = assert_b_m (fn () => "cc_abs/_/is_value: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e
-            val (e1, t_e1) = assert_EAscType e1
-            val e1 = cc e1
-          in
-            case snd $ collect_TForallIT t_e1 of
-                TArrow _ =>
-                (* can't handle this *)
-                let
-                  val gamma = fresh_tvar ()
-                  val z = fresh_evar ()
-                  val z_code = fresh_evar ()
-                  val z_env = fresh_evar ()
-                  val e = EAppITs (EV z_code, itargs')
-                  val e = EPair (e, EV z_env)
-                  val t_pack = close_TForallIT (outer_binds, t_e1)
-                  val e = EPack (cc_t t_pack, TV (gamma, KType), e)
-                  val e = ELetManyClose ([(z_code, "z_code", EFst $ EV z), (z_env, "z_env", ESnd $ EV z)], e)
-                  val e = EUnpackClose (e1, (gamma, "'c"), (z, "z"), e)
-                                       
-                in
-                  e
-                end
-              | _ =>
-                let                                           
-                  (* val e = reduce_ELets e *)
-                  (* val () = assert_b_m (fn () => "cc_abs/_/is_value#2: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e *)
-                  val e1 = close_EAbsITs (outer_binds, e1)
-                in
-                  e1
-                end
-          end
+        | _ => raise Impossible "cc_abs"
     end
 
 and cc_ERec e_all outer_binds bind =
@@ -914,7 +848,6 @@ fun test1 dirname =
     val () = println "Checking closed-ness of ERec's"
     val () = check_ERec_closed e
     val () = println "Started MicroTiML typechecking #3 ..."
-    val () = require_EAbsIT_value := false (* CC may use non-value computations to implement values *)
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #3"
     val () = println "Type:"

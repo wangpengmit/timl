@@ -50,7 +50,7 @@ fun a %: b = EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)
                       
-fun EAppK (e1, e2) =
+fun EApp_alias_fun_arg (e1, e2) =
     case e1 of
         EAbs bind =>
         let
@@ -67,9 +67,24 @@ fun EAppK (e1, e2) =
         in
           e
         end
+
+(* used for CPS of EApp and EAppI/T when the function part shouldn't be aliased because that may create a EAppI/T not followed by EApp, which CC can't handle *)
+fun EApp_alias_arg (e1, e2) =
+    case e1 of
+        EAbs bind =>
+        let
+          val (t_x, (name_x, e_body)) = unBindAnnoName bind
+          val e = MakeELet (e2 (* %: t_x *), name_x, e_body)
+        in
+          e
+        end
+      | _ =>
+        MakeELet (e2, ("x", dummy), EApp (shift01_e_e e1, EVar $ ID (0, dummy)))
         
+infixr 0 %$
+fun a %$ b = EApp_alias_arg (a, b)
 infixr 0 $$
-fun a $$ b = EAppK (a, b)
+fun a $$ b = EApp_alias_fun_arg (a, b)
                   
 fun assert_TProd t =
   case t of
@@ -106,23 +121,23 @@ fun assert_TForallI t =
 (*       end *)
 (*     | _ => raise assert_fail "assert_and_reduce_beta" *)
 
-(* fun assert_and_reduce_letxx e = *)
-(*     let *)
-(*       fun error () = raise assert_fail $ "assert_and_reduce_letxx: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
-(*     in *)
-(*       case e of *)
-(*           ELet (e1, bind) => *)
-(*           let *)
-(*             val (name_x, e2) = unBindSimpName bind *)
-(*             val () = case e2 of *)
-(*                          EVar (ID (x, _)) => *)
-(*                          if x = 0 then () else error () *)
-(*                        | _ => error () *)
-(*           in *)
-(*             e1 *)
-(*           end *)
-(*         | _ => error () *)
-(*     end *)
+fun assert_and_reduce_letxx e =
+    let
+      fun error () = raise assert_fail $ "assert_and_reduce_letxx: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
+    in
+      case e of
+          ELet (e1, bind) =>
+          let
+            val (name_x, e2) = unBindSimpName bind
+            val () = case e2 of
+                         EVar (ID (x, _)) =>
+                         if x = 0 then () else error ()
+                       | _ => error ()
+          in
+            e1
+          end
+        | _ => error ()
+    end
 
 val whnf = fn t => whnf ([], []) t
                        
@@ -137,14 +152,53 @@ fun cps_t t =
     (* val t = whnf t *)
     val t =                                         
     case whnf t of
-        TArrow _ => cps_t_arrow t
-      | TQuan (Forall, _) => cps_t_arrow t
-      | TQuanI (Forall, _) => cps_t_arrow t
-      | TVar _ => t
-      | TConst _ => t
-      | TNat _ => t
-      | TBinOp (opr, t1, t2) => TBinOp (opr, cps_t t1, cps_t t2)
-      | TArr (t, i) => TArr (cps_t t, i)
+      TArrow (t1, i, t2) =>
+      (* [[ t1 --i--> t2 ]] = \\j. [[t1]]*([[t2]] --j--> unit) -- blowup_time(i, j) --> unit *)
+      let
+        val t1 = cps_t t1
+        val t2 = cps_t t2
+        val j = fresh_ivar ()
+        val t = TProd (t1, TArrow (t2, IV j, TUnit))
+        val t = TArrow (t, blowup_time (i, IV j), TUnit)
+      in
+        TForallTimeClose ((j, "j"), t)
+      end
+    | TQuan (Forall, bind) =>
+      (* [[ \\alpha.t ]] = \\alpha. \\j. ([[t]] --j--> unit) -- blowup_time_t(j) --> unit *)
+      let
+        val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
+        val alpha = fresh_tvar ()
+        val t = open0_t_t alpha t
+        val t = cps_t t
+        val j = fresh_ivar ()
+        val t = TArrow (t, IV j, TUnit)
+        val t = TArrow (t, IV j %+ T_1, TUnit)
+        val t = TForallTimeClose ((j, "j"), t)
+      in
+        TForall $ close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
+      end
+    | TQuanI (Forall, bind) =>
+      (* [[ \\a.t ]] = \\a. \\j. ([[t]] --j--> unit) -- blowup_time_i(j) --> unit *)
+      let
+        val ((name_a, s_a), t) = unBindAnno2 bind
+        val a = fresh_ivar ()
+        (* val () = println $ "a=" ^ str_int (unFree_i a) *)
+        (* val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
+        val t = open0_i_t a t
+        (* val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
+        val t = cps_t t
+        val j = fresh_ivar ()
+        val t = TArrow (t, IV j, TUnit)
+        val t = TArrow (t, IV j %+ T_1, TUnit)
+        val t = TForallTimeClose ((j, "j"), t)
+      in
+        TForallI $ close0_i_t_anno ((a, name_a, s_a), t)
+      end
+    | TVar _ => t
+    | TConst _ => t
+    | TNat _ => t
+    | TBinOp (opr, t1, t2) => TBinOp (opr, cps_t t1, cps_t t2)
+    | TArr (t, i) => TArr (cps_t t, i)
     | TQuan (Exists ex, bind) => 
       let
         val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
@@ -208,43 +262,6 @@ fun cps_t t =
     t
   end
 
-and cps_t_arrow_core (t1, i, t2) j =
-    let
-      val t = TProd (t1, TArrow (t2, IV j, TUnit))
-      val t = TArrow (t, blowup_time (i, IV j), TUnit)
-    in
-      t
-    end
-      
-and cps_t_arrow t =
-    let
-      val (binds, t) = open_collect_TForallIT_whnf whnf t
-    in
-      case t of
-          TArrow (t1, i, t2) =>
-          (* [[ \\a*. t1 --i--> t2 ]] = \\a*. \\j. [[t1]]*([[t2]] --j--> unit) -- blowup_time(i, j) --> unit *)
-          let
-            val t1 = cps_t t1
-            val t2 = cps_t t2
-            val j = fresh_ivar ()
-            val t = cps_t_arrow_core (t1, i, t2) j
-            val t = TForallTimeClose ((j, "j"), t)
-            val t = close_TForallITs (binds, t)
-          in
-            t
-          end
-        | _ =>
-          (* treat non-EAbs EAbsITs as non-reducible *)
-          (* this is OK because of the value restriction in EAbsI/T*)
-          (* [[ \\a*. t ]] = \\a*. [[t]] *)
-          let
-            val t = cps_t t
-            val t = close_TForallITs (binds, t)
-          in
-            t
-          end
-    end
-
 fun cont_type (t, i) = TArrow (t, i, TUnit)
 
 (* CPS conversion on terms *)
@@ -258,22 +275,37 @@ fun cps (e, t_e) (k, j_k) =
       S.EVar x =>
       (* [[ x ]](k) = k x *)
       (k $$ EVar x, j_k %+ T_1)
-    | S.EBinOp (EBApp, e1, e2) =>
-      (* [[ e1 [t*] e2 ]](k) = [[e1]](\x1. [[e2]] (\x2. x1 [ [[t*]] ] {k.j} (x2, k))) *)
+    | S.EAbs bind =>
+      (* [[ \x.e ]](k) = k (\\j. \(x, c). [[e]](c) |> blowup_time(i, j))
+         where [i] is the time bound of [e], blowup_time(i,j) = b(i+1)+2i+1+j, [b] is blow-up factor *)
       let
-        val (_, t_e1) = assert_EAscType e1
+        val ((name_x, _), e) = unBindAnno2 bind
+        val t_e = whnf t_e
+        val (t_x, i, t_e) = assert_TArrow t_e
+        val x = fresh_evar ()
+        val e = open0_e_e x e
+        val c = fresh_evar ()
+        val j = fresh_ivar ()
+        val (e, _) = cps (e, t_e) (EV c, IV j)
+        val e = EAscTime (e, blowup_time (i, IV j))
+        val t_e = cps_t t_e
+        val t_c = cont_type (t_e, IV j)
+        val t_x = cps_t t_x
+        val e = EAbsPairClose ((x, name_x, t_x), (c, "c", t_c), e)
+        val e = EAbsTimeClose ((j, "j"), e)
+      in
+        (k $$ e, j_k %+ T_1)
+      end
+    | S.EBinOp (EBApp, e1, e2) =>
+      (* [[ e1 e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. x1 {k.j} (x2, k))) *)
+      let
+        val (e1, t_e1) = assert_EAscType e1
         val t_e1 = whnf t_e1
         val (t_e2, i, _) = assert_TArrow t_e1
-        val (e1, itargs) = collect_EAppIT e1
-        val (e1, t_e1) = assert_EAscType e1
-        val itargs = map (map_inr cps_t) itargs
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
         val xk = fresh_evar ()
-        val e = EV x1
-        val e = EAppITs (e, itargs)
-        val e = EAppI (e, j_k)
-        val e = e $$ EPair (EV x2, EV xk)
+        val e = EAppI (EV x1, j_k) %$ EPair (EV x2, EV xk)
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
         val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
@@ -283,37 +315,6 @@ fun cps (e, t_e) (k, j_k) =
       in
         cps (e1, t_e1) (e, i_e)
       end
-    | S.EAppT (e, t) =>
-      (* treat [EAppI/T (v, _)] as value *)
-      (* [[ e[t] ]](k) = [[e]](\x. k(x[ [[t]] ])) *)
-      let
-        val (e, t_e) = assert_EAscType e
-        val t = cps_t t
-        val x = fresh_evar ()
-        val c = EAppITs (EV x, [inr t])
-        val c = k $$ c
-        val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
-      in
-        cps (e, t_e) (c, j_k %+ T_1)
-      end
-    | S.EAppI (e, i) =>
-      (* treat [(EAppI/T (v, _)] as value *)
-      (* [[ e[i] ]](k) = [[e]](\x. k(x[i])) *)
-      let
-        val (e, t_e) = assert_EAscType e
-        val x = fresh_evar ()
-        val c = EAppITs (EV x, [inl i])
-        val c = k $$ c
-        val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
-      in
-        cps (e, t_e) (c, j_k %+ T_1)
-      end
-    | S.EAbsT _ => cps_abs (e, t_e) (k, j_k)
-    | S.EAbsI _ => cps_abs (e, t_e) (k, j_k)
-    | S.EAbs _ => cps_abs (e, t_e) (k, j_k)
-    | S.ERec _ => cps_abs (e, t_e) (k, j_k)
     | S.EConst c =>
       (* [[ x ]](c) = k c *)
       (k $$ EConst c, j_k %+ T_1)
@@ -323,6 +324,92 @@ fun cps (e, t_e) (k, j_k) =
     | S.EBuiltin t =>
       (* [[ builtin ]](k) = k(builtin) *)
       (k $$ EBuiltin t, j_k %+ T_1)
+    | S.ERec bind =>
+      (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
+      let
+        val ((name_x, _), e) = unBindAnno2 bind
+        val () = println $ "cps() on: " ^ name_x
+        val x = fresh_evar ()
+        val e = open0_e_e x e
+        val t_x = cps_t t_e
+        val () = assert_b "cps/ERec/1" $ is_value e
+        val (e, i_e) = cps (e, t_e) (Eid t_x, T_0) (* CPS with id is not strictly legal, since id doesn't return unit. It's OK because e should be a value. Values can be CPSed with continuations that return non-unit. *)
+        val e = assert_and_reduce_letxx e
+        val (e, _) = collect_EAscTypeTime e
+        val () = assert_b "cps/ERec/2" $ is_value e
+        val () = case snd $ collect_EAbsIT e of
+                     EAbs _ => ()
+                   | _ => raise Impossible "ERec: body after CPS should be EAbsITMany (EAbs (...))"
+        val e = ERec $ close0_e_e_anno ((x, name_x, t_x), e)
+      in
+        (k $$ e, j_k %+ T_1)
+      end
+    | S.EAbsT bind =>
+      (* [[ \\alpha.e ]](k) = k (\\alpha. \\j. \c. [[e]](c)) *)
+      let
+        val ((name_alpha, kd_alpha), e) = unBindAnno2 bind
+        val t_e = whnf t_e
+        val (_, t_e) = assert_TForall t_e
+        val alpha = fresh_tvar ()
+        val e = open0_t_e alpha e
+        val t_e = open0_t_t alpha t_e
+        val j = fresh_ivar ()
+        val c = fresh_evar ()
+        val () = assert_b_m (fn () => "cps/EAbsT/is_value: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e
+        val (e, _) = cps (e, t_e) (EV c, IV j)
+        val e = EAscTime (e, blowup_time_t (IV j))
+        val t_e = cps_t t_e
+        val t_c = cont_type (t_e, IV j)
+        val e = EAbs $ close0_e_e_anno ((c, "c", t_c), e)
+        val e = EAbsTimeClose ((j, "j"), e)
+        val e = EAbsT $ close0_t_e_anno ((alpha, name_alpha, kd_alpha), e)
+      in
+        (k $$ e, j_k %+ T_1)
+      end
+    | S.EAbsI bind =>
+      (* [[ \\a.e ]](k) = k (\\a. \\j. \c. [[e]](c)) *)
+      let
+        val ((name_a, s_a), e) = unBindAnno2 bind
+        val t_e = whnf t_e
+        val (_, t_e) = assert_TForallI t_e
+        val a = fresh_ivar ()
+        val e = open0_i_e a e
+        val t_e = open0_i_t a t_e
+        val j = fresh_ivar ()
+        val c = fresh_evar ()
+        val () = assert_b "cps/EAbsT" $ is_value e
+        val (e, _) = cps (e, t_e) (EV c, IV j)
+        val e = EAscTime (e, blowup_time_t (IV j))
+        val t_e = cps_t t_e
+        val t_c = cont_type (t_e, IV j)
+        val e = EAbs $ close0_e_e_anno ((c, "c", t_c), e)
+        val e = EAbsTimeClose ((j, "j"), e)
+        val e = EAbsI $ close0_i_e_anno ((a, name_a, s_a), e)
+      in
+        (k $$ e, j_k %+ T_1)
+      end
+    | S.EAppT (e, t) =>
+      (* [[ e[t] ]](k) = [[e]](\x. x[t]{k.j}(k)) *)
+      let
+        val (e, t_e) = assert_EAscType e
+        val x = fresh_evar ()
+        val c = EAppI (EAppT (EV x, cps_t t), j_k) %$ k
+        val t_x = cps_t t_e
+        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+      in
+        cps (e, t_e) (c, blowup_time_t j_k)
+      end
+    | S.EAppI (e, i) =>
+      (* [[ e[i] ]](k) = [[e]](\x. x[i]{k.j}(k)) *)
+      let
+        val (e, t_e) = assert_EAscType e
+        val x = fresh_evar ()
+        val c = EAppI (EAppI (EV x, i), j_k) %$ k
+        val t_x = cps_t t_e
+        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+      in
+        cps (e, t_e) (c, blowup_time_i j_k)
+      end
     | S.EUnOp (EUFold t_fold, e) =>
       (* [[ fold e ]](k) = [[e]](\x. k (fold x)) *)
       let
@@ -598,108 +685,6 @@ fun cps (e, t_e) (k, j_k) =
       end
     end
       
-and cps_abs (e, t_e) (k, j_k) =
-  let
-    val (outer_binds, e) = open_collect_EAbsIT e
-  in
-  case e of
-      S.ERec bind =>
-      (* [[ \\a*. fix y. \\b*. \x. e ]](k) = k (\\a*. fix y. \\b*. \\j. \(x, c). [[e]](c) |> blowup_time(i, j))
-         where [i] is the time bound of [e], blowup_time(i,j) = b(i+1)+2i+1+j, [b] is blow-up factor *)
-      let
-        val (t_y, (name_y, e)) = unBindAnnoName bind
-        val () = println $ "cps() on: " ^ fst name_y
-        val y = fresh_evar ()
-        val e = open0_e_e y e
-        val (inner_binds, e) = open_collect_EAbsIT e
-        val (t_x, (name_x, e)) = assert_EAbs e
-        val x = fresh_evar ()
-        val e = open0_e_e x e
-        (* val ((e, t_e), i) = mapFst assert_EAscType $ assert_EAscTime e *)
-        val (_, t_arrow) = collect_TForallIT_open_with_whnf whnf inner_binds t_y
-        val t_arrow = whnf t_arrow
-        val (t_x, i, t_e) = assert_TArrow t_arrow
-        val c = fresh_evar ()
-        val j = fresh_ivar ()
-        val (e, _) = cps (e, t_e) (EV c, IV j)
-        val e = EAscTime (e, blowup_time (i, IV j))
-        val t_e = cps_t t_e
-        val t_c = cont_type (t_e, IV j)
-        val t_x = cps_t t_x
-        val e = EAbsPairClose ((x, fst name_x, t_x), (c, "c", t_c), e)
-        val e = EAbsTimeClose ((j, "j"), e)
-        val e = close_EAbsITs (inner_binds, e)
-        (* val t_y = cps_t t_y *)
-        (* val t_y = whnf t_y *)
-        (* val (_, t_y) = assert_TForallI t_y *)
-        (* val t_y = open0_i_t j t_y *)
-        val t_y = cps_t_arrow_core (t_x, i, t_e) j
-        val t_y = TForallTimeClose ((j, "j"), t_y)
-        val t_y = close_TForallITs (inner_binds, t_y)
-        val e = ERec $ close0_e_e_anno ((y, fst name_y, t_y), e)
-        val e = close_EAbsITs (outer_binds, e)
-      in
-        (k $$ e, j_k %+ T_1)
-      end
-    (* | S.ERec bind => *)
-    (*   (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *) *)
-    (*   let *)
-    (*     val ((name_x, _), e) = unBindAnno2 bind *)
-    (*     val x = fresh_evar () *)
-    (*     val e = open0_e_e x e *)
-    (*     val t_x = cps_t t_e *)
-    (*     val () = assert_b "cps/ERec/1" $ is_value e *)
-    (*     val (e, i_e) = cps (e, t_e) (Eid t_x, T_0) (* CPS with id is not strictly legal, since id doesn't return unit. It's OK because e should be a value. Values can be CPSed with continuations that return non-unit. *) *)
-    (*     val e = assert_and_reduce_letxx e *)
-    (*     val (e, _) = collect_EAscTypeTime e *)
-    (*     val () = assert_b "cps/ERec/2" $ is_value e *)
-    (*     val () = case snd $ collect_EAbsIT e of *)
-    (*                  EAbs _ => () *)
-    (*                | _ => raise Impossible "ERec: body after CPS should be EAbsITMany (EAbs (...))" *)
-    (*     val e = ERec $ close0_e_e_anno ((x, name_x, t_x), e) *)
-    (*   in *)
-    (*     (k $$ e, j_k %+ T_1) *)
-    (*   end *)
-    | _ =>
-      (* [[ \\a*. e ]](k) = k (\\a*. [[e]](id)) *)
-      let
-        val (_, t_e) = collect_TForallIT_open_with_whnf whnf outer_binds t_e
-        val () = assert_b_m (fn () => "cps_abs/_/is_value: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e
-        (* CPS with id is not strictly legal, since id doesn't return unit. It's OK because e should be a value. Values can be CPSed with continuations that return non-unit. *)                            
-        val t_x = cps_t t_e
-        val (e, _) = cps (e, t_e) (Eid t_x, T_0)
-        val e = reduce_ELets e
-        val () = assert_b_m (fn () => "cps_abs/_/is_value#2: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e
-        val e = close_EAbsITs (outer_binds, e)
-      in
-        (k $$ e, j_k %+ T_1)
-      end
-    (* | S.EAbsI bind => *)
-    (*   (* [[ \\a.e ]](k) = k (\\j. \\a. \c. [[e]](c)) *) *)
-    (*   let *)
-    (*     val ((name_a, s_a), e) = unBindAnno2 bind *)
-    (*     val t_e = whnf t_e *)
-    (*     val (_, t_e) = assert_TForallI t_e *)
-    (*     val a = fresh_ivar () *)
-    (*     val e = open0_i_e a e *)
-    (*     val t_e = open0_i_t a t_e *)
-    (*     val j = fresh_ivar () *)
-    (*     val c = fresh_evar () *)
-    (*     val () = assert_b "cps/EAbsT" $ is_value e *)
-    (*     val (e, _) = cps (e, t_e) (EV c, IV j) *)
-    (*     val e = EAscTime (e, blowup_time_t (IV j)) *)
-    (*     val t_e = cps_t t_e *)
-    (*     val t_c = cont_type (t_e, IV j) *)
-    (*     val e = EAbs $ close0_e_e_anno ((c, "c", t_c), e) *)
-    (*     val e = EAbsI $ close0_i_e_anno ((a, name_a, s_a), e) *)
-    (*     val e = EAbsTimeClose ((j, "j"), e) *)
-    (*   in *)
-    (*     (k $$ e, j_k %+ T_1) *)
-    (*   end *)
-  end
-    
-val cps = fn (e, t_e) => cps (convert_EAbs_to_ERec e, t_e)
-
 end
 
 structure CPSUnitTest = struct
