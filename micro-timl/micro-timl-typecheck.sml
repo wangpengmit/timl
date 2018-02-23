@@ -629,6 +629,11 @@ fun eval_constr b =
     #visit_expr vtable visitor () b
   end
 
+fun assert_cons ls =
+    case ls of
+        x :: xs => (x, xs)
+      | [] => raise Impossible "assert_cons fails"
+
 fun smart_EAscType (e, t) =
     let
       val (e, is) = collect_EAscTime e
@@ -983,10 +988,6 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
                 val e = EAscTypes (e, ts)
                 val (e, t, i1) = tc ctx e
                 val i = sc_against_sort ictx (i, STime)
-                fun assert_cons ls =
-                  case ls of
-                      x :: xs => (x, xs)
-                    | [] => raise Impossible "assert_cons fails"
                 fun check_le_with_subtractions ictx (i, i') =
                   let
                     val collect_MinusI_left = collect_BinOpI_left MinusI
@@ -1021,13 +1022,46 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
         in
           (EBuiltin t, t, T0)
         end
-      | ELet data =>
+      (* | ELet data => *)
+      (*   let *)
+      (*     val (e1, (name, e2)) = unELet data *)
+      (*     val (e1, t1, i1) = tc ctx e1 *)
+      (*     val (e2, t2, i2) = tc (add_typing_full (fst name, t1) ctx) e2 *)
+      (*   in *)
+      (*     (MakeELet (e1 %: t1, name, e2), t2, i1 %+ i2) *)
+      (*   end *)
+      | ELet _ =>
         let
-          val (e1, (name, e2)) = unELet data
-          val (e1, t1, i1) = tc ctx e1
-          val (e2, t2, i2) = tc (add_typing_full (fst name, t1) ctx) e2
+          fun collect_ELet e =
+              case e of
+                  ELet (e1, bind) =>
+                  let
+                    val (name, e) = unBindSimpName bind
+                    val (decls, e) = collect_ELet e
+                  in
+                    ((name, e1) :: decls, e)
+                  end
+                | _ => ([], e)
+          fun ELets (decls, e) = foldr (fn ((name, e1), e) => ELet (e1, EBind (name, e))) e decls
+
+          val (decls, e) = collect_ELet e_input
+          fun foo ((name, e), (decls, ctx)) =
+              let
+                val (e, t, i) = tc ctx e
+                val decl = ((name, e %: t), i)
+                val decls = decl :: decls
+                val ctx = add_typing_full (fst name, t) ctx
+              in
+                (decls, ctx)
+              end
+          val (decls, ctx) = foldl foo ([], ctx) decls
+          val decls = rev decls
+          val (decls, is) = unzip decls 
+          val (e, t, i) = tc ctx e
+          val e = ELets (decls, e)
+          val is = uncurry combine_AddI_nonempty $ assert_cons is
         in
-          (MakeELet (e1 %: t1, name, e2), t2, i1 %+ i2)
+          (e, t, is %+ i)
         end
       | ELetType data =>
         let
