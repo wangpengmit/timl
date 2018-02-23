@@ -244,19 +244,36 @@ fun free_tvars_with_anno_e_fn output b =
 
 fun free_tvars_with_anno_e a = free_vars_with_anno_0 free_tvars_with_anno_e_fn a
     
-fun free_evars_with_anno_expr_visitor_vtable cast output (* : ('this, unit, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable *) =
+val code_blocks = ref []
+val code_labels = ref IntBinarySet.empty
+fun add_code_block (decl as (x, _, _)) =
+    (push_ref code_blocks decl;
+     binop_ref (curry IntBinarySet.add) code_labels (unFree_e x)
+    )
+                      
+fun free_evars_with_anno_expr_visitor_vtable cast (excluded, output) (* : ('this, unit, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable *) =
   let
     fun visit_EAscType this env (e, t) =
       let
         val (e_core, _) = collect_EAscTypeTime e
       in
         case e_core of
-            EVar (QID (_, (x, _))) => (output (Free_e x, t); EAscType (e, t))
+            EVar (QID (_, (x, _))) =>
+            let
+              val () =
+                  if IntBinarySet.member (excluded, x) then ()
+                  else output (Free_e x, t)
+            in
+              EAscType (e, t)
+            end
           | _ => EAscType (#visit_expr (cast this) this env e, t)
       end
     fun visit_var this env var =
         case var of
-            QID _ => raise Impossible "free_evars_with_anno/visit_var/QID"
+            QID (_, (x, _)) =>
+            if IntBinarySet.member (excluded, x) then var
+            else 
+              raise Impossible $ "free_evars_with_anno/visit_var/QID without EAscType: " ^ str_int x
           | _ => var
     val vtable = 
         default_expr_visitor_vtable
@@ -277,14 +294,14 @@ fun free_evars_with_anno_expr_visitor_vtable cast output (* : ('this, unit, 'var
 
 fun new_free_evars_with_anno_expr_visitor params = new_expr_visitor free_evars_with_anno_expr_visitor_vtable params
 
-fun free_evars_with_anno_fn output b =
+fun free_evars_with_anno_fn excluded output b =
   let
-    val visitor as (ExprVisitor vtable) = new_free_evars_with_anno_expr_visitor output
+    val visitor as (ExprVisitor vtable) = new_free_evars_with_anno_expr_visitor (excluded, output)
   in
     #visit_expr vtable visitor () b
   end
 
-fun free_evars_with_anno a = free_vars_with_anno_0 free_evars_with_anno_fn a
+fun free_evars_with_anno excluded a = free_vars_with_anno_0 (free_evars_with_anno_fn excluded) a
       
 fun IV (x, s) = VarI (make_Free_i x, [s])
 fun TV (x, k) = TVar (make_Free_t x, [k])
@@ -470,7 +487,7 @@ fun apply_TForallIT b args =
         end
       | (_, []) => b
       | _ => raise Impossible "apply_TForallIT"
-          
+
 fun cc e =
     let
       (* val () = println $ "CC on " ^ (substr 0 400 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
@@ -557,12 +574,12 @@ and cc_abs e_all =
       val (binds, e) = open_collect_EAbsIT e_all
     in
       case e of
-          ERec bind => cc_ERec e_all binds bind
+          ERec bind => cc_ERec (* e_all *) binds bind
         (* | EAbs bind => cc_EAbs e_all binds bind *)
         | _ => raise Impossible "cc_abs"
     end
 
-and cc_ERec e_all outer_binds bind =
+and cc_ERec (* e_all *) outer_binds bind =
     let
       val (t_x, (name_x, e)) = unBindAnnoName bind
       val () = println $ "cc() on: " ^ fst name_x
@@ -572,16 +589,26 @@ and cc_ERec e_all outer_binds bind =
       val (t_z, (name_z, e)) = assert_EAbs e
       val z = fresh_evar ()
       val e = open0_e_e z e
+      val e = cc e
       val (_, t_arrow) = collect_TForallIT_open_with inner_binds t_x
       val (_, i, _) = assert_TArrow t_arrow
-      val (ys, sigmas) = unzip $ free_evars_with_anno e_all
+      val excluded = IntBinarySet.addList (!code_labels, map unFree_e [x, z])
+      val ys_anno = free_evars_with_anno excluded e
+      val (ys, sigmas) = unzip $ ys_anno
       fun add_name prefix (i, (a, b)) = (a, prefix ^ str_int (1+i), b)
       (* val () = println "before free_ivars" *)
-      val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e_all
+      val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e
       (* val () = println "after free_ivars" *)
-      val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e_all
+      val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e
+      val outer_inner_binds = outer_binds @ inner_binds
+      fun eq_bind xx' =
+          case xx' of
+              (inl (x, _, _), inl (x', _, _)) => x = x'
+            | (inr (x, _, _), inr (x', _, _)) => x = x'
+            | _ => false
       val betas = map inl free_ivars @ map inr free_tvars
-      val t_env = cc_t $ TRecord sigmas
+      val betas = diff eq_bind betas outer_inner_binds
+      val t_env = TRecord sigmas
       val t_z = cc_t t_z
       val t_arrow = TArrow (TProd (t_env, t_z), i, TUnit)
       val z_code = fresh_evar ()
@@ -596,16 +623,20 @@ and cc_ERec e_all outer_binds bind =
       val def_x = EPack (cc_t t_x, t_env, EPair (EAppITs_binds (EV z_code, betas @ outer_binds), EV z_env))
       val len_ys = length ys
       val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ERecordProj (len_ys, i) $ EV z_env)) ys
-      val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, cc e)
+      val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, e)
       val e = EAbsPairClose ((z_env, "z_env", t_env), (z, fst name_z, t_z), e)
-      val e = close_EAbsITs (betas @ outer_binds @ inner_binds, e)
-      val t_rawcode = close_TForallITs (betas @ outer_binds @ inner_binds, t_arrow)
+      val betas_outer_inner_binds = betas @ outer_inner_binds
+      val e = close_EAbsITs (betas_outer_inner_binds, e)
+      val t_rawcode = close_TForallITs (betas_outer_inner_binds, t_arrow)
       (* val t_code = TForallITClose (inner_binds, t_arrow) *)
       val v_code = ERec $ close0_e_e_anno ((z_code, fst name_x ^ "_code", t_rawcode), e)
-      val v_env = ERecord $ map EV ys
+      fun EV_anno (y, anno) = EAscType (EV y, anno)
+      val v_env = ERecord $ map EV_anno ys_anno
       val x_code = fresh_evar ()
       val e = EPack (cc_t $ close_TForallITs (outer_binds, t_x), t_env, EPair (EAppITs_binds (EV x_code(* v_code *), betas), v_env))
-      val e = ELetClose ((x_code, fst name_x ^ "_code", v_code), e)
+      val x_v_code = (x_code, fst name_x ^ "_code", v_code)
+      val () = add_code_block x_v_code
+      (* val e = ELetClose (x_v_code, e) *)
     in
       e
     end
@@ -641,7 +672,18 @@ and cc_ERec e_all outer_binds bind =
 (*     in *)
 (*     end *)
 
-val cc = cc o convert_EAbs_to_ERec
+val cc =
+ fn e =>
+    let
+      val e = convert_EAbs_to_ERec e
+      val () = code_blocks := []
+      val () = code_labels := IntBinarySet.empty
+      val e = cc e
+      val decls = rev $ !code_blocks
+      val e = ELetManyClose (decls, e)
+    in
+      e
+    end
 
 val forget_var = Subst.forget_var
 val forget_i_i = Subst.forget_i_i
@@ -845,8 +887,8 @@ fun test1 dirname =
     val () = println "Finished CC"
     val () = pp_e $ export ToStringUtil.empty_ctx e
     val () = println ""
-    val () = println "Checking closed-ness of ERec's"
-    val () = check_ERec_closed e
+    (* val () = println "Checking closed-ness of ERec's" *)
+    (* val () = check_ERec_closed e *)
     val () = println "Started MicroTiML typechecking #3 ..."
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #3"
