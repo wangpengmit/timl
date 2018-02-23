@@ -1334,6 +1334,8 @@ fun collect_EAppIT_rev e =
   end
 fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
 
+(* Treats EAppI/T (v, _) as a value. This is OK because EAbsI/T is always around a value, therefore deferring the reduction of EAppI/T (EAbsI/T _, _) won't change any side effect. Another angle to look at it is that if we use SML's erasure semantics where all types are erased before execution, then the reduction of EAppI/T (EAbsI/T _, _) is a no-op.
+*)
 fun is_value e =
   case e of
       EConst _ => true

@@ -431,23 +431,6 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           str ")";
           close_box ()
         )
-      | EUnpack (e, bind) =>
-        let
-          val (tname, bind) = get_bind bind
-          val (ename, e) = get_bind bind
-        in
-          open_hbox ();
-          str "EUnpack";
-          space ();
-          str "(";
-          str tname;
-          comma ();
-          str ename;
-          comma ();
-          pp_e e;
-          str ")";
-          close_box ()
-        end
       | EPackI (t, i, e) =>
         (
           open_hbox ();
@@ -500,6 +483,45 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           str ")";
           close_box ()
         end
+      | EUnpack (e, branch) =>
+        let
+          val (name1, branch) = get_bind branch
+          val (name2, branch) = get_bind branch
+        in
+	  open_vbox_noindent ();
+          (* space (); *)
+          open_hbox ();
+          str "EUnpack";
+          space ();
+          str "(";
+          str name1;
+          comma ();
+          str name2;
+          comma ();
+          pp_e e;
+	  close_box ();
+          comma ();
+          pp_e branch;          
+          str ")";
+          close_box ()
+        end
+      (* | EUnpack (e, bind) => *)
+      (*   let *)
+      (*     val (tname, bind) = get_bind bind *)
+      (*     val (ename, e) = get_bind bind *)
+      (*   in *)
+      (*     open_hbox (); *)
+      (*     str "EUnpack"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     str tname; *)
+      (*     comma (); *)
+      (*     str ename; *)
+      (*     comma (); *)
+      (*     pp_e e; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   end *)
       | EAscTime (e, i) =>
         (
 	  open_vbox_noindent ();
@@ -521,7 +543,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           str "EAscType";
           space ();
           str "(";
-          (* pp_t t; *)
+          pp_t t;
           close_box ();
           comma ();
           pp_e e;
