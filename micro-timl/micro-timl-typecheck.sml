@@ -829,7 +829,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
       | ERec data =>
         let
           val (t, (name, e)) = unBindAnnoName data
-          val () = println $ "tc() on: " ^ fst name
+          val () = println $ "tc() on: " ^ fst name ^ "  "
           val () = case snd $ collect_EAbsIT e of
                        EAbs _ => ()
                      | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"

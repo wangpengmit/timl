@@ -289,6 +289,27 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           str ")";
           close_box ()
         )
+      | ELet (e, branch) =>
+        let
+          val (name, e_body) = get_bind branch
+        in
+	  open_vbox_noindent ();
+          (* space (); *)
+          open_vbox ();
+          open_hbox ();
+          str "ELet";
+          space ();
+          str "(";
+          str name;
+	  close_box ();
+          comma ();
+          pp_e e;
+	  close_box ();
+          comma ();
+          pp_e e_body;
+          str ")";
+          close_box ()
+        end
       | EAbs bind =>
         let
           val (name, t, e) = get_bind_anno bind
@@ -567,25 +588,6 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           pp_t t;
           close_box ()
         )
-      | ELet (e, branch) =>
-        let
-          val (name, e_body) = get_bind branch
-        in
-	  open_vbox_noindent ();
-          (* space (); *)
-          open_hbox ();
-          str "ELet";
-          space ();
-          str "(";
-          str name;
-          comma ();
-          pp_e e;
-	  close_box ();
-          comma ();
-          pp_e e_body;
-          str ")";
-          close_box ()
-        end
       | ELetIdx (i, branch) =>
         let
           val (name, e_body) = get_bind branch

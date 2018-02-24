@@ -1,6 +1,6 @@
 functor TopoSortFn (structure M : ORD_MAP
                     structure S : ORD_SET
-                                    sharing type M.Key.ord_key = S.item
+                                    sharing type M.Key.ord_key = S.Key.ord_key
                    ) =
 struct
 

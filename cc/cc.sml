@@ -243,8 +243,8 @@ fun free_tvars_with_anno_e_fn output b =
   end
 
 fun free_tvars_with_anno_e a = free_vars_with_anno_0 free_tvars_with_anno_e_fn a
-    
-val code_blocks = ref []
+
+val code_blocks = ref ([] : (free_e * string * (var, idx, sort, bsort kind, (var, bsort, idx, sort) ty) expr) list)
 val code_labels = ref IntBinarySet.empty
 fun add_code_block (decl as (x, _, _)) =
     (push_ref code_blocks decl;
@@ -582,7 +582,7 @@ and cc_abs e_all =
 and cc_ERec (* e_all *) outer_binds bind =
     let
       val (t_x, (name_x, e)) = unBindAnnoName bind
-      val () = println $ "cc() on: " ^ fst name_x
+      val () = println $ "cc() on: " ^ fst name_x ^ "  "
       val x = fresh_evar ()
       val e = open0_e_e x e
       val (inner_binds, e) = open_collect_EAbsIT e

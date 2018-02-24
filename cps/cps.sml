@@ -328,7 +328,7 @@ fun cps (e, t_e) (k, j_k) =
       (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
       let
         val ((name_x, _), e) = unBindAnno2 bind
-        val () = println $ "cps() on: " ^ name_x
+        val () = println $ "cps() on: " ^ name_x ^ "  "
         val x = fresh_evar ()
         val e = open0_e_e x e
         val t_x = cps_t t_e

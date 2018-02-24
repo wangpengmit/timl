@@ -24,7 +24,7 @@ fun foo {i : Nat} {j | j > i} () =
       ()
     end
       
-fun id x = x
+fun id arg = arg
 
 val f = id
 
@@ -33,5 +33,8 @@ val a = f 1
 val a = f ()
 
 fun twice f x = f (f x)
+
+(* fun fact_tail (n, acc) = *)
+(*     if n  *)
 
 end

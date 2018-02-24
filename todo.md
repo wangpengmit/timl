@@ -105,6 +105,7 @@
 - [ ] Generalization has some problems with higher-order uvars.
 - [ ] Simplify modules in output.
 - [ ] Rename [long_id]'s [ID] to "Bound" and [QID] to "Free", in accordance with locally nameless representation.
+- [ ] Add native booleans. Add more integer operations (including comparisons). Add more nat operations.
 
 # To-do for MicroTiML
 
