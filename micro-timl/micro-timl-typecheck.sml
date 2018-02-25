@@ -50,7 +50,8 @@ type state = (scontext * prop) list
 val vcs : state ref = ref []
 val admits : state ref = ref []
                  
-fun check_prop ctx p = push_ref vcs (ctx, p)
+(* fun check_prop ctx p = push_ref vcs (ctx, p) *)
+fun check_prop ctx p = ()
 fun add_admit ctx p = push_ref admits (ctx, p)               
                          
 fun write_prop ctx (p, r) = check_prop ctx p
