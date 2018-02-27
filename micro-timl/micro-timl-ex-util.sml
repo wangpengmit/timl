@@ -111,6 +111,20 @@ fun EAscTimes (e, is) = foldl (swap EAscTime) e is
 val unEAbsI = unBindAnnoName
 val unEAbsT = unBindAnnoName
                 
+fun collect_EAbsI e =
+  case e of
+      EAbsI data =>
+      let
+        val (s, (name, e)) = unEAbsI data
+        val (binds, e) = collect_EAbsI e
+      in
+        ((name, s) :: binds, e)
+      end
+    | _ => ([], e)
+
+fun EAbsIs (binds, b) = foldr (EAbsI o IBindAnno) b binds
+fun TForallIs (binds, b) = foldr (TForallI o IBindAnno) b binds
+                               
 fun collect_EAbsIT e =
   case e of
       EAbsI data =>

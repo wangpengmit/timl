@@ -575,7 +575,16 @@ fun shift01_t_t a = shift_t_t 0 1 a
 type mtiml_ty = (Expr.var, bsort, idx, sort) ty
 type econtext = (string * mtiml_ty) list
                                                       
-fun add_sorting_full new (ictx, tctx, ectx(* , hctx *)) = (new :: ictx, tctx, map (mapSnd shift01_i_t) ectx(* , HeapMap.map (mapPair (shift01_i_t, shift01_i_i)) hctx *))
+fun trace_noln s a = (print s; a)
+                  
+fun add_sorting_full new (ictx, tctx, ectx(* , hctx *)) =
+    let
+      val ret = 
+          (new :: ictx, tctx, map (mapSnd (shift01_i_t o trace_noln ".")) ectx(* , HeapMap.map (mapPair (shift01_i_t, shift01_i_i)) hctx *))
+      val () = println ""
+    in
+      ret
+    end
 fun add_kinding_full new (ictx, tctx, ectx(* , hctx *)) = (ictx, new :: tctx, map (mapSnd shift01_t_t) ectx(* , HeapMap.map (mapFst shift01_t_t) hctx *))
 fun add_typing_full new (ictx, tctx, ectx(* , hctx *)) = (ictx, tctx, new :: ectx(* , hctx *))
 
@@ -655,8 +664,9 @@ fun a |> b = EAscTime (a, b)
 
 fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
   let
-    (* val () = print "typechecking: " *)
-    (* val () = println $ (* substr 0 100 $  *)ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
+    val () = print "tc() start:\n"
+    val e_input_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input
+    val () = println $ e_input_str
     val itctx = (ictx, tctx)
     fun main () =
         case e_input of
@@ -847,15 +857,64 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
         in
           (MakeEAbsT (name, k, e), MakeTForall (k, name, t), T0)
         end
-      | EAbsI data =>
+      | EAbsI _ =>
         let
-          val (s, (name, e)) = unEAbsI data
-          val s = is_wf_sort ictx s
+          val () = println "tc() on EAbsI"
+          val (binds, e) = collect_EAbsI e_input
+          val regions = map (snd o fst) binds
+          val binds = map (mapFst fst) binds
+          val () = println "before tc()/EAbsI/is_wf_sorts()"
+          fun is_wf_sorts ctx binds =
+              let
+                fun foo ((name, s), (binds, ctx)) =
+                    let
+                      val s = is_wf_sort ctx s
+                      val bind = (name, s)
+                    in
+                      (bind :: binds, bind :: ctx)
+                    end
+                val (binds, ctx) = foldl foo ([], ctx) binds
+                val binds = rev binds
+              in
+                (binds, ctx)
+              end
+          val (binds, ictx) = is_wf_sorts ictx binds
+          val () = println "before tc()/EAbsI/is_value()"
           val () = assert_b "EAbsI: is_value e" (is_value e)
-          val (e, t) = tc_against_time (add_sorting_full (fst name, s) ctx) (e, T0)
+          val () = println "before tc()/EAbsI/add_sortings_full()"
+          val () = println $ sprintf "#ictx=$  #ectx=$" [str_int $ length ictx, str_int $ length ectx]
+          val len_binds = length binds
+          val ectx = map (mapSnd (shift_i_t 0 len_binds o trace_noln ".")) ectx
+          val () = println ""
+          val ctx = (ictx, tctx, ectx)
+          val () = println "before tc()/EAbsI/tc_against_time()"
+          val (e, t) = tc_against_time ctx (e, T0)
+          val () = println "before tc()/EAbsI/making result"
+          val binds = ListPair.mapEq (fn ((name, anno), r) => ((name, r), anno)) (binds, regions)
+          val result = (EAbsIs (binds, e), TForallIs (binds, t), T0)
+          val () = println "after tc()/EAbsI/making result"
         in
-          (MakeEAbsI (name, s, e), MakeTForallI (s, name, t), T0)
+          result
         end
+      (* | EAbsI data => *)
+      (*   let *)
+      (*     val () = println "tc() on EAbsI" *)
+      (*     val (s, (name, e)) = unEAbsI data *)
+      (*     val () = println "before is_wf_sort()" *)
+      (*     val s = is_wf_sort ictx s *)
+      (*     val () = println "before is_value()" *)
+      (*     val () = assert_b "EAbsI: is_value e" (is_value e) *)
+      (*     val () = println "before add_sorting_full()" *)
+      (*     val () = println $ sprintf "#ictx=$  #ectx=$" [str_int $ length ictx, str_int $ length ectx] *)
+      (*     val ctx = add_sorting_full (fst name, s) ctx *)
+      (*     val () = println "before tc_against_time()" *)
+      (*     val (e, t) = tc_against_time ctx (e, T0) *)
+      (*     val () = println "before making result" *)
+      (*     val result = (MakeEAbsI (name, s, e), MakeTForallI (s, name, t), T0) *)
+      (*     val () = println "after making result" *)
+      (*   in *)
+      (*     result *)
+      (*   end *)
       | EAppT (e, t1) =>
         let
           val (e, t_e, i) = tc ctx e
@@ -1005,9 +1064,12 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
         end
       | EAscType (e, t2) =>
         let
+          val () = println "tc() on EAscType"
           val (e, t1, i) = tc ctx e
           val t2 = kc_against_kind itctx (t2, KType)
+          val () = println "before tc()/EAscType/is_eq_ty()"
           val () = is_eq_ty itctx (t1, t2)
+          val () = println "after tc()/EAscType/is_eq_ty()"
         in
           (e %: t2, t2, i)
         end
@@ -1096,41 +1158,66 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
                       | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
                       | MTCError m => raise MTCError (m ^ extra_msg ())
                       | Impossible m => raise Impossible (m ^ extra_msg ())
-    (* val () = print "tc-done: " *)
-    (* val () = println $ substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
+    val () = print "tc() finished:\n"
+    (* val () = println $ substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input *)
+    val () = println $ e_input_str
   in
     (e_output, t, i)
   end
 
 and tc_against_ty (ctx as (ictx, tctx, _(* , _ *))) (e, t) =
     let
-      (* val () = println $ sprintf "typechecking against type:\n  $\n  $" [ *)
-      (*       substr 0 10000 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e, *)
-      (*       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
+      val () = print "tc_against_ty() start:\n"
+      (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
+      (* val t_str = substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
+      (* val () = println $ sprintf "  $\n  $\n" [ *)
+      (*       e_str, *)
+      (*       t_str *)
       (*     ] *)
       val (e, t', i) = tc ctx e
-      (* val () = println $ sprintf "tc_against_ty() to cmp types:\n  $  $" [ *)
-      (*       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t', *)
-      (*       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
+      (* val () = print "tc_against_ty() to compare types:\n" *)
+      (* val () = println $ sprintf "  $\n  $\n" [ *)
+      (*       substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t', *)
+      (*       t_str *)
       (*     ] *)
+      val () = println "before tc_against_ty()/is_eq_ty()"
       val () = is_eq_ty (ictx, tctx) (t', t)
-      (* val () = println "tc_against_ty() finished" *)
+      val () = println "tc_against_ty() finished:"
+      (* val () = println e_str *)
     in
       (e, i)
     end
     
 and tc_against_time (ctx as (ictx, tctx, _(* , _ *))) (e, i) =
     let
+      val () = print "tc_against_time() start:\n"
+      (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
+      (* val () = println e_str *)
       val (e, t, i') = tc ctx e
+      val () = println "before tc_against_time()/check_prop()"
       val () = check_prop ictx (i' %<= i)
+      val () = println "tc_against_time() finished:"
+      (* val () = println e_str *)
     in
       (e, t)
     end
     
 and tc_against_ty_time (ctx as (ictx, tctx, _(* , _ *))) (e, t, i) =
     let
+      val () = print "tc_against_ty_time() start:\n"
+      (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
+      (* val () = println e_str *)
       val (e, t') = tc_against_time ctx (e, i)
+      (* val () = print "tc_against_ty_time() to compare types:\n" *)
+      (* val t_str = substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
+      (* val () = println $ sprintf "  $\n  $\n" [ *)
+      (*       substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t', *)
+      (*       t_str *)
+      (*     ] *)
+      val () = println "before tc_against_ty_time()/is_eq_ty()"
       val () = is_eq_ty (ictx, tctx) (t', t)
+      val () = println "tc_against_ty_time() finished:"
+      (* val () = println e_str *)
     in
       e
     end
