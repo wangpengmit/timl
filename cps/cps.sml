@@ -753,6 +753,7 @@ infixr 0 !!
          
 fun test1 dirname =
   let
+    val () = println "CPS.UnitTest started"
     val filename = join_dir_file (dirname, "cps-test1.pkg")
     val filenames = ParseFilename.expand_pkg (fn msg => raise Impossible msg) filename
     open Parser
@@ -819,6 +820,7 @@ fun test1 dirname =
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
+    val () = println "CPS.UnitTest finished"
   in
     ((* t, e *))
   end

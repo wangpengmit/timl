@@ -954,6 +954,7 @@ fun test3 dirname =
 
 fun test4 dirname =
   let
+    val () = println "TiML2MicroTiML.UnitTest started"
     val filename = join_dir_file (dirname, "to-micro-timl-test4.pkg")
     val filenames = ParseFilename.expand_pkg (fn msg => raise Impossible msg) filename
     open Parser
@@ -981,6 +982,7 @@ fun test4 dirname =
     val e = export ToStringUtil.empty_ctx e
     val () = pp_e e
     val () = println ""
+    val () = println "TiML2MicroTiML.UnitTest finished"
   in
     ((* t, e *))
   end

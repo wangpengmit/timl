@@ -589,6 +589,7 @@ fun force_t (ni_ref, nt_ref, t_ref) =
     val nt = !nt_ref
     val t = !t_ref
     val changed = false
+    fun trace_around _ _ f = f ()
     val (t, changed) = if nt > 0 then (trace_around "^" "$" (fn () => shift_t_t 0 nt t), true) else (t, changed)
     val (t, changed) = if ni > 0 then (trace_around "^" "$" (fn () => shift_i_t 0 ni t), true) else (t, changed)
     val () = if changed then
@@ -1357,6 +1358,7 @@ infixr 0 !!
          
 fun test1 dirname =
   let
+    val () = println "MicroTiMLTypecheck.UnitTest started"
     val filename = join_dir_file (dirname, "micro-timl-tc-test1.pkg")
     val filenames = ParseFilename.expand_pkg (fn msg => raise Impossible msg) filename
     open Parser
@@ -1404,6 +1406,7 @@ fun test1 dirname =
     val () = println $ "#VCs: " ^ str_int (length vcs)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
+    val () = println "MicroTiMLTypecheck.UnitTest finished"
   in
     ((* t, e *))
   end

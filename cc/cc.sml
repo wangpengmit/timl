@@ -489,12 +489,14 @@ fun apply_TForallIT b args =
       | _ => raise Impossible "apply_TForallIT"
 
 fun cc e =
-    let
-      (* val () = println $ "CC on " ^ (substr 0 400 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
-    in
+  let
+    val e_str = (* substr 0 400 $  *)ExportPP.pp_e_to_string (SOME 2, SOME 1) $ ExportPP.export ([], [], [], []) e
+    val () = println $ "cc() started: " ^ e_str
+    val e =
     case e of
         EBinOp (EBApp, e1, e2) =>
         let
+          val () = println "cc() on EApp"
           val (e1, itargs) = collect_EAppIT e1
           (* val (e1, t_e1) = assert_EAscType e1 *)
           (* val t_e1 = cc_t t_e1 *)
@@ -505,8 +507,11 @@ fun cc e =
           val z_code = fresh_evar ()
           val z_env = fresh_evar ()
           val e = EAppITs (EV z_code, map (map_inr cc_t) itargs) %$ EPair (EV z_env, cc e2)
+          val () = println $ "cc()/EApp: before ELetManyClose()"
           val e = ELetManyClose ([(z_code, "z_code", EFst $ EV z), (z_env, "z_env", ESnd $ EV z)], e)
+          val () = println $ "cc()/EApp: after ELetManyClose()"
           val e = EUnpackClose (cc e1, (gamma, "'c"), (z, "z"), e)
+          val () = println "cc() done on EApp"
         in
           e
         end
@@ -548,16 +553,22 @@ fun cc e =
       | EPackI (tp, i, e) => EPackI (cc_t tp, i, cc e)
       | EUnpackI (e1, bind) =>
         let
+          val () = println "before cc()/EUnpackI/cc#1"
           val e1 = cc e1
+          val () = println "after cc()/EUnpackI/cc#1"
           val (name_a, bind) = unBindSimpName bind
           val (name_x, e2) = unBindSimpName bind
           val a = fresh_ivar ()
           val x = fresh_evar ()
           val e2 = open0_i_e a e2
           val e2 = open0_e_e x e2
+          val () = println "before cc()/EUnpackI/cc#2"
           val e2 = cc e2
+          val () = println "after cc()/EUnpackI/cc#2"
+          val e = EUnpackIClose (e1, (a, fst name_a), (x, fst name_x), e2)
+          val () = println "done cc()/EUnpackI"
         in
-          EUnpackIClose (e1, (a, fst name_a), (x, fst name_x), e2)
+          e
         end
       | EVar _ => e
       | EConst _ => e
@@ -567,11 +578,16 @@ fun cc e =
       | ENever t => ENever (cc_t t)
       | EBuiltin t => EBuiltin (cc_t t)
       | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
-    end
+    val () = println $ "cc() finished: " ^ e_str
+  in
+    e
+  end
 
 and cc_abs e_all =
     let
+      val () = println $ "cc_abs(): before open_collect_EAbsIT()"
       val (binds, e) = open_collect_EAbsIT e_all
+      val () = println $ "cc_abs(): after open_collect_EAbsIT()"
     in
       case e of
           ERec bind => cc_ERec (* e_all *) binds bind
@@ -597,6 +613,7 @@ and cc_ERec (* e_all *) outer_binds bind =
       val (_, t_arrow) = collect_TForallIT_open_with inner_binds t_x
       val () = println $ "cc(): after collect_TForallIT_open_with()"
       val (_, i, _) = assert_TArrow t_arrow
+      val () = println $ "cc(): before getting free vars"
       val excluded = IntBinarySet.addList (!code_labels, map unFree_e [x, z])
       val ys_anno = free_evars_with_anno excluded e
       val (ys, sigmas) = unzip $ ys_anno
@@ -613,6 +630,7 @@ and cc_ERec (* e_all *) outer_binds bind =
             | _ => false
       val betas = map inl free_ivars @ map inr free_tvars
       val betas = diff eq_bind betas outer_inner_binds
+      val () = println $ "cc(): after getting free vars"
       val t_env = TRecord sigmas
       val t_z = cc_t t_z
       val t_arrow = TArrow (TProd (t_env, t_z), i, TUnit)
@@ -628,7 +646,9 @@ and cc_ERec (* e_all *) outer_binds bind =
       val def_x = EPack (cc_t t_x, t_env, EPair (EAppITs_binds (EV z_code, betas @ outer_binds), EV z_env))
       val len_ys = length ys
       val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ERecordProj (len_ys, i) $ EV z_env)) ys
+      val () = println $ "cc(): before ELetManyClose()"
       val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, e)
+      val () = println $ "cc(): after ELetManyClose()"
       val e = EAbsPairClose ((z_env, "z_env", t_env), (z, fst name_z, t_z), e)
       val betas_outer_inner_binds = betas @ outer_inner_binds
       val () = println $ "cc(): before close_EAbsITs()"
@@ -648,6 +668,7 @@ and cc_ERec (* e_all *) outer_binds bind =
       val x_v_code = (x_code, fst name_x ^ "_code", v_code)
       val () = add_code_block x_v_code
       (* val e = ELetClose (x_v_code, e) *)
+      val () = println $ "cc() done on: " ^ fst name_x
     in
       e
     end
@@ -824,6 +845,7 @@ open TestUtil
        
 fun test1 dirname =
   let
+    val () = println "CC.UnitTest started"
     val filename = join_dir_file (dirname, "cc-test1.pkg")
     val filenames = ParseFilename.expand_pkg (fn msg => raise Impossible msg) filename
     open Parser
@@ -916,6 +938,7 @@ fun test1 dirname =
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
                      
+    val () = println "CC.UnitTest finished"
   in
     ((* t, e *))
   end
