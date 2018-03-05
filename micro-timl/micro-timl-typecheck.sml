@@ -400,6 +400,7 @@ fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
 
 end
 
+fun ictx_names ictx = map fst ictx
 fun itctx_names (ictx, tctx) = (map fst ictx, map fst tctx)
 fun ctx_names (ictx, tctx, ectx(* , _ *)) = (map fst ictx, map fst tctx, [], map fst ectx)
                                    
@@ -580,9 +581,10 @@ type lazy_ty = int ref * int ref * mtiml_ty ref
 type econtext = (string * lazy_ty) list
 
 fun new_lazy_t t = (ref 0, ref 0, ref t)
-fun lazy_shift_i_t n (refs as (ni, _, _)) = (binop_ref (curry op+) ni n; refs)
+(* New refs should be created here, because the old refs may still be used later in unshifted contexts. Refs are only for avoid duplicate computations when we retrieve a variable more than once. [lazy_ty] can be defined just as [int * int * mtiml_ty], in which case every retrieval needs to perform shifting (potentially expensive). *)
+fun lazy_shift_i_t n (ni, nt, t) = (ref (!ni+n), ref (!nt), ref (!t))
 fun lazy_shift01_i_t a = lazy_shift_i_t 1 a
-fun lazy_shift01_t_t (refs as (_, nt, _)) = (inc_ref nt; refs)
+fun lazy_shift01_t_t (ni, nt, t) = (ref (!ni), ref (!nt+1), ref (!t))
 fun force_t (ni_ref, nt_ref, t_ref) =
   let
     val ni = !ni_ref
@@ -1179,16 +1181,20 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           tc ctx e
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input)
-    fun extra_msg () = "\nwhen typechecking " ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input)
+    fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input)
     val (e_output, t, i) = main ()
                  handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
                       | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())
                       | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
                       | MTCError m => raise MTCError (m ^ extra_msg ())
                       | Impossible m => raise Impossible (m ^ extra_msg ())
-    val () = print "tc() finished:\n"
+    val () = println "tc() finished:"
     (* val () = println $ substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input *)
     val () = println $ e_input_str
+    (* val () = println "of type:" *)
+    (* val () = println $ (* substr 0 100 $  *)ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
+    (* val () = println "of time:" *)
+    (* val () = println $ (* substr 0 100 $  *)ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) i *)
   in
     (e_output, t, i)
   end
