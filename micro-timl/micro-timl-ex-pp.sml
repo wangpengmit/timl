@@ -71,10 +71,18 @@ fun str_e str_var str_i e =
       | _ => raise Unimpl ""
   end
     
-fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
+(* depth=NONE means no depth limit *)
+fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
   let
-    val pp_e = pp_e params s
-    val pp_t = pp_t s
+    val (reached_depth_limit, depth) =
+        case depth of
+            NONE => (false, NONE)
+          | SOME n => if n <= 0 then
+                        (true, NONE)
+                      else
+                        (false, SOME (n-1))
+    val pp_e = pp_e params s (depth_t, depth)
+    val pp_t = pp_t s depth_t
     fun space () = PP.space s 1
     fun add_space a = (space (); a)
     fun str v = PP.string s v
@@ -115,6 +123,8 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
       )
     fun pp_list_bracket f ls = pp_bracket $ (fn () => pp_list f ls)
   in
+    if reached_depth_limit then ()
+    else
     case e of
         EVar x =>
         (* ( *)
@@ -408,18 +418,39 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
           str ")";
           close_box ()
         )
-      | EAbsI bind =>
+      (* | EAbsI bind => *)
+      (*   let *)
+      (*     val (name, s, e) = get_bind_anno bind *)
+      (*   in *)
+      (*     open_vbox (); *)
+      (*     open_hbox (); *)
+      (*     str "EAbsI"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     str name; *)
+      (*     comma (); *)
+      (*     str $ str_s s; *)
+      (*     close_box (); *)
+      (*     comma (); *)
+      (*     pp_e e; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   end *)
+      | EAbsI _ =>
         let
-          val (name, s, e) = get_bind_anno bind
+          val (binds, e) = MicroTiMLExUtil.collect_EAbsI e
         in
           open_vbox ();
           open_hbox ();
           str "EAbsI";
           space ();
           str "(";
-          str name;
-          comma ();
-          str $ str_s s;
+          foldl (fn ((name, s), ()) =>
+                    (str $ fst name;
+                     str ":"; space ();
+                     str $ str_s s;
+                     comma ()
+                )) () binds;
           close_box ();
           comma ();
           pp_e e;
@@ -649,9 +680,9 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s e =
 
 open WithPP
        
-fun pp_e_to_fn params s e = withPP ("", 80, s) (fn s => pp_e params s e)
+fun pp_e_to_fn params s ds e = withPP ("", 80, s) (fn s => pp_e params s ds e)
 fun pp_e_fn params = pp_e_to_fn params TextIO.stdOut
-fun pp_e_to_string_fn params e =
-  pp_to_string "pp_e_to_string.tmp" (fn os => pp_e_to_fn params os e)
+fun pp_e_to_string_fn params ds e =
+  pp_to_string "pp_e_to_string.tmp" (fn os => pp_e_to_fn params os ds e)
     
 end

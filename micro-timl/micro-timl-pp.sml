@@ -24,10 +24,18 @@ fun str_ty_bin_op opr =
   case opr of
       TBProd => "prod"
     | TBSum => "sum"
-      
-fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s t =
+
+(* depth=NONE means no depth limit *)
+fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
   let
-    val pp_t = pp_t params s
+    val (reached_depth_limit, depth) =
+        case depth of
+            NONE => (false, NONE)
+          | SOME n => if n <= 0 then
+                        (true, NONE)
+                      else
+                        (false, SOME (n-1))
+    val pp_t = pp_t params s depth
     fun space () = PP.space s 1
     fun add_space a = (space (); a)
     fun str v = PP.string s v
@@ -57,6 +65,8 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s t =
             pp_list f xs
           )
   in
+    if reached_depth_limit then ()
+    else
     case t of
         TVar (x, ks) =>
         (* ( *)
@@ -238,11 +248,11 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s t =
 
 open WithPP
        
-fun pp_t_fn params t = withPP ("", 80, TextIO.stdOut) (fn s => pp_t params s t)
+fun pp_t_fn params d t = withPP ("", 80, TextIO.stdOut) (fn s => pp_t params s d t)
 val pp_t_to_fn = pp_t
-fun pp_t_to_os_fn params os t = withPP ("", 80, os) (fn s => pp_t params s t)
-fun pp_t_to_string_fn params t =
-  pp_to_string "pp_t_to_string.tmp" (fn os => pp_t_to_os_fn params os t)
+fun pp_t_to_os_fn params os d t = withPP ("", 80, os) (fn s => pp_t params s d t)
+fun pp_t_to_string_fn params d t =
+  pp_to_string "pp_t_to_string.tmp" (fn os => pp_t_to_os_fn params os d t)
                               
 fun str_proj opr =
   case opr of

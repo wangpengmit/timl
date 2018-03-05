@@ -363,6 +363,9 @@ fun repeat_app f n = Range.app (fn _ => f ()) (Range.zero_to n)
 datatype empty = Empty of empty
 fun exfalso (x : empty) = raise Impossible "type empty shouldn't have inhabitant"
 
+fun inc n = n + 1
+fun dec n = n - 1
+                  
 fun unop_ref f r = r := f (!r)
 fun binop_ref f r x = r := f (!r) x
 fun inc_ref r = r := !r + 1

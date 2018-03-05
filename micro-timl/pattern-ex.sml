@@ -877,9 +877,9 @@ fun test2 () =
     val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, pp_e_to_string) (EV 0) branches
     open ToStringRaw
     open ToString
-    fun str2pp f s t = PP.string s $ f t
+    fun str2pp f s _ t = PP.string s $ f t
     val pp_e = pp_e_fn (str_int, str_raw_i, str_raw_s, str_raw_k, str2pp str_raw_mt)
-    val () = pp_e e
+    val () = pp_e (NONE, NONE) e
                   
     (* val branches = map remove_anno branches *)
     (* val branches = map (remove_constr shift_i_e) branches *)

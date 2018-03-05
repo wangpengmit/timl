@@ -339,11 +339,11 @@ fun str_s a =
   ToString.str_s Gctx.empty [] a
   (* const_fun "<sort>" a *)
 val str = PP.string
-fun pp_t_to s b =
+fun pp_t_to s depth b =
   (* MicroTiMLPP.pp_t_to_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") s b *)
   str s "<ty>"
-fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
-fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") b
+fun pp_t a = MicroTiMLPP.pp_t_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") a
+fun pp_t_to_string a = MicroTiMLPP.pp_t_to_string_fn (str_var, const_fun "<bs>", str_i, str_s, const_fun "<kind>") a
 fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
     str_var,
     str_i,
@@ -406,7 +406,7 @@ fun on_e (e : S.expr) =
         (*   in *)
         (*     e' *)
         (*   end *)
-        val e2 = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, PP_E.pp_e_to_string) (EV 0) pns
+        val e2 = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, PP_E.pp_e_to_string (NONE, NONE)) (EV 0) pns
       in
         ELet (e, BindSimp (name, e2))
       end
@@ -846,7 +846,7 @@ fun pp_e a = MicroTiMLExPP.pp_e_fn (
     str_s,
     const_fun "<kind>",
     pp_t
-  ) a
+  ) (NONE, NONE) a
                                  
 fun test1 dirname =
   let

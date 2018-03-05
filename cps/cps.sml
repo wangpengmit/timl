@@ -97,7 +97,7 @@ fun assert_TSum t =
 fun assert_TAbsT t =
   case t of
       TAbsT bind => unBindAnno bind
-    | _ => raise assert_fail $ "assert_TAbsT; got: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+    | _ => raise assert_fail $ "assert_TAbsT; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t)
 fun assert_TAbsI t =
   case t of
       TAbsI bind => unBindAnno bind
@@ -105,11 +105,11 @@ fun assert_TAbsI t =
 fun assert_TForall t =
   case t of
       TQuan (Forall, bind) => unBindAnno bind
-    | _ => raise assert_fail $ "assert_TForall; got: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+    | _ => raise assert_fail $ "assert_TForall; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t)
 fun assert_TForallI t =
   case t of
       TQuanI (Forall, bind) => unBindAnno bind
-    | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+    | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t)
 
 (* fun assert_and_reduce_beta e = *)
 (*   case e of *)
@@ -123,7 +123,7 @@ fun assert_TForallI t =
 
 fun assert_and_reduce_letxx e =
     let
-      fun error () = raise assert_fail $ "assert_and_reduce_letxx: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
+      fun error () = raise assert_fail $ "assert_and_reduce_letxx: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
     in
       case e of
           ELet (e1, bind) =>
@@ -355,7 +355,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_e = open0_t_t alpha t_e
         val j = fresh_ivar ()
         val c = fresh_evar ()
-        val () = assert_b_m (fn () => "cps/EAbsT/is_value: " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)) $ is_value e
+        val () = assert_b_m (fn () => "cps/EAbsT/is_value: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)) $ is_value e
         val (e, _) = cps (e, t_e) (EV c, IV j)
         val e = EAscTime (e, blowup_time_t (IV j))
         val t_e = cps_t t_e
@@ -679,7 +679,7 @@ fun cps (e, t_e) (k, j_k) =
     (*   end *)
     | _ =>
       let
-        val s = (* substr 0 100 $  *)ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e
+        val s = (* substr 0 100 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e
       in
         raise Unimpl $ "cps() on: " ^ s
       end
@@ -796,26 +796,26 @@ fun test1 dirname =
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
-    val () = pp_t $ export_t ([], []) t
+    val () = pp_t NONE $ export_t ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
     val () = println ""
                      
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)
     val () = println "Finished CPS conversion ..."
-    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
     val () = println ""
     val () = println "Started MicroTiML typechecking #2 ..."
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
-    val () = pp_t $ export_t ([], []) t
+    val () = pp_t NONE $ export_t ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i

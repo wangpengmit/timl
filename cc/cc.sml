@@ -173,7 +173,7 @@ fun free_ivars_with_anno_e e =
                  handle
                  TopoSortFailed =>
                  let
-                   val msg = sprintf "topo_sort failed on expr: $\n" [ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e]
+                   val msg = sprintf "topo_sort failed on expr: $\n" [ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e]
                    val msg = msg ^ sprintf "with dep graph: $\n" [str_ls (str_pair (str_int, str_ls str_int o TopoSort.SU.to_list)) $ IntBinaryMap.listItemsi in_graph]
                  in
                    raise Impossible msg
@@ -566,7 +566,7 @@ fun cc e =
       | EAscTime (e, i) => EAscTime (cc e, i)
       | ENever t => ENever (cc_t t)
       | EBuiltin t => EBuiltin (cc_t t)
-      | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
+      | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
     end
 
 and cc_abs e_all =
@@ -856,7 +856,7 @@ fun test1 dirname =
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
-    val () = pp_t $ export_t ([], []) t
+    val () = pp_t NONE $ export_t ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
@@ -875,11 +875,11 @@ fun test1 dirname =
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
-    val () = pp_t $ export_t ([], []) t
+    val () = pp_t NONE $ export_t ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
-    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
     val () = println ""
                      
     val () = println "Started CC ..."
@@ -887,7 +887,7 @@ fun test1 dirname =
     val () = println "Finished CC"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string $ export ToStringUtil.empty_ctx e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ToStringUtil.empty_ctx e
     val () = write_file ("cc-unit-test-result.tmp", e_str)
     val () = println e_str
     val () = println ""
@@ -898,7 +898,7 @@ fun test1 dirname =
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #3"
     val () = println "Type:"
-    val () = pp_t $ export_t ([], []) t
+    val () = pp_t NONE $ export_t ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i

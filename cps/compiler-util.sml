@@ -72,7 +72,7 @@ fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
 fun assert_TArrow t =
   case t of
       TArrow a => a
-    | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t)
+    | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t)
                  
 fun assert_EAbs e =
   case e of
@@ -85,7 +85,7 @@ fun assert_EAscType e =
   in
     case e of
         EAscType (e, t) => (EAscTimes (e, is), t)
-      | _ => raise assert_fail $ "assert_EAscType; got:\n" ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
+      | _ => raise assert_fail $ "assert_EAscType; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
   end
     
 fun assert_EAscTime e =
@@ -94,7 +94,7 @@ fun assert_EAscTime e =
   in
     case e of
         EAscTime (e, i) => (EAscTypes (e, ts), i)
-      | _ => raise assert_fail $ "assert_EAscTime; got:\n" ^ (ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e)
+      | _ => raise assert_fail $ "assert_EAscTime; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
   end
     
 fun EV x = EVar $ make_Free_e x

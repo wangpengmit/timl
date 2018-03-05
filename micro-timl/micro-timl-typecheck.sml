@@ -408,8 +408,8 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
     let
       val t = whnf ctx t
       val t' = whnf ctx t'
-      fun t_str () = ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t
-      fun t'_str () = ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t'
+      fun t_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names ctx) t
+      fun t'_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names ctx) t'
       val assert_b = fn b => flip assert_b_m b $ (fn () => sprintf "Can't unify types:\n$\nand\n$\n" [t_str (), t'_str ()])
       (* val () = println $ sprintf "comparing types:\n  $  $" [ *)
       (*       t_str (), *)
@@ -506,8 +506,8 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           end
         | _ => raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
                      [
-                       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t,
-                       ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names ctx) t'
+                       ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names ctx) t,
+                       ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names ctx) t'
                      ]
     end      
 
@@ -851,7 +851,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val t_e = whnf itctx t_e
           val (t1, t2) = case t_e of
                              TBinOp (TBSum, t1, t2) => (t1, t2)
-                           | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (map fst ictx, map fst tctx) t_e)
+                           | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t (map fst ictx, map fst tctx) t_e)
           val (e1, t1, i1) = tc (add_typing_full (fst name1, t1) ctx) e1
           val (e2, t2, i2) = tc (add_typing_full (fst name2, t2) ctx) e2
           val () = is_eq_ty itctx (t1, t2)
@@ -1017,10 +1017,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val t_e1 = whnf itctx t_e1
           val (s, (_, t)) = case t_e1 of
                                 TQuanI (Exists _, data) => unTQuanI data
-                              | _ => raise MTCError $ mismatch "EUnpackI" (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names itctx) t_e1) "TQuanI (Exists, _)"
+                              | _ => raise MTCError $ mismatch "EUnpackI" (ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names itctx) t_e1) "TQuanI (Exists, _)"
           val (e2, t2, i2) = tc (add_typing_full (fst ename, t) $ add_sorting_full (fst iname, s) ctx) e2
           val t2 = forget01_i_t t2
-                   handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_sorting_it (fst iname, s) itctx) t2))
+                   handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names $ add_sorting_it (fst iname, s) itctx) t2))
           val i2 = forget01_i_i i2
                    handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (fst iname :: map fst ictx) i2))
         in
@@ -1180,8 +1180,8 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           tc ctx e
         end
-      | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input)
-    fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input)
+      | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)
+    fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)
     val (e_output, t, i) = main ()
                  handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
                       | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())
@@ -1391,7 +1391,7 @@ fun test1 dirname =
     val () = println "Started translating ..."
     val e = trans_e e
     val () = println "Finished translating"
-    val () = pp_e $ export ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
     val () = println ""
     open MicroTiMLTypecheck
     open TestUtil
@@ -1399,7 +1399,7 @@ fun test1 dirname =
     val ((_, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking"
     val () = println "Type:"
-    val () = pp_t $ export_t ([], []) t
+    val () = pp_t NONE $ export_t ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
