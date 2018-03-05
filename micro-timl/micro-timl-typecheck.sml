@@ -605,8 +605,8 @@ fun force_t (ni_ref, nt_ref, t_ref) =
 fun add_sorting_full new (ictx, tctx, ectx) =
     let
       val ret = 
-          (new :: ictx, tctx, map (mapSnd (lazy_shift01_i_t o trace_noln ".")) ectx)
-      val () = println ""
+          (new :: ictx, tctx, map (mapSnd (lazy_shift01_i_t (* o trace_noln "." *))) ectx)
+      (* val () = println "" *)
     in
       ret
     end
@@ -689,9 +689,9 @@ fun a |> b = EAscTime (a, b)
 
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
-    val () = print "tc() start:\n"
-    val e_input_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input
-    val () = println $ e_input_str
+    (* val () = print "tc() start:\n" *)
+    (* val e_input_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input *)
+    (* val () = println $ e_input_str *)
     val itctx = (ictx, tctx)
     fun main () =
         case e_input of
@@ -889,11 +889,11 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         end
       | EAbsI _ =>
         let
-          val () = println "tc() on EAbsI"
+          (* val () = println "tc() on EAbsI" *)
           val (binds, e) = collect_EAbsI e_input
           val regions = map (snd o fst) binds
           val binds = map (mapFst fst) binds
-          val () = println "before tc()/EAbsI/is_wf_sorts()"
+          (* val () = println "before tc()/EAbsI/is_wf_sorts()" *)
           fun is_wf_sorts ctx binds =
               let
                 fun foo ((name, s), (binds, ctx)) =
@@ -909,20 +909,20 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                 (binds, ctx)
               end
           val (binds, ictx) = is_wf_sorts ictx binds
-          val () = println "before tc()/EAbsI/is_value()"
+          (* val () = println "before tc()/EAbsI/is_value()" *)
           val () = assert_b "EAbsI: is_value e" (is_value e)
-          val () = println "before tc()/EAbsI/add_sortings_full()"
-          val () = println $ sprintf "#ictx=$  #ectx=$" [str_int $ length ictx, str_int $ length ectx]
+          (* val () = println "before tc()/EAbsI/add_sortings_full()" *)
+          (* val () = println $ sprintf "#ictx=$  #ectx=$" [str_int $ length ictx, str_int $ length ectx] *)
           val len_binds = length binds
-          val ectx = map (mapSnd (lazy_shift_i_t len_binds o trace_noln ".")) ectx
-          val () = println ""
+          val ectx = map (mapSnd (lazy_shift_i_t len_binds (* o trace_noln "." *))) ectx
+          (* val () = println "" *)
           val ctx = (ictx, tctx, ectx)
-          val () = println "before tc()/EAbsI/tc_against_time()"
+          (* val () = println "before tc()/EAbsI/tc_against_time()" *)
           val (e, t) = tc_against_time ctx (e, T0)
-          val () = println "before tc()/EAbsI/making result"
+          (* val () = println "before tc()/EAbsI/making result" *)
           val binds = ListPair.mapEq (fn ((name, anno), r) => ((name, r), anno)) (binds, regions)
           val result = (EAbsIs (binds, e), TForallIs (binds, t), T0)
-          val () = println "after tc()/EAbsI/making result"
+          (* val () = println "after tc()/EAbsI/making result" *)
         in
           result
         end
@@ -1094,12 +1094,12 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         end
       | EAscType (e, t2) =>
         let
-          val () = println "tc() on EAscType"
+          (* val () = println "tc() on EAscType" *)
           val (e, t1, i) = tc ctx e
           val t2 = kc_against_kind itctx (t2, KType)
-          val () = println "before tc()/EAscType/is_eq_ty()"
+          (* val () = println "before tc()/EAscType/is_eq_ty()" *)
           val () = is_eq_ty itctx (t1, t2)
-          val () = println "after tc()/EAscType/is_eq_ty()"
+          (* val () = println "after tc()/EAscType/is_eq_ty()" *)
         in
           (e %: t2, t2, i)
         end
@@ -1188,9 +1188,8 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                       | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
                       | MTCError m => raise MTCError (m ^ extra_msg ())
                       | Impossible m => raise Impossible (m ^ extra_msg ())
-    val () = println "tc() finished:"
-    (* val () = println $ substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input *)
-    val () = println $ e_input_str
+    (* val () = println "tc() finished:" *)
+    (* val () = println $ e_input_str *)
     (* val () = println "of type:" *)
     (* val () = println $ (* substr 0 100 $  *)ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
     (* val () = println "of time:" *)
@@ -1201,7 +1200,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
 
 and tc_against_ty (ctx as (ictx, tctx, _(* , _ *))) (e, t) =
     let
-      val () = print "tc_against_ty() start:\n"
+      (* val () = print "tc_against_ty() start:\n" *)
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
       (* val t_str = substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
       (* val () = println $ sprintf "  $\n  $\n" [ *)
@@ -1214,9 +1213,9 @@ and tc_against_ty (ctx as (ictx, tctx, _(* , _ *))) (e, t) =
       (*       substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t', *)
       (*       t_str *)
       (*     ] *)
-      val () = println "before tc_against_ty()/is_eq_ty()"
+      (* val () = println "before tc_against_ty()/is_eq_ty()" *)
       val () = is_eq_ty (ictx, tctx) (t', t)
-      val () = println "tc_against_ty() finished:"
+      (* val () = println "tc_against_ty() finished:" *)
       (* val () = println e_str *)
     in
       (e, i)
@@ -1224,13 +1223,13 @@ and tc_against_ty (ctx as (ictx, tctx, _(* , _ *))) (e, t) =
     
 and tc_against_time (ctx as (ictx, tctx, _(* , _ *))) (e, i) =
     let
-      val () = print "tc_against_time() start:\n"
+      (* val () = print "tc_against_time() start:\n" *)
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
       (* val () = println e_str *)
       val (e, t, i') = tc ctx e
-      val () = println "before tc_against_time()/check_prop()"
+      (* val () = println "before tc_against_time()/check_prop()" *)
       val () = check_prop ictx (i' %<= i)
-      val () = println "tc_against_time() finished:"
+      (* val () = println "tc_against_time() finished:" *)
       (* val () = println e_str *)
     in
       (e, t)
@@ -1238,7 +1237,7 @@ and tc_against_time (ctx as (ictx, tctx, _(* , _ *))) (e, i) =
     
 and tc_against_ty_time (ctx as (ictx, tctx, _)) (e, t, i) =
     let
-      val () = print "tc_against_ty_time() start:\n"
+      (* val () = print "tc_against_ty_time() start:\n" *)
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
       (* val () = println e_str *)
       val (e, t') = tc_against_time ctx (e, i)
@@ -1248,9 +1247,9 @@ and tc_against_ty_time (ctx as (ictx, tctx, _)) (e, t, i) =
       (*       substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t', *)
       (*       t_str *)
       (*     ] *)
-      val () = println "before tc_against_ty_time()/is_eq_ty()"
+      (* val () = println "before tc_against_ty_time()/is_eq_ty()" *)
       val () = is_eq_ty (ictx, tctx) (t', t)
-      val () = println "tc_against_ty_time() finished:"
+      (* val () = println "tc_against_ty_time() finished:" *)
       (* val () = println e_str *)
     in
       e
