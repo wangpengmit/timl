@@ -514,8 +514,6 @@ fun remove_var p =
     
 (***************** the "remove_constr" visitor  **********************)    
 
-fun unop_ref f r = r := f (!r)
-                             
 fun shift_imposs msg _ _ _ = raise Impossible msg
 
 fun PnUnpackIMany (names, p) = foldr PnUnpackI p names

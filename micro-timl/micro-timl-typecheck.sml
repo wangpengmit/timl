@@ -572,21 +572,44 @@ fun shift01_t_t a = shift_t_t 0 1 a
 (* structure IntMap = IntBinaryMap *)
 (* structure HeapMap = IntMap *)
 
-type mtiml_ty = (Expr.var, bsort, idx, sort) ty
-type econtext = (string * mtiml_ty) list
-                                                      
 fun trace_noln s a = (print s; a)
                   
-fun add_sorting_full new (ictx, tctx, ectx(* , hctx *)) =
+type mtiml_ty = (Expr.var, bsort, idx, sort) ty
+type lazy_ty = int ref * int ref * mtiml_ty ref
+                                     
+type econtext = (string * lazy_ty) list
+
+fun new_lazy_t t = (ref 0, ref 0, ref t)
+fun lazy_shift_i_t n (refs as (ni, _, _)) = (binop_ref (curry op+) ni n; refs)
+fun lazy_shift01_i_t a = lazy_shift_i_t 1 a
+fun lazy_shift01_t_t (refs as (_, nt, _)) = (inc_ref nt; refs)
+fun force_t (ni_ref, nt_ref, t_ref) =
+  let
+    val ni = !ni_ref
+    val nt = !nt_ref
+    val t = !t_ref
+    val changed = false
+    val (t, changed) = if nt > 0 then (shift_t_t 0 nt t, true) else (t, changed)
+    val (t, changed) = if ni > 0 then (shift_i_t 0 ni t, true) else (t, changed)
+    val () = if changed then
+               (ni_ref := 0;
+                nt_ref := 0;
+                t_ref := t)
+             else ()
+  in
+    t
+  end
+                                                      
+fun add_sorting_full new (ictx, tctx, ectx) =
     let
       val ret = 
-          (new :: ictx, tctx, map (mapSnd (shift01_i_t o trace_noln ".")) ectx(* , HeapMap.map (mapPair (shift01_i_t, shift01_i_i)) hctx *))
+          (new :: ictx, tctx, map (mapSnd (lazy_shift01_i_t o trace_noln ".")) ectx)
       val () = println ""
     in
       ret
     end
-fun add_kinding_full new (ictx, tctx, ectx(* , hctx *)) = (ictx, new :: tctx, map (mapSnd shift01_t_t) ectx(* , HeapMap.map (mapFst shift01_t_t) hctx *))
-fun add_typing_full new (ictx, tctx, ectx(* , hctx *)) = (ictx, tctx, new :: ectx(* , hctx *))
+fun add_kinding_full new (ictx, tctx, ectx) = (ictx, new :: tctx, map (mapSnd lazy_shift01_t_t) ectx)
+fun add_typing_full (name, t) (ictx, tctx, ectx) = (ictx, tctx, (name, new_lazy_t t) :: ectx)
 
 open Unbound
        
@@ -662,7 +685,7 @@ fun a %: b = smart_EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)
 
-fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
+fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
     val () = print "tc() start:\n"
     val e_input_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input
@@ -672,7 +695,12 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
         case e_input of
         EVar x =>
         (case nth_error_local ectx x of
-             SOME (_, t) => (e_input %: t, t, T0)
+             SOME (_, t) =>
+             let
+               val t = force_t t
+             in
+               (e_input %: t, t, T0)
+             end
            | NONE => raise MTCError "Unbound term variable"
         )
       | EConst c => (e_input, get_expr_const_type c, T0)
@@ -884,7 +912,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext(* , hctx *))) e_input =
           val () = println "before tc()/EAbsI/add_sortings_full()"
           val () = println $ sprintf "#ictx=$  #ectx=$" [str_int $ length ictx, str_int $ length ectx]
           val len_binds = length binds
-          val ectx = map (mapSnd (shift_i_t 0 len_binds o trace_noln ".")) ectx
+          val ectx = map (mapSnd (lazy_shift_i_t len_binds o trace_noln ".")) ectx
           val () = println ""
           val ctx = (ictx, tctx, ectx)
           val () = println "before tc()/EAbsI/tc_against_time()"
@@ -1202,7 +1230,7 @@ and tc_against_time (ctx as (ictx, tctx, _(* , _ *))) (e, i) =
       (e, t)
     end
     
-and tc_against_ty_time (ctx as (ictx, tctx, _(* , _ *))) (e, t, i) =
+and tc_against_ty_time (ctx as (ictx, tctx, _)) (e, t, i) =
     let
       val () = print "tc_against_ty_time() start:\n"
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)

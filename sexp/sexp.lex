@@ -21,7 +21,7 @@ fun make_pos abs : pos =
 fun make_region (abs, size) : region = 
     (make_pos abs, 
      make_pos (abs + size))
-fun update_line yypos = (inc line; linestart := yypos)
+fun update_line yypos = (inc_ref line; linestart := yypos)
 
 fun flat (a, (b, c)) = (a, b, c)
 

@@ -25,7 +25,7 @@ fun make_pos abs : pos =
 fun make_region (abs, size) : region = 
     (make_pos abs, 
      make_pos (abs + size))
-fun update_line yypos = (inc line; linestart := yypos)
+fun update_line yypos = (inc_ref line; linestart := yypos)
 fun reset_line () =
     (line := LINE;
      linestart := LINE_START;
@@ -153,7 +153,7 @@ id_init = ({alpha}|[_']);
 				  (make_region (yypos, size yytext)));
 <INITIAL>. => ((reporter o flat) (sprintf "Bad character: $" [yytext], make_region (yypos, size yytext)); (T.BOGUS o flat) (yytext, make_region (yypos, size yytext)));
 
-<INITIAL>"(*" => (inc comment_level; YYBEGIN COMMENT; continue());
-<COMMENT>"(*" => (inc comment_level; continue());
-<COMMENT>"*)" => (dec comment_level; if !comment_level = 0 then YYBEGIN INITIAL else (); continue());
+<INITIAL>"(*" => (inc_ref comment_level; YYBEGIN COMMENT; continue());
+<COMMENT>"(*" => (inc_ref comment_level; continue());
+<COMMENT>"*)" => (dec_ref comment_level; if !comment_level = 0 then YYBEGIN INITIAL else (); continue());
 <COMMENT>. => (continue());

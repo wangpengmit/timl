@@ -337,9 +337,6 @@ fun trim s =
 fun concatMap f ls = (List.concat o map f) ls
 fun concatMapi f ls = (List.concat o mapi f) ls
 
-fun inc r = r := !r + 1
-fun dec r = r := !r - 1
-
 structure Range = struct
 
 type range = int * int
@@ -366,8 +363,11 @@ fun repeat_app f n = Range.app (fn _ => f ()) (Range.zero_to n)
 datatype empty = Empty of empty
 fun exfalso (x : empty) = raise Impossible "type empty shouldn't have inhabitant"
 
-fun push xs x = x :: xs
+fun unop_ref f r = r := f (!r)
 fun binop_ref f r x = r := f (!r) x
+fun inc_ref r = r := !r + 1
+fun dec_ref r = r := !r - 1
+fun push xs x = x :: xs
 fun push_ref r x = binop_ref push r x
 fun copy_ref r = ref $ !r
 

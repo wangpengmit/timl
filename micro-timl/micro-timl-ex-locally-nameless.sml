@@ -117,8 +117,6 @@ fun map_tvar f (Free_t x) = Free_t $ f x
 fun map_cvar f (Free_c x) = Free_c $ f x
 fun map_evar f (Free_e x) = Free_e $ f x
                        
-fun unop_ref f r = r := f (!r)
-                            
 fun fresh_var map counter =
   let
     val v = !counter
