@@ -123,7 +123,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
       )
     fun pp_list_bracket f ls = pp_bracket $ (fn () => pp_list f ls)
   in
-    if reached_depth_limit then ()
+    if reached_depth_limit then str "..."
     else
     case e of
         EVar x =>
@@ -452,7 +452,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
                      comma ()
                 )) () binds;
           close_box ();
-          comma ();
+          space ();
           pp_e e;
           str ")";
           close_box ()

@@ -33,6 +33,15 @@ fun sprintf s ls =
 fun printf s ls = print $ sprintf s ls
 fun println s = print (s ^ "\n")
 fun trace s a = (println s; a)
+fun trace_noln s a = (print s; a)
+fun trace_around begin_mark end_mark f =
+  let
+    val () = print begin_mark
+    val v = f ()
+    val () = println end_mark
+  in
+    v
+  end
 
 fun isNone opt = not (isSome opt)
 fun default v opt = getOpt (opt, v)

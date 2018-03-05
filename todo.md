@@ -112,6 +112,7 @@
 - [ ] remove let x = ... when x is "_", because such case can only be from translation of wildcard patterns
 - [ ] remove duplicate EAsc and EAscTime
 - [ ] analysing the form of expr is complicated by the pervasion of EAscType and EAscTime; need some principled way to transparently ignore EAscType/Time.
+- [ ] dynamic-table.timl needs to be instantiated to be tested by MicroTiML compiler
 
 # To-do for Examples:
 

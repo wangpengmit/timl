@@ -65,7 +65,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
             pp_list f xs
           )
   in
-    if reached_depth_limit then ()
+    if reached_depth_limit then str "..."
     else
     case t of
         TVar (x, ks) =>

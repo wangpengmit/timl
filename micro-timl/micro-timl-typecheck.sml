@@ -573,8 +573,6 @@ fun shift01_t_t a = shift_t_t 0 1 a
 (* structure IntMap = IntBinaryMap *)
 (* structure HeapMap = IntMap *)
 
-fun trace_noln s a = (print s; a)
-                  
 type mtiml_ty = (Expr.var, bsort, idx, sort) ty
 type lazy_ty = int ref * int ref * mtiml_ty ref
                                      
@@ -591,8 +589,8 @@ fun force_t (ni_ref, nt_ref, t_ref) =
     val nt = !nt_ref
     val t = !t_ref
     val changed = false
-    val (t, changed) = if nt > 0 then (shift_t_t 0 nt t, true) else (t, changed)
-    val (t, changed) = if ni > 0 then (shift_i_t 0 ni t, true) else (t, changed)
+    val (t, changed) = if nt > 0 then (trace_around "^" "$" (fn () => shift_t_t 0 nt t), true) else (t, changed)
+    val (t, changed) = if ni > 0 then (trace_around "^" "$" (fn () => shift_i_t 0 ni t), true) else (t, changed)
     val () = if changed then
                (ni_ref := 0;
                 nt_ref := 0;
@@ -689,9 +687,9 @@ fun a |> b = EAscTime (a, b)
 
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
-    (* val () = print "tc() start:\n" *)
-    (* val e_input_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e_input *)
-    (* val () = println $ e_input_str *)
+    (* val () = print "tc() start: " *)
+    (* val e_input_str = (* substr 0 100 $  *)ExportPP.pp_e_to_string (SOME 2, SOME 1) $ ExportPP.export (ctx_names ctx) e_input *)
+    (* val () = print $ e_input_str *)
     val itctx = (ictx, tctx)
     fun main () =
         case e_input of
@@ -870,7 +868,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
       | ERec data =>
         let
           val (t, (name, e)) = unBindAnnoName data
-          val () = println $ "tc() on: " ^ fst name ^ "  "
+          val () = println $ "tc() on: " ^ fst name
           val () = case snd $ collect_EAbsIT e of
                        EAbs _ => ()
                      | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"
