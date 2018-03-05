@@ -490,8 +490,9 @@ fun apply_TForallIT b args =
 
 fun cc e =
   let
-    val e_str = (* substr 0 400 $  *)ExportPP.pp_e_to_string (SOME 2, SOME 1) $ ExportPP.export ([], [], [], []) e
-    val () = println $ "cc() started: " ^ e_str
+    (* val () = print $ "cc() started: " *)
+    (* val e_str = (* substr 0 400 $  *)ExportPP.pp_e_to_string (SOME 2, SOME 1) $ ExportPP.export ([], [], [], []) e *)
+    (* val () = println $ e_str *)
     val e =
     case e of
         EBinOp (EBApp, e1, e2) =>
@@ -560,7 +561,10 @@ fun cc e =
           val (name_x, e2) = unBindSimpName bind
           val a = fresh_ivar ()
           val x = fresh_evar ()
+          val () = println "before cc()/EUnpackI/open0_i_e()"
+          (* this could be slow *)
           val e2 = open0_i_e a e2
+          val () = println "after cc()/EUnpackI/open0_i_e()"
           val e2 = open0_e_e x e2
           val () = println "before cc()/EUnpackI/cc#2"
           val e2 = cc e2
@@ -578,7 +582,7 @@ fun cc e =
       | ENever t => ENever (cc_t t)
       | EBuiltin t => EBuiltin (cc_t t)
       | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
-    val () = println $ "cc() finished: " ^ e_str
+    (* val () = println $ "cc() finished: " ^ e_str *)
   in
     e
   end
