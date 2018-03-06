@@ -200,6 +200,7 @@ micro-timl/micro-timl-ex-locally-nameless.sml
 micro-timl/compiler-util.sml
 micro-timl/cps.sml
 micro-timl/cc.sml
+micro-timl/pair-alloc.sml
 unit-test.sml
 main.sml
 }

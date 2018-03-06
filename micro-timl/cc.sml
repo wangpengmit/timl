@@ -308,8 +308,6 @@ fun TV (x, k) = TVar (make_Free_t x, [k])
 
 fun TExists bind = TQuan (Exists (), bind)
                          
-fun ELetManyClose (ds, e) = foldr ELetClose e ds
-
 val ETT = EConst ECTT
 
 fun ceil_half n = (n + 1) div 2

@@ -2,6 +2,16 @@
 
 structure PairAlloc = struct
 
+open Expr
+open CompilerUtil
+open MicroTiMLVisitor
+open MicroTiMLExLongId
+open MicroTiMLExLocallyNameless
+open MicroTiMLExUtil
+open MicroTiMLEx
+       
+infixr 0 $
+         
 fun pa_ty_visitor_vtable cast () =
   let
     val vtable =
@@ -15,7 +25,7 @@ fun pa_ty_visitor_vtable cast () =
           visit_noop
     fun visit_TBinOp this env (data as (opr, t1, t2)) =
       case opr of
-          TBinOp =>
+          TBProd =>
           let
             val pa_t = #visit_ty (cast this) this env
             val t1 = pa_t t1
@@ -58,7 +68,7 @@ fun pa_expr_visitor_vtable cast () =
         | _ => #visit_EUnOp vtable this env data (* call super *)
     fun visit_EBinOp this env (data as (opr, e1, e2)) =
       case opr of
-        | EBPair =>
+          EBPair =>
           let
             val pa = #visit_expr (cast this) this env
             val (e1, t_e1) = assert_EAscType e1
@@ -77,7 +87,7 @@ fun pa_expr_visitor_vtable cast () =
                    (x2, "x2", e2),
                    (y0, "y0", EMallocPair (t_e1, t_e2)),
                    (y1, "y1", EPairAssign (EV y0, ProjFst, EV x1)),
-                   (y2, "y2", EPairAssign (EV y1, ProjSnd, EV x2)),
+                   (y2, "y2", EPairAssign (EV y1, ProjSnd, EV x2))
                   ], EV y2)                  
           in
             e
@@ -102,6 +112,14 @@ datatype 'expr decl =
          DLet of free_e * string * 'expr
          | DUnpack of (free_t * string) * (free_e * string) * 'expr
          | DUnpackI of (free_i * string) * (free_e * string) * 'expr
+
+fun close_EDecl (d, e2) =
+  case d of
+      DLet d => ELetClose (d, e2)
+    | DUnpack (a, x, e1) => EUnpackClose (e1, a, x, e2)
+    | DUnpackI (a, x, e1) => EUnpackIClose (e1, a, x, e2)
+      
+fun close_EDecls (decls, e) = foldr close_EDecl e decls
                                                                  
 fun anf_decls_expr_visitor_vtable cast output =
   let
@@ -192,7 +210,7 @@ fun anf_decls_expr_visitor_vtable cast output =
         if add_var then
           let
             val x = fresh_evar ()
-            val () = output $ DLet (x, "x", EAscTime (e, i))
+            val () = output $ DLet (x, "x", e)
           in
             EV x
           end
@@ -223,7 +241,7 @@ and anf e =
       fun output d = push_ref decls d
       val e = anf_decls output e
       val decls = !decls
-      val e = EDecls (decls, e)
+      val e = close_EDecls (decls, e)
     in
       e
     end

@@ -100,6 +100,8 @@ fun assert_EAscTime e =
 fun EV x = EVar $ make_Free_e x
                 
 fun ELetClose ((x, name, e1), e2) = MakeELet (e1, (name, dummy), close0_e_e x e2)
+fun ELetManyClose (ds, e) = foldr ELetClose e ds
+
 fun EAbsPairClose ((x1, name1, t1), (x2, name2, t2), e) =
   let
     val x = fresh_evar ()
