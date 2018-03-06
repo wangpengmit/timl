@@ -1180,6 +1180,22 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           tc ctx e
         end
+      | EMallocPair (t1, t2) =>
+        let
+          val t1 = kc_against_kind itctx (t1, KType)
+          val t2 = kc_against_kind itctx (t2, KType)
+        in
+          (EMallocPair (t1, t2), TProdEx ((t1, false), (t2, false)), T0)
+        end
+      | EPairAssign (e1, proj, e2) =>
+        let
+          val (e1, t_e1, i_e1) = tc ctx e1
+          val ((t1, b1), (t2, b2)) =
+              case t_e1 of
+                  TProdEx a => a
+                | _ => raise 
+        in
+        end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)
     fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)
     val (e_output, t, i) = main ()
