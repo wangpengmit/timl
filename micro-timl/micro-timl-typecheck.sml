@@ -309,6 +309,13 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TArr (t, i), KType)
       end
+    | TProdEx ((t1, b1), (t2, b2)) =>
+      let
+        val t1 = kc_against_kind ctx (t1, KType)
+        val t2 = kc_against_kind ctx (t2, KType)
+      in
+        (TProdEx ((t1, b1), (t2, b2)), KType)
+      end
 
 and kc_against_kind ctx (t, k) =
   let
@@ -1193,8 +1200,27 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val ((t1, b1), (t2, b2)) =
               case t_e1 of
                   TProdEx a => a
-                | _ => raise 
+                | _ => raise MTCError "EPairAssign/assert-TProdEx"
+          val t_e2 = choose (t1, t2) proj
+          val (e2, i_e2) = tc_against_ty ctx (e2, t_e2)
+          val (b1, b2) = case proj of
+                             ProjFst => (true, b2)
+                           | ProjSnd => (b1, true)
         in
+          (EPairAssign (e1, proj, e2), TProdEx ((t1, b1), (t2, b2)), i_e1 %+ i_e2)
+        end
+      | EProjProtected (proj, e) =>
+        let
+          val (e, t_e, i_e) = tc ctx e
+          val ts =
+              case t_e of
+                  TProdEx a => a
+                | _ => raise MTCError "EProjProtected/assert-TProdEx"
+          val (t, b) = choose ts proj
+          val () = if b then ()
+                   else raise MTCError "EProjProtected/check-permission"
+        in
+          (EProjProtected (proj, e), t, i_e)
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)
     fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)

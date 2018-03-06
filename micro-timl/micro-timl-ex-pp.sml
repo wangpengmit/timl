@@ -676,6 +676,44 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         end
+      | EMallocPair (t1, t2) =>
+        (
+          open_hbox ();
+          str "EMallocPair";
+          space ();
+          str "(";
+          pp_t t1;
+          comma ();
+          pp_t t2;
+          str ")";
+          close_box ()
+        )
+      | EPairAssign (e1, proj, e2) =>
+        (
+          open_hbox ();
+          str "EPairAssign";
+          space ();
+          str "(";
+          pp_e e1;
+          comma ();
+          str $ str_proj proj;
+          comma ();
+          pp_e e2;
+          str ")";
+          close_box ()
+        )
+      | EProjProtected (proj, e) =>
+        (
+          open_hbox ();
+          str "EProjProtected";
+          space ();
+          str "(";
+          str $ str_proj proj;
+          comma ();
+          pp_e e;
+          str ")";
+          close_box ()
+        )
   end
 
 open WithPP

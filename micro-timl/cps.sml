@@ -251,12 +251,12 @@ fun cps_t t =
         TAbsI t
       end
     | TAppI (t, i) => TAppI (cps_t t, i)
-    (* | _ => *)
-    (*   let *)
-    (*     val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t *)
-    (*   in *)
-    (*     raise Unimpl $ "cps_t() on: " ^ s *)
-  (*   end *)
+    | TProdEx _ =>
+      let
+        val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t
+      in
+        raise Unimpl $ "cps_t() on: " ^ s
+      end
     (* val () = println $ "cps_t() result: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
   in
     t

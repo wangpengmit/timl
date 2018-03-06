@@ -84,6 +84,8 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        visit_EMatchPair : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ebind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EMatchUnfold : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EMallocPair : 'this -> 'env -> 'ty * 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       visit_EPairAssign : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       visit_EProjProtected : 'this -> 'env -> projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_var : 'this -> 'env -> 'var -> 'var2,
        visit_cvar : 'this -> 'env -> 'var -> 'var2,
        visit_idx : 'this -> 'env -> 'idx -> 'idx2,
@@ -136,6 +138,9 @@ fun override_visit_EVar (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -183,6 +188,9 @@ fun override_visit_ELet (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -230,6 +238,9 @@ fun override_visit_EMatchUnfold (record : ('this, 'env, 'var, 'idx, 'sort, 'kind
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = new,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -277,6 +288,9 @@ fun override_visit_EMatchPair (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = new,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -324,6 +338,9 @@ fun override_visit_EMatchSum (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, '
     visit_EMatchSum = new,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -371,6 +388,9 @@ fun override_visit_EVarConstr (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -418,6 +438,9 @@ fun override_visit_EAppConstr (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -465,6 +488,9 @@ fun override_visit_EAscType (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 't
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -512,6 +538,9 @@ fun override_visit_ERec (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -559,6 +588,9 @@ fun override_visit_EAbs (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
+    visit_EMallocPair = #visit_EMallocPair record,
+    visit_EPairAssign = #visit_EPairAssign record,
+    visit_EProjProtected = #visit_EProjProtected record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
     visit_idx = #visit_idx record,
@@ -623,6 +655,9 @@ fun default_expr_visitor_vtable
           | EMatchSum data => #visit_EMatchSum vtable this env data
           | EMatchPair data => #visit_EMatchPair vtable this env data
           | EMatchUnfold data => #visit_EMatchUnfold vtable this env data
+          | EMallocPair data => #visit_EMallocPair vtable this env data
+          | EPairAssign data => #visit_EPairAssign vtable this env data
+          | EProjProtected data => #visit_EProjProtected vtable this env data
       end
     fun visit_EVar this env data =
       let
@@ -905,6 +940,29 @@ fun default_expr_visitor_vtable
       in
         EMatchUnfold (e, branch)
       end
+    fun visit_EMallocPair this env (t1, t2) =
+      let
+        val vtable = cast this
+        val t1 = #visit_ty vtable this env t1
+        val t2 = #visit_ty vtable this env t2
+      in
+        EMallocPair (t1, t2)
+      end
+    fun visit_EPairAssign this env (e1, proj, e2) =
+      let
+        val vtable = cast this
+        val e1 = #visit_expr vtable this env e1
+        val e2 = #visit_expr vtable this env e2
+      in
+        EPairAssign (e1, proj, e2)
+      end
+    fun visit_EProjProtected this env (proj, e) =
+      let
+        val vtable = cast this
+        val e = #visit_expr vtable this env e
+      in
+        EProjProtected (proj, e)
+      end
   in
     {
       visit_expr = visit_expr,
@@ -940,6 +998,9 @@ fun default_expr_visitor_vtable
       visit_EMatchSum = visit_EMatchSum,
       visit_EMatchPair = visit_EMatchPair,
       visit_EMatchUnfold = visit_EMatchUnfold,
+      visit_EMallocPair = visit_EMallocPair,
+      visit_EPairAssign = visit_EPairAssign,
+      visit_EProjProtected = visit_EProjProtected,
       visit_var = visit_var,
       visit_cvar = visit_cvar,
       visit_idx = visit_idx,
