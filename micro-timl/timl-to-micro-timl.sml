@@ -982,7 +982,7 @@ fun test4 dirname =
     val e = export ToStringUtil.empty_ctx e
     val () = pp_e e
     val () = println ""
-    val () = println "TiML2MicroTiML.UnitTest finished"
+    val () = println "TiML2MicroTiML.UnitTest passed"
   in
     ((* t, e *))
   end

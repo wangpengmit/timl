@@ -214,7 +214,7 @@ fun test1 dirname =
       (* val t = t0 *)
       (* val t = MicroTiMLExLongId.shift_i_t 0 999 t *)
       (* val () = println $ "after shift0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
-      val () = println "MicroTiMLExLocallyNameless.UnitTest finished"
+      val () = println "MicroTiMLExLocallyNameless.UnitTest passed"
     in
       ()
     end

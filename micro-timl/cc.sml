@@ -942,7 +942,7 @@ fun test1 dirname =
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
                      
-    val () = println "CC.UnitTest finished"
+    val () = println "CC.UnitTest passed"
   in
     ((* t, e *))
   end

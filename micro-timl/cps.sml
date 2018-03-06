@@ -820,7 +820,7 @@ fun test1 dirname =
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
-    val () = println "CPS.UnitTest finished"
+    val () = println "CPS.UnitTest passed"
   in
     ((* t, e *))
   end

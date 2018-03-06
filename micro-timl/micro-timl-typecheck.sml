@@ -592,6 +592,7 @@ fun force_t (ni_ref, nt_ref, t_ref) =
     fun trace_around _ _ f = f ()
     val (t, changed) = if nt > 0 then (trace_around "^" "$" (fn () => shift_t_t 0 nt t), true) else (t, changed)
     val (t, changed) = if ni > 0 then (trace_around "^" "$" (fn () => shift_i_t 0 ni t), true) else (t, changed)
+    (* val (t, changed) = if ni > 0 then ((trace "$" o shift_i_t 0 ni o trace_noln "^") t, true) else (t, changed) *)
     val () = if changed then
                (ni_ref := 0;
                 nt_ref := 0;
@@ -1406,7 +1407,7 @@ fun test1 dirname =
     val () = println $ "#VCs: " ^ str_int (length vcs)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    val () = println "MicroTiMLTypecheck.UnitTest finished"
+    val () = println "MicroTiMLTypecheck.UnitTest passed"
   in
     ((* t, e *))
   end

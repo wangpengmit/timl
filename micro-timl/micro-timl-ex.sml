@@ -42,6 +42,10 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EMatchSum of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind list
          | EMatchPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ebind
          | EMatchUnfold of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
+         (* used by compiler/pair-alloc *)
+         | EMallocPair of 'ty * 'ty
+         | EPairAssign of ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
+         | EProjProtected of projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
 
 (**overrides*)
 type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 'ty2) expr_visitor_vtable =

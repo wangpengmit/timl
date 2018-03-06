@@ -39,6 +39,8 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TArr of ('var, 'bsort, 'idx, 'sort) ty * 'idx
          | TAbsT of ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
          | TAppT of ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
+         (* used by compiler/pair-alloc *)
+         | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool)
 
 type loc = int
              

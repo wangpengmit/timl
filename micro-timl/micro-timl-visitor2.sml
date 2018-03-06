@@ -512,7 +512,7 @@ fun test1 dirname =
     val () = assert_b "" $ eq_t t1 t1
     val () = assert_b "" $ eq_t t2 t2
     val () = assert_b "" $ not $ eq_t t1 t2
-    val () = println "MicroTiMLVisitor2.UnitTest finished"
+    val () = println "MicroTiMLVisitor2.UnitTest passed"
   in
     ()
   end
