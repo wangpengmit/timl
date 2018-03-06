@@ -511,6 +511,15 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           in
             ()
           end
+        | (TProdEx ((t1, b1), (t2, b2)), TProdEx ((t1', b1'), (t2', b2'))) =>
+          let
+            val () = is_eq_ty ctx (t1, t1')
+            val () = is_eq_ty ctx (t2, t2')
+            val () = assert_b (b1 = b1')
+            val () = assert_b (b2 = b2')
+          in
+            ()
+          end
         | _ => raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
                      [
                        ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names ctx) t,
@@ -694,6 +703,8 @@ fun a %: b = smart_EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)
 
+val anno_EPair = ref false
+                     
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
     (* val () = print "tc() start: " *)
@@ -781,6 +792,8 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         let
           val (e1, t1, i1) = tc ctx e1
           val (e2, t2, i2) = tc ctx e2
+          val (e1, e2) = if !anno_EPair then (e1 %: t1, e2 %: t2)
+                         else (e1, e2)
         in
           (EPair (e1, e2), TProd (t1, t2), i1 %+ i2)
         end

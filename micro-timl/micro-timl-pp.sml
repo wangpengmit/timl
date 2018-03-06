@@ -247,7 +247,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
       | TProdEx ((t1, b1), (t2, b2)) =>
         (
           open_hbox ();
-          str "TAppT";
+          str "TProdEx";
           space ();
           str "(";
           str $ str_bool b1;
