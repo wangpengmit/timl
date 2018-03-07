@@ -88,7 +88,7 @@
 - [x] Have double-linked lists.
 - [x] rbt6.timl:  absidx sort `Time` inference error in `IntKey`.
 - [x] Currently `absidx ... with ... end` is "scoped abstract index". We should have "unscoped" or "module-scoped" abstract index `absidx id = ...` so within the module `id`'s definition is visible but outside the module it is not.
-- [ ] Make `kind`'s sorts dependent, or only use `bsort` in `kind`.
+- [x] Make `kind`'s sorts dependent, or only use `bsort` in `kind`.
 - [ ] Generate typing derivations.
     Road map (a translation validation (i.e. derivation reconstruction) approach):
     * [ ] Generate type-annotation TiML syntax

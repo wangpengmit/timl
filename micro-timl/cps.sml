@@ -49,7 +49,9 @@ infix 0 %:
 fun a %: b = EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)
-                      
+
+(* smart EApp that converts topmost beta-redex to ELet and creates aliases for e1 and e2 *)
+(* pre: e1 and e2 must be value *)
 fun EApp_alias_fun_arg (e1, e2) =
     case e1 of
         EAbs bind =>
@@ -67,8 +69,9 @@ fun EApp_alias_fun_arg (e1, e2) =
         in
           e
         end
-
+(* smart EApp that converts topmost beta-redex to ELet and creates aliases for e2 (not e1) *)
 (* used for CPS of EApp and EAppI/T when the function part shouldn't be aliased because that may create a EAppI/T not followed by EApp, which CC can't handle *)
+(* pre: e2 must be value *)
 fun EApp_alias_arg (e1, e2) =
     case e1 of
         EAbs bind =>
@@ -79,8 +82,15 @@ fun EApp_alias_arg (e1, e2) =
           e
         end
       | _ =>
-        MakeELet (e2, ("x", dummy), EApp (shift01_e_e e1, EVar $ ID (0, dummy)))
+        let
+          (* val () = assert_b "EApp_alias_arg" $ is_value e2 *)
+          val e = MakeELet (e2, ("x", dummy), EApp (shift01_e_e e1, EVar $ ID (0, dummy)))
+        in
+          e
+        end
         
+infixr 0 %%
+fun a %% b = EApp (a, b)
 infixr 0 %$
 fun a %$ b = EApp_alias_arg (a, b)
 infixr 0 $$
@@ -637,7 +647,7 @@ fun cps (e, t_e) (k, j_k) =
         val (e, i') = cps (e, t_e) (k, j_k)
         val i = blowup_time (i, j_k)
       in
-        (e |> i' |> i, i)
+        (e (* |> i' *) |> i, i)
       end
     | S.EWrite (e1, e2, e3) =>
       (* [[ write e1 e2 e3 ]](k) = [[e1]] (\x1. [[e2]] (\x2. [[e3]] (\x3. k (write x1 x2 x3)))) *)

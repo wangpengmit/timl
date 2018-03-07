@@ -1,9 +1,9 @@
 (* unit-test-basic.timl *)
             
 (* basic.timl *)
-list.timl
+(* list.timl *)
 
-(* stdlib.pkg *)
+stdlib.pkg
                
 (* unit-test-bool.timl *)
 (* unit-test-list.timl *)
@@ -11,10 +11,10 @@ list.timl
 (* perversive-list.timl *)
 (* trivial.timl *)
 (* bigO-evolve.timl *)
-(* fold-evolve.timl *)
-(* single-var.timl *)
-(* bug.timl *)
-(* pldi-2017-review-example.timl *)
+fold-evolve.timl
+single-var.timl
+bug.timl
+pldi-2017-review-example.timl
 (* braun-tree-sortedness.timl *)
 (* rbt-sortedness.timl *)
 

@@ -238,6 +238,13 @@ fun anf_decls_expr_visitor_vtable cast output =
       in
         ECase (e, bind1, bind2)
       end
+    (* this relies on form invariants after CPS *)
+    fun visit_EAscTime this env (e, i) =
+      let
+        val e = anf e
+      in
+        EAscTime (e, i)
+      end
     fun visit_expr this env e =
       let
         fun is_add_decl e =
@@ -250,6 +257,7 @@ fun anf_decls_expr_visitor_vtable cast output =
             | EVar _ => false
             | EAscType _ => false
             | EAscTime _ => false
+            | EBinOp (EBApp, _, _) => false
             | _ => true
         val add_decl = is_add_decl e
         val e = #visit_expr vtable this env e (* call super *)
