@@ -6,14 +6,14 @@ open Basic
 open Nat
 (* open List *)
 
-fun array ['a] {len : Nat} (n : nat {len}, x : 'a) return array 'a {len} using $len =
-    builtin
+(* fun array ['a] {len : Nat} (n : nat {len}, x : 'a) return array 'a {len} using $len = *)
+(*     builtin *)
 
-fun sub ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}) return 'a using 0.0 =
-    builtin
+(* fun sub ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}) return 'a using 0.0 = *)
+(*     builtin *)
 
-fun update ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}, x : 'a) return unit using 0.0 =
-    builtin
+(* fun update ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}, x : 'a) return unit using 0.0 = *)
+(*     builtin *)
 
 fun length ['a] {len : Nat} (a : array 'a {len}) return nat {len} using 0.0 =
     builtin

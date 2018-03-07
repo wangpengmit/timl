@@ -316,6 +316,24 @@ local
                      NONE =>
 		     if x = "fst" then EFst (elab e2, r)
 		     else if x = "snd" then ESnd (elab e2, r)
+		     else if x = "array" then
+                       (case e2 of
+                            S.Tuple ([e1, e2], _) =>
+                            ENew (elab e1, elab e2)
+                          | _ => raise Error (r, "should be 'array (_, _)'")
+                       )
+		     else if x = "sub" then
+                       (case e2 of
+                            S.Tuple ([e1, e2], _) =>
+                            ERead (elab e1, elab e2)
+                          | _ => raise Error (r, "should be 'sub (_, _)'")
+                       )
+		     else if x = "update" then
+                       (case e2 of
+                            S.Tuple ([e1, e2, e3], _) =>
+                            EWrite (elab e1, elab e2, elab e3)
+                          | _ => raise Error (r, "should be 'update (_, _, _)'")
+                       )
 		     else default ()
                    | SOME _ => default ()
                 )

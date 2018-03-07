@@ -1,0 +1,8 @@
+structure UnitTestArray = struct
+
+val a = array (#10, 0)
+
+val _ = sub (a, #2)
+val _ = update (a, #2, 3)
+               
+end

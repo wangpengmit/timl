@@ -108,6 +108,7 @@
 - [ ] Add native booleans. Add more integer operations (including comparisons). Add more nat operations.
 - [ ] Add example links to website.
 - [ ] Remove assert_b and assert_b_m to make sure when assertion are turned off no computation will be wasted.
+- [ ] Add ELength.
 
 # To-do for MicroTiML
 

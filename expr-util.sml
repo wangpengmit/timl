@@ -23,6 +23,9 @@ fun EAsc (e, t) = EET (EETAsc, e, t)
 fun EAscTime (e, i) = EEI (EEIAscTime, e, i)
 fun ENever (t, r) = ET (ETNever, t, r)
 fun EBuiltin (t, r) = ET (ETBuiltin, t, r)
+fun ENew (e1, e2) = EBinOp (EBNew, e1, e2)
+fun ERead (e1, e2) = EBinOp (EBRead, e1, e2)
+fun EWrite (e1, e2, e3) = ETriOp (Write, e1, e2, e3)
   
 fun collect_Pair e =
   case e of

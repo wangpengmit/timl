@@ -743,9 +743,6 @@ fun check_CPSed_expr e =
   end
 
 and check_decl e =
-    check_value e
-    handle
-    _ =>
     case fst $ collect_EAscType e of
         EUnOp (_, e) => check_value e
       | EBinOp (opr, e1, e2) =>
@@ -761,7 +758,9 @@ and check_decl e =
         (check_value e1;
          check_value e2)
       | EProjProtected (_, e) => check_value e
-      | _ => raise Impossible $ "check_decl():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+      | _ => check_value e
+             handle Impossible msg =>
+                    raise Impossible $ "check_decl():\n" ^ msg
         
 and check_value e =
   case e of
