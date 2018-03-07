@@ -1126,6 +1126,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
       | ENever t =>
         let
           val t = kc_against_kind itctx (t, KType)
+          val () = check_prop ictx (False dummy)
         in
           (ENever t, t, T0)
         end
@@ -1222,6 +1223,12 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                    else raise MTCError "EProjProtected/check-permission"
         in
           (EProjProtected (proj, e), t, i_e)
+        end
+      | EHalt e =>
+        let
+          val (e, t_e, i_e) = tc ctx e
+        in
+          (EHalt e, TUnit, i_e)
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)
     fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)

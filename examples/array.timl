@@ -9,19 +9,19 @@ open Nat
 fun array ['a] {len : Nat} (n : nat {len}, x : 'a) return array 'a {len} using $len =
     builtin
 
-fun fromList ['a] {len : Nat} (l : List.list 'a {len}) return array 'a {len} using $len =
+fun sub ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}) return 'a using 0.0 =
     builtin
 
-fun tabulate ['a] {len : Nat} {m : Time} (n : nat {len}, f : nat_less_than {len} -- m --> 'a) return array 'a {len} using (m + $1) * $len =
+fun update ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}, x : 'a) return unit using 0.0 =
     builtin
 
 fun length ['a] {len : Nat} (a : array 'a {len}) return nat {len} using 0.0 =
     builtin
 
-fun sub ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}) return 'a using 0.0 =
+fun fromList ['a] {len : Nat} (l : List.list 'a {len}) return array 'a {len} using $len =
     builtin
 
-fun update ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}, x : 'a) return unit using 0.0 =
+fun tabulate ['a] {len : Nat} {m : Time} (n : nat {len}, f : nat_less_than {len} -- m --> 'a) return array 'a {len} using (m + $1) * $len =
     builtin
 
 fun appi ['a] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a -- m --> unit) (a : array 'a {len}) return unit using (m + $1) * $len =

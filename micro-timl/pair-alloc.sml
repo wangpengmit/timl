@@ -433,6 +433,7 @@ fun test1 dirname =
     (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
+    (* val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0) *)
     val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)

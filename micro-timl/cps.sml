@@ -44,6 +44,7 @@ fun EAbsTimeClose ((x, name), e) = EAbsI $ close0_i_e_anno ((x, name, STime), e)
 fun ELetConstrClose ((x, name), e1, e2) = MakeELetConstr (e1, (name, dummy), close0_c_e x e2)
   
 fun Eid t = EAbs $ EBindAnno ((("x", dummy), t), EVar $ Bound 0)
+fun EHaltFun t = EAbs $ EBindAnno ((("x", dummy), t), EHalt $ EVar $ Bound 0)
 
 infix 0 %:
 fun a %: b = EAscType (a, b)
@@ -693,8 +694,116 @@ fun cps (e, t_e) (k, j_k) =
       in
         raise Unimpl $ "cps() on: " ^ s
       end
-    end
-      
+  end
+
+(* Checks the form invariants after CPS, according to the 'System F to TAL' paper. *)
+fun check_CPSed_expr e =
+  let
+    val loop = check_CPSed_expr
+  in
+  case fst $ collect_EAscType e of
+      ELet (e1, bind) =>
+      let
+        val () = check_decl e1
+        val (_, e2) = unBind bind
+      in
+        loop e2
+      end
+    | EUnpack (e1, bind) =>
+      let
+        val () = check_value e1
+        val (_, bind) = unBind bind
+        val (_, e2) = unBind bind
+      in
+        loop e2
+      end
+    | EUnpackI (e1, bind) =>
+      let
+        val () = check_value e1
+        val (_, bind) = unBind bind
+        val (_, e2) = unBind bind
+      in
+        loop e2
+      end
+    | EBinOp (EBApp, e1, e2) =>
+      (check_value e1;
+       check_value e2)
+    | ECase (e, bind1, bind2) =>
+      let
+        val () = check_value e
+        val (_, e1) = unBind bind1
+        val (_, e2) = unBind bind2
+      in
+        (loop e1;
+         loop e2)
+      end
+    | EHalt e => check_value e
+    | EAscTime (e, _) => loop e
+    | _ => raise Impossible $ "check_CPSed_expr():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+  end
+
+and check_decl e =
+    check_value e
+    handle
+    _ =>
+    case fst $ collect_EAscType e of
+        EUnOp (_, e) => check_value e
+      | EBinOp (opr, e1, e2) =>
+        (assert_b "check_decl/EBinOp/opr <> EBApp" $ opr <> EBApp;
+         check_value e1;
+         check_value e2)
+      | EWrite (e1, e2, e3) =>
+        (check_value e1;
+         check_value e2;
+         check_value e3)
+      | EMallocPair _ => ()
+      | EPairAssign (e1, _, e2) =>
+        (check_value e1;
+         check_value e2)
+      | EProjProtected (_, e) => check_value e
+      | _ => raise Impossible $ "check_decl():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+        
+and check_value e =
+  case e of
+      EConst _ => ()
+    | EBinOp (EBPair, e1, e2) => (check_value e1; check_value e2)
+    | EUnOp (EUInj _, e) => check_value e
+    | EAbs bind =>
+      let
+        val (_, e) = unBindAnno bind
+      in
+        check_CPSed_expr e
+      end
+    | EAbsT bind => 
+      let
+        val (_, e) = unBindAnno bind
+      in
+        check_value e
+      end
+    | EAbsI bind => 
+      let
+        val (_, e) = unBindAnno bind
+      in
+        check_value e
+      end
+    | EPack (_, _, e) => check_value e
+    | EPackI (_, _, e) => check_value e
+    | EPackIs (_, _, e) => check_value e
+    | EUnOp (EUFold _, e) => check_value e
+    | EAscType (e, _) => check_value e
+    | EAppT (e, _) => check_value e
+    | EAppI (e, _) => check_value e
+    | ERec data =>
+      let
+        val (_, e) = unBindAnno data
+      in
+        check_value e
+      end
+    | EVar _ => () (* variables denote values *)
+    | ENever _ => ()
+    | EBuiltin _ => ()
+    | _ => raise Impossible $ "check_value():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+                              
 end
 
 structure CPSUnitTest = struct
@@ -818,10 +927,14 @@ fun test1 dirname =
     val () = println ""
                      
     val () = println "Started CPS conversion ..."
-    val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)
+    val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0)
+    (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion ..."
     val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
     val () = println ""
+    val () = println "Started post-CPS form checking"
+    val () = check_CPSed_expr e
+    val () = println "Finished post-CPS form checking"
     val () = println "Started MicroTiML typechecking #2 ..."
     val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #2"

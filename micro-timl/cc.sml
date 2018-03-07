@@ -434,6 +434,8 @@ fun cc_t t =
       in
         raise Unimpl $ "cc_t() on: " ^ s
       end
+    (* | EWrite _ => _ *)
+    (* | EHalt _ => _ *)
 
 and cc_t_arrow t =
     let
@@ -908,6 +910,7 @@ fun test1 dirname =
     (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
+    (* val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0) *)
     val (e, _) = cps (e, TUnit) (Eid TUnit, T_0)
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
