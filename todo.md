@@ -118,6 +118,7 @@
 - [ ] dynamic-table.timl needs to be instantiated to be tested by MicroTiML compiler
 - [x] tc() should add annotations only when specific flags are turned on; the client that turns on these flags should consume the annotations to prevent them from polluting later translations.
 - [ ] Add level limits to export_t and export_e.
+- [ ] Add a pass to remove annotations on EVar, TVar and VarI after cc().
 
 # To-do for Examples:
 

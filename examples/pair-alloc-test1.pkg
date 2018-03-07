@@ -12,10 +12,10 @@ stdlib.pkg
 (* perversive-list.timl *)
 (* trivial.timl *)
 (* bigO-evolve.timl *)
-fold-evolve.timl
-single-var.timl
-bug.timl
-pldi-2017-review-example.timl
+(* fold-evolve.timl *)
+(* single-var.timl *)
+(* bug.timl *)
+(* pldi-2017-review-example.timl *)
 (* braun-tree-sortedness.timl *)
 (* rbt-sortedness.timl *)
 
@@ -32,7 +32,7 @@ pldi-2017-review-example.timl
 (* array-msort.timl *)
 (* array-msort-inplace.timl *)
 (* array-kmed.timl *)
-(* dlist.timl *)
-(* qsort.timl *)
-(* dijkstra.timl *)
+dlist.timl
+qsort.timl
+dijkstra.timl
 

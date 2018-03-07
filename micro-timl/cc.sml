@@ -714,6 +714,87 @@ and cc_ERec (* e_all *) outer_binds bind =
 (*     in *)
 (*     end *)
 
+fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
+  let
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_ERec this env bind =
+        let
+          val (t_x, (name_x, e)) = unBindAnnoName bind
+          val (binds, e) = collect_EAbsIT e
+          val (t_y, (name_y, e)) = assert_EAbs e
+          val e = #visit_expr (cast this) this env e
+          val e = EAbs $ EBindAnno ((name_y, t_y), e)
+        in
+          ERec $ EBindAnno ((name_x, t_x), EAbsITs (binds, e))
+        end
+    val mark_begin = "__$begin$_"
+    val len_mark_begin = String.size mark_begin
+    val mark_end = #"$"
+    val default_fun_name = "__f"
+    fun visit_EAbs this env bind =
+      let
+        val (t_y, ((name_y, r), e)) = unBindAnnoName bind
+        val () = println $ "visit_EAbs()/name_y: " ^ name_y
+        val (fun_name, name_y) =
+            if String.isPrefix mark_begin name_y then
+              (case String.fields (curry op= mark_end) $ String.extract (name_y, len_mark_begin, NONE) of
+                   [fun_name, name_y] => (fun_name, name_y)
+                 | _ => (default_fun_name, name_y)
+              )
+            else (default_fun_name, name_y)
+        val ((_, t_e), i) = mapFst assert_EAscType $ assert_EAscTime e
+        val e = #visit_expr (cast this) this env e
+        val e = EAbs $ EBindAnno (((name_y, r), t_y), e)
+      in
+        ERec $ EBindAnno (((fun_name, dummy), TArrow (t_y, i, t_e)), shift01_e_e e)
+      end
+    fun visit_ELet this env (data as (e1, bind)) =
+        let
+          val ((name_x, _), _) = unBindSimpName bind
+          val (e1, ascs) = collect_EAscTypeTime e1
+          val (binds, e1) = collect_EAbsIT e1
+          val e1 = 
+              case e1 of
+                  EAbs bind1 =>
+                  let
+                    val (t_y, ((name_y, r), e1)) = unBindAnnoName bind1
+                  in
+                    EAbs $ EBindAnno (((mark_begin ^ name_x ^ String.str mark_end ^ name_y, r), t_y), e1)
+                  end
+                | _ => e1
+          val e1 = EAbsITs (binds, e1)
+          val e1 = EAscTypeTimes (e1, ascs)
+        in
+          (* call super *)
+          #visit_ELet vtable this env (e1, bind)
+        end
+    val vtable = override_visit_ERec vtable visit_ERec
+    val vtable = override_visit_EAbs vtable visit_EAbs
+    val vtable = override_visit_ELet vtable visit_ELet
+  in
+    vtable
+  end
+
+fun new_convert_EAbs_to_ERec_expr_visitor params = new_expr_visitor convert_EAbs_to_ERec_expr_visitor_vtable params
+
+fun convert_EAbs_to_ERec b =
+  let
+    val visitor as (ExprVisitor vtable) = new_convert_EAbs_to_ERec_expr_visitor ()
+  in
+    #visit_expr vtable visitor () b
+  end
+
 val cc =
  fn e =>
     let
