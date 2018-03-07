@@ -66,6 +66,34 @@ fun pa_expr_visitor_vtable cast () =
       case opr of
           EUProj proj => EProjProtected (proj, #visit_expr (cast this) this env e)
         | _ => #visit_EUnOp vtable this env data (* call super *)
+    (* fun visit_EBinOp this env (data as (opr, e1, e2)) = *)
+    (*   case opr of *)
+    (*       EBPair => *)
+    (*       let *)
+    (*         val pa = #visit_expr (cast this) this env *)
+    (*         val (e1, t_e1) = assert_EAscType e1 *)
+    (*         val (e2, t_e2) = assert_EAscType e2 *)
+    (*         val e1 = pa e1 *)
+    (*         val e2 = pa e2 *)
+    (*         val t_e1 = pa_t t_e1 *)
+    (*         val t_e2 = pa_t t_e2 *)
+    (*         val x1 = fresh_evar () *)
+    (*         val x2 = fresh_evar () *)
+    (*         val y0 = fresh_evar () *)
+    (*         val y1 = fresh_evar () *)
+    (*         val y2 = fresh_evar () *)
+    (*         val () = println $ "e2=" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e2) *)
+    (*         val e = ELetManyClose ( *)
+    (*               [(x1, "px1", e1), *)
+    (*                (x2, "px2", e2), *)
+    (*                (y0, "y0", EMallocPair (t_e1, t_e2)), *)
+    (*                (y1, "y1", EPairAssign (EV y0, ProjFst, EV x1)), *)
+    (*                (y2, "y2", EPairAssign (EV y1, ProjSnd, EV x2)) *)
+    (*               ], EV y2)                   *)
+    (*       in *)
+    (*         e *)
+    (*       end *)
+    (*     | _ => #visit_EBinOp vtable this env data (* call super *) *)
     fun visit_EBinOp this env (data as (opr, e1, e2)) =
       case opr of
           EBPair =>
@@ -77,18 +105,17 @@ fun pa_expr_visitor_vtable cast () =
             val e2 = pa e2
             val t_e1 = pa_t t_e1
             val t_e2 = pa_t t_e2
-            val x1 = fresh_evar ()
-            val x2 = fresh_evar ()
-            val y0 = fresh_evar ()
-            val y1 = fresh_evar ()
-            val y2 = fresh_evar ()
-            val e = ELetManyClose (
-                  [(x1, "x1", e1),
-                   (x2, "x2", e2),
-                   (y0, "y0", EMallocPair (t_e1, t_e2)),
-                   (y1, "y1", EPairAssign (EV y0, ProjFst, EV x1)),
-                   (y2, "y2", EPairAssign (EV y1, ProjSnd, EV x2))
-                  ], EV y2)                  
+            (* val () = println $ "e2=" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e2) *)
+            (* EV-bounded *)
+            fun EVB n = EVar $ ID (n, dummy)
+            val e = ELets (
+                  map (mapFst $ attach_snd dummy) $
+                  [("x1", e1),
+                   ("x2", shift01_e_e e2),
+                   ("y0", EMallocPair (t_e1, t_e2)),
+                   ("y1", EPairAssign (EVB 0, ProjFst, EVB 2)),
+                   ("y2", EPairAssign (EVB 0, ProjSnd, EVB 2))
+                  ], EVB 0)                  
           in
             e
           end
@@ -583,8 +610,8 @@ fun test1 dirname =
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
-    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
-    val () = println ""
+    (* val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e *)
+    (* val () = println "" *)
                      
     val () = println "Started CC ..."
     val e = cc e
@@ -608,6 +635,8 @@ fun test1 dirname =
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
+    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
+    val () = println ""
                      
     val () = println "Started Pair Alloc ..."
     val e = pa e

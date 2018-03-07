@@ -1145,18 +1145,6 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
       (*   end *)
       | ELet _ =>
         let
-          fun collect_ELet e =
-              case e of
-                  ELet (e1, bind) =>
-                  let
-                    val (name, e) = unBindSimpName bind
-                    val (decls, e) = collect_ELet e
-                  in
-                    ((name, e1) :: decls, e)
-                  end
-                | _ => ([], e)
-          fun ELets (decls, e) = foldr (fn ((name, e1), e) => ELet (e1, EBind (name, e))) e decls
-
           val (decls, e) = collect_ELet e_input
           fun foo ((name, e), (decls, ctx)) =
               let

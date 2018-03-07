@@ -180,5 +180,17 @@ fun whnf ctx t =
 
 fun eq_t a = MicroTiMLVisitor2.eq_t_fn (curry Equal.eq_var, Equal.eq_bs, Equal.eq_i, Equal.eq_s) a
                      
+fun collect_ELet e =
+  case e of
+      ELet (e1, bind) =>
+      let
+        val (name, e) = unBindSimpName bind
+        val (decls, e) = collect_ELet e
+      in
+        ((name, e1) :: decls, e)
+      end
+    | _ => ([], e)
+fun ELets (decls, e) = foldr (fn ((name, e1), e) => ELet (e1, EBind (name, e))) e decls
+
 end
                                  
