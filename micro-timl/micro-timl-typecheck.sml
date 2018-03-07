@@ -703,8 +703,27 @@ fun a %: b = smart_EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)
 
+val anno_EVar = ref false
+val anno_EProj = ref false
+val anno_EFold = ref false
+val anno_EUnfold = ref false
+val anno_EApp = ref false
 val anno_EPair = ref false
-                     
+val anno_EBPrim = ref false
+val anno_ENew = ref false
+val anno_ERead = ref false
+val anno_ENatAdd = ref false
+val anno_EWrite = ref false
+val anno_ECase = ref false
+val anno_EAbs = ref false
+val anno_EAppT = ref false
+val anno_EAppI = ref false
+val anno_EPack = ref false
+val anno_EPackI = ref false
+val anno_EUnpack = ref false
+val anno_EUnpackI = ref false
+val anno_ELet = ref false
+           
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
     (* val () = print "tc() start: " *)
@@ -718,8 +737,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
              SOME (_, t) =>
              let
                val t = force_t t
+               val e = e_input
+               val e = if !anno_EVar then e %: t else e
              in
-               (e_input %: t, t, T0)
+               (e, t, T0)
              end
            | NONE => raise MTCError "Unbound term variable"
         )
@@ -736,8 +757,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val (t1, t2) = case t_e of
                              TBinOp (TBProd, t1, t2) => (t1, t2)
                            | _ => raise MTCError "EProj"
+          val e = if !anno_EProj then e %: t_e else e
         in
-          (EProj (proj, e %: t_e), choose (t1, t2) proj, i)
+          (EProj (proj, e), choose (t1, t2) proj, i)
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
@@ -763,8 +785,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           (* val () = println $ "EFold: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names itctx) t) *)
           val (e, i) = tc_against_ty ctx (e, t) 
           (* val () = println "EFold: after tc_against_ty" *)
+          val e = if !anno_EFold then e %: t else e
         in
-          (EFold (t', e %: t), t', i)
+          (EFold (t', e), t', i)
         end
       | EUnOp (EUUnfold, e) =>
         let
@@ -774,8 +797,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val (k, (_, t1)) = case t of
                                  TRec data => unBindAnnoName data
                                | _ => raise MTCError "EUnfold"
+          val e = if !anno_EUnfold then e %: t_e else e
         in
-          (EUnfold (e %: t_e), TAppITs (subst0_t_t t t1) args, i)
+          (EUnfold e, TAppITs (subst0_t_t t t1) args, i)
         end
       | EBinOp (EBApp, e1, e2) =>
         let
@@ -785,15 +809,15 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                                 TArrow data => data
                               | _ => raise MTCError "EApp"
           val (e2, i2) = tc_against_ty ctx (e2, t1)
+          val e1 = if !anno_EApp then e1 %: t_e1 else e1
         in
-          (EApp (e1 %: t_e1, e2), t2, i1 %+ i2 %+ T1 %+ i)
+          (EApp (e1, e2), t2, i1 %+ i2 %+ T1 %+ i)
         end
       | EBinOp (EBPair, e1, e2) =>
         let
           val (e1, t1, i1) = tc ctx e1
           val (e2, t2, i2) = tc ctx e2
-          val (e1, e2) = if !anno_EPair then (e1 %: t1, e2 %: t2)
-                         else (e1, e2)
+          val (e1, e2) = if !anno_EPair then (e1 %: t1, e2 %: t2) else (e1, e2)
         in
           (EPair (e1, e2), TProd (t1, t2), i1 %+ i2)
         end
@@ -803,8 +827,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val () = is_eq_ty itctx (t1, get_prim_expr_bin_op_arg1_ty opr)
           val (e2, t2, i2) = tc ctx e2
           val () = is_eq_ty itctx (t2, get_prim_expr_bin_op_arg2_ty opr)
+          val (e1, e2) = if !anno_EBPrim then (e1 %: t1, e2 %: t2) else (e1, e2)
         in
-          (EBinOpPrim (opr, e1 %: t1, e2 %: t2), get_prim_expr_bin_op_res_ty opr, i1 %+ i2)
+          (EBinOpPrim (opr, e1, e2), get_prim_expr_bin_op_res_ty opr, i1 %+ i2)
         end
       | EBinOp (EBNew, e1, e2) =>
         let
@@ -814,8 +839,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                       TNat i => i
                     | _ => raise MTCError "ENew"
           val (e2, t2, j2) = tc ctx e2
+          val (e1, e2) = if !anno_ENew then (e1 %: t1, e2 %: t2) else (e1, e2)
         in
-          (ENew (e1 %: t1, e2 %: t2), TArr (t2, i), j1 %+ j2)
+          (ENew (e1, e2), TArr (t2, i), j1 %+ j2)
         end
       | EBinOp (EBRead, e1, e2) =>
         let
@@ -829,8 +855,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                        TNat i => i
                      | _ => raise MTCError "ERead 2"
           val () = check_prop ictx (i2 %< i1)
+          val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
         in
-          (ERead (e1 %: t1, e2 %: t2), t, j1 %+ j2)
+          (ERead (e1, e2), t, j1 %+ j2)
         end
       | EBinOp (EBNatAdd, e1, e2) =>
         let
@@ -844,8 +871,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val i2 = case t2 of
                        TNat i => i
                      | _ => raise MTCError "ENatAdd 2"
+          val (e1, e2) = if !anno_ENatAdd then (e1 %: t1, e2 %: t2) else (e1, e2)
         in
-          (ENatAdd (e1 %: t1, e2 %: t2), TNat (i1 %+ i2), j1 %+ j2)
+          (ENatAdd (e1, e2), TNat (i1 %+ i2), j1 %+ j2)
         end
       | EWrite (e1, e2, e3) =>
         let
@@ -861,8 +889,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                      | _ => raise MTCError "ERead 2"
           val () = check_prop ictx (i2 %< i1)
           val (e3, j3) = tc_against_ty ctx (e3, t)
+          val (e1, e2, e3) = if !anno_EWrite then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
         in
-          (EWrite (e1 %: t1, e2 %: t2, e3 %: t), TUnit, j1 %+ j2 %+ j3)
+          (EWrite (e1, e2, e3), TUnit, j1 %+ j2 %+ j3)
         end
       | ECase data =>
         let
@@ -875,15 +904,17 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val (e1, t1, i1) = tc (add_typing_full (fst name1, t1) ctx) e1
           val (e2, t2, i2) = tc (add_typing_full (fst name2, t2) ctx) e2
           val () = is_eq_ty itctx (t1, t2)
+          val e = if !anno_ECase then e %: t_e else e
         in
-          (MakeECase (e %: t_e, (name1, e1), (name2, e2)), t1, i %+ IMax (i1, i2))
+          (MakeECase (e, (name1, e1), (name2, e2)), t1, i %+ IMax (i1, i2))
         end
       | EAbs data =>
         let
           val (t1 : mtiml_ty, (name, e)) = unEAbs data
           val t1 = kc_against_kind itctx (t1, KType)
           val (e, t2, i) = tc (add_typing_full (fst name, t1) ctx) e
-          val e = MakeEAbs (name, t1, e %: t2 |> i)
+          val e = if !anno_EAbs then e %: t2 |> i else e
+          val e = MakeEAbs (name, t1, e)
         in
           (e, TArrow (t1, i, t2), T0)
         end
@@ -973,8 +1004,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                                 TQuan (Forall, data) => unTQuan data
                               | _ => raise MTCError "EAppT"
           val t1 = kc_against_kind itctx (t1, KType)
+          val e = if !anno_EAppT then e %: t_e else e
         in
-          (EAppT (e %: t_e, t1), subst0_t_t t1 t, i)
+          (EAppT (e, t1), subst0_t_t t1 t, i)
         end
       | EAppI (e, i) =>
         let
@@ -984,8 +1016,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                                 TQuanI (Forall, data) => unTQuanI data
                               | _ => raise MTCError "EAppT"
           val i = sc_against_sort ictx (i, s)
+          val e = if !anno_EAppI then e %: t_e else e
         in
-          (EAppI (e %: t_e, i), subst0_i_t i t, j)
+          (EAppI (e, i), subst0_i_t i t, j)
         end
       | EPack (t', t1, e) =>
         let
@@ -997,8 +1030,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val t1 = kc_against_kind itctx (t1, k)
           val t_e = subst0_t_t t1 t
           val (e, i) = tc_against_ty ctx (e, t_e)
+          val e = if !anno_EPack then e %: t_e else e
         in
-          (EPack (t', t1, e %: t_e), t', i)
+          (EPack (t', t1, e), t', i)
         end
       | EPackI (t', i, e) =>
         let
@@ -1010,8 +1044,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val i = sc_against_sort ictx (i, s)
           val t_e = subst0_i_t i t
           val (e, j) = tc_against_ty ctx (e, t_e)
+          val e = if !anno_EPackI then e %: t_e else e
         in
-          (EPackI (t', i, e %: t_e), t', j)
+          (EPackI (t', i, e), t', j)
         end
       | EUnpack data =>
         let
@@ -1025,8 +1060,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           (* val () = println $ "trying to forget: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_kinding_it (tname, k) itctx) t2) *)
           val t2 = forget01_t_t t2
           (* val () = println "forget finished" *)
+          val e1 = if !anno_EUnpack then e1 %: t_e1 else e1
         in
-          (MakeEUnpack (e1 %: t_e1, tname, ename, e2), t2, i1 %+ i2)
+          (MakeEUnpack (e1, tname, ename, e2), t2, i1 %+ i2)
         end
       | EUnpackI data =>
         let
@@ -1043,8 +1079,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                    handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names $ add_sorting_it (fst iname, s) itctx) t2))
           val i2 = forget01_i_i i2
                    handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (fst iname :: map fst ictx) i2))
+          val e1 = if !anno_EUnpackI then e1 %: t_e1 else e1
         in
-          (MakeEUnpackI (e1 %: t_e1, iname, ename, e2), t2, i1 %+ i2)
+          (MakeEUnpackI (e1, iname, ename, e2), t2, i1 %+ i2)
         end
       | EPackIs (t, is, e) =>
         let
@@ -1080,7 +1117,8 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                 val e2 = EAscTypes (e2, ts)
                 val e2 = EAscTime (e2, BinOpI (MinusI, i, i1))
                 val (e2, t2, _) = tc (add_typing_full (fst name, t1) ctx) e2
-                val e = MakeELet (e1 %: t1, name, e2)
+                val e1 = if !anno_ELet then e1 %: t1 else e1
+                val e = MakeELet (e1, name, e2)
               in
                 (e |> i, t2, i)
               end
@@ -1150,7 +1188,8 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           fun foo ((name, e), (decls, ctx)) =
               let
                 val (e, t, i) = tc ctx e
-                val decl = ((name, e %: t), i)
+                val e = if !anno_ELet then e %: t else e
+                val decl = ((name, e), i)
                 val decls = decl :: decls
                 val ctx = add_typing_full (fst name, t) ctx
               in
@@ -1335,11 +1374,55 @@ fun runWriter m () =
   in 
     (r, vcs, admits) 
   end
+    
+datatype tc_flags =
+         AnnoEVar
+       | AnnoEProj
+       | AnnoEFold
+       | AnnoEUnfold
+       | AnnoEApp
+       | AnnoEPair
+       | AnnoEBPrim
+       | AnnoENew
+       | AnnoERead
+       | AnnoENatAdd
+       | AnnoEWrite
+       | AnnoECase
+       | AnnoEAbs
+       | AnnoEAppT
+       | AnnoEAppI
+       | AnnoEPack
+       | AnnoEPackI
+       | AnnoEUnpack
+       | AnnoEUnpackI
+       | AnnoELet
 
-fun typecheck ctx e =
+fun typecheck flags ctx e =
   let
+    val mem = fn (a : tc_flags) => mem op= a
+    val () = anno_EVar := mem AnnoEVar flags
+    val () = anno_EProj := mem AnnoEProj flags
+    val () = anno_EFold := mem AnnoEFold flags
+    val () = anno_EUnfold := mem AnnoEUnfold flags
+    val () = anno_EApp := mem AnnoEApp flags
+    val () = anno_EPair := mem AnnoEPair flags
+    val () = anno_EBPrim := mem AnnoEBPrim flags
+    val () = anno_ENew := mem AnnoENew flags
+    val () = anno_ERead := mem AnnoERead flags
+    val () = anno_ENatAdd := mem AnnoENatAdd flags
+    val () = anno_EWrite := mem AnnoEWrite flags
+    val () = anno_ECase := mem AnnoECase flags
+    val () = anno_EAbs := mem AnnoEAbs flags
+    val () = anno_EAppT := mem AnnoEAppT flags
+    val () = anno_EAppI := mem AnnoEAppI flags
+    val () = anno_EPack := mem AnnoEPack flags
+    val () = anno_EPackI := mem AnnoEPackI flags
+    val () = anno_EUnpack := mem AnnoEUnpack flags
+    val () = anno_EUnpackI := mem AnnoEUnpackI flags
+    val () = anno_ELet := mem AnnoELet flags
+    val ret = runWriter (fn () => tc ctx e) ()
   in
-    runWriter (fn () => tc ctx e) ()
+    ret
   end
 
 end
@@ -1447,7 +1530,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking ..."
-    val ((_, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val ((_, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t

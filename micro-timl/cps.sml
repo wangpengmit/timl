@@ -696,6 +696,13 @@ fun cps (e, t_e) (k, j_k) =
       end
   end
 
+val cps_tc_flags =
+    let
+      open MicroTiMLTypecheck
+    in
+      [AnnoEApp, AnnoEAppT, AnnoEAppI, AnnoEFold, AnnoEUnfold, AnnoEPack, AnnoEPackI, AnnoEUnpack, AnnoEUnpackI, AnnoEBPrim, AnnoENew, AnnoERead, AnnoENatAdd, AnnoEProj, AnnoECase, AnnoELet, AnnoEWrite]
+    end
+                     
 (* Checks the form invariants after CPS, according to the 'System F to TAL' paper. *)
 fun check_CPSed_expr e =
   let
@@ -912,7 +919,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], []) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t
@@ -935,7 +942,7 @@ fun test1 dirname =
     val () = check_CPSed_expr e
     val () = println "Finished post-CPS form checking"
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i), vcs, admits) = typecheck [] ([], [], []) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t
@@ -955,3 +962,4 @@ val test_suites = [
 ]
                             
 end                  
+

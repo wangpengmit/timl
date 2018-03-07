@@ -727,6 +727,13 @@ val cc =
       e
     end
 
+val cc_tc_flags =
+    let
+      open MicroTiMLTypecheck
+    in
+      [AnnoEAbs, AnnoEVar]
+    end
+                     
 val forget_var = Subst.forget_var
 val forget_i_i = Subst.forget_i_i
 val forget_i_s = Subst.forget_i_s
@@ -896,7 +903,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t
@@ -918,7 +925,7 @@ fun test1 dirname =
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ToStringUtil.empty_ctx e
     val () = write_file ("cc-unit-test-after-cps.tmp", e_str)
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i), vcs, admits) = typecheck cc_tc_flags ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t
@@ -941,7 +948,7 @@ fun test1 dirname =
     (* val () = println "Checking closed-ness of ERec's" *)
     (* val () = check_ERec_closed e *)
     val () = println "Started MicroTiML typechecking #3 ..."
-    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #3"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t

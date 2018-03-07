@@ -315,8 +315,13 @@ fun pair_alloc e =
     e
   end
 
-(* todo: write ANF checker *)
-    
+val pair_alloc_tc_flags =
+    let
+      open MicroTiMLTypecheck
+    in
+      [AnnoEPair]
+    end
+                     
 structure UnitTest = struct
 
 structure TestUtil = struct
@@ -422,7 +427,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t
@@ -446,7 +451,7 @@ fun test1 dirname =
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i), vcs, admits) = typecheck cc_tc_flags ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t
@@ -469,9 +474,7 @@ fun test1 dirname =
     (* val () = println "Checking closed-ness of ERec's" *)
     (* val () = check_ERec_closed e *)
     val () = println "Started MicroTiML typechecking #3 ..."
-    val () = anno_EPair := true
-    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
-    val () = anno_EPair := false
+    val ((e, t, i), vcs, admits) = typecheck pair_alloc_tc_flags ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #3"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t
@@ -495,7 +498,7 @@ fun test1 dirname =
     val () = check_CPSed_expr e
     val () = println "Finished post-CPS form checking"
     val () = println "Started MicroTiML typechecking #4 ..."
-    val ((e, t, i), vcs, admits) = typecheck ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #4"
     val () = println "Type:"
     val () = pp_t NONE $ export_t ([], []) t
