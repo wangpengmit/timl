@@ -865,12 +865,14 @@ fun is_value (e : U.expr) : bool =
       | EEI (opr, e, i) =>
         (case opr of
              EEIAppI => false
-           | EEIAscTime => false
+           (* | EEIAscTime => false *)
+           | EEIAscTime => is_value e
         )
       | EET (opr, e, t) =>
         (case opr of
              EETAppT => false
-           | EETAsc => false
+           (* | EETAsc => false *)
+           | EETAsc => is_value e
         )
       | ET (opr, t, _) =>
         (case opr of

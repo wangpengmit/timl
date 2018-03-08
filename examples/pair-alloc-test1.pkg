@@ -17,15 +17,14 @@ stdlib.pkg
 (* bug.timl *)
 (* pldi-2017-review-example.timl *)
 (* braun-tree-sortedness.timl *)
-rbt-sortedness.timl
+(* rbt-sortedness.timl *)
 
 (* ragged-matrix.timl *)
 (* tree.timl *)
 (* msort.timl *)
 (* insertion-sort.timl *)
 (* braun-tree.timl *)
-(* rbt.timl *)
-(* dynamic-table.timl *)
+rbt.timl
 (* functional-queue.timl *)
 (* array-bsearch.timl *)
 (* array-heap.timl *)
@@ -36,3 +35,5 @@ rbt-sortedness.timl
 (* qsort.timl *)
 (* dijkstra.timl *)
 
+(* dynamic-table.timl *)
+(* dynamic-table-test.timl *)

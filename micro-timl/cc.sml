@@ -494,9 +494,9 @@ fun apply_TForallIT b args =
 
 fun cc e =
   let
-    val () = print $ "cc() started: "
-    val e_str = (* substr 0 400 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 1) ([], [], [], []) e
-    val () = println $ e_str
+    (* val () = print $ "cc() started: " *)
+    (* val e_str = (* substr 0 400 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 1) ([], [], [], []) e *)
+    (* val () = println $ e_str *)
     val e =
     case e of
         EBinOp (EBApp, e1, e2) =>

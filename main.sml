@@ -338,7 +338,7 @@ fun parse_arguments (opts : options, args) =
                 (push_ref positionals s; parseArgs ts)
       val () = parseArgs args
     in
-      (rev (!positionals))
+      (!positionals)
     end
 
 val success = OS.Process.success
@@ -355,9 +355,9 @@ fun main (prog_name, args : string list) =
                  NONE => ()
                | SOME dirname => (app (fn f => ignore $ f dirname) UnitTest.test_suites; exit success)
     val libraries = rev $ !(#Libraries opts)
-    val () = if null filenames then
-               usage_and_fail ()
-             else ()
+    (* val () = if null filenames then *)
+    (*            usage_and_fail () *)
+    (*          else () *)
     val () = TypeCheck.anno_less := !(#AnnoLess opts)
     val _ = repeat_app (fn () => TiML.main libraries filenames) (!(#Repeat opts))
   in	

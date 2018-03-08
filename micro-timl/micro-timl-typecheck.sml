@@ -672,7 +672,7 @@ val anno_ELet = ref false
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
     (* val () = print "tc() start: " *)
-    (* val e_input_str = (* substr 0 100 $  *)ExportPP.pp_e_to_string (SOME 2, SOME 1) $ ExportPP.export (ctx_names ctx) e_input *)
+    (* val e_input_str = (* substr 0 100 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 1) (ctx_names ctx) e_input *)
     (* val () = print $ e_input_str *)
     val itctx = (ictx, tctx)
     fun main () =

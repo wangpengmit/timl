@@ -1,0 +1,17 @@
+structure DummyTable = struct
+
+datatype table 'a {size : Nat} {num : Nat} = DummyTable of table 'a {0} {0}
+val aaa = 1
+val ['a] table_num_le_size = builtin : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> Basic.le {num} {size}
+  val ['a] alloc = builtin : forall {size : Nat}, nat {size} -- 1.0 --> table 'a {size} {0}
+  val ['a] do_insert = builtin : forall {size num : Nat} {num < size}, table 'a {size} {num} ->> 'a -- 1.0 --> table 'a {size} {num + 1}
+  datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num}
+  val ['a] do_delete = builtin : forall {size num : Nat}, table 'a {size} {num} ->> 'a -- 1.0 --> do_delete 'a {size} {num}
+  val ['a] copy = builtin : forall {size num size' num' : Nat}, table 'a {size} {num} ->> table 'a {size'} {num'} -- $num --> table 'a {size'} {num min size'}
+  val ['a] num = builtin : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {num}
+  val ['a] size = builtin : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {size}
+                     
+end
+
+structure DummyDynamicTable = DynamicTable (DummyTable)
+
