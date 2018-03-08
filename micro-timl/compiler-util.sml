@@ -12,67 +12,12 @@ fun close0_i_e_anno a = close0_anno IBindAnno close0_i_e a
 fun close0_t_e_anno a = close0_anno TBindAnno close0_t_e a
 fun close0_e_e_anno a = close0_anno EBindAnno close0_e_e a
 
-structure ExportPP = struct
-
-open LongId
-open Util
-open MicroTiML
-open MicroTiMLVisitor
-open MicroTiMLExLongId
-open MicroTiMLEx
-       
-infixr 0 $
-infixr 0 !!
-         
-fun short_to_long_id x = ID (x, dummy)
-fun export_var sel ctx id =
-  let
-    fun unbound s = "__unbound_" ^ s
-    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
-  in
-    case id of
-        ID (x, _) =>
-        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
-      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
-  end
-(* val export_i = return2 *)
-fun export_i a = ToString.export_i Gctx.empty a
-fun export_s a = ToString.export_s Gctx.empty a
-fun export_t a = export_t_fn (TVar (ID ("...", dummy), []), export_var snd, export_i, export_s) NONE a
-fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
-val str = PP.string
-fun str_var x = LongId.str_raw_long_id id(*str_int*) x
-fun str_i a =
-  (* ToStringRaw.str_raw_i a *)
-  ToString.SN.strn_i a
-(* const_fun "<idx>" a *)
-fun str_bs a =
-  ToStringRaw.str_raw_bs a
-fun str_s a =
-  (* ToStringRaw.str_raw_s a *)
-  ToString.SN.strn_s a
-  (* const_fun "<sort>" a *)
-fun pp_t_to s b =
-  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
-  (* str s "<ty>" *)
-fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
-fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
-fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
-    str_var,
-    str_i,
-    str_s,
-    const_fun "<kind>",
-    pp_t_to
-  ) a
-
-end
-
 fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
                              
 fun assert_TArrow t =
   case t of
       TArrow a => a
-    | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t)
+    | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                  
 fun assert_EAbs e =
   case e of
@@ -85,7 +30,7 @@ fun assert_EAscType e =
   in
     case e of
         EAscType (e, t) => (EAscTimes (e, is), t)
-      | _ => raise assert_fail $ "assert_EAscType; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+      | _ => raise assert_fail $ "assert_EAscType; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
     
 fun assert_EAscTime e =
@@ -94,7 +39,7 @@ fun assert_EAscTime e =
   in
     case e of
         EAscTime (e, i) => (EAscTypes (e, ts), i)
-      | _ => raise assert_fail $ "assert_EAscTime; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+      | _ => raise assert_fail $ "assert_EAscTime; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
     
 fun EV x = EVar $ make_Free_e x

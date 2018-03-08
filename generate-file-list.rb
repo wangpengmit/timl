@@ -194,6 +194,7 @@ micro-timl/pattern-ex.sml
 micro-timl/post-process.sml
 remove-open.sml
 merge-modules.sml
+micro-timl/export-pp.sml
 micro-timl/timl-to-micro-timl.sml
 micro-timl/micro-timl-typecheck.sml
 micro-timl/micro-timl-ex-locally-nameless.sml

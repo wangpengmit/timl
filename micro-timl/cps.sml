@@ -108,7 +108,7 @@ fun assert_TSum t =
 fun assert_TAbsT t =
   case t of
       TAbsT bind => unBindAnno bind
-    | _ => raise assert_fail $ "assert_TAbsT; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t)
+    | _ => raise assert_fail $ "assert_TAbsT; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TAbsI t =
   case t of
       TAbsI bind => unBindAnno bind
@@ -116,11 +116,11 @@ fun assert_TAbsI t =
 fun assert_TForall t =
   case t of
       TQuan (Forall, bind) => unBindAnno bind
-    | _ => raise assert_fail $ "assert_TForall; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t)
+    | _ => raise assert_fail $ "assert_TForall; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TForallI t =
   case t of
       TQuanI (Forall, bind) => unBindAnno bind
-    | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t)
+    | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 
 (* fun assert_and_reduce_beta e = *)
 (*   case e of *)
@@ -134,7 +134,7 @@ fun assert_TForallI t =
 
 fun assert_and_reduce_letxx e =
     let
-      fun error () = raise assert_fail $ "assert_and_reduce_letxx: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+      fun error () = raise assert_fail $ "assert_and_reduce_letxx: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
     in
       case e of
           ELet (e1, bind) =>
@@ -264,7 +264,7 @@ fun cps_t t =
     | TAppI (t, i) => TAppI (cps_t t, i)
     | TProdEx _ =>
       let
-        val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t
+        val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t
       in
         raise Unimpl $ "cps_t() on: " ^ s
       end
@@ -366,7 +366,7 @@ fun cps (e, t_e) (k, j_k) =
         val t_e = open0_t_t alpha t_e
         val j = fresh_ivar ()
         val c = fresh_evar ()
-        val () = assert_b_m (fn () => "cps/EAbsT/is_value: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)) $ is_value e
+        val () = assert_b_m (fn () => "cps/EAbsT/is_value: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)) $ is_value e
         val (e, _) = cps (e, t_e) (EV c, IV j)
         val e = EAscTime (e, blowup_time_t (IV j))
         val t_e = cps_t t_e
@@ -690,7 +690,7 @@ fun cps (e, t_e) (k, j_k) =
     (*   end *)
     | _ =>
       let
-        val s = (* substr 0 100 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e
+        val s = (* substr 0 100 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e
       in
         raise Unimpl $ "cps() on: " ^ s
       end
@@ -746,7 +746,7 @@ fun check_CPSed_expr e =
       end
     | EHalt e => check_value e
     | EAscTime (e, _) => loop e
-    | _ => raise Impossible $ "check_CPSed_expr():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+    | _ => raise Impossible $ "check_CPSed_expr():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
 
 and check_decl e =
@@ -808,15 +808,12 @@ and check_value e =
     | EVar _ => () (* variables denote values *)
     | ENever _ => ()
     | EBuiltin _ => ()
-    | _ => raise Impossible $ "check_value():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+    | _ => raise Impossible $ "check_value():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
                               
-end
-
-structure CPSUnitTest = struct
+structure UnitTest = struct
 
 structure TestUtil = struct
 
-open CPS
 open LongId
 open Util
 open MicroTiML
@@ -824,49 +821,6 @@ open MicroTiMLVisitor
 open MicroTiMLExLongId
 open MicroTiMLEx
        
-infixr 0 $
-infixr 0 !!
-         
-fun short_to_long_id x = ID (x, dummy)
-fun export_var (sel : 'ctx -> string list) (ctx : 'ctx) id =
-  let
-    fun unbound s = "__unbound_" ^ s
-    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
-  in
-    case id of
-        ID (x, _) =>
-        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
-        (* short_to_long_id $ str_int x *)
-      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
-  end
-(* val export_i = return2 *)
-fun export_i a = ToString.export_i Gctx.empty a
-fun export_s a = ToString.export_s Gctx.empty a
-fun export_t a = export_t_fn (TVar (ID ("...", dummy), []), export_var snd, export_i, export_s) NONE a
-fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
-val str = PP.string
-fun str_var x = LongId.str_raw_long_id id(*str_int*) x
-fun str_i a =
-  (* ToStringRaw.str_raw_i a *)
-  ToString.SN.strn_i a
-  (* const_fun "<idx>" a *)
-fun str_bs a =
-  ToStringRaw.str_raw_bs a
-fun str_s a =
-  (* ToStringRaw.str_raw_s a *)
-  ToString.SN.strn_s a
-  (* const_fun "<sort>" a *)
-fun pp_t_to s b =
-  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
-  (* str s "<ty>" *)
-fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
-fun pp_e a = MicroTiMLExPP.pp_e_fn (
-    str_var,
-    str_i,
-    str_s,
-    const_fun "<kind>",
-    pp_t_to
-  ) a
 fun fail () = OS.Process.exit OS.Process.failure
                    
 end
@@ -922,21 +876,22 @@ fun test1 dirname =
     val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], []) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
-    val () = pp_t NONE $ export_t ([], []) t
+    open ExportPP
+    val () = pp_t NONE $ export_t NONE ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = println ""
                      
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion ..."
-    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = println ""
     val () = println "Started post-CPS form checking"
     val () = check_CPSed_expr e
@@ -945,7 +900,7 @@ fun test1 dirname =
     val ((e, t, i), vcs, admits) = typecheck [] ([], [], []) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
-    val () = pp_t NONE $ export_t ([], []) t
+    val () = pp_t NONE $ export_t NONE ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
@@ -963,3 +918,4 @@ val test_suites = [
                             
 end                  
 
+end

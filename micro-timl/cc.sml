@@ -173,7 +173,7 @@ fun free_ivars_with_anno_e e =
                  handle
                  TopoSortFailed =>
                  let
-                   val msg = sprintf "topo_sort failed on expr: $\n" [ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e]
+                   val msg = sprintf "topo_sort failed on expr: $\n" [ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e]
                    val msg = msg ^ sprintf "with dep graph: $\n" [str_ls (str_pair (str_int, str_ls str_int o TopoSort.SU.to_list)) $ IntBinaryMap.listItemsi in_graph]
                  in
                    raise Impossible msg
@@ -430,7 +430,7 @@ fun cc_t t =
     | TArr (t, i) => TArr (cc_t t, i)
     | TProdEx _ =>
       let
-        val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t ([], []) t
+        val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t
       in
         raise Unimpl $ "cc_t() on: " ^ s
       end
@@ -587,7 +587,7 @@ fun cc e =
       | EBuiltin t => EBuiltin (cc_t t)
       | EWrite (e1, e2, e3) => EWrite (cc e1, cc e2, cc e3)
       | EHalt e => EHalt (cc e)
-      | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e)
+      | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
     (* val () = println $ "cc() finished: " ^ e_str *)
   in
     e
@@ -994,49 +994,6 @@ open MicroTiMLVisitor
 open MicroTiMLExLongId
 open MicroTiMLEx
        
-infixr 0 $
-infixr 0 !!
-         
-fun short_to_long_id x = ID (x, dummy)
-fun export_var (sel : 'ctx -> string list) (ctx : 'ctx) id =
-  let
-    fun unbound s = "__unbound_" ^ s
-    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
-  in
-    case id of
-        ID (x, _) =>
-        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
-        (* short_to_long_id $ str_int x *)
-      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
-  end
-(* val export_i = return2 *)
-fun export_i a = ToString.export_i Gctx.empty a
-fun export_s a = ToString.export_s Gctx.empty a
-fun export_t a = export_t_fn (TVar (ID ("...", dummy), []), export_var snd, export_i, export_s) NONE a
-fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
-val str = PP.string
-fun str_var x = LongId.str_raw_long_id id(*str_int*) x
-fun str_i a =
-  (* ToStringRaw.str_raw_i a *)
-  ToString.SN.strn_i a
-  (* const_fun "<idx>" a *)
-fun str_bs a =
-  ToStringRaw.str_raw_bs a
-fun str_s a =
-  (* ToStringRaw.str_raw_s a *)
-  ToString.SN.strn_s a
-  (* const_fun "<sort>" a *)
-fun pp_t_to s b =
-  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
-  (* str s "<ty>" *)
-fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
-fun pp_e a = MicroTiMLExPP.pp_e_fn (
-    str_var,
-    str_i,
-    str_s,
-    const_fun "<kind>",
-    pp_t_to
-  ) a
 fun fail () = OS.Process.exit OS.Process.failure
                    
 end
@@ -1089,7 +1046,8 @@ fun test1 dirname =
     val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
-    val () = pp_t NONE $ export_t ([], []) t
+    open ExportPP
+    val () = pp_t NONE $ export_t NONE ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
@@ -1105,17 +1063,17 @@ fun test1 dirname =
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ToStringUtil.empty_ctx e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file ("cc-unit-test-after-cps.tmp", e_str)
     val () = println "Started MicroTiML typechecking #2 ..."
     val ((e, t, i), vcs, admits) = typecheck cc_tc_flags ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
-    val () = pp_t NONE $ export_t ([], []) t
+    val () = pp_t NONE $ export_t NONE ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
-    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = println ""
                      
     val () = println "Started CC ..."
@@ -1123,7 +1081,7 @@ fun test1 dirname =
     val () = println "Finished CC"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ToStringUtil.empty_ctx e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file ("cc-unit-test-after-cc.tmp", e_str)
     val () = println e_str
     val () = println ""
@@ -1134,7 +1092,7 @@ fun test1 dirname =
     val ((e, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #3"
     val () = println "Type:"
-    val () = pp_t NONE $ export_t ([], []) t
+    val () = pp_t NONE $ export_t NONE ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i

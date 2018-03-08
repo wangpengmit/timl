@@ -352,61 +352,6 @@ and kc_against_kind ctx (t, k) =
 (*     #visit_ty vtable visitor 0 b *)
 (*   end *)
 
-structure ExportPP = struct
-
-open LongId
-open Util
-open MicroTiML
-open MicroTiMLVisitor
-open MicroTiMLExLongId
-open MicroTiMLEx
-       
-infixr 0 $
-infixr 0 !!
-         
-fun short_to_long_id x = ID (x, dummy)
-fun export_var sel ctx id =
-  let
-    fun unbound s = "__unbound_" ^ s
-    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
-  in
-    case id of
-        ID (x, _) =>
-        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
-      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
-  end
-(* val export_i = return2 *)
-fun export_i a = ToString.export_i Gctx.empty a
-fun export_s a = ToString.export_s Gctx.empty a
-fun export_t a = export_t_fn (TVar (ID ("...", dummy), []), export_var snd, export_i, export_s) NONE a
-fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
-val str = PP.string
-fun str_var x = LongId.str_raw_long_id id(*str_int*) x
-fun str_i a =
-  (* ToStringRaw.str_raw_i a *)
-  ToString.SN.strn_i a
-(* const_fun "<idx>" a *)
-fun str_bs a =
-  ToStringRaw.str_raw_bs a
-fun str_s a =
-  (* ToStringRaw.str_raw_s a *)
-  ToString.SN.strn_s a
-  (* const_fun "<sort>" a *)
-fun pp_t_to s b =
-  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
-  (* str s "<ty>" *)
-fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
-fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
-fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
-    str_var,
-    str_i,
-    str_s,
-    const_fun "<kind>",
-    pp_t_to
-  ) a
-
-end
-
 fun ictx_names ictx = map fst ictx
 fun itctx_names (ictx, tctx) = (map fst ictx, map fst tctx)
 fun ctx_names (ictx, tctx, ectx(* , _ *)) = (map fst ictx, map fst tctx, [], map fst ectx)
@@ -415,8 +360,8 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
     let
       val t = whnf ctx t
       val t' = whnf ctx t'
-      fun t_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names ctx) t
-      fun t'_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names ctx) t'
+      fun t_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t
+      fun t'_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
       val assert_b = fn b => flip assert_b_m b $ (fn () => sprintf "Can't unify types:\n$\nand\n$\n" [t_str (), t'_str ()])
       (* val () = println $ sprintf "comparing types:\n  $  $" [ *)
       (*       t_str (), *)
@@ -522,8 +467,8 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           end
         | _ => raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
                      [
-                       ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names ctx) t,
-                       ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names ctx) t'
+                       ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t,
+                       ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
                      ]
     end      
 
@@ -900,7 +845,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val t_e = whnf itctx t_e
           val (t1, t2) = case t_e of
                              TBinOp (TBSum, t1, t2) => (t1, t2)
-                           | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t (map fst ictx, map fst tctx) t_e)
+                           | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
           val (e1, t1, i1) = tc (add_typing_full (fst name1, t1) ctx) e1
           val (e2, t2, i2) = tc (add_typing_full (fst name2, t2) ctx) e2
           val () = is_eq_ty itctx (t1, t2)
@@ -1073,10 +1018,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val t_e1 = whnf itctx t_e1
           val (s, (_, t)) = case t_e1 of
                                 TQuanI (Exists _, data) => unTQuanI data
-                              | _ => raise MTCError $ mismatch "EUnpackI" (ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names itctx) t_e1) "TQuanI (Exists, _)"
+                              | _ => raise MTCError $ mismatch "EUnpackI" (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names itctx) t_e1) "TQuanI (Exists, _)"
           val (e2, t2, i2) = tc (add_typing_full (fst ename, t) $ add_sorting_full (fst iname, s) ctx) e2
           val t2 = forget01_i_t t2
-                   handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t (itctx_names $ add_sorting_it (fst iname, s) itctx) t2))
+                   handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names $ add_sorting_it (fst iname, s) itctx) t2))
           val i2 = forget01_i_i i2
                    handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (fst iname :: map fst ictx) i2))
           val e1 = if !anno_EUnpackI then e1 %: t_e1 else e1
@@ -1271,8 +1216,8 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EHalt e, TUnit, i_e)
         end
-      | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)
-    fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (ctx_names ctx) e_input)
+      | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
+    fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
     val (e_output, t, i) = main ()
                  handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
                       | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())
@@ -1427,9 +1372,7 @@ fun typecheck flags ctx e =
     ret
   end
 
-end
-
-structure MicroTiMLTypecheckUnitTest = struct
+structure UnitTest = struct
 
 structure TestUtil = struct
 
@@ -1440,49 +1383,6 @@ open MicroTiMLVisitor
 open MicroTiMLExLongId
 open MicroTiMLEx
        
-infixr 0 $
-infixr 0 !!
-         
-fun short_to_long_id x = ID (x, dummy)
-fun export_var (sel : 'ctx -> string list) (ctx : 'ctx) id =
-  let
-    fun unbound s = "__unbound_" ^ s
-    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
-  in
-    case id of
-        ID (x, _) =>
-        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
-        (* short_to_long_id $ str_int x *)
-      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
-  end
-(* val export_i = return2 *)
-fun export_i a = ToString.export_i Gctx.empty a
-fun export_s a = ToString.export_s Gctx.empty a
-fun export_t a = export_t_fn (TVar (ID ("...", dummy), []), export_var snd, export_i, export_s) NONE a
-fun export a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t) a
-val str = PP.string
-fun str_var x = LongId.str_raw_long_id id(*str_int*) x
-fun str_i a =
-  (* ToStringRaw.str_raw_i a *)
-  ToString.SN.strn_i a
-  (* const_fun "<idx>" a *)
-fun str_bs a =
-  ToStringRaw.str_raw_bs a
-fun str_s a =
-  (* ToStringRaw.str_raw_s a *)
-  ToString.SN.strn_s a
-  (* const_fun "<sort>" a *)
-fun pp_t_to s b =
-  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
-  (* str s "<ty>" *)
-fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
-fun pp_e a = MicroTiMLExPP.pp_e_fn (
-    str_var,
-    str_i,
-    str_s,
-    const_fun "<kind>",
-    pp_t_to
-  ) a
 fun fail () = OS.Process.exit OS.Process.failure
                    
 end
@@ -1527,15 +1427,16 @@ fun test1 dirname =
     val () = println "Started translating ..."
     val e = trans_e e
     val () = println "Finished translating"
-    val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e
+    open ExportPP
+    val () = pp_e (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = println ""
-    open MicroTiMLTypecheck
     open TestUtil
+    open ExportPP
     val () = println "Started MicroTiML typechecking ..."
     val ((_, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking"
     val () = println "Type:"
-    val () = pp_t NONE $ export_t ([], []) t
+    val () = pp_t NONE $ export_t NONE ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
@@ -1546,7 +1447,7 @@ fun test1 dirname =
   in
     ((* t, e *))
   end
-  handle MicroTiMLTypecheck.MTCError msg => (println $ "MTiMLTC.MTCError: " ^ substr 0 1000 msg; fail ())
+  handle MTCError msg => (println $ "MTiMLTC.MTCError: " ^ substr 0 1000 msg; fail ())
        | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; fail ())
        | NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; fail ())
     
@@ -1555,5 +1456,5 @@ val test_suites = [
 ]
                             
 end
-                       
                                  
+end

@@ -344,46 +344,6 @@ open MicroTiMLEx
 infixr 0 $
 infixr 0 !!
          
-fun short_to_long_id x = ID (x, dummy)
-fun export_var (sel : 'ctx -> string list) (ctx : 'ctx) id =
-  let
-    fun unbound s = "__unbound_" ^ s
-    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
-  in
-    case id of
-        ID (x, _) =>
-        short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
-        (* short_to_long_id $ str_int x *)
-      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
-  end
-(* val export_i = return2 *)
-fun export_i a = ToString.export_i Gctx.empty a
-fun export_s a = ToString.export_s Gctx.empty a
-fun export_t a = export_t_fn (TVar (ID ("...", dummy), []), export_var snd, export_i, export_s) a
-fun export depth_t a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t depth_t) a
-val str = PP.string
-fun str_var x = LongId.str_raw_long_id id(*str_int*) x
-fun str_i a =
-  (* ToStringRaw.str_raw_i a *)
-  ToString.SN.strn_i a
-  (* const_fun "<idx>" a *)
-fun str_bs a =
-  ToStringRaw.str_raw_bs a
-fun str_s a =
-  (* ToStringRaw.str_raw_s a *)
-  ToString.SN.strn_s a
-  (* const_fun "<sort>" a *)
-fun pp_t_to s b =
-  MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
-  (* str s "<ty>" *)
-fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
-fun pp_e a = MicroTiMLExPP.pp_e_fn (
-    str_var,
-    str_i,
-    str_s,
-    const_fun "<kind>",
-    pp_t_to
-  ) a
 fun fail () = OS.Process.exit OS.Process.failure
                    
 end
@@ -436,6 +396,7 @@ fun test1 dirname =
     val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
+    open ExportPP
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
     val () = println "Time:"
     val i = simp_i i
@@ -452,7 +413,7 @@ fun test1 dirname =
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1) ToStringUtil.empty_ctx e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1, NONE) ToStringUtil.empty_ctx e
     val () = write_file ("pair-alloc-unit-test-after-cps.tmp", e_str)
     (* val () = println e_str *)
     (* val () = println "" *)
@@ -472,7 +433,7 @@ fun test1 dirname =
     val () = println "Finished CC"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1) ToStringUtil.empty_ctx e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1, NONE) ToStringUtil.empty_ctx e
     val () = write_file ("pair-alloc-unit-test-after-cc.tmp", e_str)
     (* val () = println e_str *)
     (* val () = println "" *)
@@ -487,7 +448,7 @@ fun test1 dirname =
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
-    val () = pp_e (NONE, NONE) $ export (* (SOME 1) *)NONE ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export ((* (SOME 1) *)NONE, NONE) ToStringUtil.empty_ctx e
     val () = println ""
                      
     val () = println "Started Pair Alloc ..."
@@ -496,7 +457,7 @@ fun test1 dirname =
     val () = println "Finished Pair Alloc"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1) ToStringUtil.empty_ctx e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1, NONE) ToStringUtil.empty_ctx e
     val () = write_file ("pair-alloc-unit-test-after-pair-alloc.tmp", e_str)
     val () = println e_str
     val () = println ""
