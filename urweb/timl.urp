@@ -1,8 +1,32 @@
 library clib
 rewrite url Timl/main
 allow url https://people.csail.mit.edu/wangpeng/
+allow url https://github.com/mit-plv/timl
 file /examples.html examples.html
+# file /basic.timl ../examples/basic.timl
+# file /list.timl ../examples/list.timl
 file /basic.timl ../examples/basic.timl
 file /list.timl ../examples/list.timl
+file /nat.timl ../examples/nat.timl
+file /array.timl ../examples/array.timl
+file /ragged-matrix.timl ../examples/ragged-matrix.timl
+file /tree.timl ../examples/tree.timl
+file /msort.timl ../examples/msort.timl
+file /insertion-sort.timl ../examples/insertion-sort.timl
+file /braun-tree.timl ../examples/braun-tree.timl
+file /rbt.timl ../examples/rbt.timl
+file /dynamic-table.timl ../examples/dynamic-table.timl
+file /functional-queue.timl ../examples/functional-queue.timl
+file /array-bsearch.timl ../examples/array-bsearch.timl
+file /array-heap.timl ../examples/array-heap.timl
+file /array-msort.timl ../examples/array-msort.timl
+file /array-msort-inplace.timl ../examples/array-msort-inplace.timl
+file /array-kmed.timl ../examples/array-kmed.timl
+file /dlist.timl ../examples/dlist.timl
+file /qsort.timl ../examples/qsort.timl
+file /dijkstra.timl ../examples/dijkstra.timl
+file /perversive-list.timl ../examples/perversive-list.timl
+file /braun-tree-sortedness.timl ../examples/braun-tree-sortedness.timl
+file /rbt-sortedness.timl ../examples/rbt-sortedness.timl
 
 timl

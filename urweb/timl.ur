@@ -35,8 +35,9 @@ fun main () =
           </head>
           <body>
           <h1>{["TiML - A Functional Language with Static Time Complexity Guarantees"]}</h1>
-          (* <h2>{["by Peng Wang <wangpeng@csail.mit.edu>"]}</h2> *)
           <h2>{["by "]}<a href="https://people.csail.mit.edu/wangpeng/">Peng Wang</a>{[" <wangpeng at csail dot mit dot edu>"]}</h2>
+          <hr/>
+          <a href="https://github.com/mit-plv/timl">GitHub repo</a><br/>
           <hr/>
           <a href="/examples.html">Example TiML Programs</a><br/>
           <hr/>
