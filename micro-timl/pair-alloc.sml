@@ -245,6 +245,15 @@ fun anf_decls_expr_visitor_vtable cast output =
       in
         EAscTime (e, i)
       end
+    fun visit_EAppI this env (e, i) =
+      let
+        val (e, is) = collect_EAppI e
+        val is = is
+        val e = #visit_expr (cast this) this env e
+        val e = EAppIs (e, is)
+      in
+        EAppI (e, i)
+      end
     fun visit_expr this env e =
       let
         fun is_add_decl e =
@@ -280,6 +289,7 @@ fun anf_decls_expr_visitor_vtable cast output =
     val vtable = override_visit_ERec vtable visit_ERec
     val vtable = override_visit_ECase vtable visit_ECase
     val vtable = override_visit_EAscTime vtable visit_EAscTime
+    val vtable = override_visit_EAppI vtable visit_EAppI
     val vtable = override_visit_expr vtable visit_expr
   in
     vtable
@@ -447,7 +457,7 @@ fun test1 dirname =
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ToStringUtil.empty_ctx e
-    val () = write_file ("cc-unit-test-after-cps.tmp", e_str)
+    val () = write_file ("pair-alloc-unit-test-after-cps.tmp", e_str)
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
@@ -467,7 +477,7 @@ fun test1 dirname =
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ToStringUtil.empty_ctx e
-    val () = write_file ("cc-unit-test-after-cc.tmp", e_str)
+    val () = write_file ("pair-alloc-unit-test-after-cc.tmp", e_str)
     (* val () = println e_str *)
     (* val () = println "" *)
     (* val () = println "Done" *)
@@ -491,12 +501,12 @@ fun test1 dirname =
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ToStringUtil.empty_ctx e
-    val () = write_file ("cc-unit-test-after-pair-alloc.tmp", e_str)
+    val () = write_file ("pair-alloc-unit-test-after-pair-alloc.tmp", e_str)
     val () = println e_str
     val () = println ""
-    val () = println "Started post-CPS form checking"
+    val () = println "Started post-pair-allocation form checking"
     val () = check_CPSed_expr e
-    val () = println "Finished post-CPS form checking"
+    val () = println "Finished post-pair-allocation form checking"
     val () = println "Started MicroTiML typechecking #4 ..."
     val ((e, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e
     val () = println "Finished MicroTiML typechecking #4"

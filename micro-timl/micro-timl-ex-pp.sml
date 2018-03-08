@@ -242,6 +242,18 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
+      | EBinOp (EBPair, e1, e2) =>
+        (
+          open_hbox ();
+          str "EPair";
+          space ();
+          str "(";
+          pp_e e1;
+          comma ();
+          pp_e e2;
+          str ")";
+          close_box ()
+        )
       | EBinOp (EBPrim PEBIntAdd, e1, e2) =>
         (
           open_hbox ();
@@ -457,18 +469,34 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         end
-      | EAppI (e, i) =>
+      (* | EAppI (e, i) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EAppI"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e; *)
+      (*     comma (); *)
+      (*     str $ str_i i; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
+      | EAppI _ =>
+        let
+          val (e, is) = MicroTiMLExUtil.collect_EAppI e
+        in
         (
           open_hbox ();
           str "EAppI";
           space ();
           str "(";
           pp_e e;
-          comma ();
-          str $ str_i i;
+          app (fn i => (comma ();
+                        str $ str_i i)) is;
           str ")";
           close_box ()
         )
+        end
       | EPack (t_all, t, e) =>
         (
           open_hbox ();

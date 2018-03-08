@@ -192,5 +192,16 @@ fun collect_ELet e =
     | _ => ([], e)
 fun ELets (decls, e) = foldr (fn ((name, e1), e) => ELet (e1, EBind (name, e))) e decls
 
+fun collect_EAppI e =
+  case e of
+      EAppI (e, i) =>
+      let 
+        val (e, is) = collect_EAppI e
+      in
+        (e, is @ [i])
+      end
+    | _ => (e, [])
+fun EAppIs (f, args) = foldl (swap EAppI) f args
+                             
 end
                                  

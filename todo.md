@@ -119,6 +119,7 @@
 - [x] tc() should add annotations only when specific flags are turned on; the client that turns on these flags should consume the annotations to prevent them from polluting later translations.
 - [ ] Add level limits to export_t and export_e.
 - [x] Add a pass to remove annotations on EVar, TVar and VarI after cc().
+- [ ] Uniquefy variable names.
 
 # To-do for Examples:
 
