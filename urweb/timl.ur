@@ -29,11 +29,16 @@ fun main () =
                 set output_source output
             (* end *)
     in
-        return <xml><body>
+        return <xml>
+          <head>
+            <title>Example TiML Programs</title>
+          </head>
+          <body>
           <h1>{["TiML - A Functional Language with Static Time Complexity Guarantees"]}</h1>
           (* <h2>{["by Peng Wang <wangpeng@csail.mit.edu>"]}</h2> *)
           <h2>{["by "]}<a href="https://people.csail.mit.edu/wangpeng/">Peng Wang</a>{[" <wangpeng at csail dot mit dot edu>"]}</h2>
-          (* <a href="examples.html">Examples</a><br/> *)
+          <hr/>
+          <a href="/examples.html">Example TiML Programs</a><br/>
           <hr/>
           <br/>
           <ctextarea rows=40 cols=160 source={input_source}/>
@@ -42,5 +47,6 @@ fun main () =
           <br/>
 
           <dyn signal={show output_source}/>
-        </body></xml>
+          </body>
+          </xml>
     end

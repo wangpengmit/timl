@@ -17,7 +17,7 @@ stdlib.pkg
 (* bug.timl *)
 (* pldi-2017-review-example.timl *)
 (* braun-tree-sortedness.timl *)
-(* rbt-sortedness.timl *)
+rbt-sortedness.timl
 
 (* ragged-matrix.timl *)
 (* tree.timl *)
@@ -28,7 +28,7 @@ stdlib.pkg
 (* dynamic-table.timl *)
 (* functional-queue.timl *)
 (* array-bsearch.timl *)
-array-heap.timl
+(* array-heap.timl *)
 (* array-msort.timl *)
 (* array-msort-inplace.timl *)
 (* array-kmed.timl *)
