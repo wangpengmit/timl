@@ -223,6 +223,41 @@ fun override_visit_TProdEx (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'v
        extend_t = #extend_t record
   }
 
+fun override_visit_ty (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable) new : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable =
+  {
+       visit_kind = #visit_kind record,
+       visit_KType = #visit_KType record,
+       visit_KArrow = #visit_KArrow record,
+       visit_KArrowT = #visit_KArrowT record,
+       visit_ty = new,
+       visit_TVar = #visit_TVar record,
+       visit_TConst = #visit_TConst record,
+       visit_TBinOp = #visit_TBinOp record,
+       visit_TArrow = #visit_TArrow record,
+       visit_TAbsI = #visit_TAbsI record,
+       visit_TAppI = #visit_TAppI record,
+       visit_TQuan = #visit_TQuan record,
+       visit_TQuanI = #visit_TQuanI record,
+       visit_TRec = #visit_TRec record,
+       visit_TNat = #visit_TNat record,
+       visit_TArr = #visit_TArr record,
+       visit_TAbsT = #visit_TAbsT record,
+       visit_TAppT = #visit_TAppT record,
+       visit_TProdEx = #visit_TProdEx record,
+       visit_var = #visit_var record,
+       visit_bsort = #visit_bsort record,
+       visit_idx = #visit_idx record,
+       visit_sort = #visit_sort record,
+       visit_ty_const = #visit_ty_const record,
+       visit_ty_bin_op = #visit_ty_bin_op record,
+       visit_quan = #visit_quan record,
+       visit_ibind_anno_bsort = #visit_ibind_anno_bsort record,
+       visit_ibind_anno_sort = #visit_ibind_anno_sort record,
+       visit_tbind_anno = #visit_tbind_anno record,
+       extend_i = #extend_i record,
+       extend_t = #extend_t record
+  }
+
 (***************** the default visitor  **********************)    
 
 open VisitorUtil
@@ -991,29 +1026,48 @@ fun normalize_t_fn params t =
     
 (***************** the "export" visitor: convertnig de Bruijn indices to nameful terms **********************)    
 
-fun export_ty_visitor_vtable cast (visit_var, visit_idx, visit_sort) =
+fun export_ty_visitor_vtable cast (omitted, visit_var, visit_idx, visit_sort) =
   let
-    fun extend_i this (sctx, kctx) name = (Name2str name :: sctx, kctx)
-    fun extend_t this (sctx, kctx) name = (sctx, Name2str name :: kctx)
-    fun only_s f this (sctx, kctx) name = f sctx name
+    fun extend_i this (depth, (sctx, kctx)) name = (depth, (Name2str name :: sctx, kctx))
+    fun extend_t this (depth, (sctx, kctx)) name = (depth, (sctx, Name2str name :: kctx))
+    fun only_s f this (depth, (sctx, kctx)) name = f sctx name
+    fun ignore_this_depth f this (depth, ctx) = f ctx
+    val vtable = 
+        default_ty_visitor_vtable
+          cast
+          extend_i
+          extend_t
+          (ignore_this_depth visit_var)
+          visit_noop
+          (only_s visit_idx)
+          (only_s visit_sort)
+    fun visit_ty this (depth, ctx) t = 
+      let
+        val (reached_depth_limit, depth) =
+            case depth of
+                NONE => (false, NONE)
+              | SOME n => if n <= 0 then
+                            (true, NONE)
+                          else
+                            (false, SOME (n-1))
+      in
+        if reached_depth_limit then omitted
+        else
+          (* call super *)
+          #visit_ty vtable this (depth, ctx) t
+      end
+    val vtable = override_visit_ty vtable visit_ty
   in
-    default_ty_visitor_vtable
-      cast
-      extend_i
-      extend_t
-      (ignore_this visit_var)
-      visit_noop
-      (only_s visit_idx)
-      (only_s visit_sort)
+    vtable
   end
 
 fun new_export_ty_visitor params = new_ty_visitor export_ty_visitor_vtable params
     
-fun export_t_fn params ctx b =
+fun export_t_fn params depth ctx b =
   let
     val visitor as (TyVisitor vtable) = new_export_ty_visitor params
   in
-    #visit_ty vtable visitor ctx b
+    #visit_ty vtable visitor (depth, ctx) b
   end
 
 end
