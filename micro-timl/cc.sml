@@ -795,6 +795,107 @@ fun convert_EAbs_to_ERec b =
     #visit_expr vtable visitor () b
   end
 
+fun remove_var_anno_idx_visitor_vtable cast () =
+  let
+    fun visit_VarI this env (var, sorts) =
+      VarI (var, [])
+    val vtable = 
+        default_idx_visitor_vtable
+          cast
+          extend_noop
+          (visit_imposs "remove_var_anno_i/visit_var")
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    val vtable = override_visit_VarI vtable visit_VarI
+  in
+    vtable
+  end
+
+fun new_remove_var_anno_idx_visitor a = new_idx_visitor remove_var_anno_idx_visitor_vtable a
+    
+fun remove_var_anno_i b =
+  let
+    val visitor as (IdxVisitor vtable) = new_remove_var_anno_idx_visitor ()
+  in
+    #visit_idx vtable visitor () b
+  end
+    
+fun remove_var_anno_s b =
+  let
+    val visitor as (IdxVisitor vtable) = new_remove_var_anno_idx_visitor ()
+  in
+    #visit_sort vtable visitor () b
+  end
+    
+fun remove_var_anno_ty_visitor_vtable cast () =
+  let
+    fun visit_TVar this env (var, ks) =
+      TVar (var, [])
+    val vtable = 
+        default_ty_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          (visit_imposs "remove_var_anno_t/visit_var")
+          visit_noop
+          (ignore_this_env remove_var_anno_i)
+          (ignore_this_env remove_var_anno_s)
+    val vtable = override_visit_TVar vtable visit_TVar
+  in
+    vtable
+  end
+
+fun new_remove_var_anno_ty_visitor a = new_ty_visitor remove_var_anno_ty_visitor_vtable a
+    
+fun remove_var_anno_t b =
+  let
+    val visitor as (TyVisitor vtable) = new_remove_var_anno_ty_visitor ()
+  in
+    #visit_ty vtable visitor () b
+  end
+    
+fun remove_var_anno_expr_visitor_vtable cast () =
+  let
+    fun visit_EAscType this env (e, t) =
+      let
+        val vtable = cast this
+        val (e_core, annos) = collect_EAscTypeTime e
+        val e = #visit_expr vtable this env e
+        val annos = map (map_inl_inr (#visit_ty vtable this env) (#visit_idx vtable this env)) annos
+        val e = EAscTypeTimes (e, annos)
+      in
+        case e_core of
+            EVar _ => e
+          | _ => EAscType (e, #visit_ty vtable this env t)
+      end
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          (ignore_this_env remove_var_anno_i)
+          (ignore_this_env remove_var_anno_s)
+          (ignore_this_env remove_var_anno_t)
+    val vtable = override_visit_EAscType vtable visit_EAscType
+  in
+    vtable
+  end
+
+fun new_remove_var_anno_expr_visitor params = new_expr_visitor remove_var_anno_expr_visitor_vtable params
+
+fun remove_var_anno_e b =
+  let
+    val visitor as (ExprVisitor vtable) = new_remove_var_anno_expr_visitor ()
+  in
+    #visit_expr vtable visitor () b
+  end
+
 val cc =
  fn e =>
     let
@@ -804,6 +905,7 @@ val cc =
       val e = cc e
       val decls = rev $ !code_blocks
       val e = ELetManyClose (decls, e)
+      val e = remove_var_anno_e e
     in
       e
     end
@@ -815,70 +917,70 @@ val cc_tc_flags =
       [AnnoEAbs, AnnoEVar]
     end
                      
-val forget_var = Subst.forget_var
-val forget_i_i = Subst.forget_i_i
-val forget_i_s = Subst.forget_i_s
-fun forget_i_t a = shift_i_t_fn (forget_i_i, forget_i_s) a
-fun forget_t_t a = shift_t_t_fn forget_var a
-fun forget_i_e a = shift_i_e_fn (forget_i_i, forget_i_s, forget_i_t) a
-fun forget_t_e a = shift_t_e_fn (forget_t_t) a
-fun forget_e_e a = shift_e_e_fn forget_var a
+(* val forget_var = Subst.forget_var *)
+(* val forget_i_i = Subst.forget_i_i *)
+(* val forget_i_s = Subst.forget_i_s *)
+(* fun forget_i_t a = shift_i_t_fn (forget_i_i, forget_i_s) a *)
+(* fun forget_t_t a = shift_t_t_fn forget_var a *)
+(* fun forget_i_e a = shift_i_e_fn (forget_i_i, forget_i_s, forget_i_t) a *)
+(* fun forget_t_e a = shift_t_e_fn (forget_t_t) a *)
+(* fun forget_e_e a = shift_e_e_fn forget_var a *)
                                
-fun check_ERec_closed_expr_visitor_vtable cast output =
-  let
-    val vtable = 
-        default_expr_visitor_vtable
-          cast
-          extend_noop
-          extend_noop
-          extend_noop
-          extend_noop
-          visit_noop
-          visit_noop
-          visit_noop
-          visit_noop
-          visit_noop
-    fun visit_ERec this env bind =
-        let
-          (* call super *)
-          val e = #visit_ERec vtable this env bind
-          val (_, (name, _)) = unBindAnnoName bind
-          val name = fst name
-          val () =
-              let
-                val large = 1000000000
-                val _ = forget_i_e 0 large e
-                val _ = forget_t_e 0 large e
-                val _ = forget_e_e 0 large e
-              in
-                (* println $ name ^ " is closed" *)
-                ()
-              end
-              handle _ =>
-                     (* println $ name ^ " is open" *)
-                     output name
-        in
-          e
-        end
-    val vtable = override_visit_ERec vtable visit_ERec
-  in
-    vtable
-  end
+(* fun check_ERec_closed_expr_visitor_vtable cast output = *)
+(*   let *)
+(*     val vtable =  *)
+(*         default_expr_visitor_vtable *)
+(*           cast *)
+(*           extend_noop *)
+(*           extend_noop *)
+(*           extend_noop *)
+(*           extend_noop *)
+(*           visit_noop *)
+(*           visit_noop *)
+(*           visit_noop *)
+(*           visit_noop *)
+(*           visit_noop *)
+(*     fun visit_ERec this env bind = *)
+(*         let *)
+(*           (* call super *) *)
+(*           val e = #visit_ERec vtable this env bind *)
+(*           val (_, (name, _)) = unBindAnnoName bind *)
+(*           val name = fst name *)
+(*           val () = *)
+(*               let *)
+(*                 val large = 1000000000 *)
+(*                 val _ = forget_i_e 0 large e *)
+(*                 val _ = forget_t_e 0 large e *)
+(*                 val _ = forget_e_e 0 large e *)
+(*               in *)
+(*                 (* println $ name ^ " is closed" *) *)
+(*                 () *)
+(*               end *)
+(*               handle _ => *)
+(*                      (* println $ name ^ " is open" *) *)
+(*                      output name *)
+(*         in *)
+(*           e *)
+(*         end *)
+(*     val vtable = override_visit_ERec vtable visit_ERec *)
+(*   in *)
+(*     vtable *)
+(*   end *)
 
-fun new_check_ERec_closed_expr_visitor params = new_expr_visitor check_ERec_closed_expr_visitor_vtable params
+(* fun new_check_ERec_closed_expr_visitor params = new_expr_visitor check_ERec_closed_expr_visitor_vtable params *)
 
-fun check_ERec_closed b =
-    let
-      val r = ref []
-      fun output item = push_ref r item
-      val visitor as (ExprVisitor vtable) = new_check_ERec_closed_expr_visitor output
-      val _ = #visit_expr vtable visitor () b
-      val opens = !r
-    in
-      if not $ null opens then
-        raise Impossible $ "These ERec's are not closed: " ^ str_ls id opens
-      else ()
-    end
+(* fun check_ERec_closed b = *)
+(*     let *)
+(*       val r = ref [] *)
+(*       fun output item = push_ref r item *)
+(*       val visitor as (ExprVisitor vtable) = new_check_ERec_closed_expr_visitor output *)
+(*       val _ = #visit_expr vtable visitor () b *)
+(*       val opens = !r *)
+(*     in *)
+(*       if not $ null opens then *)
+(*         raise Impossible $ "These ERec's are not closed: " ^ str_ls id opens *)
+(*       else () *)
+(*     end *)
 
 structure UnitTest = struct
 

@@ -1,4 +1,6 @@
 library clib
 rewrite url Timl/main
+allow url https://people.csail.mit.edu/wangpeng/
+file examples.html examples.html
 
 timl

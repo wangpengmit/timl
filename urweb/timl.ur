@@ -18,6 +18,7 @@ fun main () =
 
     let
         fun process () =
+            set output_source "Typechecking ...";
             input <- get input_source;
             output <- rpc (do_process input);
             
@@ -29,7 +30,10 @@ fun main () =
             (* end *)
     in
         return <xml><body>
-          <h1>{["TiML"]}</h1>
+          <h1>{["TiML - A Functional Language with Static Time Complexity Guarantees"]}</h1>
+          (* <h2>{["by Peng Wang <wangpeng@csail.mit.edu>"]}</h2> *)
+          <h2>{["by "]}<a href="https://people.csail.mit.edu/wangpeng/">Peng Wang</a>{[" <wangpeng at csail dot mit dot edu>"]}</h2>
+          (* <a href="examples.html">Examples</a><br/> *)
           <hr/>
           <br/>
           <ctextarea rows=40 cols=160 source={input_source}/>
