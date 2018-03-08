@@ -1,4 +1,4 @@
-(* Red-black tree with invariant for well-red-ness and black-height-blancedness *)
+(* Red-black tree with invariants for well-red-ness and black-height-blancedness *)
 
 (* The main functions are [insert] and [lookup]. *)
 

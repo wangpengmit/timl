@@ -1756,35 +1756,54 @@ fun subst_e_e_fn params d x v b =
 
 (***************** the "export" visitor: convertnig de Bruijn indices to nameful terms **********************)    
 
-fun export_expr_visitor_vtable cast (visit_var, visit_cvar, visit_idx, visit_sort, visit_ty) =
+fun export_expr_visitor_vtable cast (omitted, visit_var, visit_cvar, visit_idx, visit_sort, visit_ty) =
   let
-    fun extend_i this (sctx, kctx, cctx, tctx) name = (Name2str name :: sctx, kctx, cctx, tctx)
-    fun extend_t this (sctx, kctx, cctx, tctx) name = (sctx, Name2str name :: kctx, cctx, tctx)
-    fun extend_c this (sctx, kctx, cctx, tctx) name = (sctx, kctx, Name2str name :: cctx, tctx)
-    fun extend_e this (sctx, kctx, cctx, tctx) name = (sctx, kctx, cctx, Name2str name :: tctx)
-    fun only_s f this (sctx, kctx, cctx, tctx) name = f sctx name
-    fun only_sk f this (sctx, kctx, cctx, tctx) name = f (sctx, kctx) name
+    fun extend_i this (depth, (sctx, kctx, cctx, tctx)) name = (depth, (Name2str name :: sctx, kctx, cctx, tctx))
+    fun extend_t this (depth, (sctx, kctx, cctx, tctx)) name = (depth, (sctx, Name2str name :: kctx, cctx, tctx))
+    fun extend_c this (depth, (sctx, kctx, cctx, tctx)) name = (depth, (sctx, kctx, Name2str name :: cctx, tctx))
+    fun extend_e this (depth, (sctx, kctx, cctx, tctx)) name = (depth, (sctx, kctx, cctx, Name2str name :: tctx))
+    fun ignore_this_depth f this (depth, ctx) = f ctx
+    fun only_s f this (_, (sctx, kctx, cctx, tctx)) name = f sctx name
+    fun only_sk f this (_, (sctx, kctx, cctx, tctx)) name = f (sctx, kctx) name
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_i
+          extend_t
+          extend_c
+          extend_e
+          (ignore_this_depth visit_var)
+          (ignore_this_depth visit_cvar)
+          (only_s visit_idx)
+          (only_s visit_sort)
+          (only_sk visit_ty)
+    fun visit_expr this (depth, ctx) t = 
+      let
+        val (reached_depth_limit, depth) =
+            case depth of
+                NONE => (false, NONE)
+              | SOME n => if n <= 0 then
+                            (true, NONE)
+                          else
+                            (false, SOME (n-1))
+      in
+        if reached_depth_limit then omitted
+        else
+          (* call super *)
+          #visit_expr vtable this (depth, ctx) t
+      end
+    val vtable = override_visit_expr vtable visit_expr
   in
-    default_expr_visitor_vtable
-      cast
-      extend_i
-      extend_t
-      extend_c
-      extend_e
-      (ignore_this visit_var)
-      (ignore_this visit_cvar)
-      (only_s visit_idx)
-      (only_s visit_sort)
-      (only_sk visit_ty)
+    vtable
   end
 
 fun new_export_expr_visitor params = new_expr_visitor export_expr_visitor_vtable params
     
-fun export_e_fn params ctx e =
+fun export_e_fn params depth ctx e =
   let
     val visitor as (ExprVisitor vtable) = new_export_expr_visitor params
   in
-    #visit_expr vtable visitor ctx e
+    #visit_expr vtable visitor (depth, ctx) e
   end
 
 fun collect_EAscTypeTime_rev e =

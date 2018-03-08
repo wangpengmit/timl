@@ -13,19 +13,20 @@ infixr 0 !!
 fun short_to_long_id x = ID (x, dummy)
 fun export_var sel ctx id =
   let
-    fun unbound s = "__unbound_" ^ s
-    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
+    (* fun unbound s = "__unbound_" ^ s *)
+    fun unbound s = raise Impossible $ "Unbound identifier: " ^ s
+    fun unbound_free s = s
   in
     case id of
         ID (x, _) =>
         short_to_long_id $ nth_error (sel ctx) x !! (fn () => unbound $ str_int x)
-      | QID _ => short_to_long_id $ unbound $ CanToString.str_raw_var id
+      | QID _ => short_to_long_id $ unbound_free $ CanToString.str_raw_var id
   end
 (* val export_i = return2 *)
 fun export_i a = ToString.export_i Gctx.empty a
 fun export_s a = ToString.export_s Gctx.empty a
 fun export_t a = export_t_fn (TVar (ID ("...", dummy), []), export_var snd, export_i, export_s) a
-fun export (depth_t, depth_e) a = export_e_fn (export_var #4, export_var #3, export_i, export_s, export_t depth_t) a
+fun export (depth_t, depth_e) a = export_e_fn (EVar $ ID ("...", dummy), export_var #4, export_var #3, export_i, export_s, export_t depth_t) depth_e a
 val str = PP.string
 fun str_var x = LongId.str_raw_long_id id(*str_int*) x
 fun str_i a =
