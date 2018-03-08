@@ -45,7 +45,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          (* introduced by compiler/CPS *)
          | EHalt of ('var, 'idx, 'sort, 'kind, 'ty) expr
          (* introduced by compiler/pair-alloc *)
-         | EMallocPair of 'ty * 'ty
+         | EMallocPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr (* These two expressions are only here to determine the types. They have no runtime behavior and should always be values. They are used to avoid type annotations here which could be large. *)
          | EPairAssign of ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | EProjProtected of projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
 
@@ -85,7 +85,7 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        visit_EMatchSum : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind list -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EMatchPair : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ebind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EMatchUnfold : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
-       visit_EMallocPair : 'this -> 'env -> 'ty * 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       visit_EMallocPair : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EPairAssign : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EProjProtected : 'this -> 'env -> projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EHalt : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
@@ -1362,13 +1362,13 @@ fun default_expr_visitor_vtable
       in
         EMatchUnfold (e, branch)
       end
-    fun visit_EMallocPair this env (t1, t2) =
+    fun visit_EMallocPair this env (a, b) =
       let
         val vtable = cast this
-        val t1 = #visit_ty vtable this env t1
-        val t2 = #visit_ty vtable this env t2
+        val a = #visit_expr vtable this env a
+        val b = #visit_expr vtable this env b
       in
-        EMallocPair (t1, t2)
+        EMallocPair (a, b)
       end
     fun visit_EPairAssign this env (e1, proj, e2) =
       let

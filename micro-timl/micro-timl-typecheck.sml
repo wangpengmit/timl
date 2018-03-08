@@ -1228,12 +1228,14 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           tc ctx e
         end
-      | EMallocPair (t1, t2) =>
+      | EMallocPair (a, b) =>
         let
-          val t1 = kc_against_kind itctx (t1, KType)
-          val t2 = kc_against_kind itctx (t2, KType)
+          val () = assert_b "EMallocPair: is_value a" (is_value a)
+          val () = assert_b "EMallocPair: is_value b" (is_value b)
+          val (a, t1, _) = tc ctx a
+          val (b, t2, _) = tc ctx b
         in
-          (EMallocPair (t1, t2), TProdEx ((t1, false), (t2, false)), T0)
+          (EMallocPair (a, b), TProdEx ((t1, false), (t2, false)), T0)
         end
       | EPairAssign (e1, proj, e2) =>
         let

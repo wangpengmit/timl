@@ -99,12 +99,8 @@ fun pa_expr_visitor_vtable cast () =
           EBPair =>
           let
             val pa = #visit_expr (cast this) this env
-            val (e1, t_e1) = assert_EAscType e1
-            val (e2, t_e2) = assert_EAscType e2
             val e1 = pa e1
             val e2 = pa e2
-            val t_e1 = pa_t t_e1
-            val t_e2 = pa_t t_e2
             (* val () = println $ "e2=" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export ([], [], [], []) e2) *)
             (* EV-bounded *)
             fun EVB n = EVar $ ID (n, dummy)
@@ -112,7 +108,7 @@ fun pa_expr_visitor_vtable cast () =
                   map (mapFst $ attach_snd dummy) $
                   [("x1", e1),
                    ("x2", shift01_e_e e2),
-                   ("y0", EMallocPair (t_e1, t_e2)),
+                   ("y0", EMallocPair (EVB 1, EVB 0)),
                    ("y1", EPairAssign (EVB 0, ProjFst, EVB 2)),
                    ("y2", EPairAssign (EVB 0, ProjSnd, EVB 2))
                   ], EVB 0)                  
@@ -329,7 +325,7 @@ val pair_alloc_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [AnnoEPair]
+      []
     end
                      
 structure UnitTest = struct

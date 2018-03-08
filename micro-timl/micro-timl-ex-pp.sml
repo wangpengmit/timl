@@ -704,15 +704,15 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         end
-      | EMallocPair (t1, t2) =>
+      | EMallocPair (a, b) =>
         (
           open_hbox ();
           str "EMallocPair";
           space ();
           str "(";
-          pp_t t1;
+          pp_e a;
           comma ();
-          pp_t t2;
+          pp_e b;
           str ")";
           close_box ()
         )
