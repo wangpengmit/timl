@@ -1,8 +1,7 @@
 structure DummyTable = struct
 
-datatype table 'a {size : Nat} {num : Nat} = DummyTable of table 'a {0} {0}
-val aaa = 1
-val ['a] table_num_le_size = builtin : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> Basic.le {num} {size}
+  datatype table 'a {size : Nat} {num : Nat} = DummyTable of table 'a {0} {0}
+  val ['a] table_num_le_size = builtin : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> Basic.le {num} {size}
   val ['a] alloc = builtin : forall {size : Nat}, nat {size} -- 1.0 --> table 'a {size} {0}
   val ['a] do_insert = builtin : forall {size num : Nat} {num < size}, table 'a {size} {num} ->> 'a -- 1.0 --> table 'a {size} {num + 1}
   datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num}

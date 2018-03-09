@@ -3,26 +3,6 @@ structure Expr = IdxTypeExprFn (type v = int
                          structure UVarT = UVar
                          type ptrn_constr_tag = int * int
                         )
-structure LongIdHasEqual = struct
-open LongId
-fun eq_id ((x, _), (x', _)) = x = x'
-fun eq_var a = eq_long_id eq_id a
-end
-                             
-structure HasEqual = struct
-open UVar
-open Expr
-open LongIdHasEqual
-fun eq_name ((s, _) : name, (s', _)) = s = s'
-end
-                       
-structure Equal = EqualFn (structure IdxType = struct
-                           structure Idx = Expr.Idx
-                           structure Type = Expr.Type
-                           end
-                           structure HasEqual = HasEqual
-                          )
-                          
 structure IntLongIdCanToString = struct
 
 open LongId
@@ -72,6 +52,27 @@ structure ToStringRaw = ToStringRawFn (structure Expr = Expr
                                     open CanToString
                                    )
                                 
+structure LongIdHasEqual = struct
+open LongId
+fun eq_id ((x, _), (x', _)) = x = x'
+fun eq_var a = eq_long_id eq_id a
+end
+                             
+structure HasEqual = struct
+open UVar
+open Expr
+open LongIdHasEqual
+fun eq_name ((s, _) : name, (s', _)) = s = s'
+end
+                       
+structure Equal = EqualFn (structure IdxType = struct
+                           structure Idx = Expr.Idx
+                           structure Type = Expr.Type
+                           end
+                           structure HasEqual = HasEqual
+                           val str_raw_mt = ToStringRaw.str_raw_mt
+                          )
+                          
 structure Subst = SubstFn (structure IdxType = struct
                            structure Idx = Expr.Idx
                            structure Type = Expr.Type

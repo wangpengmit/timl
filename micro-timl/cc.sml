@@ -312,8 +312,8 @@ val ETT = EConst ECTT
 
 fun ceil_half n = (n + 1) div 2
 
-fun callcc (f : ('a -> unit) -> 'a) : 'a = Cont.callcc (fn k => f (fn v => Cont.throw k v))
-                                
+open ContUtil
+       
 (* convert lists to Unsafe.Array to support random access *)
 fun make_Record_k make_Prod make_Unit ls return =
     let
@@ -328,7 +328,7 @@ fun make_Record_k make_Prod make_Unit ls return =
       make_Prod (make_Record fst_half, make_Record snd_half)
     end
 
-and make_Record make_Prod make_Unit ls = callcc $ make_Record_k make_Prod make_Unit ls
+and make_Record make_Prod make_Unit ls = callret $ make_Record_k make_Prod make_Unit ls
 
 fun TRecord a = make_Record TProd TUnit a
 fun ERecord a = make_Record EPair ETT a
@@ -345,7 +345,7 @@ fun ERecordProj_k (len, i) e return =
         ERecordProj (len - len_fst_half, i - len_fst_half) $ ESnd e
     end
 
-and ERecordProj (len, i) e = callcc $ ERecordProj_k (len, i) e
+and ERecordProj (len, i) e = callret $ ERecordProj_k (len, i) e
       
 infixr 0 %$
 fun a %$ b = EApp (a, b)

@@ -16,6 +16,8 @@ open BaseTypes
 open Operators
 open Bind
        
+infixr 0 $
+         
 fun str_raw_option f a = case a of SOME a => sprintf "SOME ($)" [f a] | NONE => "NONE"
 
 fun str_raw_name (s, _) = s
@@ -60,7 +62,28 @@ fun str_raw_mt (t : mtype) : string =
     | MtAbsI (s, bind, _) => sprintf "MtAbsI ($, $)" ["<sort>", str_raw_bind str_raw_mt bind]
     | BaseType (bt, _) => sprintf "BaseType ($)" [str_bt bt]
     | UVar (u, _) => sprintf "UVar ($)" [str_uvar_mt (str_raw_bs, str_raw_k, str_raw_mt) u]
-    | TDatatype (dt, _) => "TDatatype (...)"
+    | TDatatype (Bind (name, tbinds), _) =>
+      let
+        fun str_raw_name name = "<name>"
+        val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
+        val tnames = map (str_raw_name o fst) tname_kinds
+        val tnames = join_prefix " " tnames
+        val bsorts = map str_raw_bs bsorts
+        val bsorts = if null bsorts then ""
+                     else surround " {" "}" $ join " " bsorts
+        fun str_raw_constr_decl family_name tnames (name, core, _) =
+          let
+            val (iname_sorts, (t, is)) = unfold_binds core
+            val iname_sorts = join_prefix " " $ map (fn (name, s) => sprintf "{$ : $}" [str_raw_name name, str_raw_s s]) iname_sorts
+            val t = str_raw_mt t
+            val is = join_prefix " " $ map (surround "{" "}" o str_raw_i) is
+          in
+            sprintf "$$ of $ -> $$$" [str_raw_name name, iname_sorts, t, family_name, tnames, is]
+          end
+        val constr_decls = join " | " $ map (str_raw_constr_decl (str_raw_name name) tnames) constr_decls
+      in
+        sprintf "(datatype $$$ = $)" [str_raw_name name, tnames, bsorts, constr_decls]
+      end
 
 fun str_raw_t (t : ty) : string =
   case t of

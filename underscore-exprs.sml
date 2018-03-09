@@ -24,19 +24,6 @@ structure NamefulExpr = IdxTypeExprFn (type v = string
                                 type ptrn_constr_tag = unit
                                )
                                
-structure NamefulHasEqual = struct
-open Underscore
-open NamefulExpr
-open LongIdHasEqual
-end
-                       
-structure NamefulEqual = EqualFn (structure IdxType = struct
-                                  structure Idx = NamefulExpr.Idx
-                                  structure Type = NamefulExpr.Type
-                                  end
-                                  structure HasEqual = NamefulHasEqual
-                                 )
-                          
 structure StringLongIdCanToString = struct
 
 open LongId
@@ -66,12 +53,44 @@ structure NamefulToString = ToStringFn (structure Expr = NamefulExpr
                                         structure CanToString = NamefulCanToString
                                 )
                                 
+structure NamefulToStringRaw = ToStringRawFn (structure Expr = NamefulExpr
+                                              open NamefulCanToString
+                                   )
+                                
+structure NamefulHasEqual = struct
+open Underscore
+open NamefulExpr
+open LongIdHasEqual
+end
+                       
+structure NamefulEqual = EqualFn (structure IdxType = struct
+                                  structure Idx = NamefulExpr.Idx
+                                  structure Type = NamefulExpr.Type
+                                  end
+                                  structure HasEqual = NamefulHasEqual
+                                  val str_raw_mt = NamefulToStringRaw.str_raw_mt
+                                 )
+                          
 structure UnderscoredExpr = IdxTypeExprFn (type v = int
                                     structure UVarI = Underscore
                                     structure UVarT = Underscore
                                     type ptrn_constr_tag = unit
                                    )
 
+structure UnderscoredCanToString = struct
+open Underscore
+open UnderscoredExpr
+open IntLongIdCanToString
+end
+                       
+structure UnderscoredToString = ToStringFn (structure Expr = UnderscoredExpr
+                                            structure CanToString = UnderscoredCanToString
+                                )
+                                
+structure UnderscoredToStringRaw = ToStringRawFn (structure Expr = UnderscoredExpr
+                                                  open UnderscoredCanToString
+                                   )
+                                
 structure UnderscoredHasEqual = struct
 open Underscore
 open UnderscoredExpr
@@ -83,18 +102,9 @@ structure UnderscoredEqual = EqualFn (structure IdxType = struct
                                       structure Type = UnderscoredExpr.Type
                                       end
                                       structure HasEqual = UnderscoredHasEqual
+                                      val str_raw_mt = UnderscoredToStringRaw.str_raw_mt
                           )
                           
-structure UnderscoredCanToString = struct
-open Underscore
-open UnderscoredExpr
-open IntLongIdCanToString
-end
-                       
-structure UnderscoredToString = ToStringFn (structure Expr = UnderscoredExpr
-                                            structure CanToString = UnderscoredCanToString
-                                )
-                                
 structure UnderscoredSubst = SubstFn (structure IdxType = struct
                                       structure Idx = UnderscoredExpr.Idx
                                       structure Type = UnderscoredExpr.Type

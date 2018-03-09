@@ -1,0 +1,30 @@
+functor FunctorDatatypeTest1Fn (K : sig
+               datatype ttt 'a : {Nat} =
+                        Nil of ttt 'a {0}
+                      | Cons {n : Nat} of 'a * ttt 'a {n} --> ttt 'a {n + 1}
+              end) = struct
+end
+        
+structure FunctorDatatypeTest1Arg = struct
+datatype ttt 'a : {Nat} =
+         Nil of ttt 'a {0}
+       | Cons {n : Nat} of 'a * ttt 'a {n} --> ttt 'a {n + 1}
+end
+
+structure FunctorDatatypeTest1Result = FunctorDatatypeTest1Fn (FunctorDatatypeTest1Arg)
+
+(* functor FunctorDatatypeTest2Fn (T : sig *)
+(*   type table 'a  {Nat} {Nat} *)
+(*   (* type ttt = table *) *)
+(*   datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num} *)
+(* end) = struct *)
+(* end *)
+
+(* structure FunctorDatatypeTest2Arg = struct *)
+(*   datatype table 'a {size : Nat} {num : Nat} = DummyTable of table 'a {0} {0} *)
+(*   (* type ttt = table *) *)
+(*   datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num} *)
+(* end *)
+
+(* structure FunctorDatatypeTest2Result = FunctorDatatypeTest2Fn (FunctorDatatypeTest2Arg) *)
+         

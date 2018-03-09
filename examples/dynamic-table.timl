@@ -16,7 +16,7 @@ functor DynamicTable (T : sig
   (* Requirement: for any table, num is not larger than capacity *)
   val table_num_le_size ['a] : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> Basic.le {num} {size}
   val alloc ['a] : forall {size : Nat}, nat {size} -- 1.0 --> table 'a {size} {0}
-  val do_insert ['a] : forall {size num : Nat} {num < size}, table 'a {size} {num} ->> 'a -- 1.0 --> table 'a {size} {num + 1}
+                                val do_insert ['a] : forall {size num : Nat} {num < size}, table 'a {size} {num} ->> 'a -- 1.0 --> table 'a {size} {num + 1}
   datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num}
   val do_delete ['a] : forall {size num : Nat}, table 'a {size} {num} ->> 'a -- 1.0 --> do_delete 'a {size} {num}
   val copy ['a] : forall {size num size' num' : Nat}, table 'a {size} {num} ->> table 'a {size'} {num'} -- $num --> table 'a {size'} {num min size'}

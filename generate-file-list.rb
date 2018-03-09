@@ -104,6 +104,7 @@ parser/parser.sml
 end
 
 print %{
+cont-util.sml
 module-context.sml
 to-string-util.sml
 long-id.sml

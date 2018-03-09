@@ -254,7 +254,27 @@ fun strn_mt t =
         in
           (* (surround "[" "] " $ str_region r) ^ *) str_uvar_mt (strn_bs, strn_k, strn_mt) u
         end
-      | TDatatype (dt, _) => "(datatype ...)"
+      | TDatatype (Bind (name, tbinds), _) =>
+        let
+          val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
+          val tnames = map (fst o fst) tname_kinds
+          val tnames = join_prefix " " tnames
+          val bsorts = map strn_bs bsorts
+          val bsorts = if null bsorts then ""
+                       else surround " {" "}" $ join " " bsorts
+          fun strn_constr_decl family_name tnames (name, core, _) =
+            let
+              val (iname_sorts, (t, is)) = unfold_binds core
+              val iname_sorts = join_prefix " " $ map (fn (name, s) => sprintf "{$ : $}" [fst name, strn_s s]) iname_sorts
+              val t = strn_mt t
+              val is = join_prefix " " $ map (surround "{" "}" o strn_i) is
+            in
+              sprintf "$$ of $ -> $$$" [fst name, iname_sorts, t, family_name, tnames, is]
+            end
+          val constr_decls = join " | " $ map (strn_constr_decl (fst name) tnames) constr_decls
+        in
+          sprintf "(datatype $$$ = $)" [fst name, tnames, bsorts, constr_decls]
+        end
   end
 
 and strn_uni (binds, t) =
