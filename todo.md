@@ -118,7 +118,7 @@
 - [ ] analysing the form of expr is complicated by the pervasion of EAscType and EAscTime; need some principled way to transparently ignore EAscType/Time.
 - [ ] dynamic-table.timl needs to be instantiated to be tested by MicroTiML compiler
 - [x] tc() should add annotations only when specific flags are turned on; the client that turns on these flags should consume the annotations to prevent them from polluting later translations.
-- [ ] Add level limits to export_t and export_e.
+- [x] Add level limits to export_t and export_e.
 - [x] Add a pass to remove annotations on EVar, TVar and VarI after cc().
 - [ ] Uniquefy variable names.
 
