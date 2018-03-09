@@ -1875,6 +1875,8 @@ fun is_value e =
         is_value e
       end
     | EVar _ => true (* variables denote values *)
+    | ENever _ => true
+    | EBuiltin _ => true
     | _ => false
     (* | _ => *)
     (*   case fst $ collect_EAscTypeTime $ fst $ collect_EAppIT e of *)

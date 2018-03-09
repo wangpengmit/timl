@@ -331,10 +331,10 @@ fun cps (e, t_e) (k, j_k) =
       (k $$ EConst c, j_k %+ T_1)
     | S.ENever t =>
       (* [[ never ]](k) = k(never) *)
-      (k $$ ENever t, j_k %+ T_1)
+      (k $$ ENever (cps_t t), j_k %+ T_1)
     | S.EBuiltin t =>
       (* [[ builtin ]](k) = k(builtin) *)
-      (k $$ EBuiltin t, j_k %+ T_1)
+      (k $$ EBuiltin (cps_t t), j_k %+ T_1)
     | S.ERec bind =>
       (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
       let

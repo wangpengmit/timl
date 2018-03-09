@@ -1771,7 +1771,6 @@ and check_mtype_time gctx (ctx as (sctx, kctx, cctx, tctx), e, t, d) =
 
 fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
   let
-    val () = println "link_sig() started"
     val gctxn = gctx_names gctx
     (* val () = println $ sprintf "Linking module $ (%$) against signature" [str_v (names gctxn) $ fst m, str_int $ fst m] *)
     fun match_sort ((name, s'), sctx') =
@@ -1787,11 +1786,8 @@ fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
     val sctx' = foldr match_sort [] sctx'
     fun match_kind ((name, k'), kctx') =
       let
-        val () = println "match_kind() started"
         val (x, k) = fetch_kindext_by_name gctx [] $ QID (m, (name, r))
-        val () = println "before is_sub_kindext()"
         val () = is_sub_kindext r gctx (sctx', kctx') (k, k')
-        val () = println "after is_sub_kindext()"
         fun kind_add_type_eq t (k, t') =
           case t' of
               NONE => (k, SOME t)
@@ -1801,17 +1797,12 @@ fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
               in
                 (k, SOME t)
               end
-        val () = println "before kind_add_type_eq()"
         val k' = kind_add_type_eq (MtVar x) k'
-        val () = println "after kind_add_type_eq()"
         val ret = add_kindingext (name, k') kctx'
-        val () = println "match_kind() finished"
       in
         ret
       end
-    val () = println "before foldr match_kind [] kctx'"
     val kctx' = foldr match_kind [] kctx'
-    val () = println "after foldr match_kind [] kctx'"
     fun match_constr_type (name, c) =
       let
         val (_, t) = fetch_constr_type_by_name gctx [] $ QID (m, (name, r))
@@ -1828,7 +1819,6 @@ fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
       end
     val () = app match_type tctx'
     val () = close_ctx ctx'
-    val () = println "link_sig() finished"
   in
     (sctx', kctx', cctx', tctx')
   end

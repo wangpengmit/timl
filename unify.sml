@@ -430,7 +430,7 @@ fun unify_mt r gctx ctx (t, t') =
         | (MtVar _, MtVar _) => unify_mt ctx (whnf_mt false gctx kctx t, whnf_mt false gctx kctx t')
         | (TDatatype (dt, _), TDatatype (dt', _)) =>
           let
-            val () = println "structural TDatatypes compare started"
+            (* val () = println "structural TDatatypes compare started" *)
             fun dt_error () = error ctxn (t, t')
             fun check b = if b then () else raise dt_error ()
             fun check_length (ls, ls') = check $ length ls = length ls'
@@ -471,14 +471,14 @@ fun unify_mt r gctx ctx (t, t') =
             val family_kind = (length tname_kinds, bsorts)
             val new_kindings = rev $ (fst name, family_kind) :: map (fn (name, ()) => (fst name, Type)) tname_kinds
             val () = unify_constr_decls (add_kindings_sk new_kindings ctx) (constr_decls, constr_decls')
-            val () = println "structural TDatatypes compare finished"
+            (* val () = println "structural TDatatypes compare finished" *)
           in
             ()
           end
 	| _ => raise error ctxn (t, t')
     val t = whnf_mt true gctx kctx t
     val t' = whnf_mt true gctx kctx t'
-    val () = println $ sprintf "Unifying types\n\t$\n  and\n\t$" [str_mt gctxn ctxn t, str_mt gctxn ctxn t']
+    (* val () = println $ sprintf "Unifying types\n\t$\n  and\n\t$" [str_mt gctxn ctxn t, str_mt gctxn ctxn t'] *)
     (* Apply [unify_MtApp] in which order? Here is a heuristic: *)
     fun more_uvar_args (a, b) =
       case (is_MtApp_UVar a, is_MtApp_UVar b) of

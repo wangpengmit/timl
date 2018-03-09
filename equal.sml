@@ -202,7 +202,6 @@ fun eq_mt t t' =
         (case t' of
              TDatatype (dt', _) =>
              let
-               (* val () = println "comparing datatypes" *)
                open ContUtil
                fun eq_constr_decl_k ((name, core, _), (name', core', _)) return =
                  let
@@ -212,12 +211,9 @@ fun eq_mt t t' =
                    val (iname_sorts, (t, is)) = unfold_binds core
                    val (iname_sorts', (t', is')) = unfold_binds core'
                    val () = check $ eq_ls (uncurry eq_s) (map snd iname_sorts, map snd iname_sorts')
-                   (* val () = println "passed iname_sorts check" *)
                    (* val () = println $ sprintf "to compare types:\n$\n$" [str_raw_mt t, str_raw_mt t'] *)
                    val () = check $ eq_mt t t'
-                   (* val () = println "passed t check" *)
                    val () = check $ eq_ls (uncurry eq_i) (is, is')
-                   (* val () = println "passed [is] check" *)
                  in
                    true
                  end
@@ -230,17 +226,13 @@ fun eq_mt t t' =
                    val (tname_kinds, (sorts, constr_decls)) = unfold_binds tbinds
                    val (tname_kinds', (sorts', constr_decls')) = unfold_binds tbinds'
                    val () = check $ length tname_kinds = length tname_kinds'
-                   (* val () = println "passed length-tname_kinds check" *)
                    val () = check $ eq_ls (uncurry eq_bs) (sorts, sorts') 
-                   (* val () = println "passed sorts check" *)
                    val () = check $ eq_ls eq_constr_decl (constr_decls, constr_decls')
-                   (* val () = println "passed constr_decls check" *)
                  in
                    true
                  end
                fun eq_datatype_def a = callret $ eq_datatype_def_k a
                val ret = eq_datatype_def (dt, dt')
-               val () = println $ "comparing datatypes result: " ^ str_bool ret
              in
                ret
              end

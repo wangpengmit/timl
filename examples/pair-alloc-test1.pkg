@@ -24,7 +24,7 @@ stdlib.pkg
 (* msort.timl *)
 (* insertion-sort.timl *)
 (* braun-tree.timl *)
-rbt.timl
+(* rbt.timl *)
 (* functional-queue.timl *)
 (* array-bsearch.timl *)
 (* array-heap.timl *)
@@ -35,5 +35,5 @@ rbt.timl
 (* qsort.timl *)
 (* dijkstra.timl *)
 
-(* dynamic-table.timl *)
-(* dynamic-table-test.timl  *)
+dynamic-table.timl
+dynamic-table-test.timl
