@@ -111,7 +111,7 @@ fun process_prog show_result filename gctx prog =
                  (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *)
                  concatMap (print_unsat true filename) vcs
                )
-      val gctxd = normalize_sgntr_list old_gctx gctxd
+      val gctxd = normalize_sgntr_list true old_gctx gctxd
       val gctxd = update_sgntr_list gctxd
       (* val gctxd = SimpCtx.simp_sgntr_list gctxd *)
       val () = if show_result then

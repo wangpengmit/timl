@@ -290,13 +290,13 @@ fun whnf_s s =
       end
     | _ => s
              
-fun whnf_mt gctx kctx (t : mtype) : mtype =
+fun whnf_mt ignore_dt gctx kctx (t : mtype) : mtype =
   let
-    val whnf_mt = whnf_mt gctx
+    val whnf_mt = whnf_mt ignore_dt gctx
   in
     case t of
         UVar (x, r) => load_uvar' (whnf_mt kctx) t x
-      | MtVar x => try_retrieve_MtVar (whnf_mt kctx) gctx kctx x
+      | MtVar x => try_retrieve_MtVar ignore_dt (whnf_mt kctx) gctx kctx x
       | MtAppI (t, i) =>
         let
           val t = whnf_mt kctx t
@@ -477,7 +477,7 @@ fun normalize_k k = mapSnd (map normalize_bs) k
 (* fun normalize_ibinds f_cls f ctx (b : ('classifier, 'name, 'inner) ibinds) = normalize_binds id normalize_ibind' f_cls f ctx b *)
 (* fun normalize_tbinds get_cls f_cls f ctx (b : ('classifier, string * 'a, 'inner) tbinds) = normalize_binds get_cls normalize_tbind f_cls f ctx b *)
        
-fun normalize_type_visitor_vtable cast gctx : ('this, kcontext) type_visitor_vtable =
+fun normalize_type_visitor_vtable cast (ignore_dt, gctx) : ('this, kcontext) type_visitor_vtable =
   let
     fun adapt f this env b = f b
     fun extend_i this kctx name = shiftx_i_kctx 1 kctx (*an optimization opportunity here by lazy shifting*)
@@ -500,7 +500,7 @@ fun normalize_type_visitor_vtable cast gctx : ('this, kcontext) type_visitor_vta
         val vtable = cast this
         fun normalize_mt a = #visit_mtype vtable this kctx a
       in
-        try_retrieve_MtVar normalize_mt gctx kctx x
+        try_retrieve_MtVar ignore_dt normalize_mt gctx kctx x
       end
     val vtable = override_visit_MtVar vtable visit_MtVar
     fun visit_UVar this env (data as (x, r)) =
@@ -541,30 +541,30 @@ fun normalize_type_visitor_vtable cast gctx : ('this, kcontext) type_visitor_vta
 
 fun new_normalize_type_visitor a = new_type_visitor normalize_type_visitor_vtable a
     
-fun normalize_mt gctx kctx b =
+fun normalize_mt ignore_dt gctx kctx b =
   let
-    val visitor as (TypeVisitor vtable) = new_normalize_type_visitor gctx
+    val visitor as (TypeVisitor vtable) = new_normalize_type_visitor (ignore_dt, gctx)
   in
     #visit_mtype vtable visitor kctx b
   end
     
-fun normalize_t gctx kctx b =
+fun normalize_t ignore_dt gctx kctx b =
   let
-    val visitor as (TypeVisitor vtable) = new_normalize_type_visitor gctx
+    val visitor as (TypeVisitor vtable) = new_normalize_type_visitor (ignore_dt, gctx)
   in
     #visit_ty vtable visitor kctx b
   end
     
-fun normalize_constr_core gctx kctx b =
+fun normalize_constr_core ignore_dt gctx kctx b =
   let
-    val visitor as (TypeVisitor vtable) = new_normalize_type_visitor gctx
+    val visitor as (TypeVisitor vtable) = new_normalize_type_visitor (ignore_dt, gctx)
   in
     #visit_constr_core vtable visitor kctx b
   end
     
-fun normalize_c gctx kctx b =
+fun normalize_c ignore_dt gctx kctx b =
   let
-    val visitor as (TypeVisitor vtable) = new_normalize_type_visitor gctx
+    val visitor as (TypeVisitor vtable) = new_normalize_type_visitor (ignore_dt, gctx)
   in
     #visit_constr_info vtable visitor kctx b
   end
@@ -656,36 +656,36 @@ fun normalize_c gctx kctx b =
 
 fun normalize_k k = mapSnd (map normalize_bs) k
 
-fun normalize_ke gctx kctx ((k, t) : kind_ext) = (normalize_k k, Option.map (normalize_mt gctx kctx) t)
+fun normalize_ke ignore_dt gctx kctx ((k, t) : kind_ext) = (normalize_k k, Option.map (normalize_mt ignore_dt gctx kctx) t)
 
-fun normalize_ctx gctx ((sctx, kctx, cctx, tctx) : context) =
+fun normalize_ctx ignore_dt gctx ((sctx, kctx, cctx, tctx) : context) =
   let
     val sctx = map (mapSnd normalize_s) sctx
-    val kctx = foldr (fn ((name, ke), kctx) => (name, normalize_ke gctx kctx ke) :: kctx) [] kctx
-    val cctx = map (mapSnd (normalize_c gctx kctx)) cctx
-    val tctx = map (mapSnd (normalize_t gctx kctx)) tctx
+    val kctx = foldr (fn ((name, ke), kctx) => (name, normalize_ke ignore_dt gctx kctx ke) :: kctx) [] kctx
+    val cctx = map (mapSnd (normalize_c ignore_dt gctx kctx)) cctx
+    val tctx = map (mapSnd (normalize_t ignore_dt gctx kctx)) tctx
   in
     (sctx, kctx, cctx, tctx)
   end
 
-fun normalize_sgntr gctx sg =
+fun normalize_sgntr ignore_dt gctx sg =
   case sg of
-      Sig ctx => Sig $ normalize_ctx gctx ctx
+      Sig ctx => Sig $ normalize_ctx ignore_dt gctx ctx
     | FunctorBind ((arg_name, arg), body) =>
       let
-        val arg = normalize_ctx gctx arg
+        val arg = normalize_ctx ignore_dt gctx arg
       in
-        FunctorBind ((arg_name, arg), normalize_ctx (add_sigging (arg_name, arg) gctx) body)
+        FunctorBind ((arg_name, arg), normalize_ctx ignore_dt (add_sigging (arg_name, arg) gctx) body)
       end
 
-fun normalize_sgntr_list gctx0 gctx =
-  fst $ foldr (fn ((name, sg), (acc, gctx)) => let val p = (name, normalize_sgntr gctx sg) in (p :: acc, add p gctx) end) ([], gctx0) gctx
+fun normalize_sgntr_list ignore_dt gctx0 gctx =
+  fst $ foldr (fn ((name, sg), (acc, gctx)) => let val p = (name, normalize_sgntr ignore_dt gctx sg) in (p :: acc, add p gctx) end) ([], gctx0) gctx
 
-fun normalize_gctx gctx0 gctx =
+fun normalize_gctx ignore_dt gctx0 gctx =
   let
     val gctx0 = Gctx.union (gctx0, gctx)
   in
-    Gctx.map (normalize_sgntr gctx0) gctx
+    Gctx.map (normalize_sgntr ignore_dt gctx0) gctx
   end
 
 open VC

@@ -37,7 +37,7 @@ fun simp_e_fn params kctx e =
     #visit_expr vtable visitor kctx e
   end
 
-fun simp_e a = simp_e_fn (simp_i o normalize_i, normalize_s, normalize_mt empty, normalize_t empty, normalize_k) a
+fun simp_e a = simp_e_fn (simp_i o normalize_i, normalize_s, normalize_mt true empty, normalize_t true empty, normalize_k) a
                          
 end
                        

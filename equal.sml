@@ -8,9 +8,11 @@ end
 
 signature HAS_EQUAL = sig
   type var
+  type name
   include UVAR_I
   include UVAR_T
   val eq_var : var * var -> bool
+  val eq_name : name * name -> bool
   val eq_uvar_bs : 'bsort uvar_bs * 'bsort uvar_bs -> bool
   val eq_uvar_i : ('bsort, 'idx) uvar_i * ('bsort, 'idx) uvar_i -> bool
   val eq_uvar_s : ('bsort, 'sort) uvar_s * ('bsort, 'sort) uvar_s -> bool
@@ -22,6 +24,7 @@ functor EqualFn (structure IdxType : IDX_TYPE where type Idx.base_sort = BaseSor
                  structure HasEqual : HAS_EQUAL
                  sharing type IdxType.Type.bsort = IdxType.Idx.bsort
                  sharing type HasEqual.var = IdxType.Idx.var
+                 sharing type HasEqual.name = IdxType.Type.name
                  sharing type HasEqual.uvar_bs = IdxType.Idx.uvar_bs
                  sharing type HasEqual.uvar_i = IdxType.Idx.uvar_i
                  sharing type HasEqual.uvar_s = IdxType.Idx.uvar_s
@@ -199,21 +202,22 @@ fun eq_mt t t' =
         (case t' of
              TDatatype (dt', _) =>
              let
-               val () = println "comparing datatypes"
+               (* val () = println "comparing datatypes" *)
                open ContUtil
                fun eq_constr_decl_k ((name, core, _), (name', core', _)) return =
                  let
                    fun check b = if b then () else return false
-                   (* val () = check $ fst name = fst name' *)
+                   (* constructor names are significant *)
+                   val () = check $ eq_name (name, name')
                    val (iname_sorts, (t, is)) = unfold_binds core
                    val (iname_sorts', (t', is')) = unfold_binds core'
                    val () = check $ eq_ls (uncurry eq_s) (map snd iname_sorts, map snd iname_sorts')
-                   val () = println "passed iname_sorts check"
-                   val () = println $ sprintf "to compare types:\n$\n$" [str_raw_mt t, str_raw_mt t']
+                   (* val () = println "passed iname_sorts check" *)
+                   (* val () = println $ sprintf "to compare types:\n$\n$" [str_raw_mt t, str_raw_mt t'] *)
                    val () = check $ eq_mt t t'
-                   val () = println "passed t check"
+                   (* val () = println "passed t check" *)
                    val () = check $ eq_ls (uncurry eq_i) (is, is')
-                   val () = println "passed is check"
+                   (* val () = println "passed [is] check" *)
                  in
                    true
                  end
@@ -221,15 +225,16 @@ fun eq_mt t t' =
                fun eq_datatype_def_k (Bind (name, tbinds), Bind (name', tbinds')) return =
                  let
                    fun check b = if b then () else return false
-                   (* val () = check $ fst name = fst name' *)
+                   (* the self-referencing name is significant *)
+                   val () = check $ eq_name (name, name')
                    val (tname_kinds, (sorts, constr_decls)) = unfold_binds tbinds
                    val (tname_kinds', (sorts', constr_decls')) = unfold_binds tbinds'
                    val () = check $ length tname_kinds = length tname_kinds'
-                   val () = println "passed length-tname_kinds check"
+                   (* val () = println "passed length-tname_kinds check" *)
                    val () = check $ eq_ls (uncurry eq_bs) (sorts, sorts') 
-                   val () = println "passed sorts check"
+                   (* val () = println "passed sorts check" *)
                    val () = check $ eq_ls eq_constr_decl (constr_decls, constr_decls')
-                   val () = println "passed constr_decls check"
+                   (* val () = println "passed constr_decls check" *)
                  in
                    true
                  end

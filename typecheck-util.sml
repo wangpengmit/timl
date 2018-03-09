@@ -133,7 +133,9 @@ fun KeKind k = (k, NONE)
 fun KeTypeEq (k, t) = (k, SOME t)
 
 fun add_kindingext pair (kctx : kcontext) = pair :: kctx
+fun add_kindingexts pairs (kctx : kcontext) = pairs @ kctx
 fun add_kinding pair = add_kindingext $ mapSnd KeKind pair
+fun add_kindings pairs = add_kindingexts $ map (mapSnd KeKind) pairs
 fun add_type_eq pair = add_kindingext $ mapSnd KeTypeEq pair
 fun add_kinding_kc pair (kctx, cctx) = 
   (add_kinding pair kctx, 
@@ -152,6 +154,9 @@ fun add_type_eq_skct pair = add_kindingext_skct $ mapSnd KeTypeEq pair
 fun add_kinding_sk pair (sctx, kctx) = 
   (sctx, 
    add_kinding pair kctx)
+fun add_kindings_sk pairs (sctx, kctx) = 
+  (sctx, 
+   add_kindings pairs kctx)
 fun add_kindingexts_skct pairs (sctx, kctx, cctx, tctx) =
   let val n = length pairs in
     (sctx,
@@ -474,11 +479,11 @@ fun fetch_type_by_name gctx ctx id =
     (long_id_change_id id x, t)
   end
 
-fun try_retrieve_MtVar f gctx kctx x =
+fun try_retrieve_MtVar ignore_dt f gctx kctx x =
   let
     val k = fetch_kindext gctx (kctx, x)
     val alias = #2 k
-    val alias = if is_datatype k then NONE else alias
+    val alias = if ignore_dt andalso is_datatype k then NONE else alias
   in
     default (MtVar x) $ Option.map f alias
   end

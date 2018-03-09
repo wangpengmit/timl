@@ -490,7 +490,7 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
           val () =
               if length inames = length_name_sorts then ()
               else raise Error (r, [sprintf "This constructor requires $ index argument(s), not $" [str_int (length_name_sorts), str_int (length inames)]])
-          val ts = map (normalize_mt gctx kctx) ts
+          val ts = map (normalize_mt true gctx kctx) ts
           val is = map normalize_i is
 	  val ts = map (shiftx_i_mt 0 (length_name_sorts)) ts
 	  val is = map (shiftx_i_i 0 (length_name_sorts)) is
@@ -612,7 +612,7 @@ fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
                       fun loop (* cutoff *) t hab =
                         let
                           (* val t = normalize_mt t *)
-                          val t = whnf_mt gctx kctx t
+                          val t = whnf_mt true gctx kctx t
                           fun default () = raise Impossible "hab_to_ptrn"
                         in
                           case hab of
@@ -1290,7 +1290,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
     handle
     Error (r, msg) => raise Error (r, msg @ extra_msg ())
     | Impossible msg => raise Impossible $ join_lines $ msg :: extra_msg ()
-    val t = SimpType.simp_mt $ normalize_mt gctx kctx t
+    val t = SimpType.simp_mt $ normalize_mt true gctx kctx t
     val d = simp_i $ normalize_i d
     (* val () = println $ str_ls id $ #4 ctxn *)
     (* val () = print (sprintf " Typed $: \n        $\n" [str_e gctxn ctxn e, str_mt gctxn skctxn t]) *)
@@ -1640,7 +1640,7 @@ and is_wf_datatype gctx ctx (Bind (name, tbinds) : U.mtype U.datatype_def, r) : 
           val () = if length (collect_uvar_t_t t) > 0 then
                      raise Error (r, ["Constructor has unresolved unification type variable(s)"])
                    else ()
-          val t = normalize_t gctx kctx t
+          val t = normalize_t true gctx kctx t
           fun constr_from_type t =
             let
               val (tnames, t) = collect_Uni t
@@ -1771,6 +1771,7 @@ and check_mtype_time gctx (ctx as (sctx, kctx, cctx, tctx), e, t, d) =
 
 fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
   let
+    val () = println "link_sig() started"
     val gctxn = gctx_names gctx
     (* val () = println $ sprintf "Linking module $ (%$) against signature" [str_v (names gctxn) $ fst m, str_int $ fst m] *)
     fun match_sort ((name, s'), sctx') =
@@ -1786,22 +1787,31 @@ fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
     val sctx' = foldr match_sort [] sctx'
     fun match_kind ((name, k'), kctx') =
       let
+        val () = println "match_kind() started"
         val (x, k) = fetch_kindext_by_name gctx [] $ QID (m, (name, r))
+        val () = println "before is_sub_kindext()"
         val () = is_sub_kindext r gctx (sctx', kctx') (k, k')
-        fun kind_add_type_eq (k, t') t =
+        val () = println "after is_sub_kindext()"
+        fun kind_add_type_eq t (k, t') =
           case t' of
               NONE => (k, SOME t)
            |  SOME t' =>
               let
-                val () = unify_mt r gctx (sctx', kctx') (t', t)
+                val () = unify_mt r gctx (sctx', kctx') (t, t')
               in
-                (k, SOME t')
+                (k, SOME t)
               end
-        val k' = kind_add_type_eq k' (MtVar x)
+        val () = println "before kind_add_type_eq()"
+        val k' = kind_add_type_eq (MtVar x) k'
+        val () = println "after kind_add_type_eq()"
+        val ret = add_kindingext (name, k') kctx'
+        val () = println "match_kind() finished"
       in
-        add_kindingext (name, k') kctx'
+        ret
       end
+    val () = println "before foldr match_kind [] kctx'"
     val kctx' = foldr match_kind [] kctx'
+    val () = println "after foldr match_kind [] kctx'"
     fun match_constr_type (name, c) =
       let
         val (_, t) = fetch_constr_type_by_name gctx [] $ QID (m, (name, r))
@@ -1818,6 +1828,7 @@ fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
       end
     val () = app match_type tctx'
     val () = close_ctx ctx'
+    val () = println "link_sig() finished"
   in
     (sctx', kctx', cctx', tctx')
   end

@@ -61,6 +61,7 @@ structure NamefulHasEqual = struct
 open Underscore
 open NamefulExpr
 open LongIdHasEqual
+fun eq_name ((s, _) : name, (s', _)) = s = s'
 end
                        
 structure NamefulEqual = EqualFn (structure IdxType = struct
@@ -95,6 +96,7 @@ structure UnderscoredHasEqual = struct
 open Underscore
 open UnderscoredExpr
 open LongIdHasEqual
+fun eq_name ((s, _) : name, (s', _)) = s = s'
 end
                        
 structure UnderscoredEqual = EqualFn (structure IdxType = struct

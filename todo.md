@@ -110,6 +110,7 @@
 - [ ] Remove assert_b and assert_b_m to make sure when assertion are turned off no computation will be wasted.
 - [ ] Add ELength.
 - [ ] eq_mt()/TDatatype needs to be implemented to allow instantiating dynamic-table.timl.
+- [ ] Add negative examples.
 
 # To-do for MicroTiML
 

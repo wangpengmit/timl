@@ -63,7 +63,7 @@ fun cover_neg gctx (ctx as (sctx, kctx, cctx)) (t : mtype) c =
   let
     val neg = cover_neg gctx ctx
     (* val t = normalize_mt t *)
-    val t = whnf_mt gctx kctx t
+    val t = whnf_mt true gctx kctx t
   in
     case c of
         TrueC => FalseC
@@ -180,7 +180,7 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
       let
         (* val () = println (sprintf "find_hab on type $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) t]) *)
         (* val t = normalize_mt t *)
-        val t = whnf_mt gctx kctx t
+        val t = whnf_mt true gctx kctx t
         (* val size = covers_size cs_all *)
         (* fun check_size (t', cs) = *)
         (*     let *)
@@ -301,13 +301,13 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                                  ret
                                end
                              val (name, (family, _)) = fetch_constr gctx (cctx, x)
-                             val family = normalize_mt gctx kctx (MtVar family)
+                             val family = normalize_mt true gctx kctx (MtVar family)
                              fun same_constr c =
                                case c of
                                    ConstrC (y, c) =>
                                    let
                                      val (name', (family', _)) = fetch_constr gctx (cctx, y)
-                                     val family' = normalize_mt gctx kctx $ MtVar family'
+                                     val family' = normalize_mt true gctx kctx $ MtVar family'
                                    in
                                      if eq_constr_long_id ((name', family'), (name, family)) then
                                        SOME c

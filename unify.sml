@@ -309,8 +309,8 @@ fun unify_mt r gctx ctx (t, t') =
         val ((x, _), i_args, t_args) = is_MtApp_UVar t !! (fn () => raise UnifyAppUVarFailed "is_MtApp_UVar() fails")
         (* val () = println $ "#i_args=" ^ str_int (length i_args) *)
         val i_args = map normalize_i i_args
-        val t_args = map (normalize_mt gctx kctx) t_args
-        val t' = normalize_mt gctx kctx t'
+        val t_args = map (normalize_mt true gctx kctx) t_args
+        val t' = normalize_mt true gctx kctx t'
         val i_vars' = dedup eq_var $ collect_var_i_mt t'
         (* val () = println $ "t'=" ^ (str_mt gctxn ctxn t') *)
                                        
@@ -324,7 +324,7 @@ fun unify_mt r gctx ctx (t, t') =
                        | QID _ =>
                          raise UnifyAppUVarFailed "can't forget moduled variable"
             open UVarForget
-            val b = normalize_mt gctx kctx b
+            val b = normalize_mt true gctx kctx b
             val b = forget_i_mt x 1 b
             val b = shiftx_i_mt x 1 b
           in
@@ -332,10 +332,10 @@ fun unify_mt r gctx ctx (t, t') =
           end
         val t' = foldl (fn (x, acc) => forget_nonconsuming x acc) t' uncovered
                  handle ForgetError _ => raise UnifyAppUVarFailed "ForgetError"
-        val t' = normalize_mt gctx kctx t'
+        val t' = normalize_mt true gctx kctx t'
 
         (* val () = println $ "t'=" ^ (str_mt gctxn ctxn t') *)
-        val t = normalize_mt gctx kctx t
+        val t = normalize_mt true gctx kctx t
         val ((x, _), i_args, t_args) = is_MtApp_UVar t !! (fn () => raise UnifyAppUVarFailed "is_MtApp_UVar() fails")
         val () = if mem op= x (map #1 $ CollectUVar.collect_uvar_t_mt t') then raise UnifyAppUVarFailed "[x] is in [t']" else ()
         val i_vars' = dedup eq_var $ collect_var_i_mt t'
@@ -365,7 +365,7 @@ fun unify_mt r gctx ctx (t, t') =
       in
         ()
       end
-    fun error ctxn (t, t') = unify_error "type" r (str_mt gctxn ctxn $ normalize_mt gctx kctx t, str_mt gctxn ctxn $ normalize_mt gctx kctx t')
+    fun error ctxn (t, t') = unify_error "type" r (str_mt gctxn ctxn $ normalize_mt true gctx kctx t, str_mt gctxn ctxn $ normalize_mt true gctx kctx t')
     (* fun error ctxn (t, t') = unify_error "type" r (str_raw_mt t, str_raw_mt t') *)
     fun structural_compare (t, t') =
       if eq_mt t t' then ()
@@ -424,10 +424,61 @@ fun unify_mt r gctx ctx (t, t') =
           in
             ()
           end
+        (* now try a bit harder by not ignoring TDatatype when retrieving MtVar *)
+        | (TDatatype _, MtVar _) => unify_mt ctx (t, whnf_mt false gctx kctx t')
+        | (MtVar _, TDatatype _) => unify_mt ctx (whnf_mt false gctx kctx t, t')
+        | (MtVar _, MtVar _) => unify_mt ctx (whnf_mt false gctx kctx t, whnf_mt false gctx kctx t')
+        | (TDatatype (dt, _), TDatatype (dt', _)) =>
+          let
+            val () = println "structural TDatatypes compare started"
+            fun dt_error () = error ctxn (t, t')
+            fun check b = if b then () else raise dt_error ()
+            fun check_length (ls, ls') = check $ length ls = length ls'
+            val Bind (name, tbinds) = dt
+            val Bind (name', tbinds') = dt
+            (* the self-referencing name is significant *)
+            val () = check $ fst name = fst name'
+            val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
+            val (tname_kinds', (bsorts', constr_decls')) = unfold_binds tbinds'
+            val () = check_length (tname_kinds, tname_kinds')
+            fun unify_bsorts p =
+              (check_length p;
+               ListPair.app (unify_bs r) p)
+            val () = unify_bsorts (bsorts, bsorts')
+            fun unify_is ctx p =
+              (check_length p;
+               ListPair.app (unify_i r gctxn $ sctx_names ctx) p)
+            fun unify_inner ctx ((t, is), (t', is')) =
+              (unify_mt ctx (t, t');
+               unify_is (#1 ctx) (is, is'))
+            fun unify_constr_decl ctx ((name, core, _), (name', core', _)) =
+              let
+                (* constructor names are significant *)
+                val () = check $ fst name = fst name'
+                fun unify_binds ctx (binds, binds') =
+                  case (binds, binds') of
+                      (BindNil inner, BindNil inner') => unify_inner ctx (inner, inner')
+                    | (BindCons (s, Bind (name, binds)), BindCons (s', Bind (name', binds'))) =>
+                      (is_eqv_sort r gctxn (sctx_names $ #1 ctx) (s, s');
+                       open_close add_sorting_sk (fst name, s) ctx (fn ctx => unify_binds ctx (binds, binds')))
+                    | _ => raise dt_error ()
+              in
+                unify_binds ctx (core, core')
+              end
+            fun unify_constr_decls ctx (ds, ds') =
+              (check_length (ds, ds');
+               ListPair.app (unify_constr_decl ctx) (ds, ds'))
+            val family_kind = (length tname_kinds, bsorts)
+            val new_kindings = rev $ (fst name, family_kind) :: map (fn (name, ()) => (fst name, Type)) tname_kinds
+            val () = unify_constr_decls (add_kindings_sk new_kindings ctx) (constr_decls, constr_decls')
+            val () = println "structural TDatatypes compare finished"
+          in
+            ()
+          end
 	| _ => raise error ctxn (t, t')
-    val t = whnf_mt gctx kctx t
-    val t' = whnf_mt gctx kctx t'
-    (* val () = println $ sprintf "Unifying types\n\t$\n  and\n\t$" [str_mt gctxn ctxn t, str_mt gctxn ctxn t'] *)
+    val t = whnf_mt true gctx kctx t
+    val t' = whnf_mt true gctx kctx t'
+    val () = println $ sprintf "Unifying types\n\t$\n  and\n\t$" [str_mt gctxn ctxn t, str_mt gctxn ctxn t']
     (* Apply [unify_MtApp] in which order? Here is a heuristic: *)
     fun more_uvar_args (a, b) =
       case (is_MtApp_UVar a, is_MtApp_UVar b) of
@@ -444,15 +495,15 @@ fun unify_mt r gctx ctx (t, t') =
         UnifyAppUVarFailed msg =>
         let
           (* val () = println ("(unify_MtApp t t') failed because " ^ msg) *)
-          val t_less = whnf_mt gctx kctx t_less
+          val t_less = whnf_mt true gctx kctx t_less
         in
           unify_MtApp t_less t_more
           handle
           UnifyAppUVarFailed msg =>
           let
             (* val () = println ("(unify_MtApp t' t) failed because " ^ msg) *)
-            val t = whnf_mt gctx kctx t
-            val t' = whnf_mt gctx kctx t'
+            val t = whnf_mt true gctx kctx t
+            val t' = whnf_mt true gctx kctx t'
           in
             structural_compare (t, t')
           end
