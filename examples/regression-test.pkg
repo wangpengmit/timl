@@ -5,5 +5,8 @@ fold-evolve.timl
 single-var.timl
 bug.timl
 pldi-2017-review-example.timl
+functor-datatype-test.timl
+! functor-datatype-test-neg.timl
+! functor-datatype-test-neg2.timl
 braun-tree-sortedness.timl
 rbt-sortedness.timl

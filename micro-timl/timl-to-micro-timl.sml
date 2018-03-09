@@ -868,7 +868,7 @@ fun test4 dirname =
   let
     val () = println "TiML2MicroTiML.UnitTest started"
     val filename = join_dir_file (dirname, "to-micro-timl-test4.pkg")
-    val filenames = ParseFilename.expand_pkg (fn msg => raise Impossible msg) filename
+    val filenames = map snd $ ParseFilename.expand_pkg (fn msg => raise Impossible msg) (true, filename)
     open Parser
     val prog = concatMap parse_file filenames
     open Elaborate

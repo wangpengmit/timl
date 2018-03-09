@@ -1940,6 +1940,7 @@ fun check_top_bind gctx (name, bind) =
           | U.TopFunctorBind (((arg_name, r), arg_sg), m) =>
             (* functor applications will be implemented fiberedly instead of parametrizedly *)
             let
+              (* val arg_name = name ^ "_" ^ arg_name *)
               val (arg_sg, arg) = is_wf_sig gctx arg_sg
               val gctx = add_sigging (arg_name, arg) gctx
               val () = open_module (arg_name, arg)

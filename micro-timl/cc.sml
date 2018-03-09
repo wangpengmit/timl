@@ -1004,7 +1004,7 @@ fun test1 dirname =
   let
     val () = println "CC.UnitTest started"
     val filename = join_dir_file (dirname, "cc-test1.pkg")
-    val filenames = ParseFilename.expand_pkg (fn msg => raise Impossible msg) filename
+    val filenames = map snd $ ParseFilename.expand_pkg (fn msg => raise Impossible msg) (true, filename)
     open Parser
     val prog = concatMap parse_file filenames
     open Elaborate

@@ -123,32 +123,44 @@ fun process_prog show_result filename gctx prog =
       (prog, gctxd, (* gctx,  *)admits)
     end
 
-fun do_process_file is_library gctx filename =
+fun do_process_file is_library gctx (pos_or_neg, filename) =
   let
     val show_result = not is_library
     val () = if show_result then println $ sprintf "Typechecking file $ ..." [filename] else ()
     val () = if is_library then
                TypeCheck.turn_on_builtin ()
              else ()
-    val prog = parse_file filename
-    val prog = elaborate_prog prog
-    (* val () = (app println o map (suffix "\n") o fst o E.str_decls ctxn) decls *)
-    (* val () = (app println o map (suffix "\n") o fst o UnderscoredExpr.str_decls ctxn) decls *)
-    (* apply solvers after each top bind *)
-    (* fun iter (bind, (prog, gctx, admits_acc)) = *)
-    (*     let *)
-    (*       (* val mod_names = mod_names_top_bind bind *) *)
-    (*       (* val (gctx', mapping) = select_modules gctx mod_names *) *)
-    (*       val gctx' = gctx *)
-    (*       val (progd, gctxd, admits) = process_prog show_result filename gctx' [bind] *)
-    (*       (* val gctxd = remap_modules gctxd mapping *) *)
-    (*       val gctx = addList (gctx, gctxd) *)
-    (*     in *)
-    (*       (progd @ prog, gctx, admits_acc @ admits) *)
-    (*     end *)
-    (* val (prog, gctx, admits) = foldl iter ([], gctx, []) prog *)
-    val (prog, gctxd, admits) = process_prog show_result filename gctx prog
-    val gctx = addList (gctx, gctxd)
+    val (succeeded, prog, gctx, admits) =
+        let
+          val prog = parse_file filename
+          val prog = elaborate_prog prog
+          (* val () = (app println o map (suffix "\n") o fst o E.str_decls ctxn) decls *)
+          (* val () = (app println o map (suffix "\n") o fst o UnderscoredExpr.str_decls ctxn) decls *)
+          (* apply solvers after each top bind *)
+          (* fun iter (bind, (prog, gctx, admits_acc)) = *)
+          (*     let *)
+          (*       (* val mod_names = mod_names_top_bind bind *) *)
+          (*       (* val (gctx', mapping) = select_modules gctx mod_names *) *)
+          (*       val gctx' = gctx *)
+          (*       val (progd, gctxd, admits) = process_prog show_result filename gctx' [bind] *)
+          (*       (* val gctxd = remap_modules gctxd mapping *) *)
+          (*       val gctx = addList (gctx, gctxd) *)
+          (*     in *)
+          (*       (progd @ prog, gctx, admits_acc @ admits) *)
+          (*     end *)
+          (* val (prog, gctx, admits) = foldl iter ([], gctx, []) prog *)
+          val (prog, gctxd, admits) = process_prog show_result filename gctx prog
+        in
+          (true, prog, addList (gctx, gctxd), admits)
+        end
+        handle e =>
+               if pos_or_neg then raise e
+               else
+                 (println $ sprintf "Negative example $ properly triggered an error." [filename];
+                  (false, [], gctx, []))
+    val () = if succeeded andalso not pos_or_neg then
+               raise Error $ "Error: This is a negative example but the typechecking succeeded: " ^ filename
+             else ()
     val () = TypeCheck.turn_off_builtin ()
   in
     (prog, gctx, admits)
@@ -294,7 +306,7 @@ type options =
      {
        AnnoLess : bool ref,
        Repeat : int ref,
-       Libraries : string list ref,
+       Libraries : (bool * string) list ref,
        UnitTest : string option ref
      }
 
@@ -327,7 +339,7 @@ fun parse_arguments (opts : options, args) =
 	    | "--help" :: ts => (usage (); parseArgs ts)
 	    | "--annoless" :: ts => (#AnnoLess opts := true; parseArgs ts)
 	    | "--repeat" :: arg :: ts => (#Repeat opts := parse_repeat arg; parseArgs ts)
-	    | "-l" :: arg :: ts => (app (push_ref (#Libraries opts)) $ parse_libraries arg; parseArgs ts)
+	    | "-l" :: arg :: ts => (app (push_ref (#Libraries opts) o attach_fst true) $ parse_libraries arg; parseArgs ts)
 	    | "--unit-test" :: arg :: ts => (#UnitTest opts := SOME arg; parseArgs ts)
 	    (* | parseArgs ("-A" :: arg :: ts) = (do_A arg;       parseArgs ts) *)
 	    (* | parseArgs ("-B"        :: ts) = (do_B();         parseArgs ts) *)
@@ -335,7 +347,7 @@ fun parse_arguments (opts : options, args) =
               if String.isPrefix "-" s then
 	        raise ParseArgsError ("Unrecognized option: " ^ s)
               else
-                (push_ref positionals s; parseArgs ts)
+                (push_ref positionals (true, s); parseArgs ts)
       val () = parseArgs args
     in
       (!positionals)
@@ -364,7 +376,7 @@ fun main (prog_name, args : string list) =
     success
   end
   handle
-  TiML.Error msg => (println msg; failure)
+  TiML.Error msg => (println $ (* "Error: " ^  *)msg; failure)
   | IO.Io e => (println (sprintf "IO Error doing $ on $" [#function e, #name e]); failure)
   | Impossible msg => (println ("Impossible: " ^ msg); failure)
   | Unimpl msg => (println ("Unimpl: " ^ msg); failure)

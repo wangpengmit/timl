@@ -1,4 +1,4 @@
-functor FunctorDatatypeTest1Fn (K : sig
+functor FunctorDatatypeTest1Fn (FunctorDatatypeTest1Fn_K : sig
                                   (* type ttt = int *)
                datatype ttt 'a : {Nat} =
                         Nil of ttt 'a {0}
@@ -15,7 +15,7 @@ end
 
 structure FunctorDatatypeTest1Result = FunctorDatatypeTest1Fn (FunctorDatatypeTest1Arg)
 
-functor FunctorDatatypeTest2Fn (T : sig
+functor FunctorDatatypeTest2Fn (FunctorDatatypeTest2Fn_T : sig
   type table 'a  {Nat} {Nat}
   (* type ttt = table *)
   datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num}

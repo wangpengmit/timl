@@ -1,0 +1,15 @@
+functor FunctorDatatypeTestNeg1Fn (FunctorDatatypeTestNeg1Fn_K : sig
+               datatype ttt 'a : {Nat} =
+                        Nil of ttt 'a {0}
+                      | Cons {n_sig : Nat} of 'a * ttt 'a {n_sig} --> ttt 'a {n_sig + 1}
+              end) = struct
+end
+        
+structure FunctorDatatypeTestNeg1Arg = struct
+datatype ttt 'a : {Nat} =
+         Nil of ttt 'a {0}
+       | Co(* ns *) {n_impl : Nat} of 'a * ttt 'a {n_impl} --> ttt 'a {n_impl + 1}
+end
+
+structure FunctorDatatypeTestNeg1Result = FunctorDatatypeTestNeg1Fn (FunctorDatatypeTestNeg1Arg)
+

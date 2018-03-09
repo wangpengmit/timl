@@ -109,15 +109,16 @@
 - [ ] Add example links to website.
 - [ ] Remove assert_b and assert_b_m to make sure when assertion are turned off no computation will be wasted.
 - [ ] Add ELength.
-- [ ] eq_mt()/TDatatype needs to be implemented to allow instantiating dynamic-table.timl.
+- [x] eq_mt()/TDatatype needs to be implemented to allow instantiating dynamic-table.timl.
 - [ ] Add negative examples.
+- [ ] Argument module names of functors are put into global context, which may result in name conflicts. Should prefix argument module names with the functor names.
 
 # To-do for MicroTiML
 
 - [ ] remove let x = ... when x is "_", because such case can only be from translation of wildcard patterns
 - [ ] remove duplicate EAsc and EAscTime
 - [ ] analysing the form of expr is complicated by the pervasion of EAscType and EAscTime; need some principled way to transparently ignore EAscType/Time.
-- [ ] dynamic-table.timl needs to be instantiated to be tested by MicroTiML compiler
+- [x] dynamic-table.timl needs to be instantiated to be tested by MicroTiML compiler
 - [x] tc() should add annotations only when specific flags are turned on; the client that turns on these flags should consume the annotations to prevent them from polluting later translations.
 - [x] Add level limits to export_t and export_e.
 - [x] Add a pass to remove annotations on EVar, TVar and VarI after cc().
