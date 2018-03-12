@@ -5,6 +5,7 @@ fold-evolve.timl
 single-var.timl
 bug.timl
 pldi-2017-review-example.timl
+! functor-type-def-neg.timl
 functor-datatype-test.timl
 ! functor-datatype-test-neg.timl
 ! functor-datatype-test-neg2.timl

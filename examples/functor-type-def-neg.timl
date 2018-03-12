@@ -1,0 +1,11 @@
+functor FunctorTypeDefNeg1Fn (FunctorTypeDefNeg1Fn_K : sig
+                                type t = unit
+              end) = struct
+end
+        
+structure FunctorTypeDefNeg1Arg = struct
+type t = int
+end
+
+structure FunctorTypeDefNeg1Result = FunctorTypeDefNeg1Fn (FunctorTypeDefNeg1Arg)
+

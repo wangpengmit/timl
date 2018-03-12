@@ -1788,14 +1788,15 @@ fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
       let
         val (x, k) = fetch_kindext_by_name gctx [] $ QID (m, (name, r))
         val () = is_sub_kindext r gctx (sctx', kctx') (k, k')
-        fun kind_add_type_eq t (k, t') =
+        fun kind_add_type_eq t (k', t') =
           case t' of
-              NONE => (k, SOME t)
+              NONE => (k', SOME t)
            |  SOME t' =>
               let
-                val () = unify_mt r gctx (sctx', kctx') (t, t')
+                (* don't need this check because in this case unify_mt() has been called by is_sub_kindext above *)
+                (* val () = unify_mt r gctx (sctx', kctx') (t, t') *)
               in
-                (k, SOME t)
+                (k', SOME t)
               end
         val k' = kind_add_type_eq (MtVar x) k'
         val ret = add_kindingext (name, k') kctx'

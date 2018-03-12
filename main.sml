@@ -292,12 +292,13 @@ exception ParseArgsError of string
             
 fun usage () =
     let
-      val () = println "Usage: THIS [--help] [-l <library1:library2:...>] [--annoless] <filename1> <filename2> ..."
+      val () = println "Usage: THIS [--help] [-l <library1:library2:...>] [--annoless] <file-name1> <file-name2> ..."
       val () = println "  --help: print this message"
       val () = println "  -l <library1:library2:...>: paths to libraries, separated by ':'"
       val () = println "  --annoless: less annotations on case-of"
       val () = println "  --repeat n: repeat the whole thing for [n] times (for profiling purpose)"
       val () = println "  --unit-test <dir-name>: do unit test under directory dir-name"
+      val () = println "  -n <file-name>: typecheck a negative file (succeeds only when there are errors)"
     in
       ()
     end
@@ -343,11 +344,12 @@ fun parse_arguments (opts : options, args) =
 	    | "--unit-test" :: arg :: ts => (#UnitTest opts := SOME arg; parseArgs ts)
 	    (* | parseArgs ("-A" :: arg :: ts) = (do_A arg;       parseArgs ts) *)
 	    (* | parseArgs ("-B"        :: ts) = (do_B();         parseArgs ts) *)
-	    | s :: ts =>
-              if String.isPrefix "-" s then
-	        raise ParseArgsError ("Unrecognized option: " ^ s)
+	    | "-n" :: arg :: ts => (push_ref positionals (false, arg); parseArgs ts)
+	    | arg :: ts =>
+              if String.isPrefix "-" arg then
+	        raise ParseArgsError ("Unrecognized option: " ^ arg)
               else
-                (push_ref positionals (true, s); parseArgs ts)
+                (push_ref positionals (true, arg); parseArgs ts)
       val () = parseArgs args
     in
       (!positionals)
