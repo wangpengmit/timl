@@ -704,6 +704,87 @@ val cps_tc_flags =
     end
                      
 (* Checks the form invariants after CPS, according to the 'System F to TAL' paper. *)
+      
+fun check_CPSed_ty_visitor_vtable cast () =
+  let
+    val vtable = 
+        default_ty_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_TQuanI this env (data as (q, _)) =
+      case q of
+          Forall =>
+          let
+            val (binds, t) = collect_TForallIT $ TQuanI data
+            val _ = assert_TArrow t
+            val _ = #visit_ty (cast this) this env t
+          in
+            TQuanI data
+          end
+        | _ => #visit_TQuanI vtable this env data (* call super *)
+    fun visit_TQuan this env (data as (q, _)) =
+      case q of
+          Forall =>
+          let
+            val (binds, t) = collect_TForallIT $ TQuan data
+            val _ = assert_TArrow t
+            val _ = #visit_ty (cast this) this env t
+          in
+            TQuan data
+          end
+        | _ => #visit_TQuan vtable this env data (* call super *)
+    fun visit_TArrow this env (data as (t1, i, t2)) =
+      let
+        val _ = #visit_ty (cast this) this env t1
+        val () = case t2 of
+                     TConst TCUnit => ()
+                   | _ => raise Impossible "check_CPSed_type(): result type of TArrow must be TUnit"
+      in
+        TArrow data
+      end
+    val vtable = override_visit_TQuanI vtable visit_TQuanI
+    val vtable = override_visit_TQuan vtable visit_TQuan
+    val vtable = override_visit_TArrow vtable visit_TArrow
+  in
+    vtable
+  end
+
+fun new_check_CPSed_ty_visitor a = new_ty_visitor check_CPSed_ty_visitor_vtable a
+    
+fun check_CPSed_type b =
+  let
+    val visitor as (TyVisitor vtable) = new_check_CPSed_ty_visitor ()
+  in
+    #visit_ty vtable visitor () b
+  end
+    
+fun check_CPSed_type_expr_visitor_vtable cast () =
+  default_expr_visitor_vtable
+    cast
+    extend_noop
+    extend_noop
+    extend_noop
+    extend_noop
+    visit_noop
+    visit_noop
+    visit_noop
+    visit_noop
+    (ignore_this_env check_CPSed_type)
+
+fun new_check_CPSed_type_expr_visitor params = new_expr_visitor check_CPSed_type_expr_visitor_vtable params
+
+fun check_CPSed_type_e b =
+  let
+    val visitor as (ExprVisitor vtable) = new_check_CPSed_type_expr_visitor ()
+  in
+    ignore $ #visit_expr vtable visitor () b
+  end
+
 fun check_CPSed_expr e =
   let
     val loop = check_CPSed_expr
@@ -809,6 +890,8 @@ and check_value e =
     | ENever _ => ()
     | EBuiltin _ => ()
     | _ => raise Impossible $ "check_value():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+
+val check_CPSed_expr = fn e => (check_CPSed_type_e e; check_CPSed_expr e)
                               
 structure UnitTest = struct
 

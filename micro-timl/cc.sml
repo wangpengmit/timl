@@ -457,24 +457,6 @@ fun cc_expr_un_op opr =
       | EUFold t => EUFold $ cc_t t
       | EUUnfold => opr
 
-fun collect_TForallIT b =
-  case b of
-      TQuanI (Forall, bind) =>
-      let
-        val (s, (name, b)) = unBindAnnoName bind
-        val (binds, b) = collect_TForallIT b
-      in
-        (inl (name, s) :: binds, b)
-      end
-    | TQuan (Forall, bind) =>
-      let
-        val (k, (name, b)) = unBindAnnoName bind
-        val (binds, b) = collect_TForallIT b
-      in
-        (inr (name, k) :: binds, b)
-      end
-    | _ => ([], b)
-
 fun apply_TForallIT b args =
     case (b, args) of
         (TQuanI (Forall, bind), inl v :: args) =>

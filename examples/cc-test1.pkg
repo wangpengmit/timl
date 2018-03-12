@@ -25,7 +25,6 @@
 (* (* insertion-sort.timl *) *)
 (* (* braun-tree.timl *) *)
 (* rbt.timl *)
-(* (* dynamic-table.timl *) *)
 (* (* functional-queue.timl *) *)
 (* (* array-bsearch.timl *) *)
 (* (* array-heap.timl *) *)
@@ -36,3 +35,5 @@
 (* (* qsort.timl *) *)
 (* (* dijkstra.timl *) *)
 
+(* dynamic-table.timl *)
+(* dynamic-table-test.timl *)

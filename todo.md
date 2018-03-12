@@ -123,6 +123,7 @@
 - [x] Add level limits to export_t and export_e.
 - [x] Add a pass to remove annotations on EVar, TVar and VarI after cc().
 - [ ] Uniquefy variable names.
+- [x] check_CPSed_expr() should also check types.
 
 # To-do for Examples:
 

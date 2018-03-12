@@ -143,6 +143,24 @@ fun collect_EAbsIT e =
       end
     | _ => ([], e)
 
+fun collect_TAbsIT b =
+  case b of
+      TAbsI data =>
+      let
+        val (s, (name, b)) = unBindAnnoName data
+        val (binds, b) = collect_TAbsIT b
+      in
+        (inl (name, s) :: binds, b)
+      end
+    | TAbsT data =>
+      let
+        val (k, (name, b)) = unBindAnnoName data
+        val (binds, b) = collect_TAbsIT b
+      in
+        (inr (name, k) :: binds, b)
+      end
+    | _ => ([], b)
+
 open MicroTiMLExLongId
        
 val unTAbsT = unBindAnnoName
