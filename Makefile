@@ -33,6 +33,7 @@ main.cm: generate-file-list.rb
 	sed -i '1i(* Auto-generated. Do not edit! *)' $@
 
 clean:
+	find . -type f ! -name '*.exe' | xargs touch
 	rm -f main
 	rm -f main-image*
 	rm -f main.cm
