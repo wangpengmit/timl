@@ -46,6 +46,7 @@ fun cg_v ectx v =
     | EConst c => VConst c
     | EAppT (v, t) => VAppT (cg_v ectx v, cg_t t)
     | EPack (t_pack, t, v) => VPack (cg_t t_pack, cg_t t, cg_v ectx v)
+    | EPack (t_pack, i, v) => VPack (cg_t t_pack, i, cg_v ectx v)
     | EUnOp (EUFold t, v) => VFold (cg_t t, cg_v ectx v)
                          
 fun cg_e (ectx, itctx, rctx) e =
@@ -80,10 +81,6 @@ fun cg_e (ectx, itctx, rctx) e =
                   val t_sum = TSum $ choose_pair_inj (t_v, t_other) inj
                   val t_sum = cg_t t_sum
                   val r = fresh_reg ()
-                  fun choose_pair_inj (t, t_other) inj =
-                    case inj of
-                        InjInl => (t, t_other)
-                      | InjInr => (t_other, t)
                 in
                   ([IInj (r, inj, cg_v ectx v)],
                    r, t_sum)
@@ -128,11 +125,24 @@ fun cg_e (ectx, itctx, rctx) e =
         val (v, t) = assert_EAscType v
         val ((_, k), t) = assert_TExists t
         val t = cg_t t
-        val r = fresh_reg ()
-        val i = MakeIUnpack (cg_v ectx v, name_a, r)
         val (name_x, bind) = unBindSimpName bind
         val (name_a, e2) = unBindSimpName bind
+        val r = fresh_reg ()
+        val i = MakeIUnpack (name_a, r, cg_v ectx v)
         val I = cg_e (inl r :: ectx, inr (name_a, k) :: itctx, rctx @+ (r, t)) e2
+      in
+        i @:: I
+      end
+    | EUnpackI (v, bind) =>
+      let
+        val (v, t) = assert_EAscType v
+        val ((_, s), t) = assert_TExistsI t
+        val t = cg_t t
+        val (name_x, bind) = unBindSimpName bind
+        val (name_a, e2) = unBindSimpName bind
+        val r = fresh_reg ()
+        val i = MakeIUnpackI (name_a, r, cg_v ectx v)
+        val I = cg_e (inl r :: ectx, inl (name_a, s) :: itctx, rctx @+ (r, t)) e2
       in
         i @:: I
       end

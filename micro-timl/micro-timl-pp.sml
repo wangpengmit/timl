@@ -260,6 +260,22 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
+      | TArrowTAL (ts, i) =>
+        (
+          open_hbox ();
+          str "TArrow";
+          space ();
+          str "(";
+          Rctx.appi
+            (fn (r, t) =>
+                (str ("r" ^ str_int r);
+                 str ":"; space ();
+                 pp_t t;
+                 comma ())) ts;
+          str $ str_i i;
+          str ")";
+          close_box ()
+        )
   end
 
 open WithPP

@@ -25,3 +25,6 @@ fun remove_many (m : 'a M.map) (ks : (M.Key.ord_key, 'a M.map) Enum.enum) : 'a M
 fun find_many g ks = List.mapPartial (fn k => Option.map (Util.attach_fst k) (M.find (g, k))) ks
                                          
 end
+
+structure IntBinaryMapUtil = MapUtilFn (IntBinaryMap)
+structure StringBinaryMapUtil = MapUtilFn (StringBinaryMap)

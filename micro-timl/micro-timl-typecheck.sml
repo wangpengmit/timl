@@ -316,6 +316,13 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TProdEx ((t1, b1), (t2, b2)), KType)
       end
+    | TArrowTAL (ts, i) =>
+      let
+        val ts = Rctx.map (fn t => kc_against_kind ctx (t, KType)) ts
+        val i = sc_against_sort ictx (i, STime)
+      in
+        (TArrowTAL (ts, i), KType)
+      end
 
 and kc_against_kind ctx (t, k) =
   let

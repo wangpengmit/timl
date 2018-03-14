@@ -75,6 +75,11 @@ fun choose_inj (t1, t2) inj =
       InjInl => t1
     | InjInr => t2
                                  
+fun choose_pair_inj (t, t_other) inj =
+  case inj of
+      InjInl => (t, t_other)
+    | InjInr => (t_other, t)
+                  
 fun collect_EAscType_rev e =
   let
     val self = collect_EAscType_rev

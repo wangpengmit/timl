@@ -428,11 +428,11 @@ fun cc_t t =
     | TAppT (t, t') => TAppT (cc_t t, cc_t t')
     | TAppI (t, i) => TAppI (cc_t t, i)
     | TArr (t, i) => TArr (cc_t t, i)
-    | TProdEx _ =>
+    | _ =>
       let
         val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t
       in
-        raise Unimpl $ "cc_t() on: " ^ s
+        raise Impossible $ "cc_t() on: " ^ s
       end
 
 and cc_t_arrow t =

@@ -24,6 +24,8 @@ datatype ty_bin_op =
          TBProd
          | TBSum
 
+structure Rctx = IntBinaryMap
+                   
 (* type *)
 datatype ('var, 'bsort, 'idx, 'sort) ty =
          TVar of 'var * 'bsort kind list
@@ -41,6 +43,8 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TAppT of ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
          (* used by compiler/pair-alloc *)
          | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool)
+         (* used by compiler/code-gen *)
+         | TArrowTAL of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx
 
 type loc = int
              

@@ -31,6 +31,7 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_
        visit_TAbsT : 'this -> 'env -> ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
        visit_TAppT : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
        visit_TProdEx : 'this -> 'env -> (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool) -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
+       visit_TArrowTAL : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
        visit_var : 'this -> 'env -> 'var -> 'var2,
        visit_bsort : 'this -> 'env -> 'bsort -> 'bsort2,
        visit_idx : 'this -> 'env -> 'idx -> 'idx2,
@@ -69,6 +70,7 @@ fun override_visit_TVar (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -104,6 +106,7 @@ fun override_visit_TAppT (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = new,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -139,6 +142,7 @@ fun override_visit_TAppI (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -174,6 +178,7 @@ fun override_visit_TBinOp (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -209,6 +214,7 @@ fun override_visit_TProdEx (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'v
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = new,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -244,6 +250,7 @@ fun override_visit_ty (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -279,6 +286,7 @@ fun override_visit_TAbsI (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -314,6 +322,7 @@ fun override_visit_TAbsT (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TAbsT = new,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -349,6 +358,7 @@ fun override_visit_TArrow (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -384,6 +394,7 @@ fun override_visit_TQuanI (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -419,6 +430,7 @@ fun override_visit_TQuan (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
        visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -494,6 +506,7 @@ fun default_ty_visitor_vtable
           | TAbsT data => #visit_TAbsT vtable this env data
           | TAppT data => #visit_TAppT vtable this env data
           | TProdEx data => #visit_TProdEx vtable this env data
+          | TArrowTAL data => #visit_TArrowTAL vtable this env data
       end
     fun visit_TVar this env data =
       let
@@ -605,6 +618,15 @@ fun default_ty_visitor_vtable
       in
         TProdEx ((t1, b1), (t2, b2))
       end
+    fun visit_TArrowTAL this env data = 
+      let
+        val vtable = cast this
+        val (ts, i) = data
+        val ts = Rctx.map (#visit_ty vtable this env) ts
+        val i = #visit_idx vtable this env i
+      in
+        TArrowTAL (ts, i)
+      end
     fun default_visit_bind_anno extend this = visit_bind_anno (extend this)
   in
     {visit_kind = visit_kind,
@@ -626,6 +648,7 @@ fun default_ty_visitor_vtable
      visit_TAbsT = visit_TAbsT,
      visit_TAppT = visit_TAppT,
      visit_TProdEx = visit_TProdEx,
+     visit_TArrowTAL = visit_TArrowTAL,
      visit_var = visit_var,
      visit_bsort = visit_bsort,
      visit_idx = visit_idx,
