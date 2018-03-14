@@ -19,6 +19,31 @@ fun assert_TArrow t =
       TArrow a => a
     | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                  
+fun assert_TProd t =
+  case t of
+      TBinOp (TBProd, t1, t2) => (t1, t2)
+    | _ => raise assert_fail "assert_TProd"
+fun assert_TSum t =
+  case t of
+      TBinOp (TBSum, t1, t2) => (t1, t2)
+    | _ => raise assert_fail "assert_TSum"
+fun assert_TAbsT t =
+  case t of
+      TAbsT bind => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TAbsT; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TAbsI t =
+  case t of
+      TAbsI bind => unBindAnno bind
+    | _ => raise assert_fail "assert_TAbsI"
+fun assert_TForall t =
+  case t of
+      TQuan (Forall, bind) => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TForall; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TForallI t =
+  case t of
+      TQuanI (Forall, bind) => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+
 fun assert_TUnit msg t =
   case t of
       TConst TCUnit => ()

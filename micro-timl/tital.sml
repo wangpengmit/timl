@@ -61,5 +61,9 @@ type hval = (((ibinder * sort outer, tbinder * kind) sum) tele, (ty rctx * idx) 
 infixr 0 $
          
 fun VConst c = VWordVal $ WConst c
+
+infixr 5 @::
+         
+fun a @:: b = ISCons $ Bind (a, b)
                         
 end

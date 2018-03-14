@@ -632,11 +632,6 @@ fun eval_constr b =
     #visit_expr vtable visitor () b
   end
 
-fun assert_cons ls =
-    case ls of
-        x :: xs => (x, xs)
-      | [] => raise Impossible "assert_cons fails"
-
 fun smart_EAscType (e, t) =
     let
       val (e, is) = collect_EAscTime e

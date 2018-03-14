@@ -449,6 +449,11 @@ fun assert_b_m msg b = assert_m (const_fun b) msg
 fun assert p msg = assert_m p (const_fun msg)
 fun assert_b msg b = assert (const_fun b) msg
 
+fun assert_cons ls =
+    case ls of
+        x :: xs => (x, xs)
+      | [] => raise Impossible "assert_cons fails"
+                            
 fun find_unique ls name =
   if not (mem op= name ls) then
     name

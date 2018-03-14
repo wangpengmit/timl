@@ -2,8 +2,17 @@
 
 structure CodeGen = struct
 
+open CompilerUtil
 open TiTAL
 
+infixr 0 $
+         
+infix  6 @+
+
+structure RctxUtil = MapUtilFn (Rctx)
+                               
+val rctx_single = RctxUtil.single
+                    
 fun cg_ty_visitor_vtable cast () =
   let
     fun visit_TArrow this env (data as (t1, i, t2)) =
@@ -40,7 +49,7 @@ fun cg_t t =
 fun cg_v ectx v =
   case v of
       EVar (ID (x, _)) =>
-      (case nth_error rctx x of
+      (case nth_error ectx x of
            SOME r => VReg r
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
     | EConst c => VConst c
