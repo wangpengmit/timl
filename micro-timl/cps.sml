@@ -741,9 +741,7 @@ fun check_CPSed_ty_visitor_vtable cast () =
     fun visit_TArrow this env (data as (t1, i, t2)) =
       let
         val _ = #visit_ty (cast this) this env t1
-        val () = case t2 of
-                     TConst TCUnit => ()
-                   | _ => raise Impossible "check_CPSed_type(): result type of TArrow must be TUnit"
+        val () = assert_TUnit "check_CPSed_type(): result type of TArrow must be TUnit" t2
       in
         TArrow data
       end

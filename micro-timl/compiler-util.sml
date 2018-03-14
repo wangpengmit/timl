@@ -19,6 +19,11 @@ fun assert_TArrow t =
       TArrow a => a
     | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                  
+fun assert_TUnit msg t =
+  case t of
+      TConst TCUnit => ()
+    | _ => raise assert_fail msg
+                 
 fun assert_EAbs e =
   case e of
       EAbs bind => unBindAnnoName bind
