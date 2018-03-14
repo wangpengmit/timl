@@ -44,6 +44,15 @@ fun assert_TForallI t =
       TQuanI (Forall, bind) => unBindAnno bind
     | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 
+fun assert_TExists t =
+  case t of
+      TQuan (Exists _, bind) => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TExists; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TExistsI t =
+  case t of
+      TQuanI (Exists _, bind) => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TExistsI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+
 fun assert_TUnit msg t =
   case t of
       TConst TCUnit => ()

@@ -2,13 +2,13 @@
 
 structure TiTAL = struct
 
-open MicroTiML
+open MicroTiMLEx
 open Binders
 
 type idx = Expr.idx
 type sort = Expr.sort
 type bsort = Expr.bsort
-type kind = Expr.kind
+type kind = bsort kind
 type ty = (Expr.var, bsort, idx, sort) ty
      
 type reg = int
@@ -56,14 +56,35 @@ datatype insts =
 
 type 'v rctx = 'v IntBinaryMap.map
                   
-type hval = (((ibinder * sort outer, tbinder * kind) sum) tele, (ty rctx * idx) * insts) bind
+type hval = ((ibinder * sort outer, tbinder * kind) sum tele, (ty rctx * idx) * insts) bind
 
 infixr 0 $
          
 fun VConst c = VWordVal $ WConst c
+fun VLabel l = VWordVal $ WLabel l
 
+fun VAppIT (e, arg) =
+    case arg of
+        inl i => VAppI (e, i)
+      | inr t => VAppT (e, t)
+fun VAppITs (f, args) = foldl (swap VAppIT) f args
+                     
 infixr 5 @::
+infixr 5 @@
          
 fun a @:: b = ISCons $ Bind (a, b)
+fun ls @@ b = foldr (op@::) b ls 
                         
+fun HCode' (binds, body) : hval =
+  Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, body)
+
+fun IBinOpPrim' (opr, rd, rs, v) = IBinOpPrim (opr, rd, rs, Inner v)
+fun IBr' (r, v) = IBr (r, Inner v)
+fun IMov' (r, v) = IMov (r, Inner v)
+fun IMallocPair' (r, (v1, v2)) = IMallocPair (r, (Inner v1, Inner v2))
+fun IUnpack' (name, r, v) = IUnpack (TBinder name, r, Outer v)
+fun IUnpackI' (name, r, v) = IUnpackI (IBinder name, r, Outer v)
+fun IInj' (r, inj, v) = IInj (r, inj, Inner v)
+fun IAscTime' i = IAscTime (Inner i)
+                               
 end
