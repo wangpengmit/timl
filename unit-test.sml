@@ -10,5 +10,6 @@ val test_suites = test_suites @ MicroTiMLTypecheck.UnitTest.test_suites
 val test_suites = test_suites @ CPS.UnitTest.test_suites
 val test_suites = test_suites @ CC.UnitTest.test_suites
 val test_suites = test_suites @ PairAlloc.UnitTest.test_suites
+val test_suites = test_suites @ CodeGen.UnitTest.test_suites
 
 end

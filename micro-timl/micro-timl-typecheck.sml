@@ -670,6 +670,7 @@ val anno_EPackI = ref false
 val anno_EUnpack = ref false
 val anno_EUnpackI = ref false
 val anno_ELet = ref false
+val anno_EHalt = ref false
            
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
@@ -712,12 +713,8 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         let
           val t' = kc_against_kind itctx (t', KType)
           val (e, t, i) = tc ctx e
-          fun inject (t, t') inj =
-            case inj of
-                InjInl => (t, t')
-              | InjInr => (t', t)
         in
-          (EInj (inj, t', e), TSum $ inject (t, t') inj, i)
+          (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i)
         end
       | EUnOp (EUFold t', e) =>
         let
@@ -775,8 +772,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val (e2, t2, i2) = tc ctx e2
           val () = is_eq_ty itctx (t2, get_prim_expr_bin_op_arg2_ty opr)
           val (e1, e2) = if !anno_EBPrim then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val e = EBinOpPrim (opr, e1, e2)
+          val t = get_prim_expr_bin_op_res_ty opr
         in
-          (EBinOpPrim (opr, e1, e2), get_prim_expr_bin_op_res_ty opr, i1 %+ i2)
+          (e, t, i1 %+ i2)
         end
       | EBinOp (EBNew, e1, e2) =>
         let
@@ -1181,8 +1180,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val () = assert_b "EMallocPair: is_value b" (is_value b)
           val (a, t1, _) = tc ctx a
           val (b, t2, _) = tc ctx b
+          val e = EMallocPair (a, b)
+          val t = TProdEx ((t1, false), (t2, false))
         in
-          (EMallocPair (a, b), TProdEx ((t1, false), (t2, false)), T0)
+          (e, t, T0)
         end
       | EPairAssign (e1, proj, e2) =>
         let
@@ -1196,8 +1197,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val (b1, b2) = case proj of
                              ProjFst => (true, b2)
                            | ProjSnd => (b1, true)
+          val e = EPairAssign (e1, proj, e2)
+          val t = TProdEx ((t1, b1), (t2, b2))
         in
-          (EPairAssign (e1, proj, e2), TProdEx ((t1, b1), (t2, b2)), i_e1 %+ i_e2)
+          (e, t, i_e1 %+ i_e2)
         end
       | EProjProtected (proj, e) =>
         let
@@ -1209,12 +1212,14 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val (t, b) = choose ts proj
           val () = if b then ()
                    else raise MTCError "EProjProtected/check-permission"
+          val e = EProjProtected (proj, e)
         in
-          (EProjProtected (proj, e), t, i_e)
+          (e, t, i_e)
         end
       | EHalt e =>
         let
           val (e, t_e, i_e) = tc ctx e
+          val e = if !anno_EHalt then e %: t_e else e
         in
           (EHalt e, TUnit, i_e)
         end
@@ -1325,50 +1330,52 @@ fun runWriter m () =
   end
     
 datatype tc_flags =
-         AnnoEVar
-       | AnnoEProj
-       | AnnoEFold
-       | AnnoEUnfold
-       | AnnoEApp
-       | AnnoEPair
-       | AnnoEBPrim
-       | AnnoENew
-       | AnnoERead
-       | AnnoENatAdd
-       | AnnoEWrite
-       | AnnoECase
-       | AnnoEAbs
-       | AnnoEAppT
-       | AnnoEAppI
-       | AnnoEPack
-       | AnnoEPackI
-       | AnnoEUnpack
-       | AnnoEUnpackI
-       | AnnoELet
+         Anno_EVar
+       | Anno_EProj
+       | Anno_EFold
+       | Anno_EUnfold
+       | Anno_EApp
+       | Anno_EPair
+       | Anno_EBPrim
+       | Anno_ENew
+       | Anno_ERead
+       | Anno_ENatAdd
+       | Anno_EWrite
+       | Anno_ECase
+       | Anno_EAbs
+       | Anno_EAppT
+       | Anno_EAppI
+       | Anno_EPack
+       | Anno_EPackI
+       | Anno_EUnpack
+       | Anno_EUnpackI
+       | Anno_ELet
+       | Anno_EHalt
 
 fun typecheck flags ctx e =
   let
     val mem = fn (a : tc_flags) => mem op= a
-    val () = anno_EVar := mem AnnoEVar flags
-    val () = anno_EProj := mem AnnoEProj flags
-    val () = anno_EFold := mem AnnoEFold flags
-    val () = anno_EUnfold := mem AnnoEUnfold flags
-    val () = anno_EApp := mem AnnoEApp flags
-    val () = anno_EPair := mem AnnoEPair flags
-    val () = anno_EBPrim := mem AnnoEBPrim flags
-    val () = anno_ENew := mem AnnoENew flags
-    val () = anno_ERead := mem AnnoERead flags
-    val () = anno_ENatAdd := mem AnnoENatAdd flags
-    val () = anno_EWrite := mem AnnoEWrite flags
-    val () = anno_ECase := mem AnnoECase flags
-    val () = anno_EAbs := mem AnnoEAbs flags
-    val () = anno_EAppT := mem AnnoEAppT flags
-    val () = anno_EAppI := mem AnnoEAppI flags
-    val () = anno_EPack := mem AnnoEPack flags
-    val () = anno_EPackI := mem AnnoEPackI flags
-    val () = anno_EUnpack := mem AnnoEUnpack flags
-    val () = anno_EUnpackI := mem AnnoEUnpackI flags
-    val () = anno_ELet := mem AnnoELet flags
+    val () = anno_EVar := mem Anno_EVar flags
+    val () = anno_EProj := mem Anno_EProj flags
+    val () = anno_EFold := mem Anno_EFold flags
+    val () = anno_EUnfold := mem Anno_EUnfold flags
+    val () = anno_EApp := mem Anno_EApp flags
+    val () = anno_EPair := mem Anno_EPair flags
+    val () = anno_EBPrim := mem Anno_EBPrim flags
+    val () = anno_ENew := mem Anno_ENew flags
+    val () = anno_ERead := mem Anno_ERead flags
+    val () = anno_ENatAdd := mem Anno_ENatAdd flags
+    val () = anno_EWrite := mem Anno_EWrite flags
+    val () = anno_ECase := mem Anno_ECase flags
+    val () = anno_EAbs := mem Anno_EAbs flags
+    val () = anno_EAppT := mem Anno_EAppT flags
+    val () = anno_EAppI := mem Anno_EAppI flags
+    val () = anno_EPack := mem Anno_EPack flags
+    val () = anno_EPackI := mem Anno_EPackI flags
+    val () = anno_EUnpack := mem Anno_EUnpack flags
+    val () = anno_EUnpackI := mem Anno_EUnpackI flags
+    val () = anno_ELet := mem Anno_ELet flags
+    val () = anno_EHalt := mem Anno_EHalt flags
     val ret = runWriter (fn () => tc ctx e) ()
   in
     ret

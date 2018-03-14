@@ -896,7 +896,7 @@ val cc_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [AnnoEAbs, AnnoEVar]
+      [Anno_EAbs, Anno_EVar]
     end
                      
 (* val forget_var = Subst.forget_var *)

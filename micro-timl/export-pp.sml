@@ -13,8 +13,8 @@ infixr 0 !!
 fun short_to_long_id x = ID (x, dummy)
 fun export_var sel ctx id =
   let
-    (* fun unbound s = "__unbound_" ^ s *)
-    fun unbound s = raise Impossible $ "Unbound identifier: " ^ s
+    fun unbound s = "__unbound_" ^ s
+    (* fun unbound s = raise Impossible $ "Unbound identifier: " ^ s *)
     fun unbound_free s = s
   in
     case id of

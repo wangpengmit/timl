@@ -675,7 +675,7 @@ val cps_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [AnnoEApp, AnnoEAppT, AnnoEAppI, AnnoEFold, AnnoEUnfold, AnnoEPack, AnnoEPackI, AnnoEUnpack, AnnoEUnpackI, AnnoEBPrim, AnnoENew, AnnoERead, AnnoENatAdd, AnnoEProj, AnnoECase, AnnoELet, AnnoEWrite]
+      [Anno_EApp, Anno_EAppT, Anno_EAppI, Anno_EFold, Anno_EUnfold, Anno_EPack, Anno_EPackI, Anno_EUnpack, Anno_EUnpackI, Anno_EBPrim, Anno_ENew, Anno_ERead, Anno_ENatAdd, Anno_EProj, Anno_ECase, Anno_ELet, Anno_EWrite]
     end
                      
 (* Checks the form invariants after CPS, according to the 'System F to TAL' paper. *)
