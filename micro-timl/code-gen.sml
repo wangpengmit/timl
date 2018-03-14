@@ -158,7 +158,7 @@ fun cg_e (ectx, itctx, rctx) e =
       let
         val (v, t) = assert_EAscType v
         val t = cg_t t
-        val (t1, t2) => assert_TSum t
+        val (t1, t2) = assert_TSum t
         val (name1, e1) = unBindSimpName bind1
         val (name2, e2) = unBindSimpName bind2
         val (e2, i_e2) = assert_EAscTime e2
@@ -208,7 +208,7 @@ fun cg_prog e =
     val len = length binds
     fun on_bind bind =
       let
-        ((name, t), e) = unBindAnnoName bind
+        val ((name, t), e) = unBindAnnoName bind
         (* val t = cg_t t *)
         val l = fresh_label ()
         val hval = cg_hval [inr l] (e, t)

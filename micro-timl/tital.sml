@@ -2,6 +2,15 @@
 
 structure TiTAL = struct
 
+open MicroTiML
+open Binders
+
+type idx = Expr.idx
+type sort = Expr.sort
+type bsort = Expr.bsort
+type kind = Expr.kind
+type ty = (Expr.var, bsort, idx, sort) ty
+     
 type reg = int
 type label = int
 
@@ -35,8 +44,8 @@ datatype inst =
          | IMallocPair of reg * (value inner * value inner)
          | IMov of reg * value inner
          | ISt of (reg * projector) * reg
-         | IUnpack of name tbinder * reg * value outer
-         | IUnpackI of name ibinder * reg * value outer
+         | IUnpack of tbinder * reg * value outer
+         | IUnpackI of ibinder * reg * value outer
          | IInj of reg * injector * value inner
          | IAscTime of idx inner
 
@@ -47,8 +56,10 @@ datatype insts =
 
 type 'v rctx = 'v IntBinaryMap.map
                   
-type hval = (((name ibinder * sort outer, name tbinder * kind) sum) tele, (ty rctx * idx) * insts) bind
+type hval = (((ibinder * sort outer, tbinder * kind) sum) tele, (ty rctx * idx) * insts) bind
 
+infixr 0 $
+         
 fun VConst c = VWordVal $ WConst c
                         
 end
