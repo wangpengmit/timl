@@ -68,7 +68,7 @@ fun cg_v ectx v =
   case v of
       EVar (ID (x, _)) =>
       (case nth_error ectx x of
-           SOME v =>
+           SOME (name, v) =>
            (case v of
                 inl r => VReg r
               | inr l => VLabel l)
@@ -114,10 +114,16 @@ fun output_heap pair = push_ref heap_ref pair
                                 
 fun cg_e (params as (ectx, itctx, rctx)) e =
   let
-    val () = print $ "cg_e() started:\n"
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 2, SOME 5) ([], [], [], []) e
-    val () = println $ e_str
-    val ret =
+    (* val () = print $ "cg_e() started:\n" *)
+    val ectxn = map (fst o fst) ectx
+    fun split_inl_inr ls = foldr (fn (s, (acc1, acc2)) =>
+                                     case s of
+                                         inl a => (a :: acc1, acc2)
+                                       | inr a => (acc1, a :: acc2)) ([], []) ls
+    val (ictxn, tctxn) = mapPair (map $ fst o fst, map $ fst o fst) $ split_inl_inr itctx
+    (* val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 2, SOME 3) (ictxn, tctxn, [], ectxn) e *)
+    (* val () = println $ e_str *)
+    fun main () =
   case e of
       ELet (e1, bind) =>
       let
@@ -146,7 +152,7 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
                 end
               | v => [IMov' (r, cg_v ectx v)]
         val (name, e2) = unBindSimpName bind
-        val I = cg_e (inl r :: ectx, itctx, rctx @+ (r, t)) e2
+        val I = cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, t)) e2
       in
         I1 @@ I
       end
@@ -159,7 +165,7 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
         val (name_a, e2) = unBindSimpName bind
         val r = fresh_reg ()
         val i = IUnpack' (name_a, r, cg_v ectx v)
-        val I = cg_e (inl r :: ectx, inr (name_a, k) :: itctx, rctx @+ (r, t)) e2
+        val I = cg_e ((name_x, inl r) :: ectx, inr (name_a, k) :: itctx, rctx @+ (r, t)) e2
       in
         i @:: I
       end
@@ -172,7 +178,7 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
         val (name_a, e2) = unBindSimpName bind
         val r = fresh_reg ()
         val i = IUnpackI' (name_a, r, cg_v ectx v)
-        val I = cg_e (inl r :: ectx, inl (name_a, s) :: itctx, rctx @+ (r, t)) e2
+        val I = cg_e ((name_x, inl r) :: ectx, inl (name_a, s) :: itctx, rctx @+ (r, t)) e2
       in
         i @:: I
       end
@@ -194,9 +200,9 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
         val (e2, i_e2) = assert_EAscTime e2
         val r = fresh_reg ()
         val v = cg_v ectx v
-        val I1 = cg_e (inl r :: ectx, itctx, rctx @+ (r, t1)) e1
+        val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1)) e1
         val rctx2 = rctx @+ (r, t2)
-        val I2 = cg_e (inl r :: ectx, itctx, rctx2) e2
+        val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx2) e2
         val itbinds = rev itctx
         val hval = HCode' (itbinds, ((rctx2, i_e2), I2))
         val l = fresh_label ()
@@ -230,7 +236,10 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
     | EAscTime (e, i) => IAscTime' i @:: cg_e params e
     | EAscType (e, _) => cg_e params e
     | _ => raise Impossible $ "cg_e() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
-    val () = println $ "cg_e() finished:\n" ^ e_str
+    fun extra_msg () = "\nwhen code-gen-ing:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 5) (ictxn, tctxn, [], ectxn) e)
+    val ret = main ()
+              handle Impossible m => raise Impossible (m ^ extra_msg ())
+    (* val () = println $ "cg_e() finished:\n" ^ e_str *)
   in
     ret
   end
@@ -243,7 +252,7 @@ fun cg_hval ectx (e, t_all) =
     val (t, (name, e)) = assert_EAbs e
     val t = cg_t t
     (* input argument is always stored in r1 *)
-    val ectx = (inl 1) :: ectx
+    val ectx = (name, inl 1) :: ectx
     val rctx = rctx_single (1, t)
     val I = cg_e (ectx, rev itbinds, rctx) e
     fun get_time t =
@@ -268,13 +277,13 @@ fun cg_prog e =
         val (t, (name, e)) = unBindAnnoName bind
         (* val t = cg_t t *)
         val l = fresh_label ()
-        val hval = cg_hval [inr l] (e, t)
+        val hval = cg_hval [(name, inr l)] (e, t)
         val () = output_heap (l, hval)
       in
-        l
+        (name, l)
       end
-    val labels = map on_bind binds
-    val ectx = map inr $ rev labels
+    val name_labels = map on_bind binds
+    val ectx = map (mapSnd inr) $ rev name_labels
     val I = cg_e (ectx, [], Rctx.empty) e
     val H = !heap_ref
   in

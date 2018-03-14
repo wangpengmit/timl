@@ -1,44 +1,48 @@
 structure CCTestBasic = struct
 
-val a = ()
+(* val a = () *)
           
-val x = 1 + 2
-val y = x + 1
-val z = x + y + x
+(* val x = 1 + 2 *)
+(* val y = x + 1 *)
+(* val z = x + y + x *)
               
-val p = (1, ())
+(* val p = (1, ()) *)
           
-val i = 1
-val u = ()
-val p = (i, u)
+(* val i = 1 *)
+(* val u = () *)
+(* val p = (i, u) *)
           
-val foo = fn arg => arg + 1
+(* val foo = fn arg => arg + 1 *)
+
+(* fun f x = x + 1 *)
+
+(* val a = f 2 *)
 
 fun f x y = x + y
 
-val a = f 1 2
+(* val a = f 1 2 *)
 
-fun foo {i : Nat} {j | j > i} () =
-    let
-      fun bar (a : nat {i}, b : nat {j}) =
-          a #+ b
-      fun bar2 (a : nat {j}, b : nat {i}) =
-          b #+ a
-      fun bar3 (a : nat {j}, b : nat {i}) =
-          a #+ b
-    in
-      ()
-    end
+(* fun foo {i : Nat} {j | j > i} () = *)
+(*     let *)
+(*       fun bar (a : nat {i}, b : nat {j}) = *)
+(*           a #+ b *)
+(*       fun bar2 (a : nat {j}, b : nat {i}) = *)
+(*           b #+ a *)
+(*       fun bar3 (a : nat {j}, b : nat {i}) = *)
+(*           a #+ b *)
+(*     in *)
+(*       () *)
+(*     end *)
       
-fun id arg = arg
+(* fun id arg = arg *)
 
-val f = id
+(* val f = id *)
 
-val a = f 1
+(* val a = f 1 *)
 
-val a = f ()
+(* val a = f () *)
 
-fun twice f x = f (f x)
+(* fun twice f x = f (f x) *)
 
 (* fun fact_tail (n, acc) = *)
 (*     if n  *)
