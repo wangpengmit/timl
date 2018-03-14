@@ -29,21 +29,22 @@ datatype inst =
          | ISt of (reg * projector) * reg
          | IUnpack of name * reg * value
          | IInj of reg * injector * value
+         | IAscTime of idx
 
 datatype insts =
          ISCons of inst * insts
          | ISJmp of value
          | ISHalt of ty
 
-fun cg_val ectx v =
+fun cg_v ectx v =
   case v of
       EVar (ID (x, _)) =>
       (case nth_error rctx x of
            SOME r => VReg r
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
     | EConst c => VWordVal $ WConst c
-    | EAppT (v, t) => VAppT (cg_val ectx v, cg_t t)
-    | EPack (t_pack, t, v) => VPack (cg_t t_pack, cg_t t, cg_val ectx v)
+    | EAppT (v, t) => VAppT (cg_v ectx v, cg_t t)
+    | EPack (t_pack, t, v) => VPack (cg_t t_pack, cg_t t, cg_v ectx v)
                          
 fun cg_e (ectx, itctx, rctx) e =
   case e of
@@ -57,7 +58,7 @@ fun cg_e (ectx, itctx, rctx) e =
                   val t = cg_t t
                   val r = fresh_reg ()
                 in
-                  ([IMov (r, cg_val ectx v),
+                  ([IMov (r, cg_v ectx v),
                     ILd (r, (r, proj))],
                    r, t)
                 end
@@ -67,8 +68,8 @@ fun cg_e (ectx, itctx, rctx) e =
                   val t = cg_t t
                   val r = fresh_reg ()
                 in
-                  ([IMov (r, cg_val ectx v1),
-                   IBinOpPrim (opr, r, r, cg_val ectx v2)],
+                  ([IMov (r, cg_v ectx v1),
+                   IBinOpPrim (opr, r, r, cg_v ectx v2)],
                    r, t)
                 end
               | EUnOp (EUInj (inj, t_other), v) =>
@@ -82,7 +83,7 @@ fun cg_e (ectx, itctx, rctx) e =
                         InjInl => (t, t_other)
                       | InjInr => (t_other, t)
                 in
-                  ([IInj (r, inj, cg_val ectx v)],
+                  ([IInj (r, inj, cg_v ectx v)],
                    r, t_sum)
                 end
               | v =>
@@ -91,7 +92,28 @@ fun cg_e (ectx, itctx, rctx) e =
                   val t = cg_t t
                   val r = fresh_reg ()
                 in
-                  ([IMov (r, cg_val ectx v)],
+                  ([IMov (r, cg_v ectx v)],
+                   r, t)
+                end
+              | EMallocPair (v1, v2) =>
+                let
+                  val (_, t) = assert_EAscType e1
+                  val t = cg_t t
+                  val r = fresh_reg ()
+                in
+                  ([IMallocPair (r, cg_v ectx v1, cg_v ectx v2)],
+                   r, t)
+                end
+              | EPairAssign (v1, proj, v2) =>
+                let
+                  val (_, t) = assert_EAscType e1
+                  val t = cg_t t
+                  val r = fresh_reg ()
+                  val r' = fresh_reg ()
+                in
+                  ([IMov (r, cg_v ectx v1),
+                            IMov (r', cg_v ectx v2),
+                            ISt ((r, proj), r')],
                    r, t)
                 end
         val (name, e2) = unBindSimpName bind
@@ -105,16 +127,56 @@ fun cg_e (ectx, itctx, rctx) e =
         val ((_, k), t) = assert_TExists t
         val t = cg_t t
         val r = fresh_reg ()
-        val i = IUnpack (name_a, r, cg_val ectx v)
+        val i = IUnpack (name_a, r, cg_v ectx v)
         val (name_x, bind) = unBindSimpName bind
         val (name_a, e2) = unBindSimpName bind
         val I = cg_e (inl r :: ectx, inr (name_a, k) :: itctx, rctx @+ (r, t)) e2
       in
         i @:: I
       end
+    | EBinOp (EBApp, v1, v2) =>
+      let
+        val r = fresh_reg_util (fn r => r <> 1)
+        val i = IUnpack (name_a, r, cg_v ectx v)
+      in
+        IMove (r, cg_v ectx v1) @::
+        IMove (1, cg_v ectx v2) @::
+        ISJmp (VReg r)
+      end
+    | ECase (v, bind1, bind2) =>
+      let
+        val (v, t) = assert_EAscType v
+        val t = cg_t t
+        val (t1, t2) => assert_TSum t
+        val (name1, e1) = unBindSimpName bind1
+        val (name2, e2) = unBindSimpName bind2
+        val (e2, i_e2) = assert_EAscTime e2
+        val r = fresh_reg ()
+        val v = cg_v ectx v
+        val I1 = cg_e (inl r :: ectx, itctx, rctx @+ (r, t1)) e1
+        val rctx2 = rctx @+ (r, t2)
+        val I2 = cg_e (inl r :: ectx, itctx, rctx2) e2
+        val itbinds = rev itctx
+        val hval = MakeHCode (itbinds, (rctx2, i_e2), I2)
+        val l = fresh_label ()
+        val () = output_heap_single (l, hval)
+      in
+        IMove (r, v) @::
+        IBr (r, VAppITs_binds (VLabel l, itbinds)) @::
+        I1
+      end
+    | EHalt v =>
+      let
+        val (v, t) = assert_EAscType v
+        val t = cg_t t
+      in
+        IMov (1, cg_v ectx v) @::
+        ISHalt t
+      end
+        
                        
 (* ectx: variable mapping, maps variables to registers or labels *)
-fun cg_hval ectx e =
+fun cg_hval ectx (e, t_all) =
   let
     val (itbinds, e) = collect_EAbsIT e
     val ((name, t), e) = assert_EAbs e
@@ -123,7 +185,7 @@ fun cg_hval ectx e =
     val ectx = (inl 1) :: ectx
     val rctx = rctx_single (1, t)
     val I = cg_e (ectx, rev itbinds, rctx) e
-    val hval = MakeHCode (itbinds, rctx, I)
+    val hval = MakeHCode (itbinds, (rctx, get_time t_all), I)
   in
     hval
   end
@@ -138,8 +200,8 @@ fun cg_prog e =
         ((name, t), e) = unBindAnnoName bind
         (* val t = cg_t t *)
         val l = fresh_label ()
-        val hval = cg_hval [inr l] e
-        val () = output_heap_single (l, add_time_anno (t, hval))
+        val hval = cg_hval [inr l] (e, t)
+        val () = output_heap_single (l, hval)
       in
         l
       end
