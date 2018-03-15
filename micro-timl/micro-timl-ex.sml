@@ -1754,7 +1754,7 @@ fun subst_e_e_fn params d x v b =
     #visit_expr vtable visitor (IDepth 0, TDepth 0, CDepth 0, EDepth 0) b
   end
 
-(***************** the "export" visitor: convertnig de Bruijn indices to nameful terms **********************)    
+(*********** the "export" visitor: convertnig de Bruijn indices to nameful terms ***************)    
 
 fun export_expr_visitor_vtable cast (omitted, visit_var, visit_cvar, visit_idx, visit_sort, visit_ty) =
   let

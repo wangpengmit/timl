@@ -319,6 +319,7 @@ fun cg_prog e =
     val ectx = foldl on_bind [] binds
     val I = cg_e (ectx, [], Rctx.empty) e
     val H = !heap_ref
+    val H = rev H
   in
     (H, I)
   end
@@ -476,13 +477,12 @@ fun test1 dirname =
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
                      
+    open TiTALExportPP
     val () = println "Started Code Generation ..."
-    (* val e = pa e *)
-    val P as (H, I) = cg_prog e
+    val P = cg_prog e
     val () = println "Finished Code Generation"
-    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
-    (* val () = println "" *)
-    (* val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ((* SOME 1 *)NONE, NONE) ToStringUtil.empty_ctx e *)
+    val P = export_prog ((* SOME 1 *)NONE, NONE, NONE) P
+    (* val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ P *)
     (* val () = write_file ("unit-test-after-code-gen.tmp", e_str) *)
     (* val () = println e_str *)
     (* val () = println "" *)

@@ -1331,7 +1331,7 @@ fun runWriter m () =
     (r, vcs, admits) 
   end
     
-datatype tc_flags =
+datatype tc_flag =
          Anno_EVar
        | Anno_EProj
        | Anno_EFold
@@ -1357,7 +1357,7 @@ datatype tc_flags =
 
 fun typecheck flags ctx e =
   let
-    val mem = fn (a : tc_flags) => mem op= a
+    val mem = fn (a : tc_flag) => mem op= a
     val () = anno_EVar := mem Anno_EVar flags
     val () = anno_EProj := mem Anno_EProj flags
     val () = anno_EFold := mem Anno_EFold flags

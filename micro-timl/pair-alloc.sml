@@ -325,7 +325,7 @@ val pair_alloc_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      []
+      [] : tc_flag list
     end
                      
 structure UnitTest = struct

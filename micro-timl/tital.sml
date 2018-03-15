@@ -53,6 +53,8 @@ datatype ('idx, 'ty) insts =
          ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind
          | ISJmp of ('idx, 'ty) value
          | ISHalt of 'ty
+         (* only for debug/printing purpose *)
+         | ISDummy of string
 
 type 'v rctx = 'v IntBinaryMap.map
                   

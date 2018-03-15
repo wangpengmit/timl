@@ -2,6 +2,8 @@ structure TiTALVisitor = struct
 
 open TiTAL
 
+infixr 0 $
+         
 type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_visitor_vtable =
      {
        visit_WLabel : 'this -> 'env -> label -> 'ty2 word,
@@ -16,18 +18,22 @@ type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_visitor_vtable =
        visit_VPack : 'this -> 'env -> 'ty * 'ty * ('idx, 'ty) value -> ('idx2, 'ty2) value,
        visit_VPackI : 'this -> 'env -> 'ty * 'idx * ('idx, 'ty) value -> ('idx2, 'ty2) value,
        visit_VFold : 'this -> 'env -> 'ty * ('idx, 'ty) value -> ('idx2, 'ty2) value,
-       visit_IBinOp : 'this -> 'env -> inst_bin_op * reg * reg * ('idx, 'ty) value inner -> ('idx2, 'ty2) inst,
-       visit_IUnOp : 'this -> 'env -> inst_un_op * reg * ('idx, 'ty) value inner -> ('idx2, 'ty2) inst,
-       visit_IMallocPair : 'this -> 'env -> reg * (('idx, 'ty) value inner * ('idx, 'ty) value inner) -> ('idx2, 'ty2) inst,
-       visit_ILd : 'this -> 'env -> reg * (reg * projector) -> ('idx2, 'ty2) inst,
-       visit_ISt : 'this -> 'env -> (reg * projector) * reg -> ('idx2, 'ty2) inst,
-       visit_IUnpack : 'this -> 'env -> tbinder * reg * ('idx, 'ty) value outer -> ('idx2, 'ty2) inst,
-       visit_IUnpackI : 'this -> 'env -> ibinder * reg * ('idx, 'ty) value outer -> ('idx2, 'ty2) inst,
-       visit_IInj : 'this -> 'env -> reg * injector * ('idx, 'ty) value inner -> ('idx2, 'ty2) inst,
-       visit_IAscTime : 'this -> 'env -> 'idx inner -> ('idx2, 'ty2) inst,
+       visit_IBinOp : 'this -> 'env ctx -> inst_bin_op * reg * reg * ('idx, 'ty) value inner -> ('idx2, 'ty2) inst,
+       visit_IUnOp : 'this -> 'env ctx -> inst_un_op * reg * ('idx, 'ty) value inner -> ('idx2, 'ty2) inst,
+       visit_IMallocPair : 'this -> 'env ctx -> reg * (('idx, 'ty) value inner * ('idx, 'ty) value inner) -> ('idx2, 'ty2) inst,
+       visit_ILd : 'this -> 'env ctx -> reg * (reg * projector) -> ('idx2, 'ty2) inst,
+       visit_ISt : 'this -> 'env ctx -> (reg * projector) * reg -> ('idx2, 'ty2) inst,
+       visit_IUnpack : 'this -> 'env ctx -> tbinder * reg * ('idx, 'ty) value outer -> ('idx2, 'ty2) inst,
+       visit_IUnpackI : 'this -> 'env ctx -> ibinder * reg * ('idx, 'ty) value outer -> ('idx2, 'ty2) inst,
+       visit_IInj : 'this -> 'env ctx -> reg * injector * ('idx, 'ty) value inner -> ('idx2, 'ty2) inst,
+       visit_IAscTime : 'this -> 'env ctx -> 'idx inner -> ('idx2, 'ty2) inst,
        visit_ISCons : 'this -> 'env -> (('idx, 'ty) inst, ('idx, 'ty) insts) bind -> ('idx2, 'ty2) insts,
        visit_ISJmp : 'this -> 'env -> ('idx, 'ty) value -> ('idx2, 'ty2) insts,
        visit_ISHalt : 'this -> 'env -> 'ty -> ('idx2, 'ty2) insts,
+       visit_word : 'this -> 'env -> 'ty word -> 'ty2 word,
+       visit_value : 'this -> 'env -> ('idx, 'ty) value -> ('idx2, 'ty2) value,
+       visit_inst : 'this -> 'env ctx -> ('idx, 'ty) inst -> ('idx2, 'ty2) inst,
+       visit_insts : 'this -> 'env -> ('idx, 'ty) insts -> ('idx2, 'ty2) insts,
        visit_idx : 'this -> 'env -> 'idx -> 'idx2,
        visit_ty : 'this -> 'env -> 'ty -> 'ty2,
        extend_i : 'this -> 'env -> iname -> 'env,
@@ -55,6 +61,45 @@ fun new_tital_visitor vtable params =
     TiTALVisitor vtable
   end
 
+(***************** overrides  **********************)    
+
+fun override_visit_insts (record : ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_visitor_vtable) new =
+  {
+    visit_WLabel = #visit_WLabel record,
+    visit_WConst = #visit_WConst record,
+    visit_WUninit = #visit_WUninit record,
+    visit_WBuiltin = #visit_WBuiltin record,
+    visit_WNever = #visit_WNever record,
+    visit_VReg = #visit_VReg record,
+    visit_VWord = #visit_VWord record,
+    visit_VAppT = #visit_VAppT record,
+    visit_VAppI = #visit_VAppI record,
+    visit_VPack = #visit_VPack record,
+    visit_VPackI = #visit_VPackI record,
+    visit_VFold = #visit_VFold record,
+    visit_IBinOp = #visit_IBinOp record,
+    visit_IUnOp = #visit_IUnOp record,
+    visit_IMallocPair = #visit_IMallocPair record,
+    visit_ILd = #visit_ILd record,
+    visit_ISt = #visit_ISt record,
+    visit_IUnpack = #visit_IUnpack record,
+    visit_IUnpackI = #visit_IUnpackI record,
+    visit_IInj = #visit_IInj record,
+    visit_IAscTime = #visit_IAscTime record,
+    visit_ISCons = #visit_ISCons record,
+    visit_ISJmp = #visit_ISJmp record,
+    visit_ISHalt = #visit_ISHalt record,
+    visit_word = #visit_word record,
+    visit_value = #visit_value record,
+    visit_inst = #visit_inst record,
+    visit_insts = new,
+    visit_idx = #visit_idx record,
+    visit_ty = #visit_ty record,
+    extend_i = #extend_i record,
+    extend_t = #extend_t record
+  }
+    
+    
 (***************** the default visitor  **********************)    
 
 open VisitorUtil
@@ -164,7 +209,7 @@ fun default_tital_visitor_vtable
       in
         VFold (t, v)
       end
-    fun visit_value this env data =
+    fun visit_inst this env data =
       let
         val vtable = cast this
       in
@@ -203,6 +248,20 @@ fun default_tital_visitor_vtable
       end
     fun visit_ILd this env data = ILd data
     fun visit_ISt this env data = ISt data
+    fun visit_ibinder this env name =
+      let
+        val vtable = cast this
+        val name = visit_binder (#extend_i vtable this) env name
+      in
+        name
+      end
+    fun visit_tbinder this env name =
+      let
+        val vtable = cast this
+        val name = visit_binder (#extend_t vtable this) env name
+      in
+        name
+      end
     fun visit_IUnpack this env (name, r, v) = 
       let
         val vtable = cast this
@@ -233,216 +292,142 @@ fun default_tital_visitor_vtable
       in
         IAscTime i
       end
-
-
-
-        
-    fun visit_un_op this env opr = 
+    fun visit_insts this env data =
       let
         val vtable = cast this
-        fun on_t x = #visit_ty vtable this env x
       in
-        case opr of
-            EUProj opr => EUProj opr
-          | EUInj (opr, t) => EUInj (opr, on_t t)
-          | EUFold t => EUFold $ on_t t
-          | EUUnfold => EUUnfold
+        case data of
+            ISCons data => #visit_ISCons vtable this env data
+          | ISJmp data => #visit_ISJmp vtable this env data
+          | ISHalt data => #visit_ISHalt vtable this env data
+          | ISDummy data => ISDummy data
       end
-    fun visit_EUnOp this env data = 
+    fun visit_ISCons this env bind = 
       let
         val vtable = cast this
-        val (opr, e) = data
-        val opr = visit_un_op this env opr
-        val e = #visit_expr vtable this env e
+        val bind = visit_bind (#visit_inst vtable this) (#visit_insts vtable this) env bind
       in
-        EUnOp (opr, e)
+        ISCons bind
       end
-    fun visit_EBinOp this env data = 
+    fun visit_ISJmp this env v = 
       let
         val vtable = cast this
-        val (opr, e1, e2) = data
-        val e1 = #visit_expr vtable this env e1
-        val e2 = #visit_expr vtable this env e2
+        val v = #visit_value vtable this env v
       in
-        EBinOp (opr, e1, e2)
+        ISJmp v
       end
-    fun visit_EWrite this env data = 
+    fun visit_ISHalt this env t = 
       let
         val vtable = cast this
-        val (e1, e2, e3) = data
-        val e1 = #visit_expr vtable this env e1
-        val e2 = #visit_expr vtable this env e2
-        val e3 = #visit_expr vtable this env e3
-      in
-        EWrite (e1, e2, e3)
-      end
-    fun visit_ibind this = visit_bind_simp (#extend_i (cast this) this)
-    fun visit_tbind this = visit_bind_simp (#extend_t (cast this) this)
-    fun visit_ebind this = visit_bind_simp (#extend_e (cast this) this)
-    fun visit_ibind_anno this = visit_bind_anno (#extend_i (cast this) this)
-    fun visit_tbind_anno this = visit_bind_anno (#extend_t (cast this) this)
-    fun visit_ebind_anno this = visit_bind_anno (#extend_e (cast this) this)
-    fun visit_ECase this env data =
-      let
-        val vtable = cast this
-        val (e, e1, e2) = data
-        val e = #visit_expr vtable this env e
-        val e1 = visit_ebind this (#visit_expr vtable this) env e1
-        val e2 = visit_ebind this (#visit_expr vtable this) env e2
-      in
-        ECase (e, e1, e2)
-      end
-    fun visit_EAbs this env data =
-      let
-        val vtable = cast this
-        val data = visit_ebind_anno this (#visit_ty vtable this) (#visit_expr vtable this) env data
-      in
-        EAbs data
-      end
-    fun visit_ERec this env data =
-      let
-        val vtable = cast this
-        val data = visit_ebind_anno this (#visit_ty vtable this) (#visit_expr vtable this) env data
-      in
-        ERec data
-      end
-    fun visit_EAbsT this env data =
-      let
-        val vtable = cast this
-        val data = visit_tbind_anno this (#visit_kind vtable this) (#visit_expr vtable this) env data
-      in
-        EAbsT data
-      end
-    fun visit_EAppT this env data = 
-      let
-        val vtable = cast this
-        val (e, t) = data
-        val e = #visit_expr vtable this env e
         val t = #visit_ty vtable this env t
       in
-        EAppT (e, t)
-      end
-    fun visit_EAbsI this env data =
-      let
-        val vtable = cast this
-        val data = visit_ibind_anno this (#visit_sort vtable this) (#visit_expr vtable this) env data
-      in
-        EAbsI data
-      end
-    fun visit_EAppI this env data = 
-      let
-        val vtable = cast this
-        val (e, i) = data
-        val e = #visit_expr vtable this env e
-        val i = #visit_idx vtable this env i
-      in
-        EAppI (e, i)
-      end
-    fun visit_EPack this env data = 
-      let
-        val vtable = cast this
-        val (t_all, t, e) = data
-        val t_all = #visit_ty vtable this env t_all
-        val t = #visit_ty vtable this env t
-        val e = #visit_expr vtable this env e
-      in
-        EPack (t_all, t, e)
-      end
-    fun visit_EUnpack this env data =
-      let
-        val vtable = cast this
-        val (e, bind) = data
-        val e = #visit_expr vtable this env e
-        val bind = (visit_tbind this o visit_ebind this) (#visit_expr vtable this) env bind
-      in
-        EUnpack (e, bind)
-      end
-    fun visit_EPackI this env data = 
-      let
-        val vtable = cast this
-        val (t, i, e) = data
-        val t = #visit_ty vtable this env t
-        val i = #visit_idx vtable this env i
-        val e = #visit_expr vtable this env e
-      in
-        EPackI (t, i, e)
-      end
-    fun visit_EUnpackI this env data =
-      let
-        val vtable = cast this
-        val (e, bind) = data
-        val e = #visit_expr vtable this env e
-        val bind = (visit_ibind this o visit_ebind this) (#visit_expr vtable this) env bind
-      in
-        EUnpackI (e, bind)
-      end
-    fun visit_EAscTime this env data = 
-      let
-        val vtable = cast this
-        val (e, i) = data
-        val e = #visit_expr vtable this env e
-        val i = #visit_idx vtable this env i
-      in
-        EAscTime (e, i)
-      end
-    fun visit_EAscType this env data = 
-      let
-        val vtable = cast this
-        val (e, t) = data
-        val e = #visit_expr vtable this env e
-        val t = #visit_ty vtable this env t
-      in
-        EAscType (e, t)
-      end
-    fun visit_ENever this env data = 
-      let
-        val vtable = cast this
-        val data = #visit_ty vtable this env data
-      in
-        ENever data
-      end
-    fun visit_ELet this env data =
-      let
-        val vtable = cast this
-        val (e, bind) = data
-        val e = #visit_expr vtable this env e
-        val bind = visit_ebind this (#visit_expr vtable this) env bind
-      in
-        ELet (e, bind)
+        ISHalt t
       end
   in
     {
-      visit_expr = visit_expr,
-      visit_EVar = visit_EVar,
-      visit_EConst = visit_EConst,
-      (* visit_ELoc = visit_ELoc, *)
-      visit_EUnOp = visit_EUnOp,
-      visit_EBinOp = visit_EBinOp,
-      visit_EWrite = visit_EWrite,
-      visit_ECase = visit_ECase,
-      visit_EAbs = visit_EAbs,
-      visit_ERec = visit_ERec,
-      visit_EAbsT = visit_EAbsT,
-      visit_EAppT = visit_EAppT,
-      visit_EAbsI = visit_EAbsI,
-      visit_EAppI = visit_EAppI,
-      visit_EPack = visit_EPack,
-      visit_EUnpack = visit_EUnpack,
-      visit_EPackI = visit_EPackI,
-      visit_EUnpackI = visit_EUnpackI,
-      visit_EAscTime = visit_EAscTime,
-      visit_EAscType = visit_EAscType,
-      visit_ENever = visit_ENever,
-      visit_ELet = visit_ELet,
-      visit_var = visit_var,
+      visit_WLabel = visit_WLabel,
+      visit_WConst = visit_WConst,
+      visit_WUninit = visit_WUninit,
+      visit_WBuiltin = visit_WBuiltin,
+      visit_WNever = visit_WNever,
+      visit_VReg = visit_VReg,
+      visit_VWord = visit_VWord,
+      visit_VAppT = visit_VAppT,
+      visit_VAppI = visit_VAppI,
+      visit_VPack = visit_VPack,
+      visit_VPackI = visit_VPackI,
+      visit_VFold = visit_VFold,
+      visit_IBinOp = visit_IBinOp,
+      visit_IUnOp = visit_IUnOp,
+      visit_IMallocPair = visit_IMallocPair,
+      visit_ILd = visit_ILd,
+      visit_ISt = visit_ISt,
+      visit_IUnpack = visit_IUnpack,
+      visit_IUnpackI = visit_IUnpackI,
+      visit_IInj = visit_IInj,
+      visit_IAscTime = visit_IAscTime,
+      visit_ISCons = visit_ISCons,
+      visit_ISJmp = visit_ISJmp,
+      visit_ISHalt = visit_ISHalt,
+      visit_word = visit_word,
+      visit_value = visit_value,
+      visit_inst = visit_inst,
+      visit_insts = visit_insts,
       visit_idx = visit_idx,
-      visit_sort = visit_sort,
-      visit_kind = visit_noop,
       visit_ty = visit_ty,
       extend_i = extend_i,
-      extend_t = extend_t,
-      extend_e = extend_e
+      extend_t = extend_t
     }
+  end
+
+fun visit_sum visit1 visit2 env = map_inl_inr (visit1 env) (visit2 env)
+fun visit_map map visit env = map (visit env)
+                                  
+fun visit_hval (extend_i, extend_t, visit_idx, visit_sort, visit_kind, visit_ty, visit_insts) env (h : ('idx, 'sort, 'kind, 'ty) hval) : ('idx2, 'sort2, 'kind2, 'ty2) hval =
+  visit_bind
+    (visit_tele $ visit_sum
+                (visit_pair (visit_binder extend_i) (visit_outer $ visit_sort))
+                (visit_pair (visit_binder extend_t) visit_kind))
+    (visit_pair (visit_pair (visit_map Rctx.map visit_ty) visit_idx) visit_insts) env h
+    
+(*********** the "export" visitor: convertnig de Bruijn indices to nameful terms ***************)    
+
+fun export_tital_visitor_vtable cast (omitted, visit_idx, visit_ty) =
+  let
+    fun extend_i this (depth, (sctx, kctx)) name = (depth, (Name2str name :: sctx, kctx))
+    fun extend_t this (depth, (sctx, kctx)) name = (depth, (sctx, Name2str name :: kctx))
+    fun ignore_this_depth f this (depth, ctx) = f ctx
+    fun only_s f this (_, (sctx, kctx)) name = f sctx name
+    fun only_sk f this (_, (sctx, kctx)) name = f (sctx, kctx) name
+    val vtable = 
+        default_tital_visitor_vtable
+          cast
+          extend_i
+          extend_t
+          (only_s visit_idx)
+          (only_sk visit_ty)
+    fun visit_insts this (depth, ctx) t = 
+      let
+        val (reached_depth_limit, depth) =
+            case depth of
+                NONE => (false, NONE)
+              | SOME n => if n <= 0 then
+                            (true, NONE)
+                          else
+                            (false, SOME (n-1))
+      in
+        if reached_depth_limit then omitted
+        else
+          (* call super *)
+          #visit_insts vtable this (depth, ctx) t
+      end
+    val vtable = override_visit_insts vtable visit_insts
+  in
+    vtable
+  end
+
+fun new_export_tital_visitor params = new_tital_visitor export_tital_visitor_vtable params
+                                                        
+fun export_insts_fn params depth ctx e =
+  let
+    val visitor as (TiTALVisitor vtable) = new_export_tital_visitor params
+  in
+    #visit_insts vtable visitor (depth, ctx) e
+  end
+
+fun export_hval_fn visit_sort params depth h =
+  let
+    val visitor as (TiTALVisitor vtable) = new_export_tital_visitor params
+    fun only_s f (_, (sctx, kctx)) name = f sctx name
+  in
+    visit_hval (#extend_i vtable visitor,
+                #extend_t vtable visitor,
+                #visit_idx vtable visitor,
+                (only_s visit_sort),
+                return2,
+                #visit_ty vtable visitor,
+                #visit_insts vtable visitor
+               ) (depth, ([], [])) h
   end
 
 end

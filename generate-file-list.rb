@@ -205,6 +205,7 @@ micro-timl/cc.sml
 micro-timl/pair-alloc.sml
 micro-timl/tital.sml
 micro-timl/tital-visitor.sml
+micro-timl/tital-export-pp.sml
 micro-timl/code-gen.sml
 unit-test.sml
 main.sml
