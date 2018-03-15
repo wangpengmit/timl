@@ -19,7 +19,7 @@ datatype 'ty word =
 (* small values *)
 datatype ('idx, 'ty) value =
          VReg of reg
-         | VWordVal of 'ty word
+         | VWord of 'ty word
          | VAppT of ('idx, 'ty) value * 'ty
          | VAppI of ('idx, 'ty) value * 'idx
          | VPack of 'ty * 'ty * ('idx, 'ty) value
@@ -39,8 +39,8 @@ datatype inst_bin_op =
          | IBWrite
              
 datatype ('idx, 'ty) inst =
-         IBinOp of inst_bin_op * reg * reg * ('idx, 'ty) value inner
-         | IUnOp of inst_un_op * reg * ('idx, 'ty) value inner
+         IUnOp of inst_un_op * reg * ('idx, 'ty) value inner
+         | IBinOp of inst_bin_op * reg * reg * ('idx, 'ty) value inner
          | IMallocPair of reg * (('idx, 'ty) value inner * ('idx, 'ty) value inner)
          | ILd of reg * (reg * projector)
          | ISt of (reg * projector) * reg
@@ -60,10 +60,10 @@ type ('idx, 'sort, 'kind, 'ty) hval = ((ibinder * 'sort outer, tbinder * 'kind) 
 
 infixr 0 $
          
-fun VConst a = VWordVal $ WConst a
-fun VLabel a = VWordVal $ WLabel a
-fun VNever a = VWordVal $ WNever a
-fun VBuiltin a = VWordVal $ WBuiltin a
+fun VConst a = VWord $ WConst a
+fun VLabel a = VWord $ WLabel a
+fun VNever a = VWord $ WNever a
+fun VBuiltin a = VWord $ WBuiltin a
 
 fun VAppIT (e, arg) =
     case arg of

@@ -1,4 +1,4 @@
-(* micro-timl extended *)
+(* micro-timl-extended *)
 
 structure MicroTiMLEx = struct
 
