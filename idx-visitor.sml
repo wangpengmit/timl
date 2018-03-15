@@ -37,7 +37,7 @@ type ('this, 'env) idx_visitor_vtable =
        visit_BinConn : 'this -> 'env -> Operators.bin_conn * prop * prop -> T.prop,
        visit_Not : 'this -> 'env -> prop * region -> T.prop,
        visit_BinPred : 'this -> 'env -> Operators.bin_pred * idx * idx -> T.prop,
-       visit_Quan : 'this -> 'env -> idx exists_anno (*for linking idx inferer with types*) Operators.quan * bsort * (name * prop) Bind.ibind * region -> T.prop,
+       visit_Quan : 'this -> 'env -> idx exists_anno Operators.quan * bsort * (name * prop) Bind.ibind * region -> T.prop,
        visit_sort : 'this -> 'env -> sort -> T.sort,
        visit_Basic : 'this -> 'env -> bsort * region -> T.sort,
        visit_Subset : 'this -> 'env -> (bsort * region) * (name * prop) Bind.ibind * region -> T.sort,
@@ -52,6 +52,27 @@ type ('this, 'env) idx_visitor_vtable =
        extend : 'this -> 'env -> name -> 'env
      }
        
+type ('this, 'env) idx_visitor_interface =
+     ('this, 'env) idx_visitor_vtable
+                                       
+datatype 'env idx_visitor =
+         IdxVisitor of ('env idx_visitor, 'env) idx_visitor_interface
+
+fun idx_visitor_impls_interface (this : 'env idx_visitor) :
+    ('env idx_visitor, 'env) idx_visitor_interface =
+  let
+    val IdxVisitor vtable = this
+  in
+    vtable
+  end
+
+fun new_idx_visitor vtable params =
+  let
+    val vtable = vtable idx_visitor_impls_interface params
+  in
+    IdxVisitor vtable
+  end
+    
 fun override_visit_idx (record : ('this, 'env) idx_visitor_vtable) new =
   {
     visit_bsort = #visit_bsort record,
@@ -324,27 +345,6 @@ fun override_visit_UVarS (record : ('this, 'env) idx_visitor_vtable) new =
     extend = #extend record
   }
 
-type ('this, 'env) idx_visitor_interface =
-     ('this, 'env) idx_visitor_vtable
-                                       
-datatype 'env idx_visitor =
-         IdxVisitor of ('env idx_visitor, 'env) idx_visitor_interface
-
-fun idx_visitor_impls_interface (this : 'env idx_visitor) :
-    ('env idx_visitor, 'env) idx_visitor_interface =
-  let
-    val IdxVisitor vtable = this
-  in
-    vtable
-  end
-
-fun new_idx_visitor vtable params =
-  let
-    val vtable = vtable idx_visitor_impls_interface params
-  in
-    IdxVisitor vtable
-  end
-    
 (***************** the default visitor  **********************)    
 
 open VisitorUtil

@@ -92,7 +92,13 @@ fun fresh_label () =
     v
   end
 
-val heap_ref = ref ([] : (label * hval) list)
+type idx = Expr.idx
+type bsort = Expr.bsort
+type sort = Expr.sort
+type ty = (Expr.var, bsort, idx, sort) ty
+type kind = bsort kind
+                  
+val heap_ref = ref ([] : (label * (idx, sort, kind, ty) hval) list)
 fun output_heap pair = push_ref heap_ref pair
                                 
 fun cg_v ectx v =

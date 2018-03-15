@@ -5,32 +5,26 @@ structure TiTAL = struct
 open MicroTiMLEx
 open Binders
 
-type idx = Expr.idx
-type sort = Expr.sort
-type bsort = Expr.bsort
-type kind = bsort kind
-type ty = (Expr.var, bsort, idx, sort) ty
-     
 type reg = int
 type label = int
 
 (* atomic word values *)
-datatype word =
+datatype 'ty word =
          WLabel of label
          | WConst of Operators.expr_const
-         | WUninit of ty
-         | WBuiltin of ty
-         | WNever of ty
+         | WUninit of 'ty
+         | WBuiltin of 'ty
+         | WNever of 'ty
            
 (* small values *)
-datatype value =
+datatype ('idx, 'ty) value =
          VReg of reg
-         | VWordVal of word
-         | VAppT of value * ty
-         | VAppI of value * idx
-         | VPack of ty * ty * value
-         | VPackI of ty * idx * value
-         | VFold of ty * value
+         | VWordVal of 'ty word
+         | VAppT of ('idx, 'ty) value * 'ty
+         | VAppI of ('idx, 'ty) value * 'idx
+         | VPack of 'ty * 'ty * ('idx, 'ty) value
+         | VPackI of 'ty * 'idx * ('idx, 'ty) value
+         | VFold of 'ty * ('idx, 'ty) value
 
 datatype inst_un_op =
          IUMov
@@ -44,25 +38,25 @@ datatype inst_bin_op =
          | IBRead
          | IBWrite
              
-datatype inst =
-         IBinOp of inst_bin_op * reg * reg * value inner
-         | IUnOp of inst_un_op * reg * value inner
-         | IMallocPair of reg * (value inner * value inner)
+datatype ('idx, 'ty) inst =
+         IBinOp of inst_bin_op * reg * reg * ('idx, 'ty) value inner
+         | IUnOp of inst_un_op * reg * ('idx, 'ty) value inner
+         | IMallocPair of reg * (('idx, 'ty) value inner * ('idx, 'ty) value inner)
          | ILd of reg * (reg * projector)
          | ISt of (reg * projector) * reg
-         | IUnpack of tbinder * reg * value outer
-         | IUnpackI of ibinder * reg * value outer
-         | IInj of reg * injector * value inner
-         | IAscTime of idx inner
+         | IUnpack of tbinder * reg * ('idx, 'ty) value outer
+         | IUnpackI of ibinder * reg * ('idx, 'ty) value outer
+         | IInj of reg * injector * ('idx, 'ty) value inner
+         | IAscTime of 'idx inner
 
-datatype insts =
-         ISCons of (inst, insts) bind
-         | ISJmp of value
-         | ISHalt of ty
+datatype ('idx, 'ty) insts =
+         ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind
+         | ISJmp of ('idx, 'ty) value
+         | ISHalt of 'ty
 
 type 'v rctx = 'v IntBinaryMap.map
                   
-type hval = ((ibinder * sort outer, tbinder * kind) sum tele, (ty rctx * idx) * insts) bind
+type ('idx, 'sort, 'kind, 'ty) hval = ((ibinder * 'sort outer, tbinder * 'kind) sum tele, ('ty rctx * 'idx) * ('idx, 'ty) insts) bind
 
 infixr 0 $
          
@@ -83,7 +77,7 @@ infixr 5 @@
 fun a @:: b = ISCons $ Bind (a, b)
 fun ls @@ b = foldr (op@::) b ls 
                         
-fun HCode' (binds, body) : hval =
+fun HCode' (binds, body) =
   Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, body)
 
 fun IBinOp' (opr, rd, rs, v) = IBinOp (opr, rd, rs, Inner v)
