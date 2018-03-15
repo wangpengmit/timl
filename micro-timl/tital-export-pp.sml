@@ -19,13 +19,28 @@ fun export_prog (depth_t, depth_insts, depth_heap) (H, I) =
   in
     (H, I)
   end
+    
+fun pp_t_to_NONE s = pp_t_to s NONE
 fun pp_insts_to_string a = TiTALPP.pp_insts_to_string_fn (
     str_i,
-    (fn s => pp_t_to s NONE)
+    pp_t_to_NONE
   ) a
 fun pp_insts a = TiTALPP.pp_insts_fn (
     str_i,
-    (fn s => pp_t_to s NONE)
+    pp_t_to_NONE
+  ) a
+
+fun pp_prog_to_string a = TiTALPP.pp_prog_to_string_fn (
+    str_i,
+    str_s,
+    str_k,
+    pp_t_to_NONE
+  ) a
+fun pp_prog a = TiTALPP.pp_prog_fn (
+    str_i,
+    str_s,
+    str_k,
+    pp_t_to_NONE
   ) a
 
 end

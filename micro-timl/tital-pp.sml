@@ -360,8 +360,87 @@ fun pp_insts (params as (str_i, pp_t, pp_v, pp_inst)) s insts =
         str s
   end
 
+fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
+  let
+    val pp_t = pp_t s
+    val pp_insts = pp_insts s
+    fun space () = PP.space s 1
+    fun str v = PP.string s v
+    fun comma () = (str ","; space ())
+    fun open_hbox () = PP.openHBox s
+    fun open_vbox () = PP.openVBox s (PP.Rel 2)
+    fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+    fun close_box () = PP.closeBox s
+    val (itbinds, ((rctx, i), insts)) = unBind bind
+    val itbinds = unTeles itbinds
+    val itbinds = map (map_inl_inr (mapPair' binder2str unOuter) (mapFst binder2str)) itbinds
+  in
+    open_vbox ();
+    open_hbox ();
+    str "Code";
+    space ();
+    str "(";
+    app (app_inl_inr
+           (fn (name, s) =>
+              (str $ name;
+               str ":"; space ();
+               str $ str_s s;
+               comma ()
+           ))
+           (fn (name, k) =>
+              (str $ name;
+               str "::"; space ();
+               str $ str_k k;
+               comma ()
+           ))
+        ) itbinds;
+    close_box ();
+    space ();
+    open_vbox_noindent ();
+    open_hbox ();
+    str "{";
+    Rctx.appi (fn (r, t) =>
+              (str $ str_reg r;
+               str ":"; space ();
+               pp_t t;
+               comma ()
+              )) rctx;
+    str "}";
+    close_box ();
+    comma ();
+    str $ str_i i;
+    comma ();
+    pp_insts insts;
+    str ")";
+    close_box ();
+    close_box ()
+  end
+    
+fun pp_prog (pp_hval, pp_insts) s (heap, insts) =
+  let
+    val pp_hval = pp_hval s
+    val pp_insts = pp_insts s
+    fun space () = PP.space s 1
+    fun str v = PP.string s v
+    fun comma () = (str ","; space ())
+    fun open_hbox () = PP.openHBox s
+    fun open_vbox () = PP.openVBox s (PP.Rel 2)
+    fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+    fun close_box () = PP.closeBox s
+  in
+    open_vbox_noindent ();
+    app (fn ((l, name), h) =>
+            (str $ sprintf "$ ($)" [str_int l, name];
+             str ":"; space ();
+             pp_hval h;
+             space ()
+        )) heap;
+    pp_insts insts;
+    close_box ()
+  end
+
 open WithPP
-       
+
 fun pp_insts_to_fn (str_i, pp_t) s b =
   let
     val pp_v = pp_v (str_i, pp_t, pp_w pp_t)
@@ -371,5 +450,16 @@ fun pp_insts_to_fn (str_i, pp_t) s b =
 fun pp_insts_fn params = pp_insts_to_fn params TextIO.stdOut
 fun pp_insts_to_string_fn params b =
   pp_to_string "pp_insts_to_string.tmp" (fn os => pp_insts_to_fn params os b)
+    
+fun pp_prog_to_fn (str_i, str_s, str_k, pp_t) s b =
+  let
+    val pp_v = pp_v (str_i, pp_t, pp_w pp_t)
+    val pp_insts = pp_insts (str_i, pp_t, pp_v, pp_inst (str_i, pp_t, pp_v))
+  in
+    withPP ("", 80, s) (fn s => pp_prog (pp_hval (str_i, str_s, str_k, pp_t, pp_insts), pp_insts) s b)
+  end
+fun pp_prog_fn params = pp_prog_to_fn params TextIO.stdOut
+fun pp_prog_to_string_fn params b =
+  pp_to_string "pp_prog_to_string.tmp" (fn os => pp_prog_to_fn params os b)
     
 end

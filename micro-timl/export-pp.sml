@@ -39,23 +39,24 @@ fun str_s a =
   (* ToStringRaw.str_raw_s a *)
   ToString.SN.strn_s a
   (* const_fun "<sort>" a *)
+fun str_k k = "<kind>"
 fun pp_t_to s b =
   MicroTiMLPP.pp_t_to_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") s b
-  (* str s "<ty>" *)
+(* str s "<ty>" *)
 fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
 fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
 fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
     str_var,
     str_i,
     str_s,
-    const_fun "<kind>",
+    str_k,
     pp_t_to
   ) a
 fun pp_e a = MicroTiMLExPP.pp_e_fn (
     str_var,
     str_i,
     str_s,
-    const_fun "<kind>",
+    str_k,
     pp_t_to
   ) a
 

@@ -97,6 +97,7 @@ fun snd (a, b) = b
 fun mapFst f (a, b) = (f a, b)
 fun mapSnd f (a, b) = (a, f b)
 fun mapPair (fa, fb) (a, b) = (fa a, fb b)
+fun mapPair' fa fb (a, b) = (fa a, fb b)
 fun curry f a b = f (a, b)
 fun uncurry f (a, b) = f a b
 fun swap f (a, b) = f (b, a)
@@ -402,6 +403,11 @@ fun map_inl_inr f1 f2 s =
     case s of
         inl e => inl $ f1 e
       | inr e => inr $ f2 e
+
+fun app_inl_inr f1 f2 s =
+    case s of
+        inl e => f1 e
+      | inr e => f2 e
 
 fun find_by_snd p ls =
     Option.map fst (List.find (fn (_, y) => p y) ls)

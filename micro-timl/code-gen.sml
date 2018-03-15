@@ -98,7 +98,7 @@ type sort = Expr.sort
 type ty = (Expr.var, bsort, idx, sort) ty
 type kind = bsort kind
                   
-val heap_ref = ref ([] : (label * (idx, sort, kind, ty) hval) list)
+val heap_ref = ref ([] : ((label * string) * (idx, sort, kind, ty) hval) list)
 fun output_heap pair = push_ref heap_ref pair
                                 
 fun cg_v ectx v =
@@ -238,7 +238,7 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
         val itbinds = rev itctx
         val hval = HCode' (itbinds, ((rctx2, i_e2), I2))
         val l = fresh_label ()
-        val () = output_heap (l, hval)
+        val () = output_heap ((l, "inr_branch"), hval)
         fun VAppITs_ctx (e, itctx) =
           let
             fun IV n = VarI (ID (n, dummy), [])
@@ -312,7 +312,7 @@ fun cg_prog e =
         val l = fresh_label ()
         val ectx = (name, inr l) :: ectx
         val hval = cg_hval ectx (e, t)
-        val () = output_heap (l, hval)
+        val () = output_heap ((l, fst name), hval)
       in
         ectx
       end
@@ -479,12 +479,11 @@ fun test1 dirname =
                      
     open TiTALExportPP
     val () = println "Started Code Generation ..."
-    val P = cg_prog e
+    val prog = cg_prog e
     val () = println "Finished Code Generation"
-    val P = export_prog ((* SOME 1 *)NONE, NONE, NONE) P
-    val insts_str = TiTALExportPP.pp_insts_to_string $ snd P
-    val () = write_file ("unit-test-after-code-gen.tmp", insts_str)
-    val () = println insts_str
+    val prog_str = TiTALExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
+    val () = write_file ("unit-test-after-code-gen.tmp", prog_str)
+    val () = println prog_str
     val () = println ""
     (* val () = println "Started MicroTiML typechecking #4 ..." *)
     (* val ((e, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e *)
