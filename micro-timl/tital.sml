@@ -14,16 +14,11 @@ type ty = (Expr.var, bsort, idx, sort) ty
 type reg = int
 type label = int
 
-(* word values *)
+(* atomic word values *)
 datatype word =
          WLabel of label
          | WConst of Operators.expr_const
          | WUninit of ty
-         | WAppT of word * ty
-         | WAppI of word * idx
-         | WPack of ty * ty * word
-         | WPackI of ty * idx * word
-         | WFold of ty * word
          | WBuiltin of ty
          | WNever of ty
            

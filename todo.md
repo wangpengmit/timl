@@ -125,6 +125,7 @@
 - [ ] Uniquefy variable names.
 - [x] check_CPSed_expr() should also check types.
 - [x] anf_decls() shouldn't alway use "x" as the new variable name, because it will replace other meaningful names after post_process(); it should take suggestions from surrounding ELet.
+- [ ] Add a simplification for ECase where if the two branches are identical and don't mention the local variable, combine them and remove ECase.
 
 # To-do for Examples:
 
