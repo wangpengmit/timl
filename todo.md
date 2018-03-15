@@ -124,7 +124,7 @@
 - [x] Add a pass to remove annotations on EVar, TVar and VarI after cc().
 - [ ] Uniquefy variable names.
 - [x] check_CPSed_expr() should also check types.
-- [ ] anf_decls() shouldn't alway use "x" as the new variable name, because it will replace other meaningful names after post_process(); it should take suggestions from surrounding ELet.
+- [x] anf_decls() shouldn't alway use "x" as the new variable name, because it will replace other meaningful names after post_process(); it should take suggestions from surrounding ELet.
 
 # To-do for Examples:
 

@@ -36,13 +36,24 @@ datatype value =
          | VPack of ty * ty * value
          | VPackI of ty * idx * value
          | VFold of ty * value
-         
+
+datatype inst_un_op =
+         IUMov
+         | IUBr
+         | IUUnfold
+             
+datatype inst_bin_op =
+         IBPrim of prim_expr_bin_op
+         | IBNatAdd
+         | IBNew
+         | IBRead
+         | IBWrite
+             
 datatype inst =
-         IBinOpPrim of prim_expr_bin_op * reg * reg * value inner
-         | IBr of reg * value inner
-         | ILd of reg * (reg * projector)
+         IBinOp of inst_bin_op * reg * reg * value inner
+         | IUnOp of inst_un_op * reg * value inner
          | IMallocPair of reg * (value inner * value inner)
-         | IMov of reg * value inner
+         | ILd of reg * (reg * projector)
          | ISt of (reg * projector) * reg
          | IUnpack of tbinder * reg * value outer
          | IUnpackI of ibinder * reg * value outer
@@ -60,8 +71,10 @@ type hval = ((ibinder * sort outer, tbinder * kind) sum tele, (ty rctx * idx) * 
 
 infixr 0 $
          
-fun VConst c = VWordVal $ WConst c
-fun VLabel l = VWordVal $ WLabel l
+fun VConst a = VWordVal $ WConst a
+fun VLabel a = VWordVal $ WLabel a
+fun VNever a = VWordVal $ WNever a
+fun VBuiltin a = VWordVal $ WBuiltin a
 
 fun VAppIT (e, arg) =
     case arg of
@@ -78,9 +91,10 @@ fun ls @@ b = foldr (op@::) b ls
 fun HCode' (binds, body) : hval =
   Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, body)
 
-fun IBinOpPrim' (opr, rd, rs, v) = IBinOpPrim (opr, rd, rs, Inner v)
-fun IBr' (r, v) = IBr (r, Inner v)
-fun IMov' (r, v) = IMov (r, Inner v)
+fun IBinOp' (opr, rd, rs, v) = IBinOp (opr, rd, rs, Inner v)
+fun IMov' (r, v) = IUnOp (IUMov, r, Inner v)
+fun IBr' (r, v) = IUnOp (IUBr, r, Inner v)
+fun IUnfold' (r, v) = IUnOp (IUUnfold, r, Inner v)
 fun IMallocPair' (r, (v1, v2)) = IMallocPair (r, (Inner v1, Inner v2))
 fun IUnpack' (name, r, v) = IUnpack (TBinder name, r, Outer v)
 fun IUnpackI' (name, r, v) = IUnpackI (IBinder name, r, Outer v)

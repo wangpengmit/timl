@@ -671,6 +671,7 @@ val anno_EUnpack = ref false
 val anno_EUnpackI = ref false
 val anno_ELet = ref false
 val anno_EHalt = ref false
+val anno_ECase_e2_time = ref false
            
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
@@ -849,6 +850,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                            | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
           val (e1, t1, i1) = tc (add_typing_full (fst name1, t1) ctx) e1
           val (e2, t2, i2) = tc (add_typing_full (fst name2, t2) ctx) e2
+          val e2 = if !anno_ECase_e2_time then e2 |> i2 else e2
           val () = is_eq_ty itctx (t1, t2)
           val e = if !anno_ECase then e %: t_e else e
         in
@@ -1351,6 +1353,7 @@ datatype tc_flags =
        | Anno_EUnpackI
        | Anno_ELet
        | Anno_EHalt
+       | Anno_ECase_e2_time
 
 fun typecheck flags ctx e =
   let
@@ -1376,6 +1379,7 @@ fun typecheck flags ctx e =
     val () = anno_EUnpackI := mem Anno_EUnpackI flags
     val () = anno_ELet := mem Anno_ELet flags
     val () = anno_EHalt := mem Anno_EHalt flags
+    val () = anno_ECase_e2_time := mem Anno_ECase_e2_time flags
     val ret = runWriter (fn () => tc ctx e) ()
   in
     ret

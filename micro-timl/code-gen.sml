@@ -64,23 +64,6 @@ fun cg_t t =
     #visit_ty vtable visitor () t
   end
     
-fun cg_v ectx v =
-  case v of
-      EVar (ID (x, _)) =>
-      (case nth_error ectx x of
-           SOME (name, v) =>
-           (case v of
-                inl r => VReg r
-              | inr l => VLabel l)
-         | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
-    | EConst c => VConst c
-    | EAppT (v, t) => VAppT (cg_v ectx v, cg_t t)
-    | EAppI (v, i) => VAppI (cg_v ectx v, i)
-    | EPack (t_pack, t, v) => VPack (cg_t t_pack, cg_t t, cg_v ectx v)
-    | EPackI (t_pack, i, v) => VPackI (cg_t t_pack, i, cg_v ectx v)
-    | EUnOp (EUFold t, v) => VFold (cg_t t, cg_v ectx v)
-    | _ => raise Impossible $ "cg_v() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) v)
-
 val reg_counter = ref 0
                       
 fun fresh_reg () =
@@ -112,6 +95,30 @@ fun fresh_label () =
 val heap_ref = ref ([] : (label * hval) list)
 fun output_heap pair = push_ref heap_ref pair
                                 
+fun cg_v ectx v =
+  case v of
+      EVar (ID (x, _)) =>
+      (case nth_error ectx x of
+           SOME (name, v) =>
+           (case v of
+                inl r => VReg r
+              | inr l => VLabel l)
+         | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
+    | EConst c => VConst c
+    | EAppT (v, t) => VAppT (cg_v ectx v, cg_t t)
+    | EAppI (v, i) => VAppI (cg_v ectx v, i)
+    | EPack (t_pack, t, v) => VPack (cg_t t_pack, cg_t t, cg_v ectx v)
+    | EPackI (t_pack, i, v) => VPackI (cg_t t_pack, i, cg_v ectx v)
+    | EUnOp (EUFold t, v) => VFold (cg_t t, cg_v ectx v)
+    | ENever t => VNever $ cg_t t
+    | EBuiltin t => VBuiltin $ cg_t t
+    | _ =>
+      let
+        val ectxn = map (fst o fst) ectx
+      in
+        raise Impossible $ "cg_v() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], ectxn) v)
+      end
+
 fun cg_e (params as (ectx, itctx, rctx)) e =
   let
     (* val () = print $ "cg_e() started:\n" *)
@@ -137,9 +144,28 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
                  ILd (r, (r, proj))]
               | EBinOp (EBPrim opr, v1, v2) =>
                 [IMov' (r, cg_v ectx v1),
-                 IBinOpPrim' (opr, r, r, cg_v ectx v2)]
+                 IBinOp' (IBPrim opr, r, r, cg_v ectx v2)]
+              | EBinOp (EBNatAdd, v1, v2) =>
+                [IMov' (r, cg_v ectx v1),
+                 IBinOp' (IBNatAdd, r, r, cg_v ectx v2)]
+              | EBinOp (EBNew, v1, v2) =>
+                [IMov' (r, cg_v ectx v1),
+                 IBinOp' (IBNew, r, r, cg_v ectx v2)]
+              | EBinOp (EBRead, v1, v2) =>
+                [IMov' (r, cg_v ectx v1),
+                 IBinOp' (IBRead, r, r, cg_v ectx v2)]
+              | EWrite (v1, v2, v3) =>
+                let
+                  val r' = fresh_reg ()
+                in
+                  [IMov' (r, cg_v ectx v1),
+                   IMov' (r', cg_v ectx v2),
+                   IBinOp' (IBWrite, r, r', cg_v ectx v3)]
+                end
               | EUnOp (EUInj (inj, _), v) =>
                 [IInj' (r, inj, cg_v ectx v)]
+              | EUnOp (EUUnfold, v) =>
+                [IUnfold' (r, cg_v ectx v)]
               | EMallocPair (v1, v2) =>
                 [IMallocPair' (r, (cg_v ectx v1, cg_v ectx v2))]
               | EPairAssign (v1, proj, v2) =>
@@ -272,18 +298,19 @@ fun cg_prog e =
     val () = heap_ref := []
     val (binds, e) = collect_ELetRec e
     val len = length binds
-    fun on_bind (_, bind) =
+    fun on_bind ((_, bind), ectx) =
       let
         val (t, (name, e)) = unBindAnnoName bind
+        val () = println $ "cg() on " ^ fst name
         (* val t = cg_t t *)
         val l = fresh_label ()
-        val hval = cg_hval [(name, inr l)] (e, t)
+        val ectx = (name, inr l) :: ectx
+        val hval = cg_hval ectx (e, t)
         val () = output_heap (l, hval)
       in
-        (name, l)
+        ectx
       end
-    val name_labels = map on_bind binds
-    val ectx = map (mapSnd inr) $ rev name_labels
+    val ectx = foldl on_bind [] binds
     val I = cg_e (ectx, [], Rctx.empty) e
     val H = !heap_ref
   in
@@ -294,7 +321,7 @@ val code_gen_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EHalt]
+      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EHalt, Anno_ECase_e2_time]
     end
                      
 structure UnitTest = struct
@@ -449,10 +476,10 @@ fun test1 dirname =
     val () = println "Finished Code Generation"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ((* SOME 1 *)NONE, NONE) ToStringUtil.empty_ctx e
-    val () = write_file ("unit-test-after-code-gen.tmp", e_str)
-    val () = println e_str
-    val () = println ""
+    (* val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ((* SOME 1 *)NONE, NONE) ToStringUtil.empty_ctx e *)
+    (* val () = write_file ("unit-test-after-code-gen.tmp", e_str) *)
+    (* val () = println e_str *)
+    (* val () = println "" *)
     (* val () = println "Started MicroTiML typechecking #4 ..." *)
     (* val ((e, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e *)
     (* val () = println "Finished MicroTiML typechecking #4" *)

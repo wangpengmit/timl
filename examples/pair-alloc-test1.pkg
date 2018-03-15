@@ -3,11 +3,11 @@
 (* (* basic.timl *) *)
 (* (* list.timl *) *)
 
-(* stdlib.pkg *)
+(* (* stdlib.pkg *) *)
                
-(* unit-test-bool.timl *)
-(* unit-test-array.timl *)
-(* unit-test-list.timl *)
+(* (* unit-test-bool.timl *) *)
+(* (* unit-test-array.timl *) *)
+(* (* unit-test-list.timl *) *)
                
 (* (* perversive-list.timl *) *)
 (* (* trivial.timl *) *)
@@ -35,5 +35,5 @@
 (* (* qsort.timl *) *)
 (* (* dijkstra.timl *) *)
 
-(* dynamic-table.timl *)
-(* dynamic-table-test.timl *)
+(* (* dynamic-table.timl *) *)
+(* (* dynamic-table-test.timl *) *)

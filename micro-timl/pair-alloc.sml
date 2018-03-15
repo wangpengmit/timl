@@ -158,45 +158,74 @@ fun anf_decls_expr_visitor_vtable cast output =
           visit_noop
           visit_noop
           visit_noop
+    fun visit_expr this env e =
+      let
+        fun is_add_decl e =
+          case e of
+              ELet _ => false
+            | EUnpack _ => false
+            | EUnpackI _ => false
+            | ERec bind => false
+            | ECase _ => false
+            | EConst _ => false
+            | EVar _ => false
+            | EAscType _ => false
+            | EAscTime _ => false
+            | EBinOp (EBApp, _, _) => false
+            | EHalt _ => false
+            | _ => true
+        val add_decl = is_add_decl e
+        val e = #visit_expr vtable this env e (* call super *)
+      in
+        if add_decl then
+          let
+            val x = fresh_evar ()
+            val () = output $ DLet (x, env, e)
+          in
+            EV x
+          end
+        else
+          e
+      end
     fun visit_ELet this env (data as (e1, bind)) =
       let
-        val loop = #visit_expr (cast this) this env
-        val e1 = loop e1
+        val loop = #visit_expr (cast this) this
         val (name_x, e2) = unBindSimpName bind
+        val e1 = loop (fst name_x) e1
         val x = fresh_evar ()
         val e2 = open0_e_e x e2
         val () = output $ DLet (x, fst name_x, e1)
-        val e2 = loop e2
+        val e2 = loop env e2
       in
         e2
       end
     fun visit_EUnpack this env (data as (e1, bind)) =
       let
-        val loop = #visit_expr (cast this) this env
-        val e1 = loop e1
+        val loop = #visit_expr (cast this) this
         val (name_a, bind) = unBindSimpName bind
         val (name_x, e2) = unBindSimpName bind
+        val e1 = loop (fst name_x) e1
         val a = fresh_tvar ()
         val x = fresh_evar ()
         val e2 = open0_t_e a e2
         val e2 = open0_e_e x e2
         val () = output $ DUnpack ((a, fst name_a), (x, fst name_x), e1)
-        val e2 = loop e2
+        val e2 = loop env e2
       in
         e2
       end
     fun visit_EUnpackI this env (data as (e1, bind)) =
       let
-        val loop = #visit_expr (cast this) this env
-        val e1 = loop e1
+        val loop = #visit_expr (cast this) this
         val (name_a, bind) = unBindSimpName bind
         val (name_x, e2) = unBindSimpName bind
+        val e1 = loop (fst name_x) e1
         val a = fresh_ivar ()
         val x = fresh_evar ()
         val e2 = open0_i_e a e2
         val e2 = open0_e_e x e2
         val () = output $ DUnpackI ((a, fst name_a), (x, fst name_x), e1)
-        val e2 = loop e2
+        val e2 = loop env e2
       in
         e2
       end
@@ -228,7 +257,7 @@ fun anf_decls_expr_visitor_vtable cast output =
           in
             bind
           end
-        val e = #visit_expr (cast this) this env e
+        val e = #visit_expr (cast this) this "xc" e
         val bind1 = on_bind bind1         
         val bind2 = on_bind bind2        
       in
@@ -244,40 +273,10 @@ fun anf_decls_expr_visitor_vtable cast output =
     fun visit_EAppI this env (e, i) =
       let
         val (e, is) = collect_EAppI e
-        val is = is
         val e = #visit_expr (cast this) this env e
         val e = EAppIs (e, is)
       in
         EAppI (e, i)
-      end
-    fun visit_expr this env e =
-      let
-        fun is_add_decl e =
-          case e of
-              ELet _ => false
-            | EUnpack _ => false
-            | EUnpackI _ => false
-            | ERec bind => false
-            | ECase _ => false
-            | EConst _ => false
-            | EVar _ => false
-            | EAscType _ => false
-            | EAscTime _ => false
-            | EBinOp (EBApp, _, _) => false
-            | EHalt _ => false
-            | _ => true
-        val add_decl = is_add_decl e
-        val e = #visit_expr vtable this env e (* call super *)
-      in
-        if add_decl then
-          let
-            val x = fresh_evar ()
-            val () = output $ DLet (x, "x", e)
-          in
-            EV x
-          end
-        else
-          e
       end
     val vtable = override_visit_ELet vtable visit_ELet
     val vtable = override_visit_EUnpack vtable visit_EUnpack
@@ -297,7 +296,7 @@ and anf_decls output b =
   let
     val visitor as (ExprVisitor vtable) = new_anf_decls_expr_visitor output
   in
-    #visit_expr vtable visitor () b
+    #visit_expr vtable visitor "res" b
   end
 
 and anf e =
@@ -315,6 +314,7 @@ and anf e =
 fun pair_alloc e =
   let
     val e = pa e
+    (* val () = println $ "before anf():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ToStringUtil.empty_ctx e) *)
     val e = anf e
     val e = MicroTiMLExPostProcess.post_process e
   in
@@ -393,7 +393,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], []) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP
