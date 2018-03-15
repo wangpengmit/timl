@@ -7,17 +7,25 @@ infixr 0 $
 infixr 0 !!
 
 fun params depth_t = (ISDummy ("..."), export_i, export_t depth_t)
-fun export_insts (depth_t, depth_e) a = export_insts_fn (params depth_t) depth_e a
-fun export_hval (depth_t, depth_e) a = export_hval_fn export_s (params depth_t) depth_e a
-fun export_prog (depth_t, depth_e, depth_h) (H, I) =
+fun export_insts (depth_t, depth_insts) a = export_insts_fn (params depth_t) depth_insts a
+fun export_hval (depth_t, depth_insts) a = export_hval_fn export_s (params depth_t) depth_insts a
+fun export_prog (depth_t, depth_insts, depth_heap) (H, I) =
   let
-    val H = case depth_h of
+    val H = case depth_heap of
                 SOME n => take n H
               | NONE => H
-    val H = map (mapSnd $ export_hval (depth_t, depth_e)) H
-    val I = export_insts (depth_t, depth_e) ([], []) I
+    val H = map (mapSnd $ export_hval (depth_t, depth_insts)) H
+    val I = export_insts (depth_t, depth_insts) ([], []) I
   in
     (H, I)
   end
+fun pp_insts_to_string a = TiTALPP.pp_insts_to_string_fn (
+    str_i,
+    (fn s => pp_t_to s NONE)
+  ) a
+fun pp_insts a = TiTALPP.pp_insts_fn (
+    str_i,
+    (fn s => pp_t_to s NONE)
+  ) a
 
 end
