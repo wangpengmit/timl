@@ -485,14 +485,12 @@ fun test1 dirname =
     val () = write_file ("unit-test-after-code-gen.tmp", prog_str)
     val () = println prog_str
     val () = println ""
-    (* val () = println "Started MicroTiML typechecking #4 ..." *)
-    (* val ((e, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e *)
-    (* val () = println "Finished MicroTiML typechecking #4" *)
-    (* val () = println "Type:" *)
-    (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
-    (* val () = println "Time:" *)
-    (* val i = simp_i i *)
-    (* val () = println $ ToString.str_i Gctx.empty [] i *)
+    val () = println "Started TiTAL typechecking ..."
+    val (i, vcs, admits) = tital_typecheck prog
+    val () = println "Finished TiTAL typechecking"
+    val () = println "Time:"
+    val i = simp_i i
+    val () = println $ ToString.str_i Gctx.empty [] i
                      
     val () = println "CodeGen.UnitTest passed"
   in

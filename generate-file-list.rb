@@ -207,6 +207,7 @@ micro-timl/tital.sml
 micro-timl/tital-visitor.sml
 micro-timl/tital-pp.sml
 micro-timl/tital-export-pp.sml
+micro-timl/tital-tc.sml
 micro-timl/code-gen.sml
 unit-test.sml
 main.sml
