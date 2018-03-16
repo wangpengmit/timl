@@ -2,11 +2,52 @@
 
 structure TiTALTypechecking = struct
 
+fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
+  case w of
+      WLabel l =>
+      (case hctx @! l of
+           SOME t => t
+         | NONE => raise Impossible $ "unbound label " ^ str_int l
+      )
+    | WConst c => get_expr_const_type c
+    | WUninit t => kc_against_kind itctx (t, KType)
+    | WBuiltin t => kc_against_kind itctx (t, KType)
+    | WNever t => kc_against_kind itctx (t, KType)
+
+fun tc_v (ctx as (hctx, itctx as (ictx, tctx), rctx)) v =
+  case v of
+      VReg r =>
+      (case rctx @! r of
+           SOME t => t
+         | NONE => raise Impossible $ "unbound reg " ^ str_int r
+      )
+    | VWord w => tc_w (hctx, itctx) w
+    | VAppT (v, t) =>
+      let
+        val t_v = tc_v ctx v
+        val (k, (_, t2)) = assert_TForall t_v
+        val t = kc_against_kind itctx (t, k)
+      in
+        subst0_t_t t t2
+      end
+    | VPack (t_pack, t, v) =>
+      let
+        val t_pack = kc_against_kind itctx (t_pack, KType)
+        val t_pack = whnf itctx t_pack
+        val (k, (_, t')) = assert_TForall t_pack
+        val t = kc_against_kind itctx (t, k)
+        val t_v = subst0_t_t t t'
+        val () = tc_v_against_ty ctx (v, t_v)
+      in
+        t_pack
+      end
+
+      
 fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
   case insts of
       ISHalt t =>
       let
-        val t = tc_against_kind itctx (t, KType)
+        val t = kc_against_kind itctx (t, KType)
         val () = tc_v_against_ty ctx (VReg 1, t)
       in
         T1
@@ -94,4 +135,32 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             end
       end
 
+fun tc_hval hctx h =
+  let
+    val (itbinds, ((rctx, i), insts)) = unBind h
+    val itbinds = unTeles itbinds
+    val itctx as (ictx, tctx) =
+        foldl
+          (fn (bind, (ictx, tctx)) =>
+              case bind of
+                  inl (name, s) => ((binder2str name, is_wf_sort ictx $ unOuter s) :: ictx, tctx)
+                | inr (name, k) => (ictx, (binder2str name, k) :: tctx)
+          ) ([], []) itbinds
+    val rctx = Rctx.map (fn t => kc_against_kind itctx (t, KType)) rctx
+    val i = sc_against_sort ictx (i, STime)
+    val i' = tc_insts (hctx, itctx, rctx) insts
+    val () = check_prop ictx (i' %<= i)
+  in
+    ()
+  end
+
+fun tc_prog (H, I) =
+  let
+    val hctx = get_hctx H
+    val () = app (fn (_, h) => tc_hval hctx h) H
+    val i = tc_insts (hctx, ([], []), Rctx.empty) I
+  in
+    i
+  end
+    
 end

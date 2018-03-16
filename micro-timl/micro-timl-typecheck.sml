@@ -948,10 +948,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         let
           val (e, t_e, i) = tc ctx e
           val t_e = whnf itctx t_e
-          val (_, (_, t)) = case t_e of
+          val (k, (_, t)) = case t_e of
                                 TQuan (Forall, data) => unTQuan data
                               | _ => raise MTCError "EAppT"
-          val t1 = kc_against_kind itctx (t1, KType)
+          val t1 = kc_against_kind itctx (t1, k)
           val e = if !anno_EAppT then e %: t_e else e
         in
           (EAppT (e, t1), subst0_t_t t1 t, i)

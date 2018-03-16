@@ -186,11 +186,9 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
         IUnOp (opr, r, v) =>
         (
           open_hbox ();
-          str "IUnOp";
+          str $ str_inst_un_op opr;
           space ();
           str "(";
-          str $ str_inst_un_op opr;
-          comma ();
           str $ str_reg r;
           comma ();
           pp_v v;
@@ -200,11 +198,9 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
       | IBinOp (opr, r, r', v) =>
         (
           open_hbox ();
-          str "IBinOp";
+          str $ str_inst_bin_op opr;
           space ();
           str "(";
-          str $ str_inst_bin_op opr;
-          comma ();
           str $ str_reg r;
           comma ();
           str $ str_reg r';
@@ -216,7 +212,7 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
       | IMallocPair (r, (v, v')) =>
         (
           open_hbox ();
-          str "IMallocPair";
+          str "malloc_pair";
           space ();
           str "(";
           str $ str_reg r;
@@ -230,7 +226,7 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
       | ILd (r, (r', proj)) =>
         (
           open_hbox ();
-          str "ILd";
+          str "ld";
           space ();
           str "(";
           str $ str_reg r;
@@ -244,7 +240,7 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
       | ISt ((r, proj), r') =>
         (
           open_hbox ();
-          str "ISt";
+          str "st";
           space ();
           str "(";
           str $ str_reg r;
@@ -258,7 +254,7 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
       | IUnpack (name, r, v) =>
         (
           open_hbox ();
-          str "IUnpack";
+          str "unpack";
           space ();
           str "(";
           str $ binder2str name;
@@ -272,7 +268,7 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
       | IUnpackI (name, r, v) =>
         (
           open_hbox ();
-          str "IUnpackI";
+          str "unpackI";
           space ();
           str "(";
           str $ binder2str name;
@@ -286,7 +282,7 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
       | IInj (r, inj, v) =>
         (
           open_hbox ();
-          str "ISt";
+          str "inj";
           space ();
           str "(";
           str $ str_reg r;
@@ -300,7 +296,7 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
       | IAscTime i =>
         (
           open_hbox ();
-          str "IAscTime";
+          str "asc_time";
           space ();
           str "(";
           str $ str_i $ unInner i;
@@ -339,7 +335,7 @@ fun pp_insts (params as (str_i, pp_t, pp_v, pp_inst)) s insts =
       | ISJmp v =>
         (
           open_hbox ();
-          str "ISJmp";
+          str "jmp";
           space ();
           str "(";
           pp_v v;
@@ -349,7 +345,7 @@ fun pp_insts (params as (str_i, pp_t, pp_v, pp_inst)) s insts =
       | ISHalt t =>
         (
           open_hbox ();
-          str "ISHalt";
+          str "halt";
           space ();
           str "(";
           pp_t t;
@@ -430,7 +426,7 @@ fun pp_prog (pp_hval, pp_insts) s (heap, insts) =
   in
     open_vbox_noindent ();
     app (fn ((l, name), h) =>
-            (str $ sprintf "$ ($)" [str_int l, name];
+            (str $ sprintf "$ <$>" [str_int l, name];
              str ":"; space ();
              pp_hval h;
              space ()
