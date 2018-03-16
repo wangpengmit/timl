@@ -35,28 +35,29 @@ fun PEq (a, b) = BinPred (EqP, a, b)
 (* notations *)
          
 infix 9 %@
-fun a %@ b = BinOpI (IApp, a, b)
 infix 8 %^
-fun a %^ b = BinOpI (ExpNI, a, b)
 infix 7 %*
-fun a %* b = BinOpI (MultI, a, b)
 infix 6 %+ 
-fun a %+ b = BinOpI (AddI, a, b)
 infix 4 %<=
-fun a %<= b = BinPred (LeP, a, b)
 infix 4 %<
-fun a %< b = BinPred (LtP, a, b)
 infix 4 %>=
-fun a %>= b = BinPred (GeP, a, b)
 infix 4 %=
-fun a %= b = PEq (a, b)
 infixr 3 /\
-fun a /\ b = BinConn (And, a, b)
 infixr 2 \/
-fun a \/ b = BinConn (Or, a, b)
 infixr 1 -->
-fun a --> b = BinConn (Imply, a, b)
 infix 1 <->
+
+fun a %@ b = BinOpI (IApp, a, b)
+fun a %^ b = BinOpI (ExpNI, a, b)
+fun a %* b = BinOpI (MultI, a, b)
+fun a %+ b = BinOpI (AddI, a, b)
+fun a %<= b = BinPred (LeP, a, b)
+fun a %< b = BinPred (LtP, a, b)
+fun a %>= b = BinPred (GeP, a, b)
+fun a %= b = PEq (a, b)
+fun a /\ b = BinConn (And, a, b)
+fun a \/ b = BinConn (Or, a, b)
+fun a --> b = BinConn (Imply, a, b)
 fun a <-> b = BinConn (Iff, a, b)
                       
 fun combine_And ps = foldl' (fn (p, acc) => acc /\ p) (True dummy) ps

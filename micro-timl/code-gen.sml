@@ -21,8 +21,6 @@ fun collect_ELetRec e =
          | _ => ([], e))
     | _ => ([], e)
              
-structure RctxUtil = MapUtilFn (Rctx)
-
 val rctx_single = RctxUtil.single
                     
 infixr 5 @::

@@ -8,6 +8,19 @@ open TiTAL
 
 infixr 0 $
 
+infix 9 %@
+infix 8 %^
+infix 7 %*
+infix 6 %+ 
+infix 4 %<=
+infix 4 %<
+infix 4 %>=
+infix 4 %=
+infixr 3 /\
+infixr 2 \/
+infixr 1 -->
+infix 1 <->
+
 infixr 5 @::
 infixr 5 @@
 infix  6 @+
@@ -22,7 +35,8 @@ fun assert_TArrowTAL t =
   case t of
       TArrowTAL a => a
     | _ => raise assert_fail "assert_TArrowTAL"
-         
+
+fun add_kinding_full new (hctx, (ictx, tctx), rctx) = (hctx, (ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx)
 fun add_r p (hctx, itctx, rctx) = (hctx, itctx, rctx @+ p)
 
 fun is_sub_map_k eq (m, m') return =
@@ -146,7 +160,7 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val t_rs = whnf itctx t_rs
               val pair = assert_TProdEx t_rs
               val (t, b) = choose pair proj
-              val () = assert_b $ b
+              val () = assert_b "tc()/ILd" $ b
               val i = tc_insts (add_r (rd, t) ctx) I
             in
               i %+ T1
@@ -173,9 +187,9 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val t_rd = whnf itctx t_rd
               val ((t1, b1), (t2, b2)) = assert_TProdEx t_rd
               val t_rs = choose (t1, t2) proj
-              val () = tc_v_against_ty (VReg rs, t_rs)
+              val () = tc_v_against_ty ctx (VReg rs, t_rs)
               val (b1, b2) = choose_update (b1, b2) proj
-              val t = ((t1, b1), (t2, b2))
+              val t = TProdEx ((t1, b1), (t2, b2))
               val i = tc_insts (add_r (rd, t) ctx) I
             in
               i %+ T1

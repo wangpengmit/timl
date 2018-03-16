@@ -96,4 +96,6 @@ fun IUnpackI' (name, r, v) = IUnpackI (IBinder name, r, Outer v)
 fun IInj' (r, inj, v) = IInj (r, inj, Inner v)
 fun IAscTime' i = IAscTime (Inner i)
                                
+structure RctxUtil = MapUtilFn (Rctx)
+
 end
