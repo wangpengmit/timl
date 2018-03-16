@@ -115,6 +115,12 @@ fun EAbsIT (bind, e) =
       | inr bind => EAbsT $ TBindAnno (bind, e)
 fun EAbsITs (binds, e) = foldr EAbsIT e binds
                                       
+fun TForallIT (bind, e) =
+    case bind of
+        inl bind => TForallI $ IBindAnno (bind, e)
+      | inr bind => TForall $ TBindAnno (bind, e)
+fun TForallITs (binds, e) = foldr TForallIT e binds
+                                      
 fun EAscTypeTime (e, arg) =
     case arg of
         inr i => EAscTime (e, i)

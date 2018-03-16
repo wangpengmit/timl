@@ -3,8 +3,16 @@
 structure TiTALTypecheck = struct
 
 open MicroTiMLTypecheck
+open CompilerUtil
 open TiTAL
-       
+
+infixr 0 $
+
+infixr 5 @::
+infixr 5 @@
+infix  6 @+
+infix  9 @!
+
 fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
   case w of
       WLabel l =>
@@ -165,6 +173,16 @@ fun tc_hval hctx h =
 
 fun tc_prog (H, I) =
   let
+    fun get_hval_type h =
+      let
+        val (itbinds, ((rctx, i), _)) = unBind h
+        val itbinds = unTeles itbinds
+        val itbinds = map (map_inl_inr (mapPair' unBinderName unOuter) (mapFst unBinderName)) itbinds
+        val t = TForallITs (itbinds, TArrowTAL (rctx, i))
+      in
+        t
+      end
+    fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
     val () = app (fn (_, h) => tc_hval hctx h) H
     val i = tc_insts (hctx, ([], []), Rctx.empty) I

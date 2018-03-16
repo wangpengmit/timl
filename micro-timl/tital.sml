@@ -75,9 +75,13 @@ fun VAppITs (f, args) = foldl (swap VAppIT) f args
                      
 infixr 5 @::
 infixr 5 @@
+infix  6 @+
+infix  9 @!
          
 fun a @:: b = ISCons $ Bind (a, b)
 fun ls @@ b = foldr (op@::) b ls 
+fun m @+ a = Rctx.insert' (a, m)
+fun m @! k = Rctx.find (m, k)
                         
 fun HCode' (binds, body) =
   Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, body)

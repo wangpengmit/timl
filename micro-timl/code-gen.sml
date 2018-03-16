@@ -28,8 +28,7 @@ val rctx_single = RctxUtil.single
 infixr 5 @::
 infixr 5 @@
 infix  6 @+
-
-fun m @+ a = Rctx.insert' (a, m)
+infix  9 @!
 
 fun cg_ty_visitor_vtable cast () =
   let
