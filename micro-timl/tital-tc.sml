@@ -13,6 +13,37 @@ infixr 5 @@
 infix  6 @+
 infix  9 @!
 
+fun assert_TProdEx t =
+  case t of
+      TProdEx a => a
+    | _ => raise assert_fail "assert_TProdEx"
+         
+fun assert_TArrowTAL t =
+  case t of
+      TArrowTAL a => a
+    | _ => raise assert_fail "assert_TArrowTAL"
+         
+fun add_r p (hctx, itctx, rctx) = (hctx, itctx, rctx @+ p)
+
+fun is_sub_map_k eq (m, m') return =
+  (Rctx.appi (fn (k, v) =>
+                 case Rctx.find (m', k) of
+                     SOME v' => if eq (v, v') then () else return false
+                   | NONE => return false
+             ) m;
+   true)
+fun is_sub_map eq (m, m') = ContUtil.callret $ is_sub_map_k eq (m, m')
+                                             
+fun assert_sub_map err eq (m, m') =
+  Rctx.appi (fn (k, v) =>
+                case Rctx.find (m', k) of
+                    SOME v' => eq (v, v')
+                  | NONE => raise err ()
+            ) m
+
+fun is_sub_rctx ctx (rctx, rctx_abs) =
+  assert_sub_map (fn () => Impossible "is_sub_rctx()") (fn (t_abs, t) => is_eq_ty ctx (t, t_abs)) (rctx_abs, rctx)
+  
 fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
   case w of
       WLabel l =>
@@ -37,7 +68,7 @@ fun tc_v (ctx as (hctx, itctx as (ictx, tctx), rctx)) v =
       let
         val t_v = tc_v ctx v
         val t_v = whnf itctx t_v
-        val (k, (_, t2)) = assert_TForall t_v
+        val ((_, k), t2) = assert_TForall t_v
         val t = kc_against_kind itctx (t, k)
       in
         subst0_t_t t t2
@@ -46,13 +77,21 @@ fun tc_v (ctx as (hctx, itctx as (ictx, tctx), rctx)) v =
       let
         val t_pack = kc_against_kind itctx (t_pack, KType)
         val t_pack = whnf itctx t_pack
-        val (k, (_, t')) = assert_TForall t_pack
+        val ((_, k), t') = assert_TForall t_pack
         val t = kc_against_kind itctx (t, k)
         val t_v = subst0_t_t t t'
         val () = tc_v_against_ty ctx (v, t_v)
       in
         t_pack
       end
+
+and tc_v_against_ty (ctx as (hctx, itctx as (ictx, tctx), rctx)) (v, t) =
+    let
+      val t' = tc_v ctx v
+      val () = is_eq_ty (ictx, tctx) (t', t)
+    in
+      ()
+    end
       
 fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
   case insts of
@@ -99,7 +138,7 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val i1 = tc_insts (add_r (r, t1) ctx) I
               val () = is_sub_rctx itctx (rctx @+ (r, t2), rctx')
             in
-              T1 %+ TMax (i1, i2)
+              T1 %+ IMax (i1, i2)
             end
           | ILd (rd, (rs, proj)) =>
             let
@@ -145,7 +184,7 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             let
               val t_v = tc_v ctx $ unOuter v
               val t_v = whnf itctx t_v
-              val (k, (_, t)) = assert_TExists t_v
+              val ((_, k), t) = assert_TExists t_v
               val i = tc_insts (add_r (rd, t) $ add_kinding_full (binder2str name, k) ctx) I
             in
               i %+ T1
