@@ -487,7 +487,7 @@ fun test1 dirname =
     val (i, vcs, admits) = tital_typecheck prog
     val () = println "Finished TiTAL typechecking"
     val () = println "Time:"
-    val i = simp_i i
+    (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
                      
     val () = println "CodeGen.UnitTest passed"

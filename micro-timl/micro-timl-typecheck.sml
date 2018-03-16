@@ -363,6 +363,22 @@ fun ictx_names ictx = map fst ictx
 fun itctx_names (ictx, tctx) = (map fst ictx, map fst tctx)
 fun ctx_names (ictx, tctx, ectx(* , _ *)) = (map fst ictx, map fst tctx, [], map fst ectx)
                                    
+fun is_sub_map_k eq (m, m') return =
+  (Rctx.appi (fn (k, v) =>
+                 case Rctx.find (m', k) of
+                     SOME v' => if eq (v, v') then () else return false
+                   | NONE => return false
+             ) m;
+   true)
+fun is_sub_map eq (m, m') = ContUtil.callret $ is_sub_map_k eq (m, m')
+                                             
+fun assert_sub_map err eq (m, m') =
+  Rctx.appi (fn (k, v) =>
+                case Rctx.find (m', k) of
+                    SOME v' => eq (v, v')
+                  | NONE => raise err ()
+            ) m
+
 fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
     let
       val t = whnf ctx t
@@ -472,6 +488,14 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           in
             ()
           end
+        | (TArrowTAL (rctx, i), TArrowTAL (rctx', i')) =>
+          let
+            val () = assert_b $ Rctx.numItems rctx = Rctx.numItems rctx'
+            val () = is_sub_rctx ctx (rctx, rctx')
+            val () = is_eq_idx ictx (i, i')
+          in
+            ()
+          end
         | _ => raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
                      [
                        ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t,
@@ -479,6 +503,9 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
                      ]
     end      
 
+and is_sub_rctx ctx (rctx, rctx_abs) =
+  assert_sub_map (fn () => Impossible "is_sub_rctx()") (fn (t_abs, t) => is_eq_ty ctx (t, t_abs)) (rctx_abs, rctx)
+  
 fun forget_i_t a = shift_i_t_fn (forget_i_i, forget_i_s) a
 fun forget_t_t a = shift_t_t_fn forget_var a
                                

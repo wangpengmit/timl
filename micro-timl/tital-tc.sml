@@ -47,31 +47,12 @@ fun add_sorting_full new (hctx, (ictx, tctx), rctx) = (hctx, (new :: ictx, tctx)
 fun add_kinding_full new (hctx, (ictx, tctx), rctx) = (hctx, (ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx)
 fun add_r p (hctx, itctx, rctx) = (hctx, itctx, rctx @+ p)
 
-fun is_sub_map_k eq (m, m') return =
-  (Rctx.appi (fn (k, v) =>
-                 case Rctx.find (m', k) of
-                     SOME v' => if eq (v, v') then () else return false
-                   | NONE => return false
-             ) m;
-   true)
-fun is_sub_map eq (m, m') = ContUtil.callret $ is_sub_map_k eq (m, m')
-                                             
-fun assert_sub_map err eq (m, m') =
-  Rctx.appi (fn (k, v) =>
-                case Rctx.find (m', k) of
-                    SOME v' => eq (v, v')
-                  | NONE => raise err ()
-            ) m
-
-fun is_sub_rctx ctx (rctx, rctx_abs) =
-  assert_sub_map (fn () => Impossible "is_sub_rctx()") (fn (t_abs, t) => is_eq_ty ctx (t, t_abs)) (rctx_abs, rctx)
-  
 fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
   case w of
       WLabel l =>
       (case hctx @! l of
            SOME t => t
-         | NONE => raise Impossible $ "unbound label " ^ str_int l
+         | NONE => raise Impossible $ "unbound label: " ^ str_int l
       )
     | WConst c => get_expr_const_type c
     | WUninit t => kc_against_kind itctx (t, KType)
@@ -83,7 +64,7 @@ fun tc_v (ctx as (hctx, itctx as (ictx, tctx), rctx)) v =
       VReg r =>
       (case rctx @! r of
            SOME t => t
-         | NONE => raise Impossible $ "unbound reg " ^ str_int r
+         | NONE => raise Impossible $ "unbound reg: " ^ str_int r
       )
     | VWord w => tc_w (hctx, itctx) w
     | VAppT (v, t) =>
@@ -108,7 +89,7 @@ fun tc_v (ctx as (hctx, itctx as (ictx, tctx), rctx)) v =
       let
         val t_pack = kc_against_kind itctx (t_pack, KType)
         val t_pack = whnf itctx t_pack
-        val ((_, k), t') = assert_TForall t_pack
+        val ((_, k), t') = assert_TExists t_pack
         val t = kc_against_kind itctx (t, k)
         val t_v = subst0_t_t t t'
         val () = tc_v_against_ty ctx (v, t_v)
@@ -119,7 +100,7 @@ fun tc_v (ctx as (hctx, itctx as (ictx, tctx), rctx)) v =
       let
         val t_pack = kc_against_kind itctx (t_pack, KType)
         val t_pack = whnf itctx t_pack
-        val ((_, s), t') = assert_TForallI t_pack
+        val ((_, s), t') = assert_TExistsI t_pack
         val i = sc_against_sort ictx (i, s)
         val t_v = subst0_i_t i t'
         val () = tc_v_against_ty ctx (v, t_v)
@@ -362,7 +343,7 @@ fun tc_prog (H, I) =
       end
     fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
-    val () = app (fn (_, h) => tc_hval hctx h) H
+    val () = app (fn ((_, name), h) => (println $ "tch() on: " ^ name; tc_hval hctx h)) H
     val i = tc_insts (hctx, ([], []), Rctx.empty) I
   in
     i
