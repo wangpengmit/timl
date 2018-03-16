@@ -10,6 +10,10 @@ val b = case a of
             true => (fn (n : int) => ()) 1
           | false => (fn (n : int) => ()) 0
           
+(* val b = case true of *)
+(*             true => 10 + 20 *)
+(*           | false => 30 + 40 *)
+
 val b = case a of
             true => 10 + 20
           | false => 30 + 40

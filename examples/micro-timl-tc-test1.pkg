@@ -1,8 +1,14 @@
-(* (* basic.timl *) *)
-(* (* list.timl *) *)
+(* (* unit-test-basic.timl *) *)
 
-(* stdlib.pkg *)
+(* basic.timl *)
+(* list.timl *)
 
+(* (* stdlib.pkg *) *)
+
+(* unit-test-bool.timl *)
+(* (* unit-test-array.timl *) *)
+(* (* unit-test-list.timl *) *)
+  
 (* (* perversive-list.timl *) *)
 (* (* trivial.timl *) *)
 (* (* bigO-evolve.timl *) *)
@@ -30,5 +36,5 @@
 (* (* qsort.timl *) *)
 (* (* dijkstra.timl *) *)
 
-(* dynamic-table.timl *)
-(* dynamic-table-test.timl *)
+(* (* dynamic-table.timl *) *)
+(* (* dynamic-table-test.timl *) *)

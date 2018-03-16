@@ -128,6 +128,8 @@ and tc_v_against_ty (ctx as (hctx, itctx as (ictx, tctx), rctx)) (v, t) =
     end
       
 fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
+  let
+    fun main () =
   case insts of
       ISHalt t =>
       let
@@ -310,11 +312,24 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               i
             end
       end
+    fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)TiTALExportPP.pp_insts_to_string $ TiTALExportPP.export_insts (SOME 2, SOME 5) (itctx_names itctx) insts)
+    val ret = main ()
+              handle
+              Impossible m => raise Impossible (m ^ extra_msg ())
+              | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
+              (* | ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ()) *)
+              (* | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ()) *)
+              (* | MTCError m => raise MTCError (m ^ extra_msg ()) *)
+  in
+    ret
+  end
 
 fun tc_hval hctx h =
   let
+    val () = println "tc_hval() started"
     val (itbinds, ((rctx, i), insts)) = unBind h
     val itbinds = unTeles itbinds
+    val () = println "before getting itctx"
     val itctx as (ictx, tctx) =
         foldl
           (fn (bind, (ictx, tctx)) =>
@@ -322,10 +337,24 @@ fun tc_hval hctx h =
                   inl (name, s) => ((binder2str name, is_wf_sort ictx $ unOuter s) :: ictx, tctx)
                 | inr (name, k) => (ictx, (binder2str name, k) :: tctx)
           ) ([], []) itbinds
-    val rctx = Rctx.map (fn t => kc_against_kind itctx (t, KType)) rctx
+    val () = println "before checking rctx"
+    val itctxn = itctx_names itctx
+    val rctx = Rctx.mapi
+                 (fn (r, t) =>
+                     let
+                       (* val () = println $ sprintf "checking r$: $" [str_int r, ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE itctxn t] *)
+                       val ret = kc_against_kind itctx (t, KType)
+                       (* val () = println "done" *)
+                     in
+                       ret
+                     end) rctx
+    val () = println "before checking i"
     val i = sc_against_sort ictx (i, STime)
+    val () = println "before checking insts"
     val i' = tc_insts (hctx, itctx, rctx) insts
+    val () = println "after checking insts"
     val () = check_prop ictx (i' %<= i)
+    val () = println "tc_hval() finished"
   in
     ()
   end
@@ -343,7 +372,7 @@ fun tc_prog (H, I) =
       end
     fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
-    val () = app (fn ((_, name), h) => (println $ "tch() on: " ^ name; tc_hval hctx h)) H
+    val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval hctx h)) H
     val i = tc_insts (hctx, ([], []), Rctx.empty) I
   in
     i

@@ -190,11 +190,11 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
         val (v, t) = assert_EAscType v
         val ((_, k), t) = assert_TExists t
         val t = cg_t t
-        val (name_x, bind) = unBindSimpName bind
-        val (name_a, e2) = unBindSimpName bind
+        val (name_a, bind) = unBindSimpName bind
+        val (name_x, e2) = unBindSimpName bind
         val r = fresh_reg ()
         val i = IUnpack' (name_a, r, cg_v ectx v)
-        val I = cg_e ((name_x, inl r) :: ectx, inr (name_a, k) :: itctx, rctx @+ (r, t)) e2
+        val I = cg_e ((name_x, inl r) :: ectx, inr (name_a, k) :: itctx, Rctx.map shift01_t_t rctx @+ (r, t)) e2
       in
         i @:: I
       end
@@ -203,11 +203,11 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
         val (v, t) = assert_EAscType v
         val ((_, s), t) = assert_TExistsI t
         val t = cg_t t
-        val (name_x, bind) = unBindSimpName bind
-        val (name_a, e2) = unBindSimpName bind
+        val (name_a, bind) = unBindSimpName bind
+        val (name_x, e2) = unBindSimpName bind
         val r = fresh_reg ()
         val i = IUnpackI' (name_a, r, cg_v ectx v)
-        val I = cg_e ((name_x, inl r) :: ectx, inl (name_a, s) :: itctx, rctx @+ (r, t)) e2
+        val I = cg_e ((name_x, inl r) :: ectx, inl (name_a, s) :: itctx, Rctx.map shift01_i_t rctx @+ (r, t)) e2
       in
         i @:: I
       end
@@ -400,7 +400,7 @@ fun test1 dirname =
     open ExportPP
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
     val () = println "Time:"
-    val i = simp_i i
+    (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
@@ -424,7 +424,7 @@ fun test1 dirname =
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
     val () = println "Time:"
-    val i = simp_i i
+    (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
     (* val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
@@ -447,7 +447,7 @@ fun test1 dirname =
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
     val () = println "Time:"
-    val i = simp_i i
+    (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
     (* val () = pp_e (NONE, NONE) $ export ((* (SOME 1) *)NONE, NONE) ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
@@ -471,7 +471,7 @@ fun test1 dirname =
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
     val () = println "Time:"
-    val i = simp_i i
+    (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
                      
     open TiTALExportPP

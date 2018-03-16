@@ -209,7 +209,12 @@ type tcontext = (string * bsort kind) list
 fun add_sorting_it new (ictx, tctx) = (new :: ictx, tctx)
 fun add_kinding_it new (ictx, tctx) = (ictx, new :: tctx)
 
+fun ictx_names ictx = map fst ictx
+fun itctx_names (ictx, tctx) = (map fst ictx, map fst tctx)
+                                 
 fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
+  let
+    fun main () =
   case t_input of
       TVar (x, ks) =>
       (case ks of
@@ -323,6 +328,17 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TArrowTAL (ts, i), KType)
       end
+    fun extra_msg () = "\nwhen kindchecking: " ^ ((* substr 0 300 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t (SOME 5) (itctx_names ctx) t_input)
+    val ret = main ()
+              handle
+              Impossible m => raise Impossible (m ^ extra_msg ())
+              | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
+              (* | ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ()) *)
+              (* | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ()) *)
+              (* | MTCError m => raise MTCError (m ^ extra_msg ()) *)
+  in
+    ret
+  end
 
 and kc_against_kind ctx (t, k) =
   let
@@ -359,8 +375,6 @@ and kc_against_kind ctx (t, k) =
 (*     #visit_ty vtable visitor 0 b *)
 (*   end *)
 
-fun ictx_names ictx = map fst ictx
-fun itctx_names (ictx, tctx) = (map fst ictx, map fst tctx)
 fun ctx_names (ictx, tctx, ectx(* , _ *)) = (map fst ictx, map fst tctx, [], map fst ectx)
                                    
 fun is_sub_map_k eq (m, m') return =
@@ -561,10 +575,6 @@ fun get_prim_expr_bin_op_res_ty opr =
 val T0 = T0 dummy
 val T1 = T1 dummy
 
-val shift01_i_i = shift_i_i
-fun shift01_i_t a = shift_i_t 0 1 a
-fun shift01_t_t a = shift_t_t 0 1 a
-  
 (* structure IntMap = IntBinaryMap *)
 (* structure HeapMap = IntMap *)
 
@@ -1481,6 +1491,8 @@ fun test1 dirname =
     val () = println $ "#VCs: " ^ str_int (length vcs)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
+    val () = pp_e (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
+    val () = println ""
     val () = println "MicroTiMLTypecheck.UnitTest passed"
   in
     ((* t, e *))
