@@ -70,6 +70,11 @@ fun choose (t1, t2) proj =
       ProjFst => t1
     | ProjSnd => t2
                                  
+fun choose_update (b1, b2) proj =
+  case proj of
+      ProjFst => (true, b2)
+    | ProjSnd => (b1, true)
+                   
 fun choose_inj (t1, t2) inj =
   case inj of
       InjInl => t1

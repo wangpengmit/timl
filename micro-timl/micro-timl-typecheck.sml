@@ -768,10 +768,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         end
       | EBinOp (EBPrim opr, e1, e2) =>
         let
-          val (e1, t1, i1) = tc ctx e1
-          val () = is_eq_ty itctx (t1, get_prim_expr_bin_op_arg1_ty opr)
-          val (e2, t2, i2) = tc ctx e2
-          val () = is_eq_ty itctx (t2, get_prim_expr_bin_op_arg2_ty opr)
+          val t1 = get_prim_expr_bin_op_arg1_ty opr
+          val (e1, i1) = tc_against_ty ctx (e1, t1)
+          val t2 = get_prim_expr_bin_op_arg2_ty opr
+          val (e2, i2) = tc_against_ty ctx (e2, t2)
           val (e1, e2) = if !anno_EBPrim then (e1 %: t1, e2 %: t2) else (e1, e2)
           val e = EBinOpPrim (opr, e1, e2)
           val t = get_prim_expr_bin_op_res_ty opr
@@ -1196,9 +1196,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                 | _ => raise MTCError "EPairAssign/assert-TProdEx"
           val t_e2 = choose (t1, t2) proj
           val (e2, i_e2) = tc_against_ty ctx (e2, t_e2)
-          val (b1, b2) = case proj of
-                             ProjFst => (true, b2)
-                           | ProjSnd => (b1, true)
+          val (b1, b2) = choose_update (b1, b2) proj
           val e = EPairAssign (e1, proj, e2)
           val t = TProdEx ((t1, b1), (t2, b2))
         in
