@@ -279,7 +279,7 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
           str ")";
           close_box ()
         )
-      | IInj (r, inj, v) =>
+      | IInj (r, inj, v, t) =>
         (
           open_hbox ();
           str "inj";
@@ -290,6 +290,8 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
           str $ str_inj inj;
           comma ();
           pp_v v;
+          comma ();
+          pp_t $ unInner t;
           str ")";
           close_box ()
         )

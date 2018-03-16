@@ -25,7 +25,7 @@ type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_visitor_vtable =
        visit_ISt : 'this -> 'env ctx -> (reg * projector) * reg -> ('idx2, 'ty2) inst,
        visit_IUnpack : 'this -> 'env ctx -> tbinder * reg * ('idx, 'ty) value outer -> ('idx2, 'ty2) inst,
        visit_IUnpackI : 'this -> 'env ctx -> ibinder * reg * ('idx, 'ty) value outer -> ('idx2, 'ty2) inst,
-       visit_IInj : 'this -> 'env ctx -> reg * injector * ('idx, 'ty) value inner -> ('idx2, 'ty2) inst,
+       visit_IInj : 'this -> 'env ctx -> reg * injector * ('idx, 'ty) value inner * 'ty inner -> ('idx2, 'ty2) inst,
        visit_IAscTime : 'this -> 'env ctx -> 'idx inner -> ('idx2, 'ty2) inst,
        visit_ISCons : 'this -> 'env -> (('idx, 'ty) inst, ('idx, 'ty) insts) bind -> ('idx2, 'ty2) insts,
        visit_ISJmp : 'this -> 'env -> ('idx, 'ty) value -> ('idx2, 'ty2) insts,
@@ -278,12 +278,13 @@ fun default_tital_visitor_vtable
       in
         IUnpackI (name, r, v)
       end
-    fun visit_IInj this env (r, inj, v) = 
+    fun visit_IInj this env (r, inj, v, t) = 
       let
         val vtable = cast this
         val v = visit_inner (#visit_value vtable this) env v
+        val t = visit_inner (#visit_ty vtable this) env t
       in
-        IInj (r, inj, v)
+        IInj (r, inj, v, t)
       end
     fun visit_IAscTime this env i = 
       let

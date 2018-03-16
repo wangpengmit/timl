@@ -46,7 +46,7 @@ datatype ('idx, 'ty) inst =
          | ISt of (reg * projector) * reg
          | IUnpack of tbinder * reg * ('idx, 'ty) value outer
          | IUnpackI of ibinder * reg * ('idx, 'ty) value outer
-         | IInj of reg * injector * ('idx, 'ty) value inner
+         | IInj of reg * injector * ('idx, 'ty) value inner * 'ty inner
          | IAscTime of 'idx inner
 
 datatype ('idx, 'ty) insts =
@@ -93,7 +93,7 @@ fun IUnfold' (r, v) = IUnOp (IUUnfold, r, Inner v)
 fun IMallocPair' (r, (v1, v2)) = IMallocPair (r, (Inner v1, Inner v2))
 fun IUnpack' (name, r, v) = IUnpack (TBinder name, r, Outer v)
 fun IUnpackI' (name, r, v) = IUnpackI (IBinder name, r, Outer v)
-fun IInj' (r, inj, v) = IInj (r, inj, Inner v)
+fun IInj' (r, inj, v, t) = IInj (r, inj, Inner v, Inner t)
 fun IAscTime' i = IAscTime (Inner i)
                                
 structure RctxUtil = MapUtilFn (Rctx)

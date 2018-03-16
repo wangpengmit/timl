@@ -165,8 +165,8 @@ fun cg_e (params as (ectx, itctx, rctx)) e =
                    IMov' (r', cg_v ectx v2),
                    IBinOp' (IBWrite, r, r', cg_v ectx v3)]
                 end
-              | EUnOp (EUInj (inj, _), v) =>
-                [IInj' (r, inj, cg_v ectx v)]
+              | EUnOp (EUInj (inj, t), v) =>
+                [IInj' (r, inj, cg_v ectx v, cg_t t)]
               | EUnOp (EUUnfold, v) =>
                 [IUnfold' (r, cg_v ectx v)]
               | EMallocPair (v1, v2) =>
@@ -482,6 +482,7 @@ fun test1 dirname =
     val () = write_file ("unit-test-after-code-gen.tmp", prog_str)
     val () = println prog_str
     val () = println ""
+    open TiTALTypecheck
     val () = println "Started TiTAL typechecking ..."
     val (i, vcs, admits) = tital_typecheck prog
     val () = println "Finished TiTAL typechecking"

@@ -52,6 +52,10 @@ fun assert_TExistsI t =
   case t of
       TQuanI (Exists _, bind) => unBindAnno bind
     | _ => raise assert_fail $ "assert_TExistsI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TRec t =
+  case t of
+      TRec bind => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TRec; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 
 fun assert_TUnit msg t =
   case t of
