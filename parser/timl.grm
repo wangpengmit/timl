@@ -80,6 +80,7 @@ open Ast
     | ELSE
     | DCOLON
     | SHARP
+    | STRING of string
 
 %nonterm start of prog
        | exp of exp
@@ -261,8 +262,9 @@ aexp : decorated_id (Var decorated_id)
      | CASE exp return OF rule_bar_star (Case (exp, return, rule_bar_star, (CASEleft, rule_bar_starright)))
      | IF exp THEN exp ELSE exp (EIte (exp1, exp2, exp3, (IFleft, exp3right)))
      | LET return decl_star IN exp END (Let (return, decl_star, exp, (LETleft, ENDright)))
-     | SHARP INT (ConstNat (INT, (SHARPleft, INTright)))
-     | INT (Const (INT, (INTleft, INTright)))
+     | SHARP INT (Const (ECNat INT, (SHARPleft, INTright)))
+     | INT (Const (ECInt INT, (INTleft, INTright)))
+     | STRING (Const (ECString STRING, (STRINGleft, STRINGright)))
      | LSQ exp_comma_star RSQ (EList (exp_comma_star, (LSQleft, RSQright)))
 
 long_id : id ((NONE, id))

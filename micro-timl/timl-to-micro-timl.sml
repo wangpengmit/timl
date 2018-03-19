@@ -223,6 +223,7 @@ fun on_bin_op opr =
 fun on_base_type t =
   case t of
       Int => TCInt
+    | String => TCString
 
 open MicroTiMLExUtil
        
@@ -346,7 +347,7 @@ fun on_e (e : S.expr) =
     | S.ET (opr, t, r) =>
       (case opr of
            Op.ETNever => ENever (on_mt t)
-         | Op.ETBuiltin => EBuiltin (on_mt t)
+         | Op.ETBuiltin name => EBuiltin (name, on_mt t)
       )
     | S.ECase (e, return, rules, r) =>
       let

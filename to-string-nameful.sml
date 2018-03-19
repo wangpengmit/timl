@@ -357,7 +357,7 @@ fun strn_e e =
     | ET (opr, t, _) =>
       (case opr of
            ETNever => sprintf "(never [$])" [strn_mt t]
-         | ETBuiltin => sprintf "(builtin [$])" [strn_mt t]
+         | ETBuiltin name => sprintf "(builtin $ [$])" [name, strn_mt t]
       )
     | EAbs bind => 
       let

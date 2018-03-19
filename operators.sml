@@ -9,7 +9,6 @@ datatype idx_const =
          | ICNat of int
          | ICTime of TimeType.time
 
-
 datatype idx_un_op =
          ToReal
          | Log2
@@ -61,6 +60,7 @@ datatype expr_const =
          ECTT
          | ECNat of nat
          | ECInt of int
+         | ECString of string
 
 datatype expr_un_op =
          EUFst
@@ -87,7 +87,7 @@ datatype expr_ET =
 
 datatype expr_T =
          ETNever
-         | ETBuiltin
+         | ETBuiltin of string
              
 fun str_idx_const c =
   case c of
@@ -171,13 +171,14 @@ fun str_expr_ET opr =
 fun str_expr_T opr =
   case opr of
       ETNever => "ETNever"
-    | ETBuiltin => "ETBuiltin"
+    | ETBuiltin name => sprintf "ETBuiltin($)" [name]
                   
 fun str_expr_const c =
   case c of
       ECTT => "()"
     | ECInt n => str_int n
     | ECNat n => sprintf "#$" [str_int n]
+    | ECString s => surround "\"" "\"" s
                                 
 fun str_expr_un_op opr = 
   case opr of

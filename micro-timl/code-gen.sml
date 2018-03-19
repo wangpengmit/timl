@@ -79,6 +79,13 @@ type kind = bsort kind
                   
 val heap_ref = ref ([] : ((label * string) * (idx, sort, kind, ty) hval) list)
 fun output_heap pair = push_ref heap_ref pair
+
+fun cg_c c =
+  case c of
+      ECTT => WCTT
+    | ECNat n => WCNat n
+    | ECInt n => WCInt n
+    | ECString s => raise Impossible $ "cg_c() on ECString"
                                 
 fun cg_v ectx v =
   case v of
@@ -89,7 +96,7 @@ fun cg_v ectx v =
                 inl r => VReg r
               | inr l => VLabel l)
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
-    | EConst c => VConst c
+    | EConst c => VConst $ cg_c c
     | EAppT (v, t) => VAppT (cg_v ectx v, cg_t t)
     | EAppI (v, i) => VAppI (cg_v ectx v, i)
     | EPack (t_pack, t, v) => VPack (cg_t t_pack, cg_t t, cg_v ectx v)
@@ -97,7 +104,7 @@ fun cg_v ectx v =
     | EUnOp (EUFold t, v) => VFold (cg_t t, cg_v ectx v)
     | EAscType (v, t) => VAscType (cg_v ectx v, cg_t t)
     | ENever t => VNever $ cg_t t
-    | EBuiltin t => VBuiltin $ cg_t t
+    | EBuiltin (name, t) => VBuiltin (name, cg_t t)
     | _ =>
       let
         val ectxn = map (fst o fst) ectx
@@ -165,6 +172,8 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                 end
               | EUnOp (EUInj (inj, t), v) =>
                 [IInj' (r, inj, cg_v ectx v, cg_t t)]
+              | EConst (ECString s) =>
+                [IString (r, s)]
               | EUnOp (EUUnfold, v) =>
                 [IUnfold' (r, cg_v ectx v)]
               | EMallocPair (v1, v2) =>

@@ -82,18 +82,20 @@ fun find (m, k : string) = Option.map #2 (List.find (fn (k', _) => k' = k) m)
 
 fun is_keyword s = find (keywords, s)
 
-				 %%
+%%
 
-				 %header (functor TiMLLexFun (structure Tokens : TiML_TOKENS));
+%header (functor TiMLLexFun (structure Tokens : TiML_TOKENS));
 
 %arg (reporter : Ast.reporter);
-				 %s COMMENT;
+%s COMMENT;
+%s STRING;
 
 alpha = [A-Za-z];
 digit = [0-9];
 ws = [\ \t];
 eol = (\013\010|\010|\013);
 id_init = ({alpha}|[_']);
+string = [^\"];
 
 %%
 
@@ -151,9 +153,14 @@ id_init = ({alpha}|[_']);
  
 <INITIAL>{id_init}({id_init}|{digit})* => ((getOpt (is_keyword yytext, fn r => (T.ID o flat) (yytext, r)))
 				  (make_region (yypos, size yytext)));
+<INITIAL>"(*" => (inc_ref comment_level; YYBEGIN COMMENT; continue());
+<INITIAL>"\"" => (YYBEGIN STRING; continue());
 <INITIAL>. => ((reporter o flat) (sprintf "Bad character: $" [yytext], make_region (yypos, size yytext)); (T.BOGUS o flat) (yytext, make_region (yypos, size yytext)));
 
-<INITIAL>"(*" => (inc_ref comment_level; YYBEGIN COMMENT; continue());
 <COMMENT>"(*" => (inc_ref comment_level; continue());
 <COMMENT>"*)" => (dec_ref comment_level; if !comment_level = 0 then YYBEGIN INITIAL else (); continue());
 <COMMENT>. => (continue());
+
+<STRING>"\"" => (YYBEGIN INITIAL; continue());
+<STRING>{string}* => ((T.STRING o flat)
+                 (yytext, make_region (yypos, size yytext)));

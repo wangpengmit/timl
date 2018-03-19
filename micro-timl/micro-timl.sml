@@ -18,6 +18,7 @@ datatype ty_const =
          TCUnit
          | TCInt
          | TCEmpty
+         | TCString
 
 (* binary type constructors *)
 datatype ty_bin_op =

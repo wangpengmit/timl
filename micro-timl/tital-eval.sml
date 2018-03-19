@@ -47,7 +47,7 @@ infix  9 @!
 (* word values *)
 datatype ('idx, 'ty) wordv =
          WVLabel of label
-         | WVConst of Operators.expr_const
+         | WVConst of word_const
          | WVUninit
          (* | WVBuiltin of 'ty *)
          (* | WVNever of 'ty *)
@@ -63,6 +63,7 @@ datatype ('idx, 'sort, 'kind, 'ty) heapv =
          | HVPair of ('idx, 'ty) wordv * ('idx, 'ty) wordv
          | HVInj of injector * ('idx, 'ty) wordv
          | HVArray of ('idx, 'ty) wordv list
+         | HVString of string
 
 fun assert_SOME a = case a of SOME v => v | NONE => raise Impossible "assert_SOME()"
 
@@ -86,7 +87,7 @@ fun read_v R v =
            WLabel l => WVLabel l
          | WConst c => WVConst c
          | WUninit t => WVUninit
-         | WBuiltin _ => raise Impossible "WBuiltin is not a legal word value"
+         | WBuiltin (name, _) => raise Impossible $ "unknown WBuiltin: " ^ name
          | WNever _ => raise Impossible "WNever is not a legal word value"
       )
       | VAppI (v, i) => WVAppI (read_v R v, i)
@@ -147,22 +148,22 @@ fun assert_WVFold t =
       WVFold a => a
     | _ => raise assert_fail "assert_WVFold"
 
-fun WVInt n = WVConst $ ECInt n
+fun WVInt n = WVConst $ WCInt n
 fun assert_WVInt t =
   case t of
-      WVConst (ECInt a) => a
+      WVConst (WCInt a) => a
     | _ => raise assert_fail "assert_WVInt"
 
-fun WVNat n = WVConst $ ECNat n
+fun WVNat n = WVConst $ WCNat n
 fun assert_WVNat t =
   case t of
-      WVConst (ECNat a) => a
+      WVConst (WCNat a) => a
     | _ => raise assert_fail "assert_WVNat"
 
-val WVTT = WVConst ECTT
+val WVTT = WVConst WCTT
 fun assert_WVTT t =
   case t of
-      WVConst ECTT => ()
+      WVConst WCTT => ()
     | _ => raise assert_fail "assert_WVTT"
 
 fun assert_HVCode t =
@@ -308,6 +309,12 @@ fun step (H, R, I) =
               val l = fresh_label H
             in
               (H @+ (l, HVInj (inj, R @^ unInner v)), R @+ (rd, WVLabel l), I')
+            end
+          | IString (rd, s) =>
+            let
+              val l = fresh_label H
+            in
+              (H @+ (l, HVString s), R @+ (rd, WVLabel l), I')
             end
           | IAscTime _ => (H, R, I')
       end

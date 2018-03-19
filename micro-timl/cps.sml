@@ -307,9 +307,9 @@ fun cps (e, t_e) (k, j_k) =
     | S.ENever t =>
       (* [[ never ]](k) = k(never) *)
       (k $$ ENever (cps_t t), j_k %+ T_1)
-    | S.EBuiltin t =>
+    | S.EBuiltin (name, t) =>
       (* [[ builtin ]](k) = k(builtin) *)
-      (k $$ EBuiltin (cps_t t), j_k %+ T_1)
+      (k $$ EBuiltin (name, cps_t t), j_k %+ T_1)
     | S.ERec bind =>
       (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
       let

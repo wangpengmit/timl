@@ -29,7 +29,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EAscTime of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx (* time ascription *)
          | EAscType of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty (* type ascription *)
          | ENever of 'ty
-         | EBuiltin of 'ty
+         | EBuiltin of string * 'ty
          | ELet of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          (* extensions from MicroTiML *)
          | ELetIdx of 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr ibind
@@ -74,7 +74,7 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        visit_EAscTime : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EAscType : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_ENever : 'this -> 'env -> 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
-       visit_EBuiltin : 'this -> 'env -> 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       visit_EBuiltin : 'this -> 'env -> string * 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_ELet : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_ELetIdx : 'this -> 'env -> 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr ibind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_ELetType : 'this -> 'env -> 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr tbind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
@@ -1292,12 +1292,12 @@ fun default_expr_visitor_vtable
       in
         ENever data
       end
-    fun visit_EBuiltin this env data = 
+    fun visit_EBuiltin this env (name, t) = 
       let
         val vtable = cast this
-        val data = #visit_ty vtable this env data
+        val t = #visit_ty vtable this env t
       in
-        EBuiltin data
+        EBuiltin (name, t)
       end
     fun visit_ELet this env data =
       let

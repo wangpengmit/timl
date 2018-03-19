@@ -7,6 +7,12 @@ open TiTAL
        
 infixr 0 $
          
+fun str_word_const c =
+  case c of
+      WCTT => "()"
+    | WCInt n => str_int n
+    | WCNat n => sprintf "#$" [str_int n]
+                                
 fun str_inst_un_op opr =
   case opr of
       IUMov => "mov"
@@ -46,7 +52,7 @@ fun pp_w pp_t s w =
           open_hbox ();
           str "WConst";
           space ();
-          str $ str_expr_const c;
+          str $ str_word_const c;
           close_box ()
         )
       | WUninit t =>
@@ -59,12 +65,14 @@ fun pp_w pp_t s w =
           str ")";
           close_box ()
         )
-      | WBuiltin t =>
+      | WBuiltin (name, t) =>
         (
           open_hbox ();
           str "WBuiltin";
           space ();
           str "(";
+          str name;
+          comma ();
           pp_t t;
           str ")";
           close_box ()
@@ -304,6 +312,18 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
           pp_v v;
           comma ();
           pp_t $ unInner t;
+          str ")";
+          close_box ()
+        )
+      | IString (r, s) =>
+        (
+          open_hbox ();
+          str "string";
+          space ();
+          str "(";
+          str $ str_reg r;
+          comma ();
+          str s;
           str ")";
           close_box ()
         )

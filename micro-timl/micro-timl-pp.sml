@@ -19,6 +19,7 @@ fun str_ty_const c =
       TCUnit => "unit"
     | TCInt => "int"
     | TCEmpty => "empty"
+    | TCString => "string"
       
 fun str_ty_bin_op opr =
   case opr of

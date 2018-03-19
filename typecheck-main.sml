@@ -841,12 +841,7 @@ fun is_value (e : U.expr) : bool =
   in
     case e of
         EVar _ => true (* todo: is this right? *)
-      | EConst (c, _) =>
-        (case c of
-             ECTT => true
-           | ECNat _ => true
-           | ECInt _ => true
-        )
+      | EConst (c, _) => true
       | EUnOp (opr, e, _) =>
         (case opr of
              EUFst => false
@@ -877,7 +872,7 @@ fun is_value (e : U.expr) : bool =
       | ET (opr, t, _) =>
         (case opr of
              ETNever => true
-           | ETBuiltin => true
+           | ETBuiltin name => true
         )
       | EAbs _ => true
       | EAbsI _ => true
@@ -971,6 +966,8 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	         (EConstNat (n, r), TyNat (ConstIN (n, r), r), T0 r)
 	       else
 	         raise Error (r, ["Natural number constant must be non-negative"])
+	     | ECString s => 
+	       (EConstString (s, r), BaseType (String, dummy), T0 dummy)
           )
         | U.EUnOp (opr, e, r) =>
           (case opr of
@@ -1124,13 +1121,13 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                in
 	         (ENever (t, r), t, T0 r)
                end
-	     | ETBuiltin => 
+	     | ETBuiltin name => 
                let
 	         val t = check_kind_Type gctx (skctx, t)
 	         val () = if !is_builtin_enabled then ()
                           else raise Error (r, ["builtin keyword is only available in standard library"])
                in
-	         (EBuiltin (t, r), t, T0 r)
+	         (EBuiltin (name, t, r), t, T0 r)
                end
           )
 	| U.EAbs bind => 

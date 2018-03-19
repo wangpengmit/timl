@@ -167,7 +167,10 @@ fun anf_decls_expr_visitor_vtable cast output =
             | EUnpackI _ => false
             | ERec bind => false
             | ECase _ => false
-            | EConst _ => false
+            | EConst c =>
+              (case c of
+                   ECString s => true (* string literal needs a standalone command *)
+                 | _ => false)
             | EVar _ => false
             | EAscType _ => false
             | EAscTime _ => false

@@ -7,9 +7,9 @@ infixr 0 $
 type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_visitor_vtable =
      {
        visit_WLabel : 'this -> 'env -> label -> 'ty2 word,
-       visit_WConst : 'this -> 'env -> Operators.expr_const -> 'ty2 word,
+       visit_WConst : 'this -> 'env -> word_const -> 'ty2 word,
        visit_WUninit : 'this -> 'env -> 'ty -> 'ty2 word,
-       visit_WBuiltin : 'this -> 'env -> 'ty -> 'ty2 word,
+       visit_WBuiltin : 'this -> 'env -> string * 'ty -> 'ty2 word,
        visit_WNever : 'this -> 'env -> 'ty -> 'ty2 word,
        visit_VReg : 'this -> 'env -> reg -> ('idx2, 'ty2) value,
        visit_VWord : 'this -> 'env -> 'ty word -> ('idx2, 'ty2) value,
@@ -27,6 +27,7 @@ type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_visitor_vtable =
        visit_IUnpack : 'this -> 'env ctx -> tbinder * reg * ('idx, 'ty) value outer -> ('idx2, 'ty2) inst,
        visit_IUnpackI : 'this -> 'env ctx -> ibinder * reg * ('idx, 'ty) value outer -> ('idx2, 'ty2) inst,
        visit_IInj : 'this -> 'env ctx -> reg * injector * ('idx, 'ty) value inner * 'ty inner -> ('idx2, 'ty2) inst,
+       visit_IString : 'this -> 'env ctx -> reg * string -> ('idx2, 'ty2) inst,
        visit_IAscTime : 'this -> 'env ctx -> 'idx inner -> ('idx2, 'ty2) inst,
        visit_ISCons : 'this -> 'env -> (('idx, 'ty) inst, ('idx, 'ty) insts) bind -> ('idx2, 'ty2) insts,
        visit_ISJmp : 'this -> 'env -> ('idx, 'ty) value -> ('idx2, 'ty2) insts,
@@ -87,6 +88,7 @@ fun override_visit_insts (record : ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_v
     visit_IUnpack = #visit_IUnpack record,
     visit_IUnpackI = #visit_IUnpackI record,
     visit_IInj = #visit_IInj record,
+    visit_IString = #visit_IString record,
     visit_IAscTime = #visit_IAscTime record,
     visit_ISCons = #visit_ISCons record,
     visit_ISJmp = #visit_ISJmp record,
@@ -134,12 +136,12 @@ fun default_tital_visitor_vtable
       in
         WUninit t
       end
-    fun visit_WBuiltin this env t = 
+    fun visit_WBuiltin this env (name, t) = 
       let
         val vtable = cast this
         val t = #visit_ty vtable this env t
       in
-        WBuiltin t
+        WBuiltin (name, t)
       end
     fun visit_WNever this env t = 
       let
@@ -233,6 +235,7 @@ fun default_tital_visitor_vtable
           | IUnpack data => #visit_IUnpack vtable this env data
           | IUnpackI data => #visit_IUnpackI vtable this env data
           | IInj data => #visit_IInj vtable this env data
+          | IString data => #visit_IString vtable this env data
           | IAscTime data => #visit_IAscTime vtable this env data
       end
     fun visit_IUnOp this env (opr, r, v) = 
@@ -297,6 +300,7 @@ fun default_tital_visitor_vtable
       in
         IInj (r, inj, v, t)
       end
+    fun visit_IString this env data = IString data
     fun visit_IAscTime this env i = 
       let
         val vtable = cast this
@@ -358,6 +362,7 @@ fun default_tital_visitor_vtable
       visit_IUnpack = visit_IUnpack,
       visit_IUnpackI = visit_IUnpackI,
       visit_IInj = visit_IInj,
+      visit_IString = visit_IString,
       visit_IAscTime = visit_IAscTime,
       visit_ISCons = visit_ISCons,
       visit_ISJmp = visit_ISJmp,

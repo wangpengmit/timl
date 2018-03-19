@@ -47,6 +47,12 @@ fun add_sorting_full new (hctx, (ictx, tctx), rctx) = (hctx, (new :: ictx, tctx)
 fun add_kinding_full new (hctx, (ictx, tctx), rctx) = (hctx, (ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx)
 fun add_r p (hctx, itctx, rctx) = (hctx, itctx, rctx @+ p)
 
+fun get_word_const_type c =
+  case c of
+      WCTT => TUnit
+    | WCNat n => TNat $ INat n
+    | WCInt _ => TInt
+
 fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
   case w of
       WLabel l =>
@@ -54,9 +60,9 @@ fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
            SOME t => t
          | NONE => raise Impossible $ "unbound label: " ^ str_int l
       )
-    | WConst c => get_expr_const_type c
+    | WConst c => get_word_const_type c
     | WUninit t => kc_against_kind itctx (t, KType)
-    | WBuiltin t => kc_against_kind itctx (t, KType)
+    | WBuiltin (name, t) => kc_against_kind itctx (t, KType)
     | WNever t => kc_against_kind itctx (t, KType)
 
 fun tc_v (ctx as (hctx, itctx as (ictx, tctx), rctx)) v =
@@ -308,6 +314,12 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val t = tc_v ctx $ unInner v
               val t = TSum $ choose_pair_inj (t, t_other) inj
               val i = tc_insts (add_r (rd, t) ctx) I
+            in
+              i %+ T1
+            end
+          | IString (rd, s) =>
+            let
+              val i = tc_insts (add_r (rd, TString) ctx) I
             in
               i %+ T1
             end

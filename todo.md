@@ -112,6 +112,7 @@
 - [x] eq_mt()/TDatatype needs to be implemented to allow instantiating dynamic-table.timl.
 - [ ] Add negative examples.
 - [ ] Argument module names of functors are put into global context, which may result in name conflicts. Should prefix argument module names with the functor names.
+- [ ] Complete parser support for string literals.
 
 # To-do for MicroTiML
 

@@ -165,6 +165,8 @@ local
                   Unit r
                 else if x = "int" then
                   BaseType (Int, r)
+                else if x = "string" then
+                  BaseType (String, r)
                 else if x = "_" then
                   UVar ((), r)
                 else
@@ -284,8 +286,6 @@ local
                 NONE =>
                 if x = "never" andalso eia = false then
                   ENever (elab_mt (S.VarT (NONE, ("_", r))), r)
-                else if x = "builtin" andalso eia = false then
-                  EBuiltin (elab_mt (S.VarT (NONE, ("_", r))), r)
                 else
                   def ()
               | SOME _ => def ()
@@ -316,6 +316,11 @@ local
                      NONE =>
 		     if x = "fst" then EFst (elab e2, r)
 		     else if x = "snd" then ESnd (elab e2, r)
+                     else if x = "builtin" then
+                       (case e2 of
+                            S.Const (S.ECString s, _) =>
+                            EBuiltin (s, elab_mt (S.VarT (NONE, ("_", r))), r)
+                          | _ => raise Error (r, "should be 'builtin \"name\"'"))
 		     else if x = "array" then
                        (case e2 of
                             S.Tuple ([e1, e2], _) =>
@@ -353,8 +358,12 @@ local
 	  EAscTime (elab e, elab_i i)
 	| S.Let (return, decs, e, r) =>
           ELet (elab_return return, Unbound.Bind (Teles $ map elab_decl decs, elab e), r)
-	| S.Const n => EConstInt n
-	| S.ConstNat n => EConstNat n
+	| S.Const (c, r) =>
+          (case c of
+               S.ECInt n => EConstInt (n, r)
+	     | S.ECNat n => EConstNat (n, r)
+	     | S.ECString s => EConstString (s, r)
+          )
         | S.BinOp (opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
 
   and elab_decl decl =

@@ -182,6 +182,7 @@ fun get_ty_const_kind c =
       TCUnit => KType
     | TCInt => KType
     | TCEmpty => KType
+    | TCString => KType
 
 fun get_ty_bin_op_arg1_kind opr =
   case opr of
@@ -556,6 +557,7 @@ fun get_expr_const_type c =
       ECTT => TUnit
     | ECNat n => TNat $ INat n
     | ECInt _ => TInt
+    | ECString _ => TString
 
 fun get_prim_expr_bin_op_arg1_ty opr =
   case opr of
@@ -1153,11 +1155,11 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (ENever t, t, T0)
         end
-      | EBuiltin t =>
+      | EBuiltin (name, t) =>
         let
           val t = kc_against_kind itctx (t, KType)
         in
-          (EBuiltin t, t, T0)
+          (EBuiltin (name, t), t, T0)
         end
       (* | ELet data => *)
       (*   let *)

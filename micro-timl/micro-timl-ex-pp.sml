@@ -642,12 +642,14 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | EBuiltin t =>
+      | EBuiltin (name, t) =>
         (
           open_hbox ();
           str "EBuiltin";
           space ();
           str "(";
+          str name;
+          comma ();
           pp_t t;
           str ")";
           close_box ()

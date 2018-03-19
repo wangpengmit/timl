@@ -88,6 +88,11 @@ datatype bind =
 type return = ty option * idx option
 
 type datatype_def = string * string list * bsort_bind list * bsort list * constr_decl list * region
+
+datatype exp_const =
+         ECInt of int
+         | ECNat of int
+         | ECString of string
               
 datatype exp = 
 	 Var of long_id * bool
@@ -99,8 +104,7 @@ datatype exp =
          | Asc of exp * ty * region
          | AscTime of exp * idx * region
          | Let of return * decl list * exp * region
-         | Const of int * region
-         | ConstNat of int * region
+         | Const of exp_const * region
          | BinOp of bin_op * exp * exp * region
 
      and decl =

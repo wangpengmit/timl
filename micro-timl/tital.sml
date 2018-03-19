@@ -8,12 +8,17 @@ open Binders
 type reg = int
 type label = int
 
+datatype word_const =
+         WCTT
+         | WCNat of nat
+         | WCInt of int
+
 (* atomic word values *)
 datatype 'ty word =
          WLabel of label
-         | WConst of Operators.expr_const
+         | WConst of word_const
          | WUninit of 'ty
-         | WBuiltin of 'ty
+         | WBuiltin of string * 'ty
          | WNever of 'ty
            
 (* small values *)
@@ -48,6 +53,7 @@ datatype ('idx, 'ty) inst =
          | IUnpack of tbinder * reg * ('idx, 'ty) value outer
          | IUnpackI of ibinder * reg * ('idx, 'ty) value outer
          | IInj of reg * injector * ('idx, 'ty) value inner * 'ty inner
+         | IString of reg * string
          | IAscTime of 'idx inner
 
 datatype ('idx, 'ty) insts =
