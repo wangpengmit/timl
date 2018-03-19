@@ -29,7 +29,7 @@ infix  9 @!
 fun assert_TProdEx t =
   case t of
       TProdEx a => a
-    | _ => raise assert_fail "assert_TProdEx"
+    | _ => raise assert_fail $ "assert_TProdEx; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TArrowTAL t =
   case t of
       TArrowTAL a => a

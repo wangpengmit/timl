@@ -61,24 +61,6 @@ fun cg_t t =
     #visit_ty vtable visitor () t
   end
     
-val reg_counter = ref 0
-                      
-fun fresh_reg () =
-  let
-    val v = !reg_counter
-    val () = inc_ref reg_counter
-  in
-    v
-  end
-
-fun fresh_reg_until p =
-  let
-    val v = fresh_reg ()
-  in
-    if p v then v
-    else fresh_reg_until p
-  end
-    
 val label_counter = ref 0
                       
 fun fresh_label () =
@@ -123,9 +105,24 @@ fun cg_v ectx v =
         raise Impossible $ "cg_v() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], ectxn) v)
       end
 
-fun cg_e (params as (ectx, itctx, rctx)) e =
+fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
   let
     (* val () = print $ "cg_e() started:\n" *)
+    val cg_e = cg_e reg_counter
+    fun fresh_reg () =
+      let
+        val v = !reg_counter
+        val () = inc_ref reg_counter
+      in
+        v
+      end
+    fun fresh_reg_until p =
+      let
+        val v = fresh_reg ()
+      in
+        if p v then v
+        else fresh_reg_until p
+      end
     val ectxn = map (fst o fst) ectx
     fun split_inl_inr ls = foldr (fn (s, (acc1, acc2)) =>
                                      case s of
@@ -284,7 +281,7 @@ fun cg_hval ectx (e, t_all) =
     (* input argument is always stored in r1 *)
     val ectx = (name, inl 1) :: ectx
     val rctx = rctx_single (1, t)
-    val I = cg_e (ectx, rev itbinds, rctx) e
+    val I = cg_e (ref 2) (ectx, rev itbinds, rctx) e
     fun get_time t =
       let
         val (_, t) = collect_TForallIT t
@@ -315,7 +312,7 @@ fun cg_prog e =
         ectx
       end
     val ectx = foldl on_bind [] binds
-    val I = cg_e (ectx, [], Rctx.empty) e
+    val I = cg_e (ref 1) (ectx, [], Rctx.empty) e
     val H = !heap_ref
     val H = rev H
   in
