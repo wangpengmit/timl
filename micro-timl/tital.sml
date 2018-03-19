@@ -25,6 +25,7 @@ datatype ('idx, 'ty) value =
          | VPack of 'ty * 'ty * ('idx, 'ty) value
          | VPackI of 'ty * 'idx * ('idx, 'ty) value
          | VFold of 'ty * ('idx, 'ty) value
+         | VAscType of ('idx, 'ty) value * 'ty
 
 datatype inst_un_op =
          IUMov

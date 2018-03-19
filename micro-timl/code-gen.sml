@@ -113,6 +113,7 @@ fun cg_v ectx v =
     | EPack (t_pack, t, v) => VPack (cg_t t_pack, cg_t t, cg_v ectx v)
     | EPackI (t_pack, i, v) => VPackI (cg_t t_pack, i, cg_v ectx v)
     | EUnOp (EUFold t, v) => VFold (cg_t t, cg_v ectx v)
+    | EAscType (v, t) => VAscType (cg_v ectx v, cg_t t)
     | ENever t => VNever $ cg_t t
     | EBuiltin t => VBuiltin $ cg_t t
     | _ =>

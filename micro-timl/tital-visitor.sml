@@ -18,6 +18,7 @@ type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_visitor_vtable =
        visit_VPack : 'this -> 'env -> 'ty * 'ty * ('idx, 'ty) value -> ('idx2, 'ty2) value,
        visit_VPackI : 'this -> 'env -> 'ty * 'idx * ('idx, 'ty) value -> ('idx2, 'ty2) value,
        visit_VFold : 'this -> 'env -> 'ty * ('idx, 'ty) value -> ('idx2, 'ty2) value,
+       visit_VAscType : 'this -> 'env -> ('idx, 'ty) value * 'ty -> ('idx2, 'ty2) value,
        visit_IBinOp : 'this -> 'env ctx -> inst_bin_op * reg * reg * ('idx, 'ty) value inner -> ('idx2, 'ty2) inst,
        visit_IUnOp : 'this -> 'env ctx -> inst_un_op * reg * ('idx, 'ty) value inner -> ('idx2, 'ty2) inst,
        visit_IMallocPair : 'this -> 'env ctx -> reg * (('idx, 'ty) value inner * ('idx, 'ty) value inner) -> ('idx2, 'ty2) inst,
@@ -77,6 +78,7 @@ fun override_visit_insts (record : ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_v
     visit_VPack = #visit_VPack record,
     visit_VPackI = #visit_VPackI record,
     visit_VFold = #visit_VFold record,
+    visit_VAscType = #visit_VAscType record,
     visit_IBinOp = #visit_IBinOp record,
     visit_IUnOp = #visit_IUnOp record,
     visit_IMallocPair = #visit_IMallocPair record,
@@ -158,6 +160,7 @@ fun default_tital_visitor_vtable
           | VPack data => #visit_VPack vtable this env data
           | VPackI data => #visit_VPackI vtable this env data
           | VFold data => #visit_VFold vtable this env data
+          | VAscType data => #visit_VAscType vtable this env data
       end
     fun visit_VReg this env data = VReg data
     fun visit_VWord this env w = 
@@ -208,6 +211,14 @@ fun default_tital_visitor_vtable
         val v = #visit_value vtable this env v
       in
         VFold (t, v)
+      end
+    fun visit_VAscType this env (v, t) = 
+      let
+        val vtable = cast this
+        val t = #visit_ty vtable this env t
+        val v = #visit_value vtable this env v
+      in
+        VAscType (v, t)
       end
     fun visit_inst this env data =
       let
@@ -338,6 +349,7 @@ fun default_tital_visitor_vtable
       visit_VPack = visit_VPack,
       visit_VPackI = visit_VPackI,
       visit_VFold = visit_VFold,
+      visit_VAscType = visit_VAscType,
       visit_IBinOp = visit_IBinOp,
       visit_IUnOp = visit_IUnOp,
       visit_IMallocPair = visit_IMallocPair,

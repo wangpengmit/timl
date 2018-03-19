@@ -118,6 +118,14 @@ fun tc_v (ctx as (hctx, itctx as (ictx, tctx), rctx)) v =
       in
         t_fold
       end
+    | VAscType (v, t2) =>
+      let
+        val t1 = tc_v ctx v
+        val t2 = kc_against_kind itctx (t2, KType)
+        val () = is_eq_ty itctx (t1, t2)
+      in
+        t2
+      end
 
 and tc_v_against_ty (ctx as (hctx, itctx as (ictx, tctx), rctx)) (v, t) =
     let

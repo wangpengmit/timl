@@ -165,6 +165,18 @@ fun pp_v (params as (str_i, pp_t, pp_w)) s v =
           str ")";
           close_box ()
         )
+      | VAscType (v, t) =>
+        (
+          open_hbox ();
+          str "VAscType";
+          space ();
+          str "(";
+          pp_v v;
+          comma ();
+          pp_t t;
+          str ")";
+          close_box ()
+        )
   end
 
 fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
