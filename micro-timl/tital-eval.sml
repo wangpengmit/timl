@@ -48,7 +48,7 @@ infix  9 @!
 datatype ('idx, 'ty) wordv =
          WVLabel of label
          | WVConst of Operators.expr_const
-         | WVUninit of 'ty
+         | WVUninit
          (* | WVBuiltin of 'ty *)
          (* | WVNever of 'ty *)
          | WVAppT of ('idx, 'ty) wordv * 'ty
@@ -62,6 +62,7 @@ datatype ('idx, 'sort, 'kind, 'ty) heapv =
          HVCode of ('idx, 'sort, 'kind, 'ty) hval
          | HVPair of ('idx, 'ty) wordv * ('idx, 'ty) wordv
          | HVInj of injector * ('idx, 'ty) wordv
+         | HVArray of ('idx, 'ty) wordv list
 
 fun assert_SOME a = case a of SOME v => v | NONE => raise Impossible "assert_SOME()"
 
@@ -84,7 +85,7 @@ fun read_v R v =
       (case w of
            WLabel l => WVLabel l
          | WConst c => WVConst c
-         | WUninit t => WVUninit t
+         | WUninit t => WVUninit
          | WBuiltin _ => raise Impossible "WBuiltin is not a legal word value"
          | WNever _ => raise Impossible "WNever is not a legal word value"
       )
@@ -136,11 +137,33 @@ fun assert_WVPack t =
       WVPack a => a
     | _ => raise assert_fail "assert_WVPack"
 
+fun assert_WVPackI t =
+  case t of
+      WVPackI a => a
+    | _ => raise assert_fail "assert_WVPackI"
+
+fun assert_WVFold t =
+  case t of
+      WVFold a => a
+    | _ => raise assert_fail "assert_WVFold"
+
 fun WVInt n = WVConst $ ECInt n
 fun assert_WVInt t =
   case t of
       WVConst (ECInt a) => a
     | _ => raise assert_fail "assert_WVInt"
+
+fun WVNat n = WVConst $ ECNat n
+fun assert_WVNat t =
+  case t of
+      WVConst (ECNat a) => a
+    | _ => raise assert_fail "assert_WVNat"
+
+val WVTT = WVConst ECTT
+fun assert_WVTT t =
+  case t of
+      WVConst ECTT => ()
+    | _ => raise assert_fail "assert_WVTT"
 
 fun assert_HVCode t =
   case t of
@@ -157,6 +180,11 @@ fun assert_HVInj t =
       HVInj a => a
     | _ => raise assert_fail "assert_HVInj"
 
+fun assert_HVArray t =
+  case t of
+      HVArray a => a
+    | _ => raise assert_fail "assert_HVArray"
+
 fun choose_update proj (b1, b2) new =
   case proj of
       ProjFst => (new, b2)
@@ -166,7 +194,10 @@ fun interp_prim_expr_bin_op opr (a, b) =
   case opr of
       PEBIntAdd => WVInt $ assert_WVInt a + assert_WVInt b
     | PEBIntMult => WVInt $ assert_WVInt a * assert_WVInt b
-                   
+fun nat_add (a, b) = WVNat $ assert_WVNat a + assert_WVNat b
+
+fun upd n v ls = update n (const_fun v) ls
+                                                           
 fun get_code (H, R) v =
   let
     val w = R @^ v
@@ -195,9 +226,7 @@ fun step (H, R, I) =
         val (inst, I') = unBind bind
       in
         case inst of
-            IBinOp (IBPrim opr, rd, rs, v) =>
-            (H, R @+ (rd, interp_prim_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
-          | IUnOp (IUBr, r, v) =>
+            IUnOp (IUBr, r, v) =>
             let
               val (inj, w) = assert_HVInj $ must_find H $ assert_WVLabel $ R @!! r
             in
@@ -205,18 +234,28 @@ fun step (H, R, I) =
                   InjInl => (H, R @+ (r, w), I')
                 | InjInr => (H, R @+ (r, w), get_code (H, R) $ unInner v)
             end
-          | ILd (rd, (rs, proj)) =>
-            (H, R @+ (rd, flip choose proj $ assert_HVPair $ must_find H $ assert_WVLabel $ R @!! rs), I')
-          | IMallocPair (rd, (v1, v2)) =>
-            let
-              val (v1, t1) = assert_VAscType $ unInner v1
-              val (v2, t2) = assert_VAscType $ unInner v2
-              val l = fresh_label H
-            in
-              (H @+ (l, HVPair (WVUninit t1, WVUninit t2)), R @+ (rd, WVLabel l), I')
-            end
           | IUnOp (IUMov, rd, v) =>
             (H, R @+ (rd, R @^ unInner v), I')
+          | IUnOp (IUUnfold, rd, v) =>
+            let
+              val (t, w) = assert_WVFold $ R @^ unInner v
+            in
+              (H, R @+ (rd, w), I')
+            end
+          | IBinOp (IBPrim opr, rd, rs, v) =>
+            (H, R @+ (rd, interp_prim_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
+          | IBinOp (IBNatAdd, rd, rs, v) =>
+            (H, R @+ (rd, nat_add (R @!! rs, R @^ unInner v)), I')
+          | IMallocPair (rd, (v1, v2)) =>
+            let
+              (* val (v1, t1) = assert_VAscType $ unInner v1 *)
+              (* val (v2, t2) = assert_VAscType $ unInner v2 *)
+              val l = fresh_label H
+            in
+              (H @+ (l, HVPair (WVUninit, WVUninit)), R @+ (rd, WVLabel l), I')
+            end
+          | ILd (rd, (rs, proj)) =>
+            (H, R @+ (rd, flip choose proj $ assert_HVPair $ must_find H $ assert_WVLabel $ R @!! rs), I')
           | ISt ((rd, proj), rs) =>
             let
               val l = assert_WVLabel $ R @!! rd
@@ -231,7 +270,51 @@ fun step (H, R, I) =
             in
               (H, R @+ (rd, w), subst0_t_insts t I')
             end
+          | IUnpackI (name, rd, v) =>
+            let
+              val (_, i, w) = assert_WVPackI $ R @^ unOuter v
+            in
+              (H, R @+ (rd, w), subst0_i_insts i I')
+            end
+          | IBinOp (IBNew, rd, rs, v) =>
+            let
+              val n = assert_WVNat $ R @!! rs
+              val l = fresh_label H
+            in
+              (H @+ (l, HVArray $ repeat n $ R @^ unInner v), R @+ (rd, WVLabel l), I')
+            end
+          | IBinOp (IBRead, rd, rs, v) =>
+            let
+              val l = assert_WVLabel $ R @!! rs
+              val n = assert_WVNat $ R @^ unInner v
+              val ls = assert_HVArray $ H @!! l
+              val () = assert_b "step()/IRead/n<#ls" $ n < length ls
+              val w = List.nth (ls, n)
+            in
+              (H, R @+ (rd, w), I')
+            end
+          | IBinOp (IBWrite, rd, rs, v) =>
+            let
+              val l = assert_WVLabel $ R @!! rd
+              val n = assert_WVNat $ R @!! rs
+              val v = R @^ unInner v
+              val ls = assert_HVArray $ H @!! l
+              val () = assert_b "step()/IWrite/n<#ls" $ n < length ls
+            in
+              (H @+ (l, HVArray $ upd n v ls), R @+ (rd, WVTT), I')
+            end
+          | IInj (rd, inj, v, t_other) =>
+            let
+              val l = fresh_label H
+            in
+              (H @+ (l, HVInj (inj, R @^ unInner v)), R @+ (rd, WVLabel l), I')
+            end
+          | IAscTime _ => (H, R, I')
       end
 
-
+fun eval (P as (H, R, I)) =
+  case I of
+      ISHalt t => trace "" $ R @!! 1
+    | _ => eval $ trace_noln "." $ step P
+                
 end

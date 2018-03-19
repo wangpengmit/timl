@@ -490,7 +490,15 @@ fun test1 dirname =
     val () = println "Time:"
     (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
-                     
+
+    open TiTALEval
+    val (H, I) = prog
+    fun get_max_k H = max_ls ~1 $ map (fst o fst) H
+    val P = ((RctxUtil.fromList $ map (fn ((l, _), c) => (l, HVCode c)) H, get_max_k H), (Rctx.empty, 0), I)
+    val () = println "Started TiTAL evaluation"              
+    val w = eval P
+    val () = assert_WVTT w
+    val () = println "Finished TiTAL evaluation"              
     val () = println "CodeGen.UnitTest passed"
   in
     ((* t, e *))
