@@ -1001,7 +1001,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                let
                  val (e, _, d) = check_mtype (ctx, e, BaseType (Int, dummy)) 
                in
-                 (EUnOp (EUPrint, e, r), BaseType (String, dummy), d)
+                 (EUnOp (EUInt2Str, e, r), BaseType (String, dummy), d)
                end
           )
 	| U.EBinOp (opr, e1, e2) =>

@@ -176,6 +176,10 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                 [IString (r, s)]
               | EUnOp (EUUnfold, v) =>
                 [IUnfold' (r, cg_v ectx v)]
+              | EUnOp (EUPrint, v) =>
+                [IUnOp' (IUPrint, r, cg_v ectx v)]
+              | EUnOp (EUInt2Str, v) =>
+                [IUnOp' (IUInt2Str, r, cg_v ectx v)]
               | EMallocPair (v1, v2) =>
                 [IMallocPair' (r, (cg_v ectx v1, cg_v ectx v2))]
               | EPairAssign (v1, proj, v2) =>

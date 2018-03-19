@@ -25,6 +25,7 @@ fun TUniKind_Many (names, t) = foldr TUniKind t names
 val TUnit = TConst TCUnit
 val TEmpty = TConst TCEmpty
 val TString = TConst TCString
+val TInt = TConst TCInt
 fun TSum (t1, t2) = TBinOp (TBSum, t1, t2)
 fun TProd (t1, t2) = TBinOp (TBProd, t1, t2)
 fun TAppIs (t, is) = foldl (swap TAppI) t is

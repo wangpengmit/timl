@@ -187,6 +187,20 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i %+ T1
             end
+          | IUnOp (IUPrint, rd, v) =>
+            let
+              val () = tc_v_against_ty ctx (unInner v, TString)
+              val i = tc_insts (add_r (rd, TUnit) ctx) I
+            in
+              i %+ T1
+            end
+          | IUnOp (IUInt2Str, rd, v) =>
+            let
+              val () = tc_v_against_ty ctx (unInner v, TInt)
+              val i = tc_insts (add_r (rd, TString) ctx) I
+            in
+              i %+ T1
+            end
           | IUnOp (IUUnfold, rd, v) =>
             let
               val t_v = tc_v ctx $ unInner v

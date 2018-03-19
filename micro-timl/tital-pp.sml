@@ -18,6 +18,8 @@ fun str_inst_un_op opr =
       IUMov => "mov"
     | IUBr => "br"
     | IUUnfold => "unfold"
+    | IUPrint => "print"
+    | IUInt2Str => "int2str"
 
 fun str_inst_bin_op opr =
   case opr of

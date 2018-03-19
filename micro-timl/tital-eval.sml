@@ -186,6 +186,11 @@ fun assert_HVArray t =
       HVArray a => a
     | _ => raise assert_fail "assert_HVArray"
 
+fun assert_HVString t =
+  case t of
+      HVString a => a
+    | _ => raise assert_fail "assert_HVString"
+
 fun choose_update proj (b1, b2) new =
   case proj of
       ProjFst => (new, b2)
@@ -237,6 +242,15 @@ fun step (H, R, I) =
             end
           | IUnOp (IUMov, rd, v) =>
             (H, R @+ (rd, R @^ unInner v), I')
+          | IUnOp (IUPrint, rd, v) =>
+            (print $ assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v;
+            (H, R @+ (rd, WVTT), I'))
+          | IUnOp (IUInt2Str, rd, v) =>
+            let
+              val l = fresh_label H
+            in
+              (H @+ (l, HVString $ str_int $ assert_WVInt $ R @^ unInner v), R @+ (rd, WVLabel l), I')
+            end
           | IUnOp (IUUnfold, rd, v) =>
             let
               val (t, w) = assert_WVFold $ R @^ unInner v

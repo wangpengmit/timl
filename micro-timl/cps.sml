@@ -396,31 +396,6 @@ fun cps (e, t_e) (k, j_k) =
       in
         cps (e, t_e) (c, blowup_time_i j_k)
       end
-    | S.EUnOp (EUFold t_fold, e) =>
-      (* [[ fold e ]](k) = [[e]](\x. k (fold x)) *)
-      let
-        val (e, t_e) = assert_EAscType e
-        val x = fresh_evar ()
-        val t_fold = cps_t t_fold
-        val c = EFold (t_fold, EV x)
-        val c = k $$ c
-        val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
-      in
-        cps (e, t_e) (c, j_k %+ T_1)
-      end
-    | S.EUnOp (EUUnfold, e) =>
-      (* [[ unfold e ]](k) = [[e]](\x. k (unfold x)) *)
-      let
-        val (e, t_e) = assert_EAscType e
-        val x = fresh_evar ()
-        val c = EUnfold (EV x)
-        val c = k $$ c
-        val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
-      in
-        cps (e, t_e) (c, j_k %+ T_1)
-      end
     | S.EPack (t_pack, t, e) =>
       (* [[ pack <t, e> ]](k) = [[e]](\x. k (pack <t, x>)) *)
       let
@@ -543,32 +518,55 @@ fun cps (e, t_e) (k, j_k) =
     (*   in *)
     (*     cps (e1, t_e1) (e, i_e) *)
     (*   end *)
-    | S.EUnOp (EUProj proj, e) =>
-      (* [[ e.p ]](k) = [[e]](\x. k (x.p)) *)
+    | S.EUnOp (opr, e) =>
+      (* [[ opr e ]](k) = [[e]](\x. k (opr x)) *)
       let
-        val (e, t_e) = assert_EAscType e
-        val x = fresh_evar ()
-        val c = EUnOp (EUProj proj, EV x)
-        val c = k $$ c
-        val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+        fun cps_EUnOp t_e f =
+          let
+            val x = fresh_evar ()
+            val c = f x
+            val c = k $$ c
+            val t_x = cps_t t_e
+            val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+          in
+            cps (e, t_e) (c, j_k %+ T_1)
+          end
+        val (t_e, opr) = 
+            case opr of
+                EUInj (inj, t_other) =>
+                let
+                  val t_e = whnf t_e
+                  val t1_t2 = assert_TSum t_e
+                  val t_e = choose_inj t1_t2 inj
+                  val t_other = cps_t t_other
+                in
+                  (t_e, EUInj (inj, t_other))
+                end
+              | EUFold t_fold =>
+                let
+                  val (e, t_e) = assert_EAscType e
+                  val t_fold = cps_t t_fold
+                in
+                  (t_e, EUFold t_fold)
+                end
+              | EUProj _ =>
+                let
+                  val (e, t_e) = assert_EAscType e
+                in
+                  (t_e, opr)
+                end
+              | EUUnfold =>
+                let
+                  val (e, t_e) = assert_EAscType e
+                in
+                  (t_e, opr)
+                end
+              | EUPrint =>
+                (TString, opr)
+              | EUInt2Str =>
+                (TInt, opr)
       in
-        cps (e, t_e) (c, j_k %+ T_1)
-      end
-    | S.EUnOp (EUInj (inj, t_other), e) =>
-      (* [[ l.e ]](k) = [[e]](\x. k (l.x)) *)
-      let
-        val t_e = whnf t_e
-        val t1_t2 = assert_TSum t_e
-        val t_e = choose_inj t1_t2 inj
-        val x = fresh_evar ()
-        val t_other = cps_t t_other
-        val c = EUnOp (EUInj (inj, t_other), EV x)
-        val c = k $$ c
-        val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
-      in
-        cps (e, t_e) (c, j_k %+ T_1)
+        cps_EUnOp t_e (fn x => EUnOp (opr, EV x))
       end
     | S.ECase (e, bind1, bind2) =>
       (* [[ case e (x.e1) (x.e2) ]](k) = [[e]](\y. case y (x. [[e1]](k)) (x. [[e2]](k))) *)

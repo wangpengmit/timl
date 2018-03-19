@@ -756,6 +756,18 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i)
         end
+      | EUnOp (EUPrint, e) =>
+        let
+          val (e, i) = tc_against_ty ctx (e, TString)
+        in
+          (EUnOp (EUPrint, e), TUnit, i)
+        end
+      | EUnOp (EUInt2Str, e) =>
+        let
+          val (e, i) = tc_against_ty ctx (e, TInt)
+        in
+          (EUnOp (EUInt2Str, e), TString, i)
+        end
       | EUnOp (EUFold t', e) =>
         let
           val t' = kc_against_kind itctx (t', KType)
