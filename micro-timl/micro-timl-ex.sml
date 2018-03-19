@@ -1105,6 +1105,8 @@ fun default_expr_visitor_vtable
           | EUInj (opr, t) => EUInj (opr, on_t t)
           | EUFold t => EUFold $ on_t t
           | EUUnfold => EUUnfold
+          | EUPrint => EUPrint
+          | EUInt2Str => EUInt2Str
       end
     fun visit_EUnOp this env data = 
       let

@@ -316,6 +316,8 @@ local
                      NONE =>
 		     if x = "fst" then EFst (elab e2, r)
 		     else if x = "snd" then ESnd (elab e2, r)
+		     else if x = "print" then EUnOp (EUPrint, elab e2, r)
+		     else if x = "int2str" then EUnOp (EUInt2Str, elab e2, r)
                      else if x = "builtin" then
                        (case e2 of
                             S.Const (S.ECString s, _) =>

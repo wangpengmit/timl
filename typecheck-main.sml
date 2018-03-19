@@ -846,6 +846,8 @@ fun is_value (e : U.expr) : bool =
         (case opr of
              EUFst => false
            | EUSnd => false
+           | EUPrint => false
+           | EUInt2Str => false
         )
       | EBinOp (opr, e1, e2) =>
         (case opr of
@@ -973,7 +975,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
           (case opr of
 	       EUFst => 
 	       let 
-                 val r = U.get_region_e e
+                 (* val r = U.get_region_e e *)
                  val t1 = fresh_mt gctx (sctx, kctx) r
                  val t2 = fresh_mt gctx (sctx, kctx) r
                  val (e, _, d) = check_mtype (ctx, e, Prod (t1, t2)) 
@@ -982,13 +984,25 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	       end
 	     | EUSnd => 
 	       let 
-                 val r = U.get_region_e e
+                 (* val r = U.get_region_e e *)
                  val t1 = fresh_mt gctx (sctx, kctx) r
                  val t2 = fresh_mt gctx (sctx, kctx) r
                  val (e, _, d) = check_mtype (ctx, e, Prod (t1, t2)) 
                in 
                  (ESnd (e, r), t2, d)
 	       end
+             | EUPrint =>
+               let
+                 val (e, _, d) = check_mtype (ctx, e, BaseType (String, dummy)) 
+               in
+                 (EUnOp (EUPrint, e, r), Unit dummy, d)
+               end
+             | EUInt2Str =>
+               let
+                 val (e, _, d) = check_mtype (ctx, e, BaseType (Int, dummy)) 
+               in
+                 (EUnOp (EUPrint, e, r), BaseType (String, dummy), d)
+               end
           )
 	| U.EBinOp (opr, e1, e2) =>
           (case opr of

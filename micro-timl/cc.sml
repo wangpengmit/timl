@@ -456,6 +456,8 @@ fun cc_expr_un_op opr =
       | EUInj (inj, t) => EUInj (inj, cc_t t)
       | EUFold t => EUFold $ cc_t t
       | EUUnfold => opr
+      | EUPrint => opr
+      | EUInt2Str => opr
 
 fun apply_TForallIT b args =
     case (b, args) of

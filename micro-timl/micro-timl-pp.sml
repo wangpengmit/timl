@@ -303,6 +303,8 @@ fun str_expr_un_op str_t opr =
     | EUInj (opr, t) => sprintf "($, $)" [str_inj opr, str_t t]
     | EUFold t => sprintf "(fold $)" [str_t t]
     | EUUnfold => "unfold"
+    | EUPrint => "print"
+    | EUInt2Str => "int2str"
 
 fun str_prim_expr_bin_op opr =
   case opr of

@@ -65,6 +65,8 @@ datatype expr_const =
 datatype expr_un_op =
          EUFst
          | EUSnd
+         | EUPrint
+         | EUInt2Str
 
 datatype bin_op =
          EBApp
@@ -184,6 +186,8 @@ fun str_expr_un_op opr =
   case opr of
       EUFst => "fst"
     | EUSnd => "snd"
+    | EUPrint => "print"
+    | EUInt2Str => "int2str"
 
 fun str_expr_bin_op opr =
   case opr of

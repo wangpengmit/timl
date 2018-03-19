@@ -7,10 +7,10 @@ val x = 1 + 2
 val y = x + 1
 val z = x + y + x
 
-val print = builtin "print" : string -- 1.0 --> unit
-val str_int = builtin "str_int" : int -- 1.0 --> string
+(* val print = builtin "print" : string -- 1.0 --> unit *)
+(* val str_int = builtin "str_int" : int -- 1.0 --> string *)
 fun println s = let val () = print s in print "\n" end
-val () = println (str_int z)
+val () = println (int2str z)
               
 (* fun println s = print s; print "\n" *)
 (* val () = println $ str_int z *)

@@ -65,6 +65,8 @@ datatype 'ty expr_un_op =
          | EUInj of injector * 'ty
          | EUFold of 'ty
          | EUUnfold
+         | EUPrint
+         | EUInt2Str
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =
