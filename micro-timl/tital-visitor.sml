@@ -431,4 +431,51 @@ fun export_hval_fn visit_sort params depth h =
                ) (depth, ([], [])) h
   end
 
+(***************** the "subst_i_insts" visitor  **********************)    
+
+fun subst_i_tital_visitor_vtable cast (visit_idx, visit_ty) =
+  let
+    fun extend_i this env _ = env + 1
+  in
+    default_tital_visitor_vtable
+      cast
+      extend_i
+      extend_noop
+      (ignore_this visit_idx)
+      (ignore_this visit_ty)
+  end
+
+fun new_subst_i_tital_visitor params = new_tital_visitor subst_i_tital_visitor_vtable params
+    
+fun subst_i_insts_fn params b =
+  let
+    val visitor as (TiTALVisitor vtable) = new_subst_i_tital_visitor params
+  in
+    #visit_insts vtable visitor 0 b
+  end
+
+(***************** the "subst_t_insts" visitor  **********************)    
+
+fun subst_t_tital_visitor_vtable cast visit_ty =
+  let
+    fun extend_i this env _ = mapFst idepth_inc env
+    fun extend_t this env _ = mapSnd tdepth_inc env
+  in
+    default_tital_visitor_vtable
+      cast
+      extend_i
+      extend_t
+      visit_noop
+      (ignore_this visit_ty)
+  end
+
+fun new_subst_t_tital_visitor params = new_tital_visitor subst_t_tital_visitor_vtable params
+    
+fun subst_t_insts_fn params b =
+  let
+    val visitor as (TiTALVisitor vtable) = new_subst_t_tital_visitor params
+  in
+    #visit_insts vtable visitor (IDepth 0, TDepth 0) b
+  end
+
 end

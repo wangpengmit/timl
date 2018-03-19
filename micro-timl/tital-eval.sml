@@ -15,6 +15,70 @@ datatype 'ty wordv =
          | WVPackI of 'ty * 'idx * ('idx, 'ty) value
          | WVFold of 'ty * ('idx, 'ty) value
 
+fun assert_SOME a = case a of SOME v => v | NONE => raise Impossible "assert_SOME()"
+
+fun must_find (m, _) k = assert_SOME $ Rctx.find (m, k)
+                                       
+infix  9 @!!
+fun m @!! k = must_find m k
+
+fun add (m, max_k) (k, v) = (m @+ (k, v), max max_k k)
+fun m @+ p = add m p
+
+fun fresh_key (_, max_k) = max_k + 1
+
+val fresh_label = fresh_key
+                  
+fun read_v R v =
+  case v of
+      VReg r => R @!! r
+    | VWord w =>
+      (case w of
+           WLabel l => WVLabel l
+         | WConst c => WVConst c
+         | WUninit t => WVUninit t
+         | WBuiltin => raise Impossible "WBuiltin is not a legal word value"
+         | WNever => raise Impossible "WNever is not a legal word value"
+      )
+      | VAppI (v, i) => WVAppI (read_v R v, i)
+      | VAppT (v, t) => WVAppT (read_v R v, t)
+      | VPack (t', t, v) => WVPack (t', t, read_v R v)
+      | VPackI (t', i, v) => WVPackI (t', i, read_v R v)
+      | VFold (t, v) => WVFold (t, read_v R v)
+
+infix  9 @^
+fun R @^ v = read_v R v                               
+
+fun adapt f d x v env = f (d + env) (x + env) v
+fun subst_i_insts d x v = subst_i_insts_fn (adapt substx_i_i d x v, adapt subst_i_t d x v)
+fun subst0_i_insts a = subst_i_insts 0 0 a
+fun adapt f d x v env b =
+  let
+    fun add_depth (di, dt) (di', dt') = (idepth_add (di, di'), tdepth_add (dt, dt'))
+  in
+    f (add_depth d env) (x + unTDepth (snd env)) v b
+  end
+fun subst_t_insts d x v = subst_t_insts_fn (adapt subst_t_t d x v)
+fun subst0_t_insts a = subst_t_insts (IDepth 0, TDepth 0) 0 a
+
+fun subst0_its_insts itargs b =
+  let
+    val (len_i, len_t) = foldl
+                           (fn (v, (ni, nt)) =>
+                               case v of
+                                   inl _ => (ni+1, nt)
+                                 | inr _ => (ni, nt+1)
+                           ) (0, 0) itargs
+    val b = fst $ foldl
+                (fn (v, (b, (ni, nt))) =>
+                    case v of
+                        inl v => (subst_i_insts (ni-1) (ni-1) v b, (ni-1, nt))
+                      | inr v => (subst_i_insts (IDepth ni, TDepth (nt-1)) (nt-1) v b, (ni, nt-1))
+                ) (b, (len_i, len_t)) itargs
+  in
+    b
+  end
+                    
 fun get_code (H, R) v =
   let
     val w = R @^ v
