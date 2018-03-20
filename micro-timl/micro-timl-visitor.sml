@@ -694,7 +694,7 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        (* visit_ELoc : 'this -> 'env -> loc -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr, *)
        visit_EUnOp : 'this -> 'env -> 'ty expr_un_op * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EBinOp : 'this -> 'env -> expr_bin_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
-       visit_EWrite : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       visit_ETriOp : 'this -> 'env -> expr_tri_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_ECase : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EAbs : 'this -> 'env -> ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_ERec : 'this -> 'env -> ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
@@ -731,7 +731,7 @@ fun override_visit_EVar (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     (* visit_ELoc = #visit_ELoc record, *)
     visit_EUnOp = #visit_EUnOp record,
     visit_EBinOp = #visit_EBinOp record,
-    visit_EWrite = #visit_EWrite record,
+    visit_ETriOp = #visit_ETriOp record,
     visit_ECase = #visit_ECase record,
     visit_EAbs = #visit_EAbs record,
     visit_ERec = #visit_ERec record,
@@ -782,7 +782,7 @@ fun default_expr_visitor_vtable
           (* | ELoc data => #visit_ELoc vtable this env data *)
           | EUnOp data => #visit_EUnOp vtable this env data
           | EBinOp data => #visit_EBinOp vtable this env data
-          | EWrite data => #visit_EWrite vtable this env data
+          | ETriOp data => #visit_ETriOp vtable this env data
           | ECase data => #visit_ECase vtable this env data
           | EAbs data => #visit_EAbs vtable this env data
           | ERec data => #visit_ERec vtable this env data
@@ -813,12 +813,10 @@ fun default_expr_visitor_vtable
         fun on_t x = #visit_ty vtable this env x
       in
         case opr of
-            EUProj opr => EUProj opr
-          | EUInj (opr, t) => EUInj (opr, on_t t)
+            EUInj (opr, t) => EUInj (opr, on_t t)
           | EUFold t => EUFold $ on_t t
           | EUUnfold => EUUnfold
-          | EUPrint => EUPrint
-          | EUInt2Str => EUInt2Str
+          | EUTiML opr => EUTiML opr
       end
     fun visit_EUnOp this env data = 
       let
@@ -838,15 +836,15 @@ fun default_expr_visitor_vtable
       in
         EBinOp (opr, e1, e2)
       end
-    fun visit_EWrite this env data = 
+    fun visit_ETriOp this env data = 
       let
         val vtable = cast this
-        val (e1, e2, e3) = data
+        val (opr, e1, e2, e3) = data
         val e1 = #visit_expr vtable this env e1
         val e2 = #visit_expr vtable this env e2
         val e3 = #visit_expr vtable this env e3
       in
-        EWrite (e1, e2, e3)
+        ETriOp (opr, e1, e2, e3)
       end
     fun visit_ibind this = visit_bind_simp (#extend_i (cast this) this)
     fun visit_tbind this = visit_bind_simp (#extend_t (cast this) this)
@@ -990,7 +988,7 @@ fun default_expr_visitor_vtable
       (* visit_ELoc = visit_ELoc, *)
       visit_EUnOp = visit_EUnOp,
       visit_EBinOp = visit_EBinOp,
-      visit_EWrite = visit_EWrite,
+      visit_ETriOp = visit_ETriOp,
       visit_ECase = visit_ECase,
       visit_EAbs = visit_EAbs,
       visit_ERec = visit_ERec,

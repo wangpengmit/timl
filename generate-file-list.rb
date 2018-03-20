@@ -126,13 +126,13 @@ pattern.sml
 pattern-visitor.sml                                 
 hyp.sml
 expr.sig
+expr-util.sml
 expr-visitor.sml                                 
 expr-fn.sml
 get-region.sml
 base-types.sml
 idx-util.sml
 type-util.sml
-expr-util.sml
 idx-type-expr.sig
 idx-type-expr-fn.sml
 expr-trans.sml

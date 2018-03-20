@@ -62,23 +62,58 @@ datatype expr_const =
          | ECInt of int
          | ECString of string
 
-datatype expr_un_op =
-         EUFst
-         | EUSnd
-         | EUPrint
-         | EUInt2Str
+(* projector for product type *)
+datatype projector =
+         ProjFst
+         | ProjSnd
 
-datatype bin_op =
+(* primitive unary term operators *)
+datatype prim_expr_un_op =
+         EUPIntNeg
+         | EUPBoolNeg
+         | EUPInt2Str
+         | EUPStrLen
+                         
+datatype expr_un_op =
+         EUProj of projector
+         | EUPrim of prim_expr_un_op
+         | EUPrint
+         | EUArrayLen
+
+(* primitive binary term operators *)
+datatype prim_expr_bin_op =
+         EBPIntAdd
+         | EBPIntMinus
+         | EBPIntMult
+         | EBPIntDiv
+         | EBPIntLt
+         | EBPIntGt
+         | EBPIntLe
+         | EBPIntGe
+         | EBPIntEq
+         | EBPIntNEq
+         | EBPBoolAnd
+         | EBPBoolOr
+         | EBPStrConcat
+
+(* binary nat operators *)
+datatype nat_expr_bin_op =
+         EBNAdd
+         | EBNBoundedMinus
+         | EBNMult
+         | EBNDiv
+         
+datatype expr_bin_op =
          EBApp
          | EBPair
-         | EBAdd
          | EBNew
          | EBRead
-         | EBNatAdd
-         | EBStrConcat
+         | EBPrim of prim_expr_bin_op
+         | EBNat of nat_expr_bin_op
 
-datatype tri_op =
-         Write
+datatype expr_tri_op =
+         ETWrite
+         | ETIte
 
 datatype expr_EI =
          EEIAppI
@@ -184,6 +219,11 @@ fun str_expr_const c =
     | ECNat n => sprintf "#$" [str_int n]
     | ECString s => surround "\"" "\"" s
                                 
+fun str_proj opr =
+  case opr of
+      ProjFst => "fst"
+    | ProjSnd => "snd"
+
 fun str_expr_un_op opr = 
   case opr of
       EUFst => "fst"
@@ -191,14 +231,18 @@ fun str_expr_un_op opr =
     | EUPrint => "print"
     | EUInt2Str => "int2str"
 
+fun str_prim_expr_bin_op opr =
+  case opr of
+      PEBIntAdd => "add"
+    | PEBIntMult => "mult"
+
 fun str_expr_bin_op opr =
   case opr of
       EBApp => "app"
     | EBPair => "pair"
     | EBNew => "new"
     | EBRead => "read"
-    | EBAdd => "add"
+    | EBPrim opr => str_prim_expr_bin_op opr
     | EBNatAdd => "nat_add"
-    | EBStrConcat => "str_concat"
 
 end

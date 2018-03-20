@@ -287,11 +287,6 @@ fun pp_t_to_os_fn params os d t = withPP ("", 80, os) (fn s => pp_t params s d t
 fun pp_t_to_string_fn params d t =
   pp_to_string "pp_t_to_string.tmp" (fn os => pp_t_to_os_fn params os d t)
                               
-fun str_proj opr =
-  case opr of
-      ProjFst => "fst"
-    | ProjSnd => "snd"
-
 fun str_inj opr =
   case opr of
       InjInl => "inl"
@@ -299,27 +294,10 @@ fun str_inj opr =
 
 fun str_expr_un_op str_t opr =
   case opr of
-      EUProj opr => str_proj opr
-    | EUInj (opr, t) => sprintf "($, $)" [str_inj opr, str_t t]
+     EUInj (opr, t) => sprintf "($, $)" [str_inj opr, str_t t]
     | EUFold t => sprintf "(fold $)" [str_t t]
     | EUUnfold => "unfold"
-    | EUPrint => "print"
-    | EUInt2Str => "int2str"
-
-fun str_prim_expr_bin_op opr =
-  case opr of
-      PEBIntAdd => "add"
-    | PEBIntMult => "mult"
-    | PEBStrConcat => "str_concat"
-
-fun str_expr_bin_op opr =
-  case opr of
-      EBPrim opr => str_prim_expr_bin_op opr
-    | EBApp => "app"
-    | EBPair => "pair"
-    | EBNew => "new"
-    | EBRead => "read"
-    | EBNatAdd => "nat_add"
+    | EUTiML opr => Operators.str_expr_un_op opr
 
 (* fun str_e str_var str_i e = *)
 (*   let *)
@@ -414,10 +392,24 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, str_t)) s e =
           str ")";
           close_box ()
         )
-      | EWrite (e1, e2, e3) =>
+      | ETriOp (ETWrite, e1, e2, e3) =>
         (
           open_hbox ();
           str "EWrite";
+          space ();
+          str "(";
+          pp_e e1;
+          comma ();
+          pp_e e2;
+          comma ();
+          pp_e e3;
+          str ")";
+          close_box ()
+        )
+      | ETriOp (ETIte, e1, e2, e3) =>
+        (
+          open_hbox ();
+          str "EIte";
           space ();
           str "(";
           pp_e e1;

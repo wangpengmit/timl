@@ -49,11 +49,6 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
 
 type loc = int
              
-(* projector for product type *)
-datatype projector =
-         ProjFst
-         | ProjSnd
-
 (* injector for sum type *)
 datatype injector =
          InjInl
@@ -61,27 +56,10 @@ datatype injector =
 
 (* unary term operators *)
 datatype 'ty expr_un_op =
-         EUProj of projector
-         | EUInj of injector * 'ty
+         EUInj of injector * 'ty
          | EUFold of 'ty
          | EUUnfold
-         | EUPrint
-         | EUInt2Str
-
-(* primitive binary term operators *)
-datatype prim_expr_bin_op =
-         PEBIntAdd
-         | PEBIntMult
-         | PEBStrConcat
-
-(* binary term operators *)
-datatype expr_bin_op =
-         EBPrim of prim_expr_bin_op
-         | EBApp
-         | EBPair
-         | EBNew 
-         | EBRead 
-         | EBNatAdd
+         | EUTiML of Operators.expr_un_op
 
 (* term *)
 datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
@@ -90,7 +68,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          (* | ELoc of loc *)
          | EUnOp of 'ty expr_un_op * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | EBinOp of expr_bin_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
-         | EWrite of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
+         | ETriOp of expr_tri_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | ECase of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          | EAbs of ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno
          | ERec of ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno

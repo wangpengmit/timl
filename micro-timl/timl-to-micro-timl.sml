@@ -18,23 +18,6 @@ infixr 0 !!
 
 exception T2MTError of string
 
-fun on_expr_un_op opr =
-  case opr of
-      EUFst => EUProj ProjFst
-    | EUSnd => EUProj ProjSnd
-    | Op.EUPrint => EUPrint
-    | Op.EUInt2Str => EUInt2Str
-
-fun on_bin_op opr =
-  case opr of
-      Op.EBApp => EBApp
-    | Op.EBPair => EBPair
-    | Op.EBAdd => EBPrim PEBIntAdd
-    | Op.EBStrConcat => EBPrim PEBStrConcat
-    | Op.EBNew => EBNew
-    | Op.EBRead => EBRead
-    | Op.EBNatAdd => EBNatAdd
-
 fun on_base_type t =
   case t of
       Int => TCInt
@@ -146,9 +129,9 @@ fun on_e (e : S.expr) =
   case e of
       S.EVar (x, _) => EVar x
     | S.EConst (c, _) => EConst c
-    | S.EUnOp (opr, e, _) => EUnOp (on_expr_un_op opr, on_e e)
-    | S.EBinOp (opr, e1, e2) => EBinOp (on_bin_op opr, on_e e1, on_e e2)
-    | S.ETriOp (Op.Write, e1, e2, e3) => EWrite (on_e e1, on_e e2, on_e e3)
+    | S.EUnOp (opr, e, _) => EUnOp (EUTiML opr, on_e e)
+    | S.EBinOp (opr, e1, e2) => EBinOp (opr, on_e e1, on_e e2)
+    | S.ETriOp (opr, e1, e2, e3) => ETriOp (opr, on_e e1, on_e e2, on_e e3)
     | S.EEI (opr, e, i) =>
       (case opr of
            Op.EEIAppI => EAppI (on_e e, i)

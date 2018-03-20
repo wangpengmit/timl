@@ -31,12 +31,15 @@ open Ast
     | EXP
     | DIV
     | PLUS
-    | NAT_PLUS
     | MINUS
+    | NAT_PLUS
+    | NAT_MINUS
+    | NAT_MULT
+    | NAT_DIV
     | INT of int
     | NNREAL of string
     | BAR
-    | NOT
+    | TILDE
     | AND
     | OR
     | IFF
@@ -44,6 +47,7 @@ open Ast
     | NEQ
     | DOUBLE_EQ
     | DOUBLE_POND
+    | DOUBLE_BAR
     | VAL
     | DATATYPE
     | EOF
@@ -168,12 +172,13 @@ open Ast
 %right DDASH LARROW ARROW ZERO_ARROW
 %right OR
 %right AND
-%nonassoc NOT
-%nonassoc EQ NEQ LE LT GE GT 
+%left DOUBLE_BAR
 %left DOUBLE_POND
 %left DOUBLE_EQ
-%left PLUS NAT_PLUS MINUS
-%left MULT DIV MAX MIN
+%nonassoc TILDE
+%nonassoc EQ NEQ LE LT GE GT 
+%left PLUS MINUS NAT_PLUS NAT_MINUS
+%left MULT DIV MAX MIN NAT_MULT NAT_DIV
 (* %left APP *)
 (* %left APPR *)
 
@@ -251,11 +256,25 @@ ty_atom : long_id (VarT long_id)
         | quan sort_bind_plus COMMA ty (Quan (quan, sort_bind_plus, ty, (quanleft, tyright)))
 
 exp : aexp (aexp)
-     | exp PLUS exp (BinOp (EBAdd, exp1, exp2, (exp1left, exp2right)))
-     | exp STR_CONCAT exp (BinOp (EBStrConcat, exp1, exp2, (exp1left, exp2right)))
+     | exp PLUS exp (BinOp (EBPrim EBPIntAdd, exp1, exp2, (exp1left, exp2right)))
+     | exp MINUS exp (BinOp (EBPrim EBPIntMinus, exp1, exp2, (exp1left, exp2right)))
+     | exp MULT exp (BinOp (EBPrim EBPIntMult, exp1, exp2, (exp1left, exp2right)))
+     | exp DIV exp (BinOp (EBPrim EBPIntDiv, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_PLUS exp (BinOp (EBNat EBNAdd, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_MINUS exp (BinOp (EBNat EBNBoundedMinus, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_MULT exp (BinOp (EBNat EBNMult, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_DIV exp (BinOp (EBNat EBNDiv, exp1, exp2, (exp1left, exp2right)))
+     | exp LT exp (BinOp (EBPrim EBPIntLt, exp1, exp2, (exp1left, exp2right)))
+     | exp GT exp (BinOp (EBPrim EBPIntGt, exp1, exp2, (exp1left, exp2right)))
+     | exp LE exp (BinOp (EBPrim EBPIntLe, exp1, exp2, (exp1left, exp2right)))
+     | exp GE exp (BinOp (EBPrim EBPIntGe, exp1, exp2, (exp1left, exp2right)))
+     | exp EQ exp (BinOp (EBPrim EBPIntEq, exp1, exp2, (exp1left, exp2right)))
+     | exp NEQ exp (BinOp (EBPrim EBPIntNEq, exp1, exp2, (exp1left, exp2right)))
+     | exp DOUBLE_POND exp (BinOp (EBPrim EBPBoolAnd, exp1, exp2, (exp1left, exp2right)))
+     | exp DOUBLE_BAR exp (BinOp (EBPrim EBPBoolOr, exp1, exp2, (exp1left, exp2right)))
+     | exp STR_CONCAT exp (BinOp (EBPrim EBPStrConcat, exp1, exp2, (exp1left, exp2right)))
      | exp DOLLAR exp (App (exp1, exp2, (exp1left, exp2right)))
      | exp SEMI_COLON exp (ESemiColon (exp1, exp2, (exp1left, exp2right)))
-     | exp NAT_PLUS exp (BinOp (EBNatAdd, exp1, exp2, (exp1left, exp2right)))
      | exp DCOLON exp (ECons (exp1, exp2, (exp1left, exp2right)))
      | exp COLON ty (Asc (exp, ty, (expleft, tyright)))
      | exp RTRI idx (AscTime (exp, idx, (expleft, idxright)))
@@ -273,6 +292,7 @@ aexp : decorated_id (Var decorated_id)
      | INT (Const (ECInt INT, (INTleft, INTright)))
      | STRING (Const (ECString STRING, (STRINGleft, STRINGright)))
      | LSQ exp_comma_star RSQ (EList (exp_comma_star, (LSQleft, RSQright)))
+     | TILDE aexp (EUnOp (EUPrim EUPIntNeg, aexp, (TILDEleft, aexpright)))
 
 long_id : id ((NONE, id))
         | id DOT id (SOME id1, id2)
@@ -303,7 +323,7 @@ aidx : long_id (VarI long_id)
     | FN id_plus DARROW idx (IAbs (id_plus, idx, (FNleft, idxright)))
 
 prop : id (ConstP id)
-     | NOT prop (Not (prop, (NOTleft, propright)))
+     | TILDE prop (Not (prop, (TILDEleft, propright)))
      | prop AND prop (BinConn (And, prop1, prop2, (prop1left, prop2right)))
      | prop OR prop (BinConn (Or, prop1, prop2, (prop1left, prop2right)))
      | prop ARROW prop (BinConn (Imply, prop1, prop2, (prop1left, prop2right)))

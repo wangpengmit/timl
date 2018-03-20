@@ -347,32 +347,33 @@ local
 		S.Var ((m, (x, _)), false) =>
                 (case m of
                      NONE =>
-		     if x = "fst" then EFst (elab e2, r)
-		     else if x = "snd" then ESnd (elab e2, r)
-		     else if x = "print" then EUnOp (EUPrint, elab e2, r)
-		     else if x = "int2str" then EUnOp (EUInt2Str, elab e2, r)
-                     else if x = "builtin" then
+		     if x = "__$fst" then EFst (elab e2, r)
+		     else if x = "__$snd" then ESnd (elab e2, r)
+		     else if x = "__$not" then EUnOp (EUPrim EUPBoolNeg, elab e2, r)
+		     else if x = "__$print" then EUnOp (EUPrint, elab e2, r)
+		     else if x = "__$int2str" then EUnOp (EUInt2Str, elab e2, r)
+                     else if x = "__$builtin" then
                        (case e2 of
                             S.Const (S.ECString s, _) =>
                             EBuiltin (s, elab_mt (S.VarT (NONE, ("_", r))), r)
-                          | _ => raise Error (r, "should be 'builtin \"name\"'"))
-		     else if x = "array" then
+                          | _ => raise Error (r, "should be '__$builtin \"name\"'"))
+		     else if x = "__$array" then
                        (case e2 of
                             S.Tuple ([e1, e2], _) =>
                             ENew (elab e1, elab e2)
-                          | _ => raise Error (r, "should be 'array (_, _)'")
+                          | _ => raise Error (r, "should be '__$array (_, _)'")
                        )
-		     else if x = "sub" then
+		     else if x = "__$sub" then
                        (case e2 of
                             S.Tuple ([e1, e2], _) =>
                             ERead (elab e1, elab e2)
-                          | _ => raise Error (r, "should be 'sub (_, _)'")
+                          | _ => raise Error (r, "should be '__$sub (_, _)'")
                        )
-		     else if x = "update" then
+		     else if x = "__$update" then
                        (case e2 of
                             S.Tuple ([e1, e2, e3], _) =>
                             EWrite (elab e1, elab e2, elab e3)
-                          | _ => raise Error (r, "should be 'update (_, _, _)'")
+                          | _ => raise Error (r, "should be '__$update (_, _, _)'")
                        )
 		     else default ()
                    | SOME _ => default ()

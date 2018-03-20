@@ -741,7 +741,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
       (*        SOME (t, i) => (e_input, TArr (t, i), T0) *)
       (*      | NONE => raise MTCError "Unbound location" *)
       (*   ) *)
-      | EUnOp (EUProj proj, e) =>
+      | EUnOp (EUTiML (EUProj proj), e) =>
         let
           val (e, t_e, i) = tc ctx e
           val t_e = whnf itctx t_e
@@ -752,24 +752,24 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EProj (proj, e), choose (t1, t2) proj, i)
         end
+      | EUnOp (EUTiML EUPrint, e) =>
+        let
+          val (e, i) = tc_against_ty ctx (e, TString)
+        in
+          (EUnOp (EUTiML EUPrint, e), TUnit, i)
+        end
+      | EUnOp (EUTiML EUInt2Str, e) =>
+        let
+          val (e, i) = tc_against_ty ctx (e, TInt)
+        in
+          (EUnOp (EUTiML EUInt2Str, e), TString, i)
+        end
       | EUnOp (EUInj (inj, t'), e) =>
         let
           val t' = kc_against_kind itctx (t', KType)
           val (e, t, i) = tc ctx e
         in
           (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i)
-        end
-      | EUnOp (EUPrint, e) =>
-        let
-          val (e, i) = tc_against_ty ctx (e, TString)
-        in
-          (EUnOp (EUPrint, e), TUnit, i)
-        end
-      | EUnOp (EUInt2Str, e) =>
-        let
-          val (e, i) = tc_against_ty ctx (e, TInt)
-        in
-          (EUnOp (EUInt2Str, e), TString, i)
         end
       | EUnOp (EUFold t', e) =>
         let
@@ -876,7 +876,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (ENatAdd (e1, e2), TNat (i1 %+ i2), j1 %+ j2)
         end
-      | EWrite (e1, e2, e3) =>
+      | ETriOp (ETWrite, e1, e2, e3) =>
         let
           val (e1, t1, j1) = tc ctx e1
           val t1 = whnf itctx t1

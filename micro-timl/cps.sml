@@ -549,21 +549,21 @@ fun cps (e, t_e) (k, j_k) =
                 in
                   (t_e, EUFold t_fold)
                 end
-              | EUProj _ =>
-                let
-                  val (e, t_e) = assert_EAscType e
-                in
-                  (t_e, opr)
-                end
               | EUUnfold =>
                 let
                   val (e, t_e) = assert_EAscType e
                 in
                   (t_e, opr)
                 end
-              | EUPrint =>
+              | EUTiML (EUProj _) =>
+                let
+                  val (e, t_e) = assert_EAscType e
+                in
+                  (t_e, opr)
+                end
+              | EUTiML EUPrint =>
                 (TString, opr)
-              | EUInt2Str =>
+              | EUTiML EUInt2Str =>
                 (TInt, opr)
       in
         cps_EUnOp t_e (fn x => EUnOp (opr, EV x))
@@ -623,7 +623,7 @@ fun cps (e, t_e) (k, j_k) =
       in
         (e (* |> i' *) |> i, i)
       end
-    | S.EWrite (e1, e2, e3) =>
+    | S.ETriOp (ETWrite, e1, e2, e3) =>
       (* [[ write e1 e2 e3 ]](k) = [[e1]] (\x1. [[e2]] (\x2. [[e3]] (\x3. k (write x1 x2 x3)))) *)
       let
         val (e1, t_e1) = assert_EAscType e1
@@ -808,7 +808,7 @@ and check_decl e =
         (assert_b "check_decl/EBinOp/opr <> EBApp" $ opr <> EBApp;
          check_value e1;
          check_value e2)
-      | EWrite (e1, e2, e3) =>
+      | ETriOp (ETWrite, e1, e2, e3) =>
         (check_value e1;
          check_value e2;
          check_value e3)

@@ -452,12 +452,10 @@ and cc_t_arrow t =
 
 fun cc_expr_un_op opr =
     case opr of
-        EUProj _ => opr
-      | EUInj (inj, t) => EUInj (inj, cc_t t)
+        EUInj (inj, t) => EUInj (inj, cc_t t)
       | EUFold t => EUFold $ cc_t t
       | EUUnfold => opr
-      | EUPrint => opr
-      | EUInt2Str => opr
+      | EUTiML _ => opr
 
 fun apply_TForallIT b args =
     case (b, args) of
@@ -569,7 +567,7 @@ fun cc e =
       | EAscTime (e, i) => EAscTime (cc e, i)
       | ENever t => ENever (cc_t t)
       | EBuiltin (name, t) => EBuiltin (name, cc_t t)
-      | EWrite (e1, e2, e3) => EWrite (cc e1, cc e2, cc e3)
+      | ETriOp (ETWrite, e1, e2, e3) => EWrite (cc e1, cc e2, cc e3)
       | EHalt e => EHalt (cc e)
       | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
     (* val () = println $ "cc() finished: " ^ e_str *)

@@ -105,7 +105,9 @@ datatype exp =
          | AscTime of exp * idx * region
          | Let of return * decl list * exp * region
          | Const of exp_const * region
-         | BinOp of bin_op * exp * exp * region
+         | EUnOp of expr_un_op * exp * region
+         | BinOp of expr_bin_op * exp * exp * region
+         | EIte of exp * exp * exp * region
 
      and decl =
          Val of id list * ptrn * exp * region
@@ -115,12 +117,12 @@ datatype exp =
          | AbsIdx2 of id * sort option * idx
          | AbsIdx of id * sort option * idx option * decl list * region
          | TypeDef of id * ty
-       | Open of id
+         | Open of id
 
 fun App (e1, e2, r) = BinOp (EBApp, e1, e2, r)
 fun short_id id = ((NONE, id), false)
 fun PShortVar (x, r) = ConstrP (short_id (x, r), [], NONE, r)
-fun EIte (e, e1, e2, r) = Case (e, (NONE, NONE), [(PShortVar ("true", r), e1), (PShortVar ("false", r), e2)], r)
+(* fun EIte (e, e1, e2, r) = Case (e, (NONE, NONE), [(PShortVar ("true", r), e1), (PShortVar ("false", r), e2)], r) *)
 fun EShortVar id = Var (short_id id)
 fun ECons (e1, e2, r) = App (EShortVar ("Cons", r), Tuple ([e1, e2], r), r)
 fun PCons (pn1, pn2, r) = ConstrP (short_id ("Cons", r), [], SOME (TupleP ([pn1, pn2], r)), r)

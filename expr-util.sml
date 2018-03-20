@@ -7,7 +7,13 @@ open Util
 open Bind
 
 infixr 0 $
-         
+
+val EUFst = EUProj ProjFst
+val EUSnd = EUProj ProjSnd
+val EUInt2Str = EUPrim EUPInt2Str
+val EBAdd = EBPrim EBPIntAdd
+val EBNatAdd = EBNat EBNAdd
+                   
 fun ETT r = EConst (ECTT, r)
 fun EConstInt (n, r) = EConst (ECInt n, r)
 fun EConstNat (n, r) = EConst (ECNat n, r)
@@ -26,7 +32,7 @@ fun ENever (t, r) = ET (ETNever, t, r)
 fun EBuiltin (name, t, r) = ET (ETBuiltin name, t, r)
 fun ENew (e1, e2) = EBinOp (EBNew, e1, e2)
 fun ERead (e1, e2) = EBinOp (EBRead, e1, e2)
-fun EWrite (e1, e2, e3) = ETriOp (Write, e1, e2, e3)
+fun EWrite (e1, e2, e3) = ETriOp (ETWrite, e1, e2, e3)
   
 fun collect_Pair e =
   case e of

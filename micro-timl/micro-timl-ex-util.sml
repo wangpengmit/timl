@@ -32,21 +32,22 @@ fun TAppIs (t, is) = foldl (swap TAppI) t is
 fun TAppTs (t, ts) = foldl (swap TAppT) t ts
          
 fun EPair (e1, e2) = EBinOp (EBPair, e1, e2)
-fun EFst e = EUnOp (EUProj ProjFst, e)
-fun ESnd e = EUnOp (EUProj ProjSnd, e)
-fun EInlInr (opr, t, e) = EUnOp (EUInj (opr, t), e)
-fun EInl (t, e) = EInlInr (InjInl, t, e)
-fun EInr (t, e) = EInlInr (InjInr, t, e)
+fun EProj (proj, e) = EUnOp (EUTiML $ EUProj proj, e)
+fun EFst e = EProj (ProjFst, e)
+fun ESnd e = EProj (ProjSnd, e)
+fun EInj (inj, t, e) = EUnOp (EUInj (inj, t), e)
+fun EInl (t, e) = EInj (InjInl, t, e)
+fun EInr (t, e) = EInj (InjInr, t, e)
 fun EFold (t, e) = EUnOp (EUFold t, e)
 fun EUnfold e = EUnOp (EUUnfold, e)
 fun EApp (e1, e2) = EBinOp (EBApp, e1, e2)
 
-fun EProj (proj, e) = EUnOp (EUProj proj, e)
-fun EInj (inj, t, e) = EUnOp (EUInj (inj, t), e)
 fun EBinOpPrim (opr, e1, e2) = EBinOp (EBPrim opr, e1, e2)
+val EBNatAdd = EBNat EBNAdd
+fun ENatAdd (e1, e2) = EBinOp (EBNatAdd, e1, e2)
 fun ENew (e1, e2) = EBinOp (EBNew, e1, e2)
 fun ERead (e1, e2) = EBinOp (EBRead, e1, e2)
-fun ENatAdd (e1, e2) = EBinOp (EBNatAdd, e1, e2)
+fun EWrite (e1, e2, e3) = ETriOp (ETWrite, e1, e2, e3)
                                       
 fun MakeEAbs (name, t, e) = EAbs $ EBindAnno ((name, t), e)
 fun MakeEAbsI (name, s, e) = EAbsI $ IBindAnno ((name, s), e)

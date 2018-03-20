@@ -64,7 +64,7 @@ fun pa_expr_visitor_vtable cast () =
           (ignore_this_env pa_t)
     fun visit_EUnOp this env (data as (opr, e)) =
       case opr of
-          EUProj proj => EProjProtected (proj, #visit_expr (cast this) this env e)
+          EUTiML (EUProj proj) => EProjProtected (proj, #visit_expr (cast this) this env e)
         | _ => #visit_EUnOp vtable this env data (* call super *)
     (* fun visit_EBinOp this env (data as (opr, e1, e2)) = *)
     (*   case opr of *)

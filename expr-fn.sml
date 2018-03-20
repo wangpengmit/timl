@@ -34,8 +34,8 @@ datatype expr =
 	 EVar of var * bool(*explicit index arguments (EIA)*)
          | EConst of expr_const * region
          | EUnOp of expr_un_op * expr * region
-         | EBinOp of bin_op * expr * expr
-	 | ETriOp of tri_op * expr * expr * expr
+         | EBinOp of expr_bin_op * expr * expr
+	 | ETriOp of expr_tri_op * expr * expr * expr
          | EEI of expr_EI * expr * idx
          | EET of expr_ET * expr * mtype
          | ET of expr_T * mtype * region

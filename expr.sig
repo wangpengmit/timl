@@ -25,8 +25,8 @@ signature EXPR = sig
 	   EVar of var * bool(*explicit index arguments (EIA)*)
            | EConst of Operators.expr_const * Region.region
            | EUnOp of Operators.expr_un_op * expr * Region.region
-           | EBinOp of Operators.bin_op * expr * expr
-	   | ETriOp of Operators.tri_op * expr * expr * expr
+           | EBinOp of Operators.expr_bin_op * expr * expr
+	   | ETriOp of Operators.expr_tri_op * expr * expr * expr
            | EEI of Operators.expr_EI * expr * idx
            | EET of Operators.expr_ET * expr * mtype
            | ET of Operators.expr_T * mtype * Region.region

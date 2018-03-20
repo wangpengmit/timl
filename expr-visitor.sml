@@ -5,6 +5,8 @@ end
 
 functor ExprVisitorFn (Params : EXPR_VISITOR_PARAMS) = struct
 
+structure SrcExprUtil = ExprUtilFn (Params.S)
+open SrcExprUtil
 open Params
 open Unbound
 open Namespaces
@@ -22,8 +24,8 @@ type ('this, 'env) expr_visitor_vtable =
        visit_EVar : 'this -> 'env -> var * bool -> T.expr,
        visit_EConst : 'this -> 'env -> expr_const * region -> T.expr,
        visit_EUnOp : 'this -> 'env -> expr_un_op * expr * region -> T.expr,
-       visit_EBinOp : 'this -> 'env -> bin_op * expr * expr -> T.expr,
-       visit_ETriOp : 'this -> 'env -> tri_op * expr * expr * expr -> T.expr,
+       visit_EBinOp : 'this -> 'env -> expr_bin_op * expr * expr -> T.expr,
+       visit_ETriOp : 'this -> 'env -> expr_tri_op * expr * expr * expr -> T.expr,
        visit_EEI : 'this -> 'env -> expr_EI * expr * idx -> T.expr,
        visit_EET : 'this -> 'env -> expr_ET * expr * mtype -> T.expr,
        visit_ET : 'this -> 'env -> expr_T * mtype * region -> T.expr,
