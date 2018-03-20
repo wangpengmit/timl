@@ -17,9 +17,8 @@ fun get_bind_anno b =
 fun str_ty_const c =
   case c of
       TCUnit => "unit"
-    | TCInt => "int"
     | TCEmpty => "empty"
-    | TCString => "string"
+    | TCTiML t => BaseTypes.str_bt t
       
 fun str_ty_bin_op opr =
   case opr of

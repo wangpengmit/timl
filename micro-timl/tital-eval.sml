@@ -166,6 +166,12 @@ fun assert_WVTT t =
       WVConst WCTT => ()
     | _ => raise assert_fail "assert_WVTT"
 
+fun WVBool n = WVConst $ WCBool n
+fun assert_WVBool t =
+  case t of
+      WVConst (WCBool a) => a
+    | _ => raise assert_fail "assert_WVBool"
+
 fun assert_HVCode t =
   case t of
       HVCode a => a
@@ -196,13 +202,34 @@ fun choose_update proj (b1, b2) new =
       ProjFst => (new, b2)
     | ProjSnd => (b1, new)
 
+fun interp_prim_expr_un_op opr a =
+  case opr of
+      EUPIntNeg => WVInt $ ~ (assert_WVInt a)
+    | EUPBoolNeg => WVBool $ not (assert_WVBool a)
+    | _ => raise Impossible $ "interp_prim_expr_un_op() on: " ^ str_prim_expr_un_op opr
+                   
 fun interp_prim_expr_bin_op opr (a, b) =
   case opr of
-      PEBIntAdd => WVInt $ assert_WVInt a + assert_WVInt b
-    | PEBIntMult => WVInt $ assert_WVInt a * assert_WVInt b
-    | PEBStrConcat => raise Impossible "interp_prim_expr_bin_op() on PEBStrConcat"
-                                                          
-fun nat_add (a, b) = WVNat $ assert_WVNat a + assert_WVNat b
+      EBPIntAdd => WVInt $ assert_WVInt a + assert_WVInt b
+    | EBPIntMult => WVInt $ assert_WVInt a * assert_WVInt b
+    | EBPIntMinus => WVInt $ assert_WVInt a - assert_WVInt b
+    | EBPIntDiv => WVInt $ assert_WVInt a div assert_WVInt b
+    | EBPIntLt => WVBool $ assert_WVInt a < assert_WVInt b
+    | EBPIntGt => WVBool $ assert_WVInt a > assert_WVInt b
+    | EBPIntLe => WVBool $ assert_WVInt a <= assert_WVInt b
+    | EBPIntGe => WVBool $ assert_WVInt a >= assert_WVInt b
+    | EBPIntEq => WVBool $ assert_WVInt a = assert_WVInt b
+    | EBPIntNEq => WVBool $ assert_WVInt a <> assert_WVInt b
+    | EBPBoolAnd => WVBool (assert_WVBool a andalso assert_WVBool b)
+    | EBPBoolOr => WVBool (assert_WVBool a orelse assert_WVBool b)
+    | EBPStrConcat => raise Impossible "interp_prim_expr_bin_op() on EBPStrConcat"
+                            
+fun interp_nat_expr_bin_op opr (a, b) =
+  case opr of
+      EBNAdd => WVNat $ assert_WVNat a + assert_WVNat b
+    | EBNBoundedMinus => WVNat $ max 0 $ assert_WVNat a - assert_WVNat b
+    | EBNMult => WVNat $ assert_WVNat a * assert_WVNat b
+    | EBNDiv => WVNat $ assert_WVNat a div assert_WVNat b
 
 fun upd n v ls = update n (const_fun v) ls
                                                            
@@ -247,19 +274,25 @@ fun step (H, R, I) =
           | IUnOp (IUPrint, rd, v) =>
             (print $ assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v;
             (H, R @+ (rd, WVTT), I'))
-          | IUnOp (IUInt2Str, rd, v) =>
-            let
-              val l = fresh_label H
-            in
-              (H @+ (l, HVString $ str_int $ assert_WVInt $ R @^ unInner v), R @+ (rd, WVLabel l), I')
-            end
           | IUnOp (IUUnfold, rd, v) =>
             let
               val (t, w) = assert_WVFold $ R @^ unInner v
             in
               (H, R @+ (rd, w), I')
             end
-          | IBinOp (IBPrim PEBStrConcat, rd, rs, v) =>
+          | IUnOp (IUArrayLen, rd, v) =>
+            (H, R @+ (rd, WVNat $ length $ assert_HVArray $ must_find H $ assert_WVLabel $ R @^ unInner v), I')
+          | IUnOp (IUPrim EUPInt2Str, rd, v) =>
+            let
+              val l = fresh_label H
+            in
+              (H @+ (l, HVString $ str_int $ assert_WVInt $ R @^ unInner v), R @+ (rd, WVLabel l), I')
+            end
+          | IUnOp (IUPrim EUPStrLen, rd, v) =>
+            (H, R @+ (rd, WVInt $ String.size $ assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v), I')
+          | IUnOp (IUPrim opr, rd, v) =>
+            (H, R @+ (rd, interp_prim_expr_un_op opr $ R @^ unInner v), I')
+          | IBinOp (IBPrim EBPStrConcat, rd, rs, v) =>
             let
               val l = fresh_label H
               val s1 = assert_HVString $ must_find H $ assert_WVLabel $ R @!! rs
@@ -269,8 +302,8 @@ fun step (H, R, I) =
             end
           | IBinOp (IBPrim opr, rd, rs, v) =>
             (H, R @+ (rd, interp_prim_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
-          | IBinOp (IBNatAdd, rd, rs, v) =>
-            (H, R @+ (rd, nat_add (R @!! rs, R @^ unInner v)), I')
+          | IBinOp (IBNat opr, rd, rs, v) =>
+            (H, R @+ (rd, interp_nat_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
           | IMallocPair (rd, (v1, v2)) =>
             let
               (* val (v1, t1) = assert_VAscType $ unInner v1 *)

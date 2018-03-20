@@ -12,6 +12,7 @@ fun str_word_const c =
       WCTT => "()"
     | WCInt n => str_int n
     | WCNat n => sprintf "#$" [str_int n]
+    | WCBool b => str_bool b
                                 
 fun str_inst_un_op opr =
   case opr of
@@ -24,7 +25,7 @@ fun str_inst_un_op opr =
 fun str_inst_bin_op opr =
   case opr of
       IBPrim opr => str_prim_expr_bin_op opr
-    | IBNatAdd => "nat_add"
+    | IBNat opr => str_nat_expr_bin_op opr
     | IBNew => "new"
     | IBRead => "read"
     | IBWrite => "write"

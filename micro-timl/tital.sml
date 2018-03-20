@@ -12,6 +12,7 @@ datatype word_const =
          WCTT
          | WCNat of nat
          | WCInt of int
+         | WCBool of bool
 
 (* atomic word values *)
 datatype 'ty word =

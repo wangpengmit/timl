@@ -16,9 +16,8 @@ datatype 'bsort kind =
 (* type constants *)
 datatype ty_const =
          TCUnit
-         | TCInt
          | TCEmpty
-         | TCString
+         | TCTiML of BaseTypes.base_type
 
 (* binary type constructors *)
 datatype ty_bin_op =

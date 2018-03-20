@@ -11,13 +11,14 @@ fun fst a = __$fst a
 fun snd a = __$snd a
 fun not a = __$not a
 fun print a = __$print a
-fun str_int a = __$str_int a
+fun int2str a = __$int2str a
+val str_int = int2str
                   
 (* (* val print = builtin "print" : string -- 1.0 --> unit *) *)
 (* (* val str_int = builtin "str_int" : int -- 1.0 --> string *) *)
 
-(* (* fun println s = let val () = print s in print "\n" end *) *)
-(* fun println s = print s; print "\n" *)
+(* fun println s = let val () = print s in print "\n" end *)
+fun println s = print s; print "\n"
 
 (* (* val () = print "z=" *) *)
 (* (* val () = println (int2str z) *) *)

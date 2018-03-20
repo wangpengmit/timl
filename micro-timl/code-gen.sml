@@ -85,6 +85,7 @@ fun cg_c c =
       ECTT => WCTT
     | ECNat n => WCNat n
     | ECInt n => WCInt n
+    | ECBool n => WCBool n
     | ECString s => raise Impossible $ "cg_c() on ECString"
                                 
 fun cg_v ectx v =
@@ -160,9 +161,9 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
               | EBinOp (EBPrim opr, v1, v2) =>
                 [IMov' (r, cg_v ectx v1),
                  IBinOp' (IBPrim opr, r, r, cg_v ectx v2)]
-              | EBinOp (EBNatAdd, v1, v2) =>
+              | EBinOp (EBNat opr, v1, v2) =>
                 [IMov' (r, cg_v ectx v1),
-                 IBinOp' (IBNatAdd, r, r, cg_v ectx v2)]
+                 IBinOp' (IBNat opr, r, r, cg_v ectx v2)]
               | EBinOp (EBNew, v1, v2) =>
                 [IMov' (r, cg_v ectx v1),
                  IBinOp' (IBNew, r, r, cg_v ectx v2)]

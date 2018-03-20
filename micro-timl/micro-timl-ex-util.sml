@@ -21,11 +21,15 @@ fun TUni bind = TQuan (Forall, bind)
 fun MakeTUni (name, k, t) = TUni $ TBindAnno ((name, k), t)
 fun TUniKind (name, t) = MakeTUni (name, KType, t)
 fun TUniKind_Many (names, t) = foldr TUniKind t names
-                  
+
+val TCString = TCTiML BaseTypes.String
+val TCInt = TCTiML BaseTypes.Int
+val TCBool = TCTiML BaseTypes.Bool
 val TUnit = TConst TCUnit
 val TEmpty = TConst TCEmpty
 val TString = TConst TCString
 val TInt = TConst TCInt
+val TBool = TConst TCBool
 fun TSum (t1, t2) = TBinOp (TBSum, t1, t2)
 fun TProd (t1, t2) = TBinOp (TBProd, t1, t2)
 fun TAppIs (t, is) = foldl (swap TAppI) t is

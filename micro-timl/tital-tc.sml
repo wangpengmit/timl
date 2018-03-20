@@ -52,6 +52,7 @@ fun get_word_const_type c =
       WCTT => TUnit
     | WCNat n => TNat $ INat n
     | WCInt _ => TInt
+    | WCBool _ => TBool
 
 fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
   case w of
@@ -187,20 +188,6 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i %+ T1
             end
-          | IUnOp (IUPrint, rd, v) =>
-            let
-              val () = tc_v_against_ty ctx (unInner v, TString)
-              val i = tc_insts (add_r (rd, TUnit) ctx) I
-            in
-              i %+ T1
-            end
-          | IUnOp (IUInt2Str, rd, v) =>
-            let
-              val () = tc_v_against_ty ctx (unInner v, TInt)
-              val i = tc_insts (add_r (rd, TString) ctx) I
-            in
-              i %+ T1
-            end
           | IUnOp (IUUnfold, rd, v) =>
             let
               val t_v = tc_v ctx $ unInner v
@@ -209,6 +196,29 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val ((_, k), t1) = assert_TRec t
               val t = TAppITs (subst0_t_t t t1) args
               val i = tc_insts (add_r (rd, t) ctx) I
+            in
+              i %+ T1
+            end
+          | IUnOp (IUPrint, rd, v) =>
+            let
+              val () = tc_v_against_ty ctx (unInner v, TString)
+              val i = tc_insts (add_r (rd, TUnit) ctx) I
+            in
+              i %+ T1
+            end
+          | IUnOp (IUArrayLen, rd, v) =>
+            let
+              val t1 = tc_v ctx $ unInner v
+              val (_, i1) = assert_TArr t1
+              val t = TNat i1
+              val i = tc_insts (add_r (rd, t) ctx) I
+            in
+              i %+ T1
+            end
+          | IUnOp (IUPrim opr, rd, v) =>
+            let
+              val () = tc_v_against_ty ctx (unInner v, get_prim_expr_un_op_arg_ty opr)
+              val i = tc_insts (add_r (rd, get_prim_expr_un_op_res_ty opr) ctx) I
             in
               i %+ T1
             end
@@ -223,13 +233,13 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i %+ T1
             end
-          | IBinOp (IBNatAdd, rd, rs, v) =>
+          | IBinOp (IBNat opr, rd, rs, v) =>
             let
               val t1 = tc_v ctx $ VReg rs
               val i1 = assert_TNat t1
               val t2 = tc_v ctx $ unInner v
               val i2 = assert_TNat t2
-              val t = TNat $ i1 %+ i2
+              val t = TNat $ interp_nat_expr_bin_op opr (i1, Simp.simp_i i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
               val i = tc_insts (add_r (rd, t) ctx) I
             in
               i %+ T1

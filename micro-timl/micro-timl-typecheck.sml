@@ -177,12 +177,12 @@ fun is_eq_kind (k, k') =
       end
     | _ => raise MTCError "can't unify kinds" 
        
-fun get_ty_const_kind c =
-  case c of
-      TCUnit => KType
-    | TCInt => KType
-    | TCEmpty => KType
-    | TCString => KType
+fun get_ty_const_kind c = KType
+  (* case c of *)
+  (*     TCUnit => KType *)
+  (*   | TCEmpty => KType *)
+  (*   | TCInt => KType *)
+  (*   | TCString => KType *)
 
 fun get_ty_bin_op_arg1_kind opr =
   case opr of
@@ -558,24 +558,69 @@ fun get_expr_const_type c =
     | ECNat n => TNat $ INat n
     | ECInt _ => TInt
     | ECString _ => TString
+    | ECBool _ => TBool
 
+fun get_prim_expr_un_op_arg_ty opr =
+  case opr of
+      EUPIntNeg => TInt
+    | EUPBoolNeg => TBool
+    | EUPInt2Str => TInt
+    | EUPStrLen => TString
+               
+fun get_prim_expr_un_op_res_ty opr =
+  case opr of
+      EUPIntNeg => TInt
+    | EUPBoolNeg => TBool
+    | EUPInt2Str => TString
+    | EUPStrLen => TInt
+               
 fun get_prim_expr_bin_op_arg1_ty opr =
   case opr of
-      PEBIntAdd => TInt
-    | PEBIntMult => TInt
-    | PEBStrConcat => TString
+      EBPIntAdd => TInt
+    | EBPIntMult => TInt
+    | EBPIntMinus => TInt
+    | EBPIntDiv => TInt
+    | EBPIntLt => TInt
+    | EBPIntGt => TInt
+    | EBPIntLe => TInt
+    | EBPIntGe => TInt
+    | EBPIntEq => TInt
+    | EBPIntNEq => TInt
+    | EBPBoolAnd => TBool
+    | EBPBoolOr => TBool
+    | EBPStrConcat => TString
       
 fun get_prim_expr_bin_op_arg2_ty opr =
   case opr of
-      PEBIntAdd => TInt
-    | PEBIntMult => TInt
-    | PEBStrConcat => TString
+      EBPIntAdd => TInt
+    | EBPIntMult => TInt
+    | EBPIntMinus => TInt
+    | EBPIntDiv => TInt
+    | EBPIntLt => TInt
+    | EBPIntGt => TInt
+    | EBPIntLe => TInt
+    | EBPIntGe => TInt
+    | EBPIntEq => TInt
+    | EBPIntNEq => TInt
+    | EBPBoolAnd => TBool
+    | EBPBoolOr => TBool
+    | EBPStrConcat => TString
       
 fun get_prim_expr_bin_op_res_ty opr =
   case opr of
-      PEBIntAdd => TInt
-    | PEBIntMult => TInt
-    | PEBStrConcat => TString
+      EBPIntAdd => TInt
+    | EBPIntMult => TInt
+    | EBPIntMinus => TInt
+    | EBPIntDiv => TInt
+    | EBPIntLt => TBool
+    | EBPIntGt => TBool
+    | EBPIntLe => TBool
+    | EBPIntGe => TBool
+    | EBPIntEq => TBool
+    | EBPIntNEq => TBool
+    | EBPBoolAnd => TBool
+    | EBPBoolOr => TBool
+    | EBPStrConcat => TString
 
 val T0 = T0 dummy
 val T1 = T1 dummy
@@ -758,11 +803,11 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EUnOp (EUTiML EUPrint, e), TUnit, i)
         end
-      | EUnOp (EUTiML EUInt2Str, e) =>
+      | EUnOp (EUTiML (EUPrim opr), e) =>
         let
-          val (e, i) = tc_against_ty ctx (e, TInt)
+          val (e, i) = tc_against_ty ctx (e, get_prim_expr_un_op_arg_ty opr)
         in
-          (EUnOp (EUTiML EUInt2Str, e), TString, i)
+          (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i)
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
@@ -860,7 +905,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (ERead (e1, e2), t, j1 %+ j2)
         end
-      | EBinOp (EBNatAdd, e1, e2) =>
+      | EBinOp (EBNat opr, e1, e2) =>
         let
           val (e1, t1, j1) = tc ctx e1
           val t1 = whnf itctx t1
@@ -873,8 +918,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                        TNat i => i
                      | _ => raise MTCError "ENatAdd 2"
           val (e1, e2) = if !anno_ENatAdd then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val t = TNat $ interp_nat_expr_bin_op opr (i1, Simp.simp_i i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
         in
-          (ENatAdd (e1, e2), TNat (i1 %+ i2), j1 %+ j2)
+          (EBinOp (EBNat opr, e1, e2), t, j1 %+ j2)
         end
       | ETriOp (ETWrite, e1, e2, e3) =>
         let

@@ -900,43 +900,71 @@ fun get_expr_const_type (c, r) =
       BaseType (Int, dummy)
     | ECString s => 
       BaseType (String, dummy)
+    | ECBool _ => 
+      BaseType (Bool, dummy)
 
 fun get_prim_expr_un_op_arg_ty opr =
   case opr of
       EUPIntNeg => Int
+    | EUPBoolNeg => Bool
+    | EUPInt2Str => Int
+    | EUPStrLen => String
                
 fun get_prim_expr_un_op_res_ty opr =
   case opr of
       EUPIntNeg => Int
+    | EUPBoolNeg => Bool
+    | EUPInt2Str => String
+    | EUPStrLen => Int
                
 fun get_prim_expr_bin_op_arg1_ty opr =
   case opr of
       EBPIntAdd => Int
     | EBPIntMult => Int
+    | EBPIntMinus => Int
+    | EBPIntDiv => Int
+    | EBPIntLt => Int
+    | EBPIntGt => Int
+    | EBPIntLe => Int
+    | EBPIntGe => Int
+    | EBPIntEq => Int
+    | EBPIntNEq => Int
+    | EBPBoolAnd => Bool
+    | EBPBoolOr => Bool
     | EBPStrConcat => String
       
 fun get_prim_expr_bin_op_arg2_ty opr =
   case opr of
       EBPIntAdd => Int
     | EBPIntMult => Int
+    | EBPIntMinus => Int
+    | EBPIntDiv => Int
+    | EBPIntLt => Int
+    | EBPIntGt => Int
+    | EBPIntLe => Int
+    | EBPIntGe => Int
+    | EBPIntEq => Int
+    | EBPIntNEq => Int
+    | EBPBoolAnd => Bool
+    | EBPBoolOr => Bool
     | EBPStrConcat => String
       
 fun get_prim_expr_bin_op_res_ty opr =
   case opr of
       EBPIntAdd => Int
     | EBPIntMult => Int
+    | EBPIntMinus => Int
+    | EBPIntDiv => Int
+    | EBPIntLt => Bool
+    | EBPIntGt => Bool
+    | EBPIntLe => Bool
+    | EBPIntGe => Bool
+    | EBPIntEq => Bool
+    | EBPIntNEq => Bool
+    | EBPBoolAnd => Bool
+    | EBPBoolOr => Bool
     | EBPStrConcat => String
 
-fun interp_nat_expr_bin_op r opr (i1, i2) =
-  case opr of
-      EBNAdd => i1 %+ i2
-    | EBNBoundedMinus => BinOpI (BoundedMinusI, i1, i2)
-    | EBNMult => i1 %* i2
-    | EBNDiv =>
-      case simp_i i2 of
-          ConstI (ICNat n) => UnOpI (IUDiv n, i1)
-        | _ => raise Error (r, ["Can only divide by a nat whose index is a constant"])
-         
 fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, tctx : tcontext), e_all : U.expr) : expr * mtype * idx =
   let
     val get_mtype = get_mtype gctx
@@ -1014,7 +1042,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
         | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), T0 r)
         | U.EUnOp (opr, e, r) =>
           (case opr of
-	       EUFst => 
+	       EUProj ProjFst => 
 	       let 
                  (* val r = U.get_region_e e *)
                  val t1 = fresh_mt gctx (sctx, kctx) r
@@ -1023,7 +1051,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                in 
                  (EFst (e, r), t1, d)
 	       end
-	     | EUSnd => 
+	     | EUProj ProjSnd => 
 	       let 
                  (* val r = U.get_region_e e *)
                  val t1 = fresh_mt gctx (sctx, kctx) r
@@ -1043,6 +1071,15 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val (e, _, d) = check_mtype (ctx, e, BaseType (get_prim_expr_un_op_arg_ty opr, dummy)) 
                in
                  (EUnOp (EUPrim opr, e, r), BaseType (get_prim_expr_un_op_res_ty opr, dummy), d)
+               end
+	     | EUArrayLen =>
+               let
+                 val r = U.get_region_e e_all
+                 val t = fresh_mt gctx (sctx, kctx) r
+                 val i = fresh_i gctx sctx (Base Time) r
+                 val (e, _, d) = check_mtype (ctx, e, TyArray (t, i))
+               in
+                 (EUnOp (opr, e, r), TyNat (i, r), d)
                end
           )
 	| U.EBinOp (opr, e1, e2) =>
@@ -1094,7 +1131,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
                in
-                 (EBinOp (EBNat opr, e1, e2), TyNat (interp_nat_expr_bin_op opr (i1, i2), r), d1 %+ d2 %+ T1 r)
+                 (EBinOp (EBNat opr, e1, e2), TyNat (interp_nat_expr_bin_op opr (i1, simp_i i2) (fn () => raise Error (r, ["Can only divide by a nat whose index is a constant"])), r), d1 %+ d2 %+ T1 r)
                end
 	     | EBPrim opr =>
 	       let val (e1, _, d1) = check_mtype (ctx, e1, BaseType (get_prim_expr_bin_op_arg1_ty opr, dummy))
@@ -1102,7 +1139,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	         (EBinOp (EBPrim opr, e1, e2), BaseType (get_prim_expr_bin_op_res_ty opr, dummy), d1 %+ d2 %+ T1 dummy)
 	       end
           )
-	| U.ETriOp (Write, e1, e2, e3) =>
+	| U.ETriOp (ETWrite, e1, e2, e3) =>
           let
             val r = U.get_region_e e_all
             val t = fresh_mt gctx (sctx, kctx) r
@@ -1113,7 +1150,16 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
             val () = write_le (i2, i1, r)
             val (e3, _, d3) = check_mtype (ctx, e3, t)
           in
-            (ETriOp (Write, e1, e2, e3), Unit r, d1 %+ d2 %+ d3)
+            (ETriOp (ETWrite, e1, e2, e3), Unit r, d1 %+ d2 %+ d3)
+          end
+	| U.ETriOp (ETIte, e, e1, e2) =>
+          let
+            val r = U.get_region_e e_all
+            val (e, _, d) = check_mtype (ctx, e, BaseType (Bool, r))
+            val (e1, t, d1) = get_mtype (ctx, e1)
+            val (e2, _, d2) = check_mtype (ctx, e2, t)
+          in
+            (ETriOp (ETIte, e, e1, e2), t, d %+ smart_max d1 d2)
           end
 	| U.EEI (opr, e, i) =>
           (case opr of

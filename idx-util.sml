@@ -171,4 +171,14 @@ fun IAbs_Many (ctx, i, r) = foldr (fn ((name, b), i) => IAbs (b, Bind ((name, r)
                                  
 fun IMax (i1, i2) = BinOpI (MaxI, i1, i2)
                            
+fun interp_nat_expr_bin_op opr (i1, i2) err =
+  case opr of
+      EBNAdd => i1 %+ i2
+    | EBNBoundedMinus => BinOpI (BoundedMinusI, i1, i2)
+    | EBNMult => i1 %* i2
+    | EBNDiv =>
+      case i2 of
+          IConst (ICNat n, r) => UnOpI (IUDiv n, i1, r)
+        | _ => err ()
+         
 end

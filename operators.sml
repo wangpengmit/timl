@@ -207,6 +207,11 @@ datatype expr_tri_op =
          ETWrite
          | ETIte
 
+fun str_expr_tri_op opr =
+  case opr of
+      ETWrite => "write"
+    | ETIte => "ite"
+                  
 datatype expr_EI =
          EEIAppI
          | EEIAscTime

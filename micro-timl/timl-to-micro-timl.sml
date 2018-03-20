@@ -18,11 +18,6 @@ infixr 0 !!
 
 exception T2MTError of string
 
-fun on_base_type t =
-  case t of
-      Int => TCInt
-    | String => TCString
-
 open MicroTiMLExUtil
        
 fun on_k ((n, bs) : S.kind) : bsort kind = KArrowTypes n $ KArrows bs KType
@@ -68,7 +63,7 @@ fun on_mt (t : S.mtype) =
     | S.MtAbs (k, Bind.Bind (name, t), _) => TAbsT $ TBindAnno ((name, on_k k), on_mt t)
     | S.MtAppI (t, i) => TAppI (on_mt t, i)
     | S.MtAbsI (b, Bind.Bind (name, t), _) => TAbsI $ IBindAnno ((name, b), on_mt t)
-    | S.BaseType (t, r) => TConst (on_base_type t)
+    | S.BaseType (t, r) => TConst (TCTiML t)
     | S.UVar (x, _) =>
       (* exfalso x *)
       raise Impossible "to-micro-timl/on_mt/UVar"
