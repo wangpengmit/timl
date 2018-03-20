@@ -186,6 +186,7 @@ fun default_expr_visitor_vtable
           | EBNew => #visit_ENew vtable this env data
           | EBRead => #visit_ERead vtable this env data
           | EBNatAdd => #visit_ENatAdd vtable this env data
+          | _ => T.EBinOp (opr, #visit_expr vtable this env e1, #visit_expr vtable this env e2)
       end
     fun visit_EApp this env data =
       let

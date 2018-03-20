@@ -1,0 +1,4 @@
+group is
+  $/basis.cm      (* Load standard functions and modules. *)
+  $/regexp-lib.cm (* Load the regexp library.             *)
+  main.sml        (* Load our own source file.            *)

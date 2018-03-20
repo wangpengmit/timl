@@ -340,8 +340,7 @@ fun strn_e e =
            end
          | EBNew => sprintf "(new $ $)" [strn_e e1, strn_e e2]
          | EBRead => sprintf "(read $ $)" [strn_e e1, strn_e e2]
-         | EBAdd => sprintf "($ $ $)" [strn_e e1, str_bin_op opr, strn_e e2]
-         | EBNatAdd => sprintf "($ $ $)" [strn_e e1, str_bin_op opr, strn_e e2]
+         | _ => sprintf "($ $ $)" [strn_e e1, str_bin_op opr, strn_e e2]
       )
     | ETriOp (Write, e1, e2, e3) => sprintf "(write $ $ $)" [strn_e e1, strn_e e2, strn_e e3]
     | EEI (opr, e, i) =>

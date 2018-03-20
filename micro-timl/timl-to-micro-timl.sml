@@ -30,6 +30,7 @@ fun on_bin_op opr =
       Op.EBApp => EBApp
     | Op.EBPair => EBPair
     | Op.EBAdd => EBPrim PEBIntAdd
+    | Op.EBStrConcat => EBPrim PEBStrConcat
     | Op.EBNew => EBNew
     | Op.EBRead => EBRead
     | Op.EBNatAdd => EBNatAdd

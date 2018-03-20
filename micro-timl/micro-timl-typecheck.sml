@@ -563,16 +563,19 @@ fun get_prim_expr_bin_op_arg1_ty opr =
   case opr of
       PEBIntAdd => TInt
     | PEBIntMult => TInt
+    | PEBStrConcat => TString
       
 fun get_prim_expr_bin_op_arg2_ty opr =
   case opr of
       PEBIntAdd => TInt
     | PEBIntMult => TInt
+    | PEBStrConcat => TString
       
 fun get_prim_expr_bin_op_res_ty opr =
   case opr of
       PEBIntAdd => TInt
     | PEBIntMult => TInt
+    | PEBStrConcat => TString
 
 val T0 = T0 dummy
 val T1 = T1 dummy

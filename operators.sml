@@ -75,6 +75,7 @@ datatype bin_op =
          | EBNew
          | EBRead
          | EBNatAdd
+         | EBStrConcat
 
 datatype tri_op =
          Write
@@ -159,6 +160,7 @@ fun str_bin_op opr =
     | EBNew => "new"
     | EBRead => "read"
     | EBNatAdd => "#+"
+    | EBStrConcat => "^"
 
 fun str_expr_EI opr =
   case opr of
@@ -197,5 +199,6 @@ fun str_expr_bin_op opr =
     | EBRead => "read"
     | EBAdd => "add"
     | EBNatAdd => "nat_add"
+    | EBStrConcat => "str_concat"
 
 end

@@ -81,6 +81,8 @@ open Ast
     | DCOLON
     | SHARP
     | STRING of string
+    | STR_CONCAT
+    | SEMI_COLON
 
 %nonterm start of prog
        | exp of exp
@@ -159,6 +161,8 @@ open Ast
 %left RTRI COLON COLON_GT
 %nonassoc LSQ LCUR
 %left COMMA
+%right SEMI_COLON
+%right DOLLAR
 %right DCOLON
 %nonassoc IFF
 %right DDASH LARROW ARROW ZERO_ARROW
@@ -248,6 +252,9 @@ ty_atom : long_id (VarT long_id)
 
 exp : aexp (aexp)
      | exp PLUS exp (BinOp (EBAdd, exp1, exp2, (exp1left, exp2right)))
+     | exp STR_CONCAT exp (BinOp (EBStrConcat, exp1, exp2, (exp1left, exp2right)))
+     | exp DOLLAR exp (App (exp1, exp2, (exp1left, exp2right)))
+     | exp SEMI_COLON exp (ESemiColon (exp1, exp2, (exp1left, exp2right)))
      | exp NAT_PLUS exp (BinOp (EBNatAdd, exp1, exp2, (exp1left, exp2right)))
      | exp DCOLON exp (ECons (exp1, exp2, (exp1left, exp2right)))
      | exp COLON ty (Asc (exp, ty, (expleft, tyright)))

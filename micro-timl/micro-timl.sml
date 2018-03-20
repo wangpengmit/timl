@@ -72,6 +72,7 @@ datatype 'ty expr_un_op =
 datatype prim_expr_bin_op =
          PEBIntAdd
          | PEBIntMult
+         | PEBStrConcat
 
 (* binary term operators *)
 datatype expr_bin_op =

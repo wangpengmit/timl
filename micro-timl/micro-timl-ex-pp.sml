@@ -37,6 +37,7 @@ fun str_prim_expr_bin_op opr =
   case opr of
       PEBIntAdd => "add"
     | PEBIntMult => "mult"
+    | PEBStrConcat => "str_concat"
 
 fun str_expr_bin_op opr =
   case opr of

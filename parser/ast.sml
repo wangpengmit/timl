@@ -98,7 +98,7 @@ datatype exp =
 	 Var of long_id * bool
          | Tuple of exp list * region
          | Abs of bind list * return * exp * region
-         | App of exp * exp * region
+         (* | App of exp * exp * region *)
          | AppI of exp * idx * region
          | Case of exp * return * (ptrn * exp) list * region
          | Asc of exp * ty * region
@@ -117,6 +117,7 @@ datatype exp =
          | TypeDef of id * ty
        | Open of id
 
+fun App (e1, e2, r) = BinOp (EBApp, e1, e2, r)
 fun short_id id = ((NONE, id), false)
 fun PShortVar (x, r) = ConstrP (short_id (x, r), [], NONE, r)
 fun EIte (e, e1, e2, r) = Case (e, (NONE, NONE), [(PShortVar ("true", r), e1), (PShortVar ("false", r), e2)], r)
@@ -127,6 +128,7 @@ fun ENil r = EShortVar ("Nil", r)
 fun EList (es, r) = foldr (fn (e, acc) => ECons (e, acc, r)) (ENil r) es
 fun PNil r = PShortVar ("Nil", r)
 fun PList (pns, r) = foldr (fn (pn, acc) => PCons (pn, acc, r)) (PNil r) pns
+fun ESemiColon (e1, e2, r) = Let ((NONE, NONE), [Val ([], PShortVar ("_", r), e1, r)], e2, r)
                                
 type name = id
               

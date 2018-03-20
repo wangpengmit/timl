@@ -200,6 +200,8 @@ fun interp_prim_expr_bin_op opr (a, b) =
   case opr of
       PEBIntAdd => WVInt $ assert_WVInt a + assert_WVInt b
     | PEBIntMult => WVInt $ assert_WVInt a * assert_WVInt b
+    | PEBStrConcat => raise Impossible "interp_prim_expr_bin_op() on PEBStrConcat"
+                                                          
 fun nat_add (a, b) = WVNat $ assert_WVNat a + assert_WVNat b
 
 fun upd n v ls = update n (const_fun v) ls
@@ -256,6 +258,14 @@ fun step (H, R, I) =
               val (t, w) = assert_WVFold $ R @^ unInner v
             in
               (H, R @+ (rd, w), I')
+            end
+          | IBinOp (IBPrim PEBStrConcat, rd, rs, v) =>
+            let
+              val l = fresh_label H
+              val s1 = assert_HVString $ must_find H $ assert_WVLabel $ R @!! rs
+              val s2 = assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v
+            in
+              (H @+ (l, HVString $ s1 ^ s2), R @+ (rd, WVLabel l), I')
             end
           | IBinOp (IBPrim opr, rd, rs, v) =>
             (H, R @+ (rd, interp_prim_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
@@ -335,7 +345,7 @@ fun step (H, R, I) =
 
 fun eval (P as (H, R, I)) =
   case I of
-      ISHalt t => trace "" $ R @!! 1
-    | _ => eval $ trace_noln "." $ step P
+      ISHalt t => (* trace "" $  *)R @!! 1
+    | _ => eval $ (* trace_noln "." $  *)step P
                 
 end

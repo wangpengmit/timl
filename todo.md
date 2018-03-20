@@ -112,7 +112,7 @@
 - [x] eq_mt()/TDatatype needs to be implemented to allow instantiating dynamic-table.timl.
 - [ ] Add negative examples.
 - [ ] Argument module names of functors are put into global context, which may result in name conflicts. Should prefix argument module names with the functor names.
-- [ ] Complete parser support for string literals.
+- [ ] Complete parser support for string literals and unescape().
 
 # To-do for MicroTiML
 
@@ -127,6 +127,8 @@
 - [x] check_CPSed_expr() should also check types.
 - [x] anf_decls() shouldn't alway use "x" as the new variable name, because it will replace other meaningful names after post_process(); it should take suggestions from surrounding ELet.
 - [ ] Add a simplification for ECase where if the two branches are identical and don't mention the local variable, combine them and remove ECase.
+- [ ] Remove datatype "micro_timl" and rename "micro_timl_ex" to "micro_timl".
+- [ ] Rename "micro-timl/" to "compiler/"
 
 # To-do for Examples:
 

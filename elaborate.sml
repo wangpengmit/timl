@@ -306,7 +306,40 @@ local
 	  in
 	    foldr f e binds
 	  end
-	| S.App (e1, e2, r) =>
+	| S.AppI (e, i, _) =>
+	  EAppI (elab e, elab_i i)
+	| S.Case (e, return, rules, r) =>
+	  let
+            (* val rules = map (mapSnd (copy_anno return)) rules *)
+	  in
+	    ECase (elab e, elab_return return, map (fn (pn, e) => Unbound.Bind (elab_pn pn, elab e)) rules, r)
+	  end
+	| S.Asc (e, t, _) =>
+	  EAsc (elab e, elab_mt t)
+	| S.AscTime (e, i, _) =>
+	  EAscTime (elab e, elab_i i)
+	| S.Let (return, decs, e, r) =>
+          ELet (elab_return return, Unbound.Bind (Teles $ map elab_decl decs, elab e), r)
+	| S.Const (c, r) =>
+          let
+            fun unescape s =
+              let
+                val ls = String.explode s
+                fun loop (ls, acc) =
+                  case ls of
+                      #"\\" :: #"n" :: ls => loop (ls, #"\n" :: acc)
+                    | c :: ls => loop (ls, c :: acc)
+                    | [] => acc
+              in
+                String.implode $ rev $ loop (ls, [])
+              end
+          in
+            case c of
+                S.ECInt n => EConstInt (n, r)
+	      | S.ECNat n => EConstNat (n, r)
+	      | S.ECString s => EConstString (unescape s, r)
+          end
+	| S.BinOp (EBApp, e1, e2, r) =>
 	  let 
 	    fun default () = EApp (elab e1, elab e2)
 	  in
@@ -346,26 +379,6 @@ local
                 )
 	      | _ => default ()
 	  end
-	| S.AppI (e, i, _) =>
-	  EAppI (elab e, elab_i i)
-	| S.Case (e, return, rules, r) =>
-	  let
-            (* val rules = map (mapSnd (copy_anno return)) rules *)
-	  in
-	    ECase (elab e, elab_return return, map (fn (pn, e) => Unbound.Bind (elab_pn pn, elab e)) rules, r)
-	  end
-	| S.Asc (e, t, _) =>
-	  EAsc (elab e, elab_mt t)
-	| S.AscTime (e, i, _) =>
-	  EAscTime (elab e, elab_i i)
-	| S.Let (return, decs, e, r) =>
-          ELet (elab_return return, Unbound.Bind (Teles $ map elab_decl decs, elab e), r)
-	| S.Const (c, r) =>
-          (case c of
-               S.ECInt n => EConstInt (n, r)
-	     | S.ECNat n => EConstNat (n, r)
-	     | S.ECString s => EConstString (s, r)
-          )
         | S.BinOp (opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
 
   and elab_decl decl =

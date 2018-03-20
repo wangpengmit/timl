@@ -841,7 +841,13 @@ fun is_value (e : U.expr) : bool =
   in
     case e of
         EVar _ => true (* todo: is this right? *)
-      | EConst (c, _) => true
+      | EConst (c, _) =>
+        (case c of
+             ECTT => true
+           | ECNat _ => true
+           | ECInt _ => true
+           | ECString _ => true
+        )
       | EUnOp (opr, e, _) =>
         (case opr of
              EUFst => false
@@ -857,6 +863,7 @@ fun is_value (e : U.expr) : bool =
            | EBRead => false
            | EBAdd => false
            | EBNatAdd => false
+           | EBStrConcat => false
         )
       | ETriOp _ => false
       | EEI (opr, e, i) =>
@@ -1031,7 +1038,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i, r))
                  val (e2, t, d2) = get_mtype (ctx, e2)
                in
-                 (EBinOp (EBNew, e1, e2), TyArray (t, i), d1 %+ d2)
+                 (EBinOp (opr, e1, e2), TyArray (t, i), d1 %+ d2)
                end
 	     | EBRead =>
                let
@@ -1043,7 +1050,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
                  val () = write_le (i2, i1, r)
                in
-                 (EBinOp (EBRead, e1, e2), t, d1 %+ d2)
+                 (EBinOp (opr, e1, e2), t, d1 %+ d2)
                end
 	     | EBNatAdd =>
                let
@@ -1053,12 +1060,17 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
                in
-                 (EBinOp (EBNatAdd, e1, e2), TyNat (i1 %+ i2, r), d1 %+ d2 %+ T1 r)
+                 (EBinOp (opr, e1, e2), TyNat (i1 %+ i2, r), d1 %+ d2 %+ T1 r)
                end
 	     | EBAdd =>
 	       let val (e1, _, d1) = check_mtype (ctx, e1, BaseType (Int, dummy))
 	           val (e2, _, d2) = check_mtype (ctx, e2, BaseType (Int, dummy)) in
-	         (EBinOp (EBAdd, e1, e2), BaseType (Int, dummy), d1 %+ d2 %+ T1 dummy)
+	         (EBinOp (opr, e1, e2), BaseType (Int, dummy), d1 %+ d2 %+ T1 dummy)
+	       end
+	     | EBStrConcat =>
+	       let val (e1, _, d1) = check_mtype (ctx, e1, BaseType (String, dummy))
+	           val (e2, _, d2) = check_mtype (ctx, e2, BaseType (String, dummy)) in
+	         (EBinOp (opr, e1, e2), BaseType (String, dummy), d1 %+ d2 %+ T1 dummy)
 	       end
           )
 	| U.ETriOp (Write, e1, e2, e3) =>
