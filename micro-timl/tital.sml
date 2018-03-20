@@ -36,12 +36,13 @@ datatype inst_un_op =
          IUMov
          | IUBr
          | IUUnfold
+         | IUPrim of prim_expr_un_op
          | IUPrint
-         | IUInt2Str
+         | IUArrayLen
              
 datatype inst_bin_op =
          IBPrim of prim_expr_bin_op
-         | IBNatAdd
+         | IBNat of nat_expr_bin_op
          | IBNew
          | IBRead
          | IBWrite
@@ -95,6 +96,8 @@ fun m @! k = Rctx.find (m, k)
 fun HCode' (binds, body) =
   Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, body)
 
+val IBNatAdd = IBNat EBNAdd
+                     
 fun IUnOp' (opr, rd, v) = IUnOp (opr, rd, Inner v)
 fun IBinOp' (opr, rd, rs, v) = IBinOp (opr, rd, rs, Inner v)
 fun IMov' (r, v) = IUnOp (IUMov, r, Inner v)

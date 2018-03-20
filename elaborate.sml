@@ -284,8 +284,12 @@ local
           in
             case m of
                 NONE =>
-                if x = "never" andalso eia = false then
+                if x = "__$never" andalso eia = false then
                   ENever (elab_mt (S.VarT (NONE, ("_", r))), r)
+                else if x = "__$true" andalso eia = false then
+                  EConst (ECBool true, r)
+                else if x = "__$false" andalso eia = false then
+                  EConst (ECBool false, r)
                 else
                   def ()
               | SOME _ => def ()
@@ -381,6 +385,8 @@ local
 	      | _ => default ()
 	  end
         | S.BinOp (opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
+        | S.EUnOp (opr, e, r) => EUnOp (opr, elab e, r)
+        | S.EIte (e1, e2, e3, _) => ETriOp (ETIte, elab e1, elab e2, elab e3)
 
   and elab_decl decl =
       case decl of

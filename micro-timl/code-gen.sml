@@ -112,6 +112,13 @@ fun cg_v ectx v =
         raise Impossible $ "cg_v() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], ectxn) v)
       end
 
+fun cg_expr_un_op opr =
+  case opr of
+      EUPrim opr => IUPrim opr
+    | EUPrint => IUPrint
+    | EUArrayLen => IUArrayLen
+    | EUProj _ => raise Impossible "cg_expr_un_op() on EUProj"
+      
 fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
   let
     (* val () = print $ "cg_e() started:\n" *)
@@ -162,7 +169,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
               | EBinOp (EBRead, v1, v2) =>
                 [IMov' (r, cg_v ectx v1),
                  IBinOp' (IBRead, r, r, cg_v ectx v2)]
-              | EWrite (v1, v2, v3) =>
+              | ETriOp (ETWrite, v1, v2, v3) =>
                 let
                   val r' = fresh_reg ()
                 in
@@ -176,10 +183,8 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                 [IString (r, s)]
               | EUnOp (EUUnfold, v) =>
                 [IUnfold' (r, cg_v ectx v)]
-              | EUnOp (EUPrint, v) =>
-                [IUnOp' (IUPrint, r, cg_v ectx v)]
-              | EUnOp (EUInt2Str, v) =>
-                [IUnOp' (IUInt2Str, r, cg_v ectx v)]
+              | EUnOp (EUTiML opr, v) =>
+                [IUnOp' (cg_expr_un_op opr, r, cg_v ectx v)]
               | EMallocPair (v1, v2) =>
                 [IMallocPair' (r, (cg_v ectx v1, cg_v ectx v2))]
               | EPairAssign (v1, proj, v2) =>

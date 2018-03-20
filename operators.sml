@@ -61,6 +61,7 @@ datatype expr_const =
          | ECNat of nat
          | ECInt of int
          | ECString of string
+         | ECBool of bool
 
 (* projector for product type *)
 datatype projector =
@@ -79,6 +80,33 @@ datatype expr_un_op =
          | EUPrim of prim_expr_un_op
          | EUPrint
          | EUArrayLen
+
+fun str_expr_const c =
+  case c of
+      ECTT => "()"
+    | ECInt n => str_int n
+    | ECNat n => sprintf "#$" [str_int n]
+    | ECString s => surround "\"" "\"" s
+    | ECBool b => str_bool b
+                                
+fun str_proj opr =
+  case opr of
+      ProjFst => "fst"
+    | ProjSnd => "snd"
+
+fun str_prim_expr_un_op opr =
+  case opr of
+      EUPIntNeg => "int_neg"
+    | EUPBoolNeg => "not"
+    | EUPInt2Str => "int2str"
+    | EUPStrLen => "str_len"
+                   
+fun str_expr_un_op opr = 
+  case opr of
+      EUProj opr => str_proj opr
+    | EUPrim opr => str_prim_expr_un_op opr
+    | EUPrint => "print"
+    | EUArrayLen => "array_len"
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =
@@ -110,6 +138,70 @@ datatype expr_bin_op =
          | EBRead
          | EBPrim of prim_expr_bin_op
          | EBNat of nat_expr_bin_op
+
+fun str_prim_expr_bin_op opr =
+  case opr of
+      EBPIntAdd => "add"
+    | EBPIntMult => "mult"
+    | EBPIntMinus => "minus"
+    | EBPIntDiv => "div"
+    | EBPIntLt => "lt"
+    | EBPIntGt => "gt"
+    | EBPIntLe => "le"
+    | EBPIntGe => "ge"
+    | EBPIntEq => "eq"
+    | EBPIntNEq => "neq"
+    | EBPBoolAnd => "and"
+    | EBPBoolOr => "or"
+    | EBPStrConcat => "str_concat"
+
+fun str_nat_expr_bin_op opr =
+  case opr of
+      EBNAdd => "nat_add"
+    | EBNBoundedMinus => "nat_bounded_minus"
+    | EBNMult => "mult"
+    | EBNDiv => "div"
+                    
+fun str_expr_bin_op opr =
+  case opr of
+      EBApp => "app"
+    | EBPair => "pair"
+    | EBNew => "new"
+    | EBRead => "read"
+    | EBPrim opr => str_prim_expr_bin_op opr
+    | EBNat opr => str_nat_expr_bin_op opr
+
+fun pretty_str_prim_expr_bin_op opr =
+  case opr of
+      EBPIntAdd => "+"
+    | EBPIntMult => "*"
+    | EBPIntMinus => "-"
+    | EBPIntDiv => "/"
+    | EBPIntLt => "<"
+    | EBPIntGt => ">"
+    | EBPIntLe => "<="
+    | EBPIntGe => ">="
+    | EBPIntEq => "="
+    | EBPIntNEq => "<>"
+    | EBPBoolAnd => "$$"
+    | EBPBoolOr => "||"
+    | EBPStrConcat => "^"
+
+fun pretty_str_nat_expr_bin_op opr =
+  case opr of
+      EBNAdd => "#+"
+    | EBNBoundedMinus => "#-"
+    | EBNMult => "#*"
+    | EBNDiv => "#/"
+                    
+fun pretty_str_expr_bin_op opr =
+  case opr of
+      EBApp => "$"
+    | EBPair => "pair"
+    | EBNew => "new"
+    | EBRead => "read"
+    | EBPrim opr => pretty_str_prim_expr_bin_op opr
+    | EBNat opr => pretty_str_nat_expr_bin_op opr
 
 datatype expr_tri_op =
          ETWrite
@@ -187,16 +279,6 @@ fun str_quan q =
         Forall => "forall"
       | Exists _ => "exists"
 
-fun str_bin_op opr =
-  case opr of
-      EBApp => "$"
-    | EBPair => "pair"
-    | EBAdd => "+"
-    | EBNew => "new"
-    | EBRead => "read"
-    | EBNatAdd => "#+"
-    | EBStrConcat => "^"
-
 fun str_expr_EI opr =
   case opr of
       EEIAppI => "EEIAppI"
@@ -212,37 +294,4 @@ fun str_expr_T opr =
       ETNever => "ETNever"
     | ETBuiltin name => sprintf "ETBuiltin($)" [name]
                   
-fun str_expr_const c =
-  case c of
-      ECTT => "()"
-    | ECInt n => str_int n
-    | ECNat n => sprintf "#$" [str_int n]
-    | ECString s => surround "\"" "\"" s
-                                
-fun str_proj opr =
-  case opr of
-      ProjFst => "fst"
-    | ProjSnd => "snd"
-
-fun str_expr_un_op opr = 
-  case opr of
-      EUFst => "fst"
-    | EUSnd => "snd"
-    | EUPrint => "print"
-    | EUInt2Str => "int2str"
-
-fun str_prim_expr_bin_op opr =
-  case opr of
-      PEBIntAdd => "add"
-    | PEBIntMult => "mult"
-
-fun str_expr_bin_op opr =
-  case opr of
-      EBApp => "app"
-    | EBPair => "pair"
-    | EBNew => "new"
-    | EBRead => "read"
-    | EBPrim opr => str_prim_expr_bin_op opr
-    | EBNatAdd => "nat_add"
-
 end

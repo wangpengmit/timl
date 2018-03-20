@@ -841,19 +841,13 @@ fun is_value (e : U.expr) : bool =
   in
     case e of
         EVar _ => true (* todo: is this right? *)
-      | EConst (c, _) =>
-        (case c of
-             ECTT => true
-           | ECNat _ => true
-           | ECInt _ => true
-           | ECString _ => true
-        )
+      | EConst _ => true
       | EUnOp (opr, e, _) =>
         (case opr of
-             EUFst => false
-           | EUSnd => false
+             EUProj _ => false
            | EUPrint => false
-           | EUInt2Str => false
+           | EUArrayLen => false
+           | EUPrim _ => false
         )
       | EBinOp (opr, e1, e2) =>
         (case opr of
@@ -861,11 +855,14 @@ fun is_value (e : U.expr) : bool =
            | EBPair => is_value e1 andalso is_value e2
            | EBNew => false
            | EBRead => false
-           | EBAdd => false
-           | EBNatAdd => false
-           | EBStrConcat => false
+           | EBPrim _ => false
+           | EBNat _ => false
         )
-      | ETriOp _ => false
+      | ETriOp (opr, _, _, _) =>
+        (case opr of
+             ETWrite => false
+           | ETIte => false
+        )                        
       | EEI (opr, e, i) =>
         (case opr of
              EEIAppI => false
@@ -889,7 +886,57 @@ fun is_value (e : U.expr) : bool =
       | EAppConstr (_, _, _, e, _) => is_value e
       | ECase _ => false
   end
-    
+
+fun get_expr_const_type (c, r) =
+  case c of
+      ECNat n => 
+      if n >= 0 then
+	TyNat (ConstIN (n, r), r)
+      else
+	raise Error (r, ["Natural number constant must be non-negative"])
+    | ECTT => 
+      Unit dummy
+    | ECInt n => 
+      BaseType (Int, dummy)
+    | ECString s => 
+      BaseType (String, dummy)
+
+fun get_prim_expr_un_op_arg_ty opr =
+  case opr of
+      EUPIntNeg => Int
+               
+fun get_prim_expr_un_op_res_ty opr =
+  case opr of
+      EUPIntNeg => Int
+               
+fun get_prim_expr_bin_op_arg1_ty opr =
+  case opr of
+      EBPIntAdd => Int
+    | EBPIntMult => Int
+    | EBPStrConcat => String
+      
+fun get_prim_expr_bin_op_arg2_ty opr =
+  case opr of
+      EBPIntAdd => Int
+    | EBPIntMult => Int
+    | EBPStrConcat => String
+      
+fun get_prim_expr_bin_op_res_ty opr =
+  case opr of
+      EBPIntAdd => Int
+    | EBPIntMult => Int
+    | EBPStrConcat => String
+
+fun interp_nat_expr_bin_op r opr (i1, i2) =
+  case opr of
+      EBNAdd => i1 %+ i2
+    | EBNBoundedMinus => BinOpI (BoundedMinusI, i1, i2)
+    | EBNMult => i1 %* i2
+    | EBNDiv =>
+      case simp_i i2 of
+          ConstI (ICNat n) => UnOpI (IUDiv n, i1)
+        | _ => raise Error (r, ["Can only divide by a nat whose index is a constant"])
+         
 fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, tctx : tcontext), e_all : U.expr) : expr * mtype * idx =
   let
     val get_mtype = get_mtype gctx
@@ -964,20 +1011,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
           in
             (e, t, T0 dummy)
           end
-        | U.EConst (c, r) =>
-          (case c of
-	       ECTT => 
-               (ETT r, Unit dummy, T0 dummy)
-	     | ECInt n => 
-	       (EConstInt (n, r), BaseType (Int, dummy), T0 dummy)
-	     | ECNat n => 
-	       if n >= 0 then
-	         (EConstNat (n, r), TyNat (ConstIN (n, r), r), T0 r)
-	       else
-	         raise Error (r, ["Natural number constant must be non-negative"])
-	     | ECString s => 
-	       (EConstString (s, r), BaseType (String, dummy), T0 dummy)
-          )
+        | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), T0 r)
         | U.EUnOp (opr, e, r) =>
           (case opr of
 	       EUFst => 
@@ -1004,11 +1038,11 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                in
                  (EUnOp (EUPrint, e, r), Unit dummy, d)
                end
-             | EUInt2Str =>
+             | EUPrim opr =>
                let
-                 val (e, _, d) = check_mtype (ctx, e, BaseType (Int, dummy)) 
+                 val (e, _, d) = check_mtype (ctx, e, BaseType (get_prim_expr_un_op_arg_ty opr, dummy)) 
                in
-                 (EUnOp (EUInt2Str, e, r), BaseType (String, dummy), d)
+                 (EUnOp (EUPrim opr, e, r), BaseType (get_prim_expr_un_op_res_ty opr, dummy), d)
                end
           )
 	| U.EBinOp (opr, e1, e2) =>
@@ -1052,7 +1086,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                in
                  (EBinOp (opr, e1, e2), t, d1 %+ d2)
                end
-	     | EBNatAdd =>
+	     | EBNat opr =>
                let
                  val r = U.get_region_e e_all
                  val i1 = fresh_i gctx sctx (Base Time) r
@@ -1060,17 +1094,12 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
                in
-                 (EBinOp (opr, e1, e2), TyNat (i1 %+ i2, r), d1 %+ d2 %+ T1 r)
+                 (EBinOp (EBNat opr, e1, e2), TyNat (interp_nat_expr_bin_op opr (i1, i2), r), d1 %+ d2 %+ T1 r)
                end
-	     | EBAdd =>
-	       let val (e1, _, d1) = check_mtype (ctx, e1, BaseType (Int, dummy))
-	           val (e2, _, d2) = check_mtype (ctx, e2, BaseType (Int, dummy)) in
-	         (EBinOp (opr, e1, e2), BaseType (Int, dummy), d1 %+ d2 %+ T1 dummy)
-	       end
-	     | EBStrConcat =>
-	       let val (e1, _, d1) = check_mtype (ctx, e1, BaseType (String, dummy))
-	           val (e2, _, d2) = check_mtype (ctx, e2, BaseType (String, dummy)) in
-	         (EBinOp (opr, e1, e2), BaseType (String, dummy), d1 %+ d2 %+ T1 dummy)
+	     | EBPrim opr =>
+	       let val (e1, _, d1) = check_mtype (ctx, e1, BaseType (get_prim_expr_bin_op_arg1_ty opr, dummy))
+	           val (e2, _, d2) = check_mtype (ctx, e2, BaseType (get_prim_expr_bin_op_arg2_ty opr, dummy)) in
+	         (EBinOp (EBPrim opr, e1, e2), BaseType (get_prim_expr_bin_op_res_ty opr, dummy), d1 %+ d2 %+ T1 dummy)
 	       end
           )
 	| U.ETriOp (Write, e1, e2, e3) =>
