@@ -6,61 +6,61 @@ open Basic
 open Nat
 open List
 
-fun array (a, b) = __$array (a, b)
-fun length a = __$length (a, b)
+fun array {n : Nat} (a : nat {n}, b) = __&array (a, b)
+fun length {len : Nat} (a : array _ {len}) = __&array_length a
        
 (* fun array ['a] {len : Nat} (n : nat {len}, x : 'a) return array 'a {len} using $len = *)
-(*     __$builtin *)
+(*     __&builtin *)
 
 (* fun length ['a] {len : Nat} (a : array 'a {len}) return nat {len} using 0.0 = *)
-(*     __$builtin *)
+(*     __&builtin *)
 
 fun sub ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}) return 'a using 0.0 =
-    __$sub (a, n)
+    __&sub (a, n)
 
 fun update ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}, x : 'a) return unit using 0.0 =
-    __$update (a, n, x)
+    __&update (a, n, x)
 
 fun fromList ['a] {len : Nat} (l : list 'a {len}) return array 'a {len} using $len =
-    __$builtin
+    __&builtin "Array.fromList"
 
 fun tabulate ['a] {len : Nat} {m : Time} (n : nat {len}, f : nat_less_than {len} -- m --> 'a) return array 'a {len} using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.tabulate"
 
 fun appi ['a] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a -- m --> unit) (a : array 'a {len}) return unit using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.appi"
 
 fun app ['a] {m : Time} {len : Nat} (f : 'a -- m --> unit) (a : array 'a {len}) return unit using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.app"
 
 fun modifyi ['a] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a -- m --> 'a) (a : array 'a {len}) return unit using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.modifyi"
 
 fun modify ['a] {m : Time} {len : Nat} (f : 'a -- m --> 'a) (a : array 'a {len}) return unit using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.modify"
 
 fun foldli ['a 'b] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a * 'b -- m --> 'b) (x : 'b) (a : array 'a {len}) return 'b using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.foldli"
 
 fun foldri ['a 'b] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a * 'b -- m --> 'b) (x : 'b) (a : array 'a {len}) return 'b using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.foldri"
 
 fun foldl ['a 'b] {m : Time} (f : 'a * 'b -- m --> 'b) (x : 'b) {len : Nat} (a : array 'a {len}) return 'b using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.foldl"
 
 fun foldr ['a 'b] {m : Time} (f : 'a * 'b -- m --> 'b) (x : 'b) {len : Nat} (a : array 'a {len}) return 'b using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.foldr"
 
 fun find ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return option 'a using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.find"
 
 fun exi_sts ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return bool using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.exi_sts"
 
 fun all ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return bool using (m + $1) * $len =
-    __$builtin
+    __&builtin "Array.all"
 
 fun toList ['a] {len : Nat} (a : array 'a {len}) return list 'a {len} using $len =
-    __$builtin
+    __&builtin "Array.toList"
       
 end

@@ -1,5 +1,7 @@
 structure UnitTestArray = struct
 
+open Array
+
 val a = array (#10, 0)
 
 val _ = sub (a, #2)

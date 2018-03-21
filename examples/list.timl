@@ -2,6 +2,8 @@
 
 structure List = struct
 
+open Basic
+
 (* length-indexed list *)
 datatype list 'a : {Nat} =
          Nil of list 'a {0}

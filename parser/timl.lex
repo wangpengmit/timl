@@ -94,7 +94,7 @@ alpha = [A-Za-z];
 digit = [0-9];
 ws = [\ \t];
 eol = (\013\010|\010|\013);
-id_init = ({alpha}|[_'$]);
+id_init = ({alpha}|[_']);
 string = [^\"];
 
 %%
@@ -114,6 +114,7 @@ string = [^\"];
 <INITIAL>":" => (T.COLON (make_region (yypos, size yytext)));
 <INITIAL>":>" => (T.COLON_GT (make_region (yypos, size yytext)));
 <INITIAL>"|>" => (T.RTRI (make_region (yypos, size yytext)));
+<INITIAL>"<|" => (T.LTRI (make_region (yypos, size yytext)));
 <INITIAL>"," => (T.COMMA (make_region (yypos, size yytext)));
 <INITIAL>"->" => (T.ARROW (make_region (yypos, size yytext)));
 <INITIAL>"-->" => (T.LARROW (make_region (yypos, size yytext)));
@@ -157,7 +158,7 @@ string = [^\"];
                  (foldl (fn (a,r) => ord(a)-ord(#"0")+10*r) 0 (explode yytext),
                     make_region (yypos, size yytext)));
  
-<INITIAL>{id_init}({id_init}|{digit})* => ((getOpt (is_keyword yytext, fn r => (T.ID o flat) (yytext, r)))
+<INITIAL>{id_init}({id_init}|{digit}|&)* => ((getOpt (is_keyword yytext, fn r => (T.ID o flat) (yytext, r)))
 				  (make_region (yypos, size yytext)));
 <INITIAL>"(*" => (inc_ref comment_level; YYBEGIN COMMENT; continue());
 <INITIAL>"\"" => (YYBEGIN STRING; continue());

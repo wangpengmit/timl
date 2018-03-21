@@ -2,12 +2,26 @@
 
 structure Basic = struct
 
-datatype bool = true | false
+fun fst a = __&fst a
+fun snd a = __&snd a
+fun not a = __&not a
+val true = __&true
+val false = __&false
+fun int2str a = __&int2str a
+val str_int = int2str
+(* val never = fn {False} => __&never *)
+fun print a = __&print a
+fun println s = print s; print "\n"
 
+(* a datatype version of boolean that is suitable for pattern-matching *)
+datatype Bool = True | False
+
+fun b2B b = if b then True else False                      
+                      
 (* indexed boolean *)
 datatype ibool : {Bool} =
-         True of ibool {true}
-         | False of ibool {false}
+         itrue of ibool {true}
+         | ifalse of ibool {false}
 
 datatype option 'a =
          NONE

@@ -10,9 +10,10 @@ fun insert ['a] {m : Nat} {n : Nat} (le : 'a * 'a -- $m --> bool) (xs : list 'a 
     case xs of
         Nil => Cons (x, Nil)
       | Cons (x', xs') =>
-        case le (x, x') of
-            true => Cons (x, xs)
-          | false => Cons (x', insert le xs' x)
+        if le (x, x') then
+          Cons (x, xs)
+        else
+          Cons (x', insert le xs' x)
 end
 
 absidx T_isort : BigO (fn m n => $m * $n * $n) with

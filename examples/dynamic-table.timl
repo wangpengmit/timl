@@ -95,9 +95,10 @@ fun delete ['a] {size num : Nat} (x : 'a) (table : table 'a {size} {num}) =
     end
 
 fun insert_or_delete ['a] {size num : Nat} (is_insert : bool, x : 'a) (table : table 'a {size} {num}) return using 20.0 =
-    case is_insert of
-        true => insert x table
-      | false => delete x table
+    if is_insert then
+      insert x table
+    else
+      delete x table
 
 datatype some_table 'a =
          SomeTable {size num : Nat} of table 'a {size} {num} --> some_table 'a

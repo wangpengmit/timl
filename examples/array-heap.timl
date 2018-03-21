@@ -22,8 +22,8 @@ fun is_empty ['a] {cap size : Nat} {size <= cap} (heap : heap 'a {cap} {size}) r
     case heap of
         Heap (size, _) =>
         case cmp (size, #0) of
-            Equal => True
-          | Greater => False
+            Equal => itrue
+          | Greater => ifalse
           | _ => never
 
 fun top ['a] {cap size : Nat} {size <= cap} {size > 0} (heap : heap 'a {cap} {size}) =

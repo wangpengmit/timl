@@ -1,37 +1,37 @@
-structure CPSTestBasic = struct
+structure CPSTestBool = struct
 
 open Basic
        
-val a = true
+val a = True
 
 (* fun f (n : int) = () *)
                     
 val b = case a of
-            true => (fn (n : int) => ()) 1
-          | false => (fn (n : int) => ()) 0
+            True => (fn (n : int) => ()) 1
+          | False => (fn (n : int) => ()) 0
           
-(* val b = case true of *)
-(*             true => 10 + 20 *)
-(*           | false => 30 + 40 *)
+(* val b = case True of *)
+(*             True => 10 + 20 *)
+(*           | False => 30 + 40 *)
 
 val b = case a of
-            true => 10 + 20
-          | false => 30 + 40
+            True => 10 + 20
+          | False => 30 + 40
 
 val c = b + 1 + 2 + 3 + b
 
-fun f () = true
+fun f () = True
              
 val neg1 =
  fn b =>
     case b of
-        true => false
-      | false => true
+        True => False
+      | False => True
 
 fun neg b =
     case b of
-        true => false
-      | false => true
+        True => False
+      | False => True
 
 val a = neg a
 

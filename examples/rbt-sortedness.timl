@@ -10,7 +10,7 @@ open Nat
 (*        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1} *)
                                   
 datatype lemma1 {a b : Nat} =
-         Lemma1 {2 ^ a <= b + 1 -> a <= ceil (log2 $(b + 1))} of lemma1 {a} {b}
+         Lemma1 {2 ^^ a <= b + 1 -> a <= ceil (log2 $(b + 1))} of lemma1 {a} {b}
 
 fun lemma1 {a b : Nat} () return lemma1 {a} {b} =
     @Lemma1 {a} {b} {admit}
@@ -25,12 +25,12 @@ datatype rbt 'a : {Nat(*size*)} {Bool} {Nat(*black height*)} {Nat(*min*)} {Nat(*
               {lsize rsize bh lmin lmax k rmin rmax : Nat}
               {color = false -> lcolor = true /\ rcolor = true }
               {lmin <= lmax /\ (lmax < k \/ bh = 0 /\ lcolor = true) /\ (k < rmin \/ bh = 0 /\ rcolor = true) /\ rmin <= rmax}
-              {2 ^ (bh + b2n (not lcolor) + 1) <= 2 * (lsize + 1) /\ 2 * (lsize + 1) <= 2 ^ (2 * bh + b2n (not lcolor) + 1)}
-              {2 ^ (bh + b2n (not rcolor) + 1) <= 2 * (rsize + 1) /\ 2 * (rsize + 1) <= 2 ^ (2 * bh + b2n (not rcolor) + 1)}
+              {2 ^^ (bh + b2n (not lcolor) + 1) <= 2 * (lsize + 1) /\ 2 * (lsize + 1) <= 2 ^^ (2 * bh + b2n (not lcolor) + 1)}
+              {2 ^^ (bh + b2n (not rcolor) + 1) <= 2 * (rsize + 1) /\ 2 * (rsize + 1) <= 2 ^^ (2 * bh + b2n (not rcolor) + 1)}
          of color {color} * rbt 'a {lsize} {lcolor} {bh} {lmin} {lmax} * (nat {k} * 'a) * rbt 'a {rsize} {rcolor} {bh} {rmin} {rmax} --> rbt 'a {lsize + 1 + rsize} {color} {bh + b2n color} {ite (bh == 0 && lcolor) k lmin} {ite (bh == 0 && rcolor) k rmax}
 
 datatype size_good {color : Bool} {size bh : Nat} =
-         SizeGood {2 ^ (bh + b2n (not color) + 1) <= 2 * (size + 1) /\ 2 * (size + 1) <= 2 ^ (2 * bh + b2n (not color) + 1)}
+         SizeGood {2 ^^ (bh + b2n (not color) + 1) <= 2 * (size + 1) /\ 2 * (size + 1) <= 2 ^^ (2 * bh + b2n (not color) + 1)}
          of size_good {color} {size} {bh}
                  
 fun rbt_size_good ['a] {color : Bool} {size bh kmin kmax k : Nat} (tr : rbt 'a {size} {color} {bh} {kmin} {kmax}) return size_good {color} {size} {bh} =

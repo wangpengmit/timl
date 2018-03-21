@@ -1,3 +1,7 @@
+unit-test-basic.timl
+unit-test-bool.timl
+unit-test-array.timl
+unit-test-list.timl
 perversive-list.timl
 trivial.timl
 bigO-evolve.timl

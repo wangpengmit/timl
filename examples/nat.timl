@@ -8,7 +8,7 @@ datatype cmp_result {a b : Nat} =
        | Greater {a > b} of cmp_result {a} {b} 
 
 fun cmp {x y : Nat} (x : nat {x}, y : nat {y}) return cmp_result {x} {y} using 0.0 =
-    builtin
+    __&builtin "Nat.cmp"
 
 datatype le_result : {Nat} {Nat} =
          Le {a b : Nat} {a <= b} of le_result {a} {b} 
@@ -56,19 +56,19 @@ fun nat_plus {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a + b} using 1.0
     a #+ b
 
 fun nat_minus {a b : Nat} {a >= b} (a : nat {a}, b : nat {b}) return nat {a - b} using 1.0 =
-    builtin
+    a #- b
 
 fun nat_mult {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a * b} using 1.0 =
-    builtin
+    a #* b
 
 fun nat_max {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a max b} using 1.0 =
-    builtin
+    __&builtin "Nat.nat_max"
 
 fun floor_half {n : Nat} (n : nat {n}) return nat {floor ($n / 2)} =
-    builtin
+    __&builtin "Nat.floor_half"
 
 fun ceil_half {n : Nat} (n : nat {n}) return nat {ceil ($n / 2)} =
-    builtin
+    __&builtin "Nat.ceil_half"
 
 datatype nat_less_than {m : Nat} =
          NatLT {n : Nat} {n < m} of nat {n} --> nat_less_than {m}

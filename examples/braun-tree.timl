@@ -8,7 +8,7 @@
 functor BraunTree (K : sig
                                type t
                                idx m : Time
-                               val le : t * t -- m --> Basic.bool
+                               val le : t * t -- m --> bool
               end) =
 struct
 
@@ -20,9 +20,10 @@ datatype braun_tree : {Nat} =
        | Node {size : Nat} of t * braun_tree {ceil ($size/2)} * braun_tree {floor ($size/2)} --> braun_tree {size+1}
 
 fun min_max {m : Time} (le : t * t -- m --> bool) (x, y) =
-    case le (x, y) of
-        true => (x, y)
-      | false => (y, x)
+    if le (x, y) then
+      (x, y)
+    else
+      (y, x)
 
 absidx T_insert : BigO (fn n => log2 $n) with
 fun insert {size : Nat} (tr : braun_tree {size}) (x : t) return braun_tree {size + 1} using T_insert size =
@@ -64,10 +65,10 @@ fun sift {size : Nat} (x, l : braun_tree {ceil ($size/2)}, r : braun_tree {floor
           @Node {1} (smaller, @Node {0} (bigger, Leaf, Leaf), Leaf)
         end
       | (@Node {nl'} (lx, l1, l2), @Node {nr'} (rx, r1, r2)) =>
-        (case (le (x, lx), le (x, rx), le (lx, rx)) of
-             (true, true, _) =>
+        (case (b2B <| le (x, lx), b2B <| le (x, rx), b2B <| le (lx, rx)) of
+             (True, True, _) =>
              @Node {size} (x, l, r)
-           | (_, _, true) =>
+           | (_, _, True) =>
              @Node {size} (lx, @sift {nl'} (x, l1, l2), r)
            | (_, _, _) =>
              @Node {size} (rx, l, @sift {nr'} (x, r1, r2))
@@ -88,11 +89,10 @@ fun pop {size : Nat} (tr : braun_tree {size + 1}) return t * braun_tree {size} u
              let
                val (_, l) = @pop {nl'} l
              in
-               case le (lx, rx) of
-                   true =>
-                   (x, @Node {nl'+1+nr'} (lx, r, l))
-                 | false =>
-                   (x, @Node {nl'+1+nr'} (rx, @sift {nr'} (lx, r1, r2), l))
+               if le (lx, rx) then
+                 (x, @Node {nl'+1+nr'} (lx, r, l))
+               else
+                 (x, @Node {nl'+1+nr'} (rx, @sift {nr'} (lx, r1, r2), l))
              end
            | _ => never
         )

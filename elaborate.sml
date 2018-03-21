@@ -167,6 +167,8 @@ local
                   BaseType (Int, r)
                 else if x = "string" then
                   BaseType (String, r)
+                else if x = "bool" then
+                  BaseType (Bool, r)
                 else if x = "_" then
                   UVar ((), r)
                 else
@@ -284,12 +286,13 @@ local
           in
             case m of
                 NONE =>
-                if x = "__$never" andalso eia = false then
+                if x = "never" andalso eia = false then
                   ENever (elab_mt (S.VarT (NONE, ("_", r))), r)
-                else if x = "__$true" andalso eia = false then
+                else if x = "__&true" andalso eia = false then
                   EConst (ECBool true, r)
-                else if x = "__$false" andalso eia = false then
+                else if x = "__&false" andalso eia = false then
                   EConst (ECBool false, r)
+                else if x = "__&builtin" then raise Error (r, "should be '__&builtin \"name\"'")
                 else
                   def ()
               | SOME _ => def ()
@@ -351,33 +354,34 @@ local
 		S.Var ((m, (x, _)), false) =>
                 (case m of
                      NONE =>
-		     if x = "__$fst" then EFst (elab e2, r)
-		     else if x = "__$snd" then ESnd (elab e2, r)
-		     else if x = "__$not" then EUnOp (EUPrim EUPBoolNeg, elab e2, r)
-		     else if x = "__$print" then EUnOp (EUPrint, elab e2, r)
-		     else if x = "__$int2str" then EUnOp (EUInt2Str, elab e2, r)
-                     else if x = "__$builtin" then
+		     if x = "__&fst" then EFst (elab e2, r)
+		     else if x = "__&snd" then ESnd (elab e2, r)
+		     else if x = "__&not" then EUnOp (EUPrim EUPBoolNeg, elab e2, r)
+		     else if x = "__&int2str" then EUnOp (EUInt2Str, elab e2, r)
+		     else if x = "__&array_length" then EUnOp (EUArrayLen, elab e2, r)
+		     else if x = "__&print" then EUnOp (EUPrint, elab e2, r)
+                     else if x = "__&builtin" then
                        (case e2 of
                             S.Const (S.ECString s, _) =>
                             EBuiltin (s, elab_mt (S.VarT (NONE, ("_", r))), r)
-                          | _ => raise Error (r, "should be '__$builtin \"name\"'"))
-		     else if x = "__$array" then
+                          | _ => raise Error (r, "should be '__&builtin \"name\"'"))
+		     else if x = "__&array" then
                        (case e2 of
                             S.Tuple ([e1, e2], _) =>
                             ENew (elab e1, elab e2)
-                          | _ => raise Error (r, "should be '__$array (_, _)'")
+                          | _ => raise Error (r, "should be '__&array (_, _)'")
                        )
-		     else if x = "__$sub" then
+		     else if x = "__&sub" then
                        (case e2 of
                             S.Tuple ([e1, e2], _) =>
                             ERead (elab e1, elab e2)
-                          | _ => raise Error (r, "should be '__$sub (_, _)'")
+                          | _ => raise Error (r, "should be '__&sub (_, _)'")
                        )
-		     else if x = "__$update" then
+		     else if x = "__&update" then
                        (case e2 of
                             S.Tuple ([e1, e2, e3], _) =>
                             EWrite (elab e1, elab e2, elab e3)
-                          | _ => raise Error (r, "should be '__$update (_, _, _)'")
+                          | _ => raise Error (r, "should be '__&update (_, _, _)'")
                        )
 		     else default ()
                    | SOME _ => default ()
