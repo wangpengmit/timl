@@ -42,7 +42,7 @@ fun array_pivot_on_range ['a] {m len l n : Nat} {l + n <= len} (le : 'a * 'a -- 
         end
 
 (* big-O inference fails for this function so a precise bound is given *)      
-idx T_array_kth_median_on_range = fn m n => 41.0 * ($m + 1.0) * $n * $n + 8.0
+idx T_array_kth_median_on_range = fn m n => 48.0 * ($m + 1.0) * $n * $n + 8.0
 fun array_kth_median_on_range ['a] {m len l n k : Nat} {l + n <= len} {1 <= k} {k <= n} (le : 'a * 'a -- $m --> bool) (a : array 'a {len}, l : nat {l}, n : nat {n}, k : nat {k}) return 'a using T_array_kth_median_on_range m n =
     case Nat.le (n, #0) return using (T_array_kth_median_on_range m n - 8.0) of
         Le => never

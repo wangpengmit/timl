@@ -9,7 +9,6 @@ val true = __&true
 val false = __&false
 fun int2str a = __&int2str a
 fun print a = __&print a
-(* val never = fn {False} => __&never *)
                 
 val str_int = int2str
 fun println s = print s; print "\n"

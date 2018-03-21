@@ -108,6 +108,7 @@ datatype exp =
          | EUnOp of expr_un_op * exp * region
          | BinOp of expr_bin_op * exp * exp * region
          | EIte of exp * exp * exp * region
+         | ENever of region
 
      and decl =
          Val of id list * ptrn * exp * region

@@ -52,13 +52,13 @@ datatype amortized_comp 'a {size num : Nat} {acost : Time} =
 (* When num reaches capacity, do re-allocation and copying *)
 fun insert ['a] {size num : Nat} (x : 'a) (table : table 'a {size} {num}) =
     AmortizedComp
-      (fn () return some_output_and_cost_constraint 'a {size} {num} {23.0} {} =>
+      (fn () return some_output_and_cost_constraint 'a {size} {num} {28.0} {} =>
           let
             val LE _ = table_num_le_size table
             val num = num table
             val size = size table
           in
-            case eq_dec (num, size) return using 2.0 + ite (num == size) ($num + 9.0) 1.0 of
+            case eq_dec (num, size) return using 2.0 + ite (num == size) ($num + 10.0) 1.0 of
                 Neq =>
                 SomeOutputAndCostConstaint (do_insert table x)
               | Eq =>
@@ -80,7 +80,7 @@ fun delete ['a] {size num : Nat} (x : 'a) (table : table 'a {size} {num}) =
       val size = size table'
     in
       AmortizedComp
-        (fn () return some_output_and_cost_constraint 'a {size} {num} {23.0} {} =>
+        (fn () return some_output_and_cost_constraint 'a {size} {num} {28.0} {} =>
            case lt_dec (nat_mult (nat_4, num'), size) return using ite (4 * num' < size) (6.0 + $num') 0.0 of
                Lt =>
                let
@@ -103,7 +103,7 @@ fun insert_or_delete ['a] {size num : Nat} (is_insert : bool, x : 'a) (table : t
 datatype some_table 'a =
          SomeTable {size num : Nat} of table 'a {size} {num} --> some_table 'a
 
-fun insert_delete_seq ['a] {n size num : Nat} (xs : list (bool * 'a) {n}) (table : table 'a {size} {num}) return some_table 'a using 48.0 * $n + ite (2 * num >= size) ($(2 * num - size)) ($size / 2 - $num) =
+fun insert_delete_seq ['a] {n size num : Nat} (xs : list (bool * 'a) {n}) (table : table 'a {size} {num}) return some_table 'a using 53.0 * $n + ite (2 * num >= size) ($(2 * num - size)) ($size / 2 - $num) =
     case xs of
         Nil => SomeTable table
       | Cons (x, xs) =>
@@ -117,12 +117,12 @@ fun insert_delete_seq ['a] {n size num : Nat} (xs : list (bool * 'a) {n}) (table
           
 absidx T_insert_delete_seq_from_good_start : BigO (fn n => $n) with
 fun insert_delete_seq_from_good_start ['a] {n size num : Nat} {ite (2 * num >= size) ($(2 * num - size)) ($size / 2 - $num) <= $n} (xs : list (bool * 'a) {n}) (table : table 'a {size} {num}) return some_table 'a using T_insert_delete_seq_from_good_start n =
-    insert_delete_seq xs table using 2.0 + 49.0 * $n
+    insert_delete_seq xs table using 2.0 + 55.0 * $n
 end
           
 absidx T_insert_delete_seq_from_empty : BigO (fn n => $n) with
 fun insert_delete_seq_from_empty ['a] {n : Nat} (xs : list (bool * 'a) {n}) (table : table 'a {0} {0}) return some_table 'a using T_insert_delete_seq_from_empty n =
-    insert_delete_seq xs table using 2.0 + 48.0 * $n
+    insert_delete_seq xs table using 2.0 + 53.0 * $n
 end
 
 end

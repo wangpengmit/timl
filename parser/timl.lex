@@ -75,6 +75,7 @@ val keywords = [
     ("if", T.IF),
     ("then", T.THEN),
     ("else", T.ELSE),
+    ("never", T.NEVER),
     ("as", T.AS)
 ]
  

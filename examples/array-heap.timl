@@ -120,7 +120,7 @@ fun shift_down ['a] {m cap size who dep : Nat} {size <= cap} {1 <= who} {who <= 
 end
 
 fun pop ['a] {m cap size : Nat} {size <= cap} {size > 0} (comp : 'a * 'a -- $m --> bool) (heap : heap 'a {cap} {size}) return heap 'a {cap} {size - 1} =
-    case heap return heap 'a {cap} {size - 1} using (T_shift_down m (size - 1)) + 8.0 of
+    case heap return heap 'a {cap} {size - 1} using (T_shift_down m (size - 1)) + 13.0 of
         Heap (size, content) =>
         let
           val size' = nat_minus (size, #1)

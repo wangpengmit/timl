@@ -113,6 +113,7 @@
 - [ ] Add negative examples.
 - [ ] Argument module names of functors are put into global context, which may result in name conflicts. Should prefix argument module names with the functor names.
 - [ ] Complete parser support for string literals and unescape().
+- [ ] If a primitive shouldn't be redefined (especially base type names because type names appear in feedback messages), it should be made a keyword in timl.lex.
 
 # To-do for MicroTiML
 

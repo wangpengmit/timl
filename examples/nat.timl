@@ -2,13 +2,28 @@
 
 structure Nat = struct
 
+datatype lt_dec {a b : Nat} =
+         Lt {a < b} of lt_dec {a} {b}
+       | Ge {a >= b} of lt_dec {a} {b}
+
+fun lt_dec {x y : Nat} (x : nat {x}, y : nat {y}) return lt_dec {x} {y} using 1.0 =
+    __&builtin "Nat.nat_lt"
+    (* case cmp (x, y) of *)
+    (*     Equal => Ge *)
+    (*   | Less => Lt *)
+    (*   | Greater => Ge *)
+
 datatype cmp_result {a b : Nat} =
          Equal {a = b} of cmp_result {a} {b} 
        | Less {a < b} of cmp_result {a} {b}
        | Greater {a > b} of cmp_result {a} {b} 
 
-fun cmp {x y : Nat} (x : nat {x}, y : nat {y}) return cmp_result {x} {y} using 0.0 =
-    __&builtin "Nat.cmp"
+fun cmp {x y : Nat} (x : nat {x}, y : nat {y}) return cmp_result {x} {y} using 4.0 =
+  case lt_dec (x, y) of
+      Lt => Less
+    | Ge => case lt_dec (y, x) of
+               Lt => Greater
+             | Ge => Equal
 
 datatype le_result : {Nat} {Nat} =
          Le {a b : Nat} {a <= b} of le_result {a} {b} 
@@ -32,21 +47,11 @@ datatype eq_dec {a b : Nat} =
          Eq {a = b} of eq_dec {a} {b}
        | Neq {a <> b} of eq_dec {a} {b}
 
-fun eq_dec {x y : Nat} (x : nat {x}, y : nat {y}) return eq_dec {x} {y} using 1.0 =
+fun eq_dec {x y : Nat} (x : nat {x}, y : nat {y}) return eq_dec {x} {y} using 5.0 =
     case cmp (x, y) of
         Equal => Eq
       | Less => Neq
       | Greater => Neq
-
-datatype lt_dec {a b : Nat} =
-         Lt {a < b} of lt_dec {a} {b}
-       | Ge {a >= b} of lt_dec {a} {b}
-
-fun lt_dec {x y : Nat} (x : nat {x}, y : nat {y}) return lt_dec {x} {y} using 1.0 =
-    case cmp (x, y) of
-        Equal => Ge
-      | Less => Lt
-      | Greater => Ge
 
 val nat_1 : nat {1} = #1
 val nat_2 : nat {2} = #2
@@ -61,14 +66,16 @@ fun nat_minus {a b : Nat} {a >= b} (a : nat {a}, b : nat {b}) return nat {a - b}
 fun nat_mult {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a * b} using 1.0 =
     a #* b
 
-fun nat_max {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a max b} using 1.0 =
-    __&builtin "Nat.nat_max"
+fun nat_max {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a max b} using 2.0 =
+  case lt_dec (a, b) of
+      Lt => b
+    | Ge => a
 
 fun floor_half {n : Nat} (n : nat {n}) return nat {floor ($n / 2)} =
   n #/ #2
 
 fun ceil_half {n : Nat} (n : nat {n}) return nat {ceil ($n / 2)} =
-    __&builtin "Nat.ceil_half"
+  (n #+ #1) #/ #2
 
 datatype nat_less_than {m : Nat} =
          NatLT {n : Nat} {n < m} of nat {n} --> nat_less_than {m}
