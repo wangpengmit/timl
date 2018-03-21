@@ -84,6 +84,7 @@ fun str_raw_mt (t : mtype) : string =
       in
         sprintf "(datatype $$$ = $)" [str_raw_name name, tnames, bsorts, constr_decls]
       end
+    | TSumbool (s1, s2) => sprintf "TSumbool ($, $)" [str_raw_s s1, str_raw_s s2]
 
 fun str_raw_t (t : ty) : string =
   case t of
@@ -104,6 +105,7 @@ fun str_raw_e e =
     | EAbs _ => "EAbs (...)"
     | EAbsI _ => "EAbsI (...)"
     | ECase _ => "ECase (...)"
+    | ECaseSumbool _ => "ECaseSumbool (...)"
     | ELet _ => "ELet (...)"
 
 end

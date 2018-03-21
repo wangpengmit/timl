@@ -93,6 +93,10 @@ datatype exp_const =
          ECInt of int
          | ECNat of int
          | ECString of string
+
+datatype expr_tri_op =
+         ETIte
+         | ETIfDec
               
 datatype exp = 
 	 Var of long_id * bool
@@ -107,7 +111,7 @@ datatype exp =
          | Const of exp_const * region
          | EUnOp of expr_un_op * exp * region
          | BinOp of expr_bin_op * exp * exp * region
-         | EIte of exp * exp * exp * region
+         | ETriOp of expr_tri_op * exp * exp * exp * region
          | ENever of region
 
      and decl =
@@ -120,6 +124,8 @@ datatype exp =
          | TypeDef of id * ty
          | Open of id
 
+fun EIte (e1, e2, e3, r) = ETriOp (ETIte, e1, e2, e3, r)
+fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r)
 fun App (e1, e2, r) = BinOp (EBApp, e1, e2, r)
 fun short_id id = ((NONE, id), false)
 fun PShortVar (x, r) = ConstrP (short_id (x, r), [], NONE, r)

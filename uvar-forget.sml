@@ -199,6 +199,7 @@ fun forget_i_mt x n b =
           | Unit r => Unit r
 	  | Prod (t1, t2) => Prod (f x n t1, f x n t2)
 	  | UniI (s, bind, r) => UniI (on_i_s x n s, on_i_ibind f x n bind, r)
+          | TSumbool (s1, s2) => TSumbool (on_i_s x n s1, on_i_s x n s2)
           | MtVar y => MtVar y
           | MtApp (t1, t2) => MtApp (f x n t1, f x n t2)
           | MtAbs (k, bind, r) => MtAbs (k, on_i_tbind f x n bind, r)

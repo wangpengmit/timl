@@ -130,6 +130,9 @@ datatype nat_expr_bin_op =
          | EBNBoundedMinus
          | EBNMult
          | EBNDiv
+
+datatype nat_cmp =
+         NCLt
          
 datatype expr_bin_op =
          EBApp
@@ -138,6 +141,7 @@ datatype expr_bin_op =
          | EBRead
          | EBPrim of prim_expr_bin_op
          | EBNat of nat_expr_bin_op
+         | EBNatCmp of nat_cmp
 
 fun str_prim_expr_bin_op opr =
   case opr of
@@ -161,6 +165,10 @@ fun str_nat_expr_bin_op opr =
     | EBNBoundedMinus => "nat_bounded_minus"
     | EBNMult => "mult"
     | EBNDiv => "div"
+
+fun str_nat_cmp opr =
+  case opr of
+      NCLt => "nat_lt"
                     
 fun str_expr_bin_op opr =
   case opr of
@@ -170,6 +178,7 @@ fun str_expr_bin_op opr =
     | EBRead => "read"
     | EBPrim opr => str_prim_expr_bin_op opr
     | EBNat opr => str_nat_expr_bin_op opr
+    | EBNatCmp opr => str_nat_cmp opr
 
 fun pretty_str_prim_expr_bin_op opr =
   case opr of
@@ -194,6 +203,10 @@ fun pretty_str_nat_expr_bin_op opr =
     | EBNMult => "#*"
     | EBNDiv => "#/"
                     
+fun pretty_str_nat_cmp opr =
+  case opr of
+      NCLt => "#<"
+                    
 fun pretty_str_expr_bin_op opr =
   case opr of
       EBApp => "$"
@@ -202,6 +215,7 @@ fun pretty_str_expr_bin_op opr =
     | EBRead => "read"
     | EBPrim opr => pretty_str_prim_expr_bin_op opr
     | EBNat opr => pretty_str_nat_expr_bin_op opr
+    | EBNatCmp opr => pretty_str_nat_cmp opr
 
 datatype expr_tri_op =
          ETWrite

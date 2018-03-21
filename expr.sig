@@ -34,6 +34,7 @@ signature EXPR = sig
 	   | EAbsI of (sort, expr) Binders.ibind_anno * Region.region
 	   | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option
 	   | ECase of expr * return * (ptrn, expr) Unbound.bind list * Region.region
+           | ECaseSumbool of expr * expr Binders.ibind * expr Binders.ibind * Region.region
 	   | ELet of return * (decl Unbound.tele, expr) Unbound.bind * Region.region
        (* these constructs won't show up in source program *)
        (* | EAbsT of (sort, expr) tbind_anno * region *)

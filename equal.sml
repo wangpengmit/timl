@@ -162,6 +162,11 @@ fun eq_mt t t' =
              UniI (s', Bind (_, t'), _) => eq_s s s' andalso eq_mt t t'
            | _ => false
         )
+      | TSumbool (s1, s2) =>
+        (case t' of
+             TSumbool (s1', s2') => eq_s s1 s1' andalso eq_s s2 s2'
+           | _ => false
+        )
       | MtVar x =>
         (case t' of
              MtVar x' => eq_var (x, x')

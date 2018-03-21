@@ -38,6 +38,7 @@ fun simp_mt t =
       in
         TDatatype (dt, r)
       end
+    | TSumbool (s1, s2) => TSumbool (simp_s s1, simp_s s2)
 
 fun simp_t t =
   case t of

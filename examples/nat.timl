@@ -7,11 +7,7 @@ datatype lt_dec {a b : Nat} =
        | Ge {a >= b} of lt_dec {a} {b}
 
 fun lt_dec {x y : Nat} (x : nat {x}, y : nat {y}) return lt_dec {x} {y} using 1.0 =
-    __&builtin "Nat.nat_lt"
-    (* case cmp (x, y) of *)
-    (*     Equal => Ge *)
-    (*   | Less => Lt *)
-    (*   | Greater => Ge *)
+  ifdec x #< y then Lt else Ge
 
 datatype cmp_result {a b : Nat} =
          Equal {a = b} of cmp_result {a} {b} 

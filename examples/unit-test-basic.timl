@@ -69,12 +69,12 @@ fun println s = print s; print "\n"
 
 (* fun twice f x = f (f x) *)
 
-val n = if 1 > 2 then 1 else 2
-val () = println <| "n=" ^ int2str n
+(* val n = if 1 > 2 then 1 else 2 *)
+(* val () = println <| "n=" ^ int2str n *)
                                                         
-(* fun fact_tail (n, acc) = *)
-(*   if n <= 1 then acc *)
-(*   else fact_tail (n-1, n * acc) *)
+fun fact_tail {n : Nat} (n : nat {n}, acc) (* return using 3.0 * $n *) =
+  ifdec n #< #1 then acc
+  else fact_tail (n #- #1, (* n *)1 * acc) using 3.0 * $n
                  
 (* val () = println $ "fact_tail (3, 1) =" ^ (int2str $ fact_tail (3, 1)) *)
 

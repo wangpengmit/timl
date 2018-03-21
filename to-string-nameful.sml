@@ -247,6 +247,7 @@ fun strn_mt t =
       | MtAbsI _ =>
         (* sprintf "(fn {$ : $} => $)" [name, strn_s gctx sctx s, strn_mt (name :: sctx, kctx) t] *)
         strn_abs t
+      | TSumbool (s1, s2) => sprintf "sumbool s1 s2" [strn_s s1, strn_s s2]
       | BaseType (bt, _) => str_bt bt
       | UVar (u, r) =>
         let
@@ -389,6 +390,13 @@ fun strn_e e =
         (join "" o map (prefix " ") o map (fn i => sprintf "{$}" [strn_i i])) is,
         strn_e e]
     | ECase (e, return, rules, _) => sprintf "(case $ $of $)" [strn_e e, strn_return return, join " | " (map strn_rule rules)]
+    | ECaseSumbool (e, bind1, bind2, _) =>
+      let
+        val (name1, e1) = unBindSimpName bind1
+        val (name2, e2) = unBindSimpName bind2
+      in
+        sprintf "(case_sumbool $ (left $ => $) (right $ => $))" [strn_e e, fst name1, strn_e e1, fst name2, strn_e e2]
+      end
 
 and strn_decl decl =
     case decl of

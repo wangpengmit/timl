@@ -34,6 +34,7 @@ signature TYPE = sig
            | MtAppI of mtype * idx
            | UVar of (bsort, kind, mtype) uvar_mt * region
            | TDatatype of mtype datatype_def * region
+           | TSumbool of sort * sort
 
   datatype ty = 
 	   Mono of mtype

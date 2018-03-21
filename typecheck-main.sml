@@ -26,13 +26,14 @@ infix 8 %^
 infix 7 %*
 infix 6 %+ 
 infix 4 %<=
+infix 4 %<
 infix 4 %>=
 infix 4 %=
 infixr 3 /\
 infixr 2 \/
 infixr 1 -->
 infix 1 <->
-        
+
 val is_builtin_enabled = ref false
 fun turn_on_builtin () = (is_builtin_enabled := true)
 fun turn_off_builtin () = (is_builtin_enabled := false)
@@ -179,6 +180,8 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
 	    (UniI (s, Bind ((name, r), c), r_all),
              HType)
           end
+        | U.TSumbool (s1, s2) =>
+          (TSumbool (is_wf_sort gctx (sctx, s1), is_wf_sort gctx (sctx, s2)), HType)
 	| U.BaseType a => (BaseType a, HType)
         | U.UVar ((), r) =>
           (* type underscore will always mean a type of kind Type *)
@@ -857,6 +860,7 @@ fun is_value (e : U.expr) : bool =
            | EBRead => false
            | EBPrim _ => false
            | EBNat _ => false
+           | EBNatCmp _ => false
         )
       | ETriOp (opr, _, _, _) =>
         (case opr of
@@ -885,6 +889,7 @@ fun is_value (e : U.expr) : bool =
       | ELet _ => false
       | EAppConstr (_, _, _, e, _) => is_value e
       | ECase _ => false
+      | ECaseSumbool _ => false
   end
 
 fun get_expr_const_type (c, r) =
@@ -1139,6 +1144,17 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	           val (e2, _, d2) = check_mtype (ctx, e2, BaseType (get_prim_expr_bin_op_arg2_ty opr, dummy)) in
 	         (EBinOp (EBPrim opr, e1, e2), BaseType (get_prim_expr_bin_op_res_ty opr, dummy), d1 %+ d2 %+ T1 dummy)
 	       end
+             | EBNatCmp NCLt =>
+               let
+                 val r = U.get_region_e e_all
+                 val i1 = fresh_i gctx sctx (Base Time) r
+                 val i2 = fresh_i gctx sctx (Base Time) r
+                 val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
+                 val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
+                 fun make_sort p = Subset ((Base UnitSort, r), Bind (("__u", r), shift_i_p p), r)
+               in
+                 (EBinOp (opr, e1, e2), TSumbool (make_sort (i1 %< i2), make_sort (i1 %>= i2)), d1 %+ d2)
+               end
           )
 	| U.ETriOp (ETWrite, e1, e2, e3) =>
           let
@@ -1282,7 +1298,26 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
             val () = close_ctx ctxd
           in
 	    (EAbsI (BindAnno ((iname, s), e), r_all), UniI (s, Bind ((name, r), t), r_all), T0 r_all)
-	  end 
+	  end
+        | U.ECaseSumbool (e, bind1, bind2, r) =>
+          let
+            val s1 = fresh_sort gctx sctx r
+            val s2 = fresh_sort gctx sctx r
+            val (e, t_e, j_e) = check_mtype (ctx, e, TSumbool (s1, s2))
+            val (iname1, e1) = unBindSimpName bind1
+            val (iname2, e2) = unBindSimpName bind2
+            val (e1, t1, j1) = open_close add_sorting_skct (fst iname1, s1) ctx (fn ctx => get_mtype (ctx, e1))
+            val ctxd = ctx_from_sorting (fst iname1, s1)
+            val ctx' = add_sorting_skct (fst iname1, s1) ctx
+            val (t1, j1) = forget_or_check_return r gctx ctx' ctxd (t1, j1) (NONE, NONE)
+            val (e2, t2, j2) = open_close add_sorting_skct (fst iname2, s2) ctx (fn ctx => get_mtype (ctx, e2))
+            val ctxd = ctx_from_sorting (fst iname2, s2)
+            val ctx' = add_sorting_skct (fst iname2, s2) ctx
+            val (t2, j2) = forget_or_check_return r gctx ctx' ctxd (t2, j2) (NONE, NONE)
+            val () = unify_mt (get_region_e e) gctx (sctx, kctx) (t2, t1)
+          in
+            (ECaseSumbool (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %+ smart_max j1 j2)
+          end
 	| U.EAppConstr ((x, eia), ts, is, e, ot) => 
 	  let
             val () = assert (fn () => null ts) "get_mtype()/EAppConstr: null ts"

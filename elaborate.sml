@@ -390,7 +390,8 @@ local
 	  end
         | S.BinOp (opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
         | S.EUnOp (opr, e, r) => EUnOp (opr, elab e, r)
-        | S.EIte (e1, e2, e3, _) => ETriOp (ETIte, elab e1, elab e2, elab e3)
+        | S.ETriOp (S.ETIte, e1, e2, e3, _) => ETriOp (ETIte, elab e1, elab e2, elab e3)
+        | S.ETriOp (S.ETIfDec, e, e1, e2, r) => ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.VarT (NONE, ("_", r))), r)
 
   and elab_decl decl =

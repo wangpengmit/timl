@@ -37,6 +37,7 @@ open Ast
     | NAT_MINUS
     | NAT_MULT
     | NAT_DIV
+    | NAT_LT
     | INT of int
     | NNREAL of string
     | BAR
@@ -89,6 +90,7 @@ open Ast
     | STR_CONCAT
     | SEMI_COLON
     | NEVER
+    | IFDEC
 
 %nonterm start of prog
        | exp of exp
@@ -178,7 +180,7 @@ open Ast
 %left DOUBLE_POND
 %left DOUBLE_EQ
 %nonassoc TILDE
-%nonassoc EQ NEQ LE LT GE GT 
+%nonassoc EQ NEQ LE LT GE GT NAT_LT
 %left PLUS MINUS NAT_PLUS NAT_MINUS
 %left MULT DIV MAX MIN NAT_MULT NAT_DIV
 (* %left APP *)
@@ -266,6 +268,7 @@ exp : aexp (aexp)
      | exp NAT_MINUS exp (BinOp (EBNat EBNBoundedMinus, exp1, exp2, (exp1left, exp2right)))
      | exp NAT_MULT exp (BinOp (EBNat EBNMult, exp1, exp2, (exp1left, exp2right)))
      | exp NAT_DIV exp (BinOp (EBNat EBNDiv, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_LT exp (BinOp (EBNatCmp NCLt, exp1, exp2, (exp1left, exp2right)))
      | exp LT exp (BinOp (EBPrim EBPIntLt, exp1, exp2, (exp1left, exp2right)))
      | exp GT exp (BinOp (EBPrim EBPIntGt, exp1, exp2, (exp1left, exp2right)))
      | exp LE exp (BinOp (EBPrim EBPIntLe, exp1, exp2, (exp1left, exp2right)))
@@ -289,6 +292,7 @@ aexp : decorated_id (Var decorated_id)
      | FN bind_plus return DARROW exp (Abs (bind_plus, return, exp, (FNleft, expright)))
      | CASE exp return OF rule_bar_star (Case (exp, return, rule_bar_star, (CASEleft, rule_bar_starright)))
      | IF exp THEN exp ELSE exp (EIte (exp1, exp2, exp3, (IFleft, exp3right)))
+     | IFDEC exp THEN exp ELSE exp (EIfDec (exp1, exp2, exp3, (IFDECleft, exp3right)))
      | LET return decl_star IN exp END (Let (return, decl_star, exp, (LETleft, ENDright)))
      | SHARP INT (Const (ECNat INT, (SHARPleft, INTright)))
      | INT (Const (ECInt INT, (INTleft, INTright)))

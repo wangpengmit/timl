@@ -933,6 +933,23 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EBinOp (EBNat opr, e1, e2), t, j1 %+ j2)
         end
+      | EBinOp (EBNatCmp NCLt, e1, e2) =>
+        let
+          val (e1, t1, j1) = tc ctx e1
+          val t1 = whnf itctx t1
+          val i1 = case t1 of
+                       TNat i => i
+                     | _ => raise MTCError "ENatAdd 1"
+          val (e2, t2, j2) = tc ctx e2
+          val t2 = whnf itctx t2
+          val i2 = case t2 of
+                       TNat i => i
+                     | _ => raise MTCError "ENatAdd 2"
+          (* val (e1, e2) = if !anno_ENatAdd then (e1 %: t1, e2 %: t2) else (e1, e2) *)
+        in
+          (*here*)
+          (EBinOp (EBNatCmp NCLt, e1, e2), t, j1 %+ j2)
+        end
       | ETriOp (ETWrite, e1, e2, e3) =>
         let
           val (e1, t1, j1) = tc ctx e1

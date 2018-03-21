@@ -132,7 +132,9 @@ open IdxGetRegion
        
 structure TypeGetRegion = TypeGetRegionFn (structure Type = Type
                                            val get_region_var = get_region_long_id
-                                           val get_region_i = get_region_i)
+                                           val get_region_i = get_region_i
+                                           val get_region_s = get_region_s
+                                          )
 open TypeGetRegion
        
 structure ExprGetRegion = ExprGetRegionFn (structure Expr = ExprCore

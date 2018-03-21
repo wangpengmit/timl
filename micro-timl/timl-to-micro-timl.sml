@@ -50,6 +50,14 @@ fun PEqs pairs = combine_And $ map PEq pairs
   
 val BSUnit = Base UnitSort
 
+fun TSumbool (s1, s2) =
+  let
+    val name = ("__p", dummy)
+    fun make_exists s = TExistsI $ IBindAnno ((name, s1), TUnit)
+  in
+    TSum (make_exists s1, make_exists s2)
+  end
+                  
 fun on_mt (t : S.mtype) =
   case t of
       S.Arrow (t1, i, t2) => TArrow (on_mt t1, i, on_mt t2)
@@ -67,6 +75,7 @@ fun on_mt (t : S.mtype) =
     | S.UVar (x, _) =>
       (* exfalso x *)
       raise Impossible "to-micro-timl/on_mt/UVar"
+    | S.TSumbool (s1, s2) => TSumbool (s1, s2)
     | S.TDatatype (Bind.Bind (dt_name, tbinds), _) =>
       let
         val (tname_kinds, (bsorts, constrs)) = unfold_binds tbinds
@@ -142,6 +151,19 @@ fun on_e (e : S.expr) =
            Op.ETNever => ENever (on_mt t)
          | Op.ETBuiltin name => EBuiltin (name, on_mt t)
       )
+    | S.ECaseSumbool (e, bind1, bind2, r) =>
+      let
+        fun on_bind bind =
+          let
+            val (iname, e) = unBindSimpName bind
+            val e = on_e e
+            val e = EUnpackI (EV 0, IBind (iname, EBind (("__u", r), shift_e_e 0 2 e)))
+          in
+            EBind (("__p", r), e)
+          end
+      in
+        ECase (on_e e, on_bind bind1, on_bind bind2)
+      end
     | S.ECase (e, return, rules, r) =>
       let
         (* todo: use information in [return] *)

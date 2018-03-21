@@ -394,6 +394,9 @@ fun unify_mt r gctx ctx (t, t') =
           in
             ()
           end
+        | (TSumbool (s1, s2), TSumbool (s1', s2')) =>
+          (is_eqv_sort r gctxn sctxn (s1, s1');
+           is_eqv_sort r gctxn sctxn (s2, s2'))
         | (Unit _, Unit _) => ()
 	| (BaseType (Int, _), BaseType (Int, _)) => ()
         | (MtAbs (k, Bind ((name, _), t), _), MtAbs (k', Bind (_, t'), _)) =>

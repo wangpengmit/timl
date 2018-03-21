@@ -76,6 +76,7 @@ val keywords = [
     ("then", T.THEN),
     ("else", T.ELSE),
     ("never", T.NEVER),
+    ("ifdec", T.IFDEC),
     ("as", T.AS)
 ]
  
@@ -143,6 +144,7 @@ string = [^\"];
 <INITIAL>"#-" => (T.NAT_MINUS (make_region (yypos, size yytext)));
 <INITIAL>"#*" => (T.NAT_MULT (make_region (yypos, size yytext)));
 <INITIAL>"#/" => (T.NAT_DIV (make_region (yypos, size yytext)));
+<INITIAL>"#<" => (T.NAT_LT (make_region (yypos, size yytext)));
 <INITIAL>"^^" => (T.EXP (make_region (yypos, size yytext)));
 <INITIAL>"#" => (T.SHARP (make_region (yypos, size yytext)));
 <INITIAL>"$" => (T.DOLLAR (make_region (yypos, size yytext)));

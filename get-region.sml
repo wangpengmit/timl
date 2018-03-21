@@ -58,6 +58,7 @@ end
 functor TypeGetRegionFn (structure Type : TYPE where type region = Region.region
                        val get_region_var : Type.var -> Region.region
                        val get_region_i : Type.idx -> Region.region
+                       val get_region_s : Type.sort -> Region.region
                       ) = struct
 
 open Type
@@ -82,6 +83,7 @@ fun get_region_mt t =
     | BaseType (_, r) => r
     | UVar (_, r) => r
     | TDatatype (_, r) => r
+    | TSumbool (s1, s2) => combine_region (get_region_s s1) (get_region_s s2)
 
 fun get_region_t t = 
   case t of
@@ -134,6 +136,7 @@ fun get_region_e e =
     | EAbsI (_, r) => r
     | EAppConstr ((x, _), _, _, e, _) => combine_region (get_region_cvar x) (get_region_e e)
     | ECase (_, _, _, r) => r
+    | ECaseSumbool (_, _, _, r) => r
     | ELet (_, _, r) => r
                                               
 fun get_region_rule (pn, e) = combine_region (get_region_pn pn) (get_region_e e)
