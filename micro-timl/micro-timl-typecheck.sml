@@ -809,6 +809,23 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i)
         end
+      (*here*)
+      | EUnOp (EBRead, e1, e2) =>
+        let
+          val (e1, t1, j1) = tc ctx e1
+          val (t, i1) = case whnf itctx t1 of
+                            TArr data => data
+                          | _ => raise MTCError "ERead 1"
+          val (e2, t2, j2) = tc ctx e2
+          val t2 = whnf itctx t2
+          val i2 = case t2 of
+                       TNat i => i
+                     | _ => raise MTCError "ERead 2"
+          val () = check_prop ictx (i2 %< i1)
+          val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
+        in
+          (ERead (e1, e2), t, j1 %+ j2)
+        end
       | EUnOp (EUInj (inj, t'), e) =>
         let
           val t' = kc_against_kind itctx (t', KType)
