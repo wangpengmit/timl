@@ -69,7 +69,7 @@ fun println s = print s; print "\n"
 
 (* fun twice f x = f (f x) *)
 
-val n = if 1 < 2 then 1 else 2
+val n = if 1 > 2 then 1 else 2
 val () = println <| "n=" ^ int2str n
                                                         
 (* fun fact_tail (n, acc) = *)

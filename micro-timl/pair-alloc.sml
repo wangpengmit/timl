@@ -167,6 +167,7 @@ fun anf_decls_expr_visitor_vtable cast output =
             | EUnpackI _ => false
             | ERec bind => false
             | ECase _ => false
+            | ETriOp (ETIte, _, _, _) => false
             | EConst c =>
               (case c of
                    ECString s => true (* string literal needs a standalone command *)
@@ -266,6 +267,17 @@ fun anf_decls_expr_visitor_vtable cast output =
       in
         ECase (e, bind1, bind2)
       end
+    fun visit_ETriOp this env (data as (opr, e, e1, e2)) =
+      case opr of
+          ETIte =>
+          let
+            val e = #visit_expr (cast this) this "xc" e
+            val e1 = anf e1         
+            val e2 = anf e2        
+          in
+            ETriOp (ETIte, e, e1, e2)
+          end
+        | _ => #visit_ETriOp vtable this env data (* call super *)
     (* this relies on form invariants after CPS *)
     fun visit_EAscTime this env (e, i) =
       let
@@ -286,6 +298,7 @@ fun anf_decls_expr_visitor_vtable cast output =
     val vtable = override_visit_EUnpackI vtable visit_EUnpackI
     val vtable = override_visit_ERec vtable visit_ERec
     val vtable = override_visit_ECase vtable visit_ECase
+    val vtable = override_visit_ETriOp vtable visit_ETriOp
     val vtable = override_visit_EAscTime vtable visit_EAscTime
     val vtable = override_visit_EAppI vtable visit_EAppI
     val vtable = override_visit_expr vtable visit_expr

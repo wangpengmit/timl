@@ -275,19 +275,12 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | ETriOp (ETIte, e1, e2, e3) =>
+      | ETriOp (ETIte, e, e1, e2) =>
         (
-          open_hbox ();
-          str "EIte";
-          space ();
-          str "(";
-          pp_e e1;
-          comma ();
-          pp_e e2;
-          comma ();
-          pp_e e3;
-          str ")";
-          close_box ()
+          open_vbox (); open_hbox (); str "ETIte"; space (); str "("; pp_e e; close_box (); comma ();
+    	    open_vbox_noindent (); pp_e e1; comma ();
+            space ();
+            pp_e e2; close_box (); str ")"; close_box ()
         )
       | ECase (e, e1, e2) =>
         (

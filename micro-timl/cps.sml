@@ -591,6 +591,24 @@ fun cps (e, t_e) (k, j_k) =
       in
         cps (e, t_e) (c, i_c)
       end
+    | S.ETriOp (ETIte, e, e1, e2) =>
+      (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
+      let
+        val t_res = t_e
+        val t_e = TBool
+        val t_res = cps_t t_res
+        val x_k = fresh_evar ()
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
+        val y = fresh_evar ()
+        val c = ETriOp (ETIte, EV y, e1, e2)
+        val c = ELetClose ((x_k, "k", k), c)
+        val t_y = cps_t t_e
+        val c = EAbs $ close0_e_e_anno ((y, "y", t_y), c)
+        val i_c = IMax (i_e1, i_e2)
+      in
+        cps (e, t_e) (c, i_c)
+      end
     | S.ELet (e1, bind) =>
       (* [[ let x = e1 in e2 ]](k) = [[e1]](\x. [[e2]](k)) *)
       let
@@ -792,6 +810,13 @@ fun check_CPSed_expr e =
         val () = check_value e
         val (_, e1) = unBind bind1
         val (_, e2) = unBind bind2
+      in
+        (loop e1;
+         loop e2)
+      end
+    | ETriOp (ETIte, e, e1, e2) =>
+      let
+        val () = check_value e
       in
         (loop e1;
          loop e2)

@@ -81,7 +81,7 @@ fun delete ['a] {size num : Nat} (x : 'a) (table : table 'a {size} {num}) =
     in
       AmortizedComp
         (fn () return some_output_and_cost_constraint 'a {size} {num} {23.0} {} =>
-           case lt_dec (nat_mult (nat_4, num'), size) return using ite (4 * num' < size) (5.0 + $num') 0.0 of
+           case lt_dec (nat_mult (nat_4, num'), size) return using ite (4 * num' < size) (6.0 + $num') 0.0 of
                Lt =>
                let
                  val new_table = alloc (floor_half size)

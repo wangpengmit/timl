@@ -1130,8 +1130,9 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val i2 = fresh_i gctx sctx (Base Time) r
                  val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
+                 val i2 = Simp.simp_i $ update_i i2
                in
-                 (EBinOp (EBNat opr, e1, e2), TyNat (interp_nat_expr_bin_op opr (i1, simp_i i2) (fn () => raise Error (r, ["Can only divide by a nat whose index is a constant"])), r), d1 %+ d2 %+ T1 r)
+                 (EBinOp (EBNat opr, e1, e2), TyNat (interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Error (r, ["Can only divide by a nat whose index is a constant, not: " ^ str_i gctxn sctxn i2])), r), d1 %+ d2 %+ T1 r)
                end
 	     | EBPrim opr =>
 	       let val (e1, _, d1) = check_mtype (ctx, e1, BaseType (get_prim_expr_bin_op_arg1_ty opr, dummy))

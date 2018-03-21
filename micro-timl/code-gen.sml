@@ -120,6 +120,20 @@ fun cg_expr_un_op opr =
     | EUArrayLen => IUArrayLen
     | EUProj _ => raise Impossible "cg_expr_un_op() on EUProj"
       
+fun VAppITs_ctx (e, itctx) =
+  let
+    fun IV n = VarI (ID (n, dummy), [])
+    fun TV n = TVar (ID (n, dummy), [])
+    val itargs = fst $ foldl
+                     (fn (bind, (acc, (ni, nt))) =>
+                         case bind of
+                             inl _ => (inl (IV ni) :: acc, (ni+1, nt))
+                           | inr _ => (inr (TV nt) :: acc, (ni, nt+1))
+                     ) ([], (0, 0)) itctx
+  in
+    VAppITs (e, itargs)
+  end
+    
 fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
   let
     (* val () = print $ "cg_e() started:\n" *)
@@ -253,22 +267,25 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val hval = HCode' (itbinds, ((rctx2, i_e2), I2))
         val l = fresh_label ()
         val () = output_heap ((l, "inr_branch"), hval)
-        fun VAppITs_ctx (e, itctx) =
-          let
-            fun IV n = VarI (ID (n, dummy), [])
-            fun TV n = TVar (ID (n, dummy), [])
-            val itargs = fst $ foldl
-                             (fn (bind, (acc, (ni, nt))) =>
-                                 case bind of
-                                     inl _ => (inl (IV ni) :: acc, (ni+1, nt))
-                                   | inr _ => (inr (TV nt) :: acc, (ni, nt+1))
-                             ) ([], (0, 0)) itctx
-          in
-            VAppITs (e, itargs)
-          end
       in
         IMov' (r, v) @::
-        IBr' (r, VAppITs_ctx (VLabel l, itctx)) @::
+        IBrSum' (r, VAppITs_ctx (VLabel l, itctx)) @::
+        I1
+      end
+    | ETriOp (ETIte, v, e1, e2) =>
+      let
+        val (e2, i_e2) = assert_EAscTime e2
+        val r = fresh_reg ()
+        val v = cg_v ectx v
+        val I1 = cg_e (ectx, itctx, rctx) e1
+        val I2 = cg_e (ectx, itctx, rctx) e2
+        val itbinds = rev itctx
+        val hval = HCode' (itbinds, ((rctx, i_e2), I2))
+        val l = fresh_label ()
+        val () = output_heap ((l, "else_branch"), hval)
+      in
+        IMov' (r, v) @::
+        IBrBool' (r, VAppITs_ctx (VLabel l, itctx)) @::
         I1
       end
     | EHalt v =>
@@ -342,7 +359,7 @@ val code_gen_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EHalt, Anno_ECase_e2_time]
+      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time]
     end
                      
 structure UnitTest = struct

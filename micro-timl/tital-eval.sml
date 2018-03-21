@@ -261,7 +261,7 @@ fun step (H, R, I) =
         val (inst, I') = unBind bind
       in
         case inst of
-            IUnOp (IUBr, r, v) =>
+            IUnOp (IUBrSum, r, v) =>
             let
               val (inj, w) = assert_HVInj $ must_find H $ assert_WVLabel $ R @!! r
             in
@@ -269,6 +269,11 @@ fun step (H, R, I) =
                   InjInl => (H, R @+ (r, w), I')
                 | InjInr => (H, R @+ (r, w), get_code (H, R) $ unInner v)
             end
+          | IUnOp (IUBrBool, r, v) =>
+            if assert_WVBool $ R @!! r then
+              (H, R, I')
+            else
+              (H, R, get_code (H, R) $ unInner v)
           | IUnOp (IUMov, rd, v) =>
             (H, R @+ (rd, R @^ unInner v), I')
           | IUnOp (IUPrint, rd, v) =>

@@ -523,6 +523,8 @@ fun cc e =
         in
           ECaseClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
         end
+      | ETriOp (ETIte, e, e1, e2) =>
+        ETriOp (ETIte, cc e, cc e1, cc e2)
       | EPack (tp, t, e) => EPack (cc_t tp, cc_t t, cc e)
       | EUnpack (e1, bind) =>
         let

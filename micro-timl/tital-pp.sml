@@ -17,7 +17,7 @@ fun str_word_const c =
 fun str_inst_un_op opr =
   case opr of
       IUMov => "mov"
-    | IUBr => "br"
+    | IUBrSum => "br_sum"
     | IUUnfold => "unfold"
     | IUPrint => "print"
     | IUInt2Str => "int2str"

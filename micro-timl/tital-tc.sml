@@ -168,7 +168,7 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
         val (inst, I) = unBind bind
       in
         case inst of
-            IUnOp (IUBr, r, v) =>
+            IUnOp (IUBrSum, r, v) =>
             let
               val t = tc_v ctx $ VReg r
               val t_v = tc_v ctx $ unInner v
@@ -178,6 +178,17 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val (rctx', i2) = assert_TArrowTAL t_v
               val i1 = tc_insts (add_r (r, t1) ctx) I
               val () = is_sub_rctx itctx (rctx @+ (r, t2), rctx')
+            in
+              T1 %+ IMax (i1, i2)
+            end
+          | IUnOp (IUBrBool, r, v) =>
+            let
+              val () = tc_v_against_ty ctx (VReg r, TBool)
+              val t_v = tc_v ctx $ unInner v
+              val t_v = whnf itctx t_v
+              val (rctx', i2) = assert_TArrowTAL t_v
+              val i1 = tc_insts ctx I
+              val () = is_sub_rctx itctx (rctx, rctx')
             in
               T1 %+ IMax (i1, i2)
             end

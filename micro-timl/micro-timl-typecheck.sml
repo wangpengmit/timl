@@ -759,6 +759,7 @@ val anno_EUnpackI = ref false
 val anno_ELet = ref false
 val anno_EHalt = ref false
 val anno_ECase_e2_time = ref false
+val anno_EIte_e2_time = ref false
            
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
@@ -809,22 +810,14 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i)
         end
-      (*here*)
-      | EUnOp (EBRead, e1, e2) =>
+      | EUnOp (EUTiML EUPArrayLen, e) =>
         let
-          val (e1, t1, j1) = tc ctx e1
-          val (t, i1) = case whnf itctx t1 of
+          val (e, t, j) = tc ctx e
+          val (_, i) = case whnf itctx t of
                             TArr data => data
-                          | _ => raise MTCError "ERead 1"
-          val (e2, t2, j2) = tc ctx e2
-          val t2 = whnf itctx t2
-          val i2 = case t2 of
-                       TNat i => i
-                     | _ => raise MTCError "ERead 2"
-          val () = check_prop ictx (i2 %< i1)
-          val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
+                          | _ => raise MTCError "EArrayLen"
         in
-          (ERead (e1, e2), t, j1 %+ j2)
+          (EUnOp (EUTiML EUPArrayLen, e), TNat i, j)
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
@@ -935,7 +928,8 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                        TNat i => i
                      | _ => raise MTCError "ENatAdd 2"
           val (e1, e2) = if !anno_ENatAdd then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val t = TNat $ interp_nat_expr_bin_op opr (i1, Simp.simp_i i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
+          val i2 = Simp.simp_i $ update_i i2
+          val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
         in
           (EBinOp (EBNat opr, e1, e2), t, j1 %+ j2)
         end
@@ -972,6 +966,19 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val e = if !anno_ECase then e %: t_e else e
         in
           (MakeECase (e, (name1, e1), (name2, e2)), t1, i %+ IMax (i1, i2))
+        end
+      | ETriOp (ETIte, e, e1, e2) =>
+        let
+          val (e, t_e, i) = tc ctx e
+          val t_e = whnf itctx t_e
+          val () = case t_e of
+                             TConst (TCTiML Bool) => ()
+                           | _ => raise MTCError $ "EIte: shoud be bool but got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
+          val (e1, t, i1) = tc ctx e1
+          val (e2, i2) = tc_against_ty ctx (e2, t)
+          val e2 = if !anno_EIte_e2_time then e2 |> i2 else e2
+        in
+          (ETriOp (ETIte, e, e1, e2), t, i %+ IMax (i1, i2))
         end
       | EAbs data =>
         let
@@ -1469,6 +1476,7 @@ datatype tc_flag =
        | Anno_ELet
        | Anno_EHalt
        | Anno_ECase_e2_time
+       | Anno_EIte_e2_time
 
 fun typecheck flags ctx e =
   let
@@ -1495,6 +1503,7 @@ fun typecheck flags ctx e =
     val () = anno_ELet := mem Anno_ELet flags
     val () = anno_EHalt := mem Anno_EHalt flags
     val () = anno_ECase_e2_time := mem Anno_ECase_e2_time flags
+    val () = anno_EIte_e2_time := mem Anno_EIte_e2_time flags
     val ret = runWriter (fn () => tc ctx e) ()
   in
     ret

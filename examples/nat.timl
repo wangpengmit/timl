@@ -65,7 +65,7 @@ fun nat_max {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a max b} using 1.
     __&builtin "Nat.nat_max"
 
 fun floor_half {n : Nat} (n : nat {n}) return nat {floor ($n / 2)} =
-    __&builtin "Nat.floor_half"
+  n #/ #2
 
 fun ceil_half {n : Nat} (n : nat {n}) return nat {ceil ($n / 2)} =
     __&builtin "Nat.ceil_half"

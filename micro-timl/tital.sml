@@ -35,7 +35,8 @@ datatype ('idx, 'ty) value =
 
 datatype inst_un_op =
          IUMov
-         | IUBr
+         | IUBrSum
+         | IUBrBool
          | IUUnfold
          | IUPrim of prim_expr_un_op
          | IUPrint
@@ -102,7 +103,8 @@ val IBNatAdd = IBNat EBNAdd
 fun IUnOp' (opr, rd, v) = IUnOp (opr, rd, Inner v)
 fun IBinOp' (opr, rd, rs, v) = IBinOp (opr, rd, rs, Inner v)
 fun IMov' (r, v) = IUnOp (IUMov, r, Inner v)
-fun IBr' (r, v) = IUnOp (IUBr, r, Inner v)
+fun IBrSum' (r, v) = IUnOp (IUBrSum, r, Inner v)
+fun IBrBool' (r, v) = IUnOp (IUBrBool, r, Inner v)
 fun IUnfold' (r, v) = IUnOp (IUUnfold, r, Inner v)
 fun IMallocPair' (r, (v1, v2)) = IMallocPair (r, (Inner v1, Inner v2))
 fun IUnpack' (name, r, v) = IUnpack (TBinder name, r, Outer v)
