@@ -851,6 +851,7 @@ fun is_value (e : U.expr) : bool =
            | EUPrint => false
            | EUArrayLen => false
            | EUPrim _ => false
+           | EUNat2Int => false
         )
       | EBinOp (opr, e1, e2) =>
         (case opr of
@@ -1086,6 +1087,14 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                in
                  (EUnOp (opr, e, r), TyNat (i, r), d)
                end
+	     | EUNat2Int =>
+               let
+                 val r = U.get_region_e e_all
+                 val i = fresh_i gctx sctx (Base Time) r
+                 val (e, _, d) = check_mtype (ctx, e, TyNat (i, r))
+               in
+                 (EUnOp (opr, e, r), BaseType (Int, r), d)
+               end
           )
 	| U.EBinOp (opr, e1, e2) =>
           (case opr of
@@ -1151,9 +1160,8 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val i2 = fresh_i gctx sctx (Base Time) r
                  val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
-                 fun make_sort p = Subset ((Base UnitSort, r), Bind (("__u", r), shift_i_p p), r)
                in
-                 (EBinOp (opr, e1, e2), TSumbool (make_sort (i1 %< i2), make_sort (i1 %>= i2)), d1 %+ d2)
+                 (EBinOp (opr, e1, e2), TSumbool (Subset_from_prop r (i1 %< i2), Subset_from_prop r (i1 %>= i2)), d1 %+ d2)
                end
           )
 	| U.ETriOp (ETWrite, e1, e2, e3) =>

@@ -118,6 +118,7 @@ fun cg_expr_un_op opr =
       EUPrim opr => IUPrim opr
     | EUPrint => IUPrint
     | EUArrayLen => IUArrayLen
+    | EUNat2Int => IUNat2Int
     | EUProj _ => raise Impossible "cg_expr_un_op() on EUProj"
       
 fun VAppITs_ctx (e, itctx) =
@@ -178,6 +179,9 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
               | EBinOp (EBNat opr, v1, v2) =>
                 [IMov' (r, cg_v ectx v1),
                  IBinOp' (IBNat opr, r, r, cg_v ectx v2)]
+              | EBinOp (EBNatCmp opr, v1, v2) =>
+                [IMov' (r, cg_v ectx v1),
+                 IBinOp' (IBNatCmp opr, r, r, cg_v ectx v2)]
               | EBinOp (EBNew, v1, v2) =>
                 [IMov' (r, cg_v ectx v1),
                  IBinOp' (IBNew, r, r, cg_v ectx v2)]

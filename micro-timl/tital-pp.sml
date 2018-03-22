@@ -18,14 +18,18 @@ fun str_inst_un_op opr =
   case opr of
       IUMov => "mov"
     | IUBrSum => "br_sum"
+    | IUBrBool => "br_bool"
     | IUUnfold => "unfold"
+    | IUPrim opr => str_prim_expr_un_op opr
     | IUPrint => "print"
-    | IUInt2Str => "int2str"
+    | IUArrayLen => "array_len"
+    | IUNat2Int => "nat2int"
 
 fun str_inst_bin_op opr =
   case opr of
       IBPrim opr => str_prim_expr_bin_op opr
     | IBNat opr => str_nat_expr_bin_op opr
+    | IBNatCmp opr => str_nat_cmp opr
     | IBNew => "new"
     | IBRead => "read"
     | IBWrite => "write"

@@ -226,6 +226,14 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i %+ T1
             end
+          | IUnOp (IUNat2Int, rd, v) =>
+            let
+              val t1 = tc_v ctx $ unInner v
+              val i1 = assert_TNat t1
+              val i = tc_insts (add_r (rd, TInt) ctx) I
+            in
+              i %+ T1
+            end
           | IUnOp (IUPrim opr, rd, v) =>
             let
               val () = tc_v_against_ty ctx (unInner v, get_prim_expr_un_op_arg_ty opr)
@@ -251,6 +259,17 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val t2 = tc_v ctx $ unInner v
               val i2 = assert_TNat t2
               val t = TNat $ interp_nat_expr_bin_op opr (i1, Simp.simp_i i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
+              val i = tc_insts (add_r (rd, t) ctx) I
+            in
+              i %+ T1
+            end
+          | IBinOp (IBNatCmp NCLt, rd, rs, v) =>
+            let
+              val t1 = tc_v ctx $ VReg rs
+              val i1 = assert_TNat t1
+              val t2 = tc_v ctx $ unInner v
+              val i2 = assert_TNat t2
+              val t = TSumbool (Subset_from_prop dummy (i1 %< i2), Subset_from_prop dummy (i1 %>= i2))
               val i = tc_insts (add_r (rd, t) ctx) I
             in
               i %+ T1

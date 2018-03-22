@@ -80,6 +80,7 @@ datatype expr_un_op =
          | EUPrim of prim_expr_un_op
          | EUPrint
          | EUArrayLen
+         | EUNat2Int
 
 fun str_expr_const c =
   case c of
@@ -107,6 +108,7 @@ fun str_expr_un_op opr =
     | EUPrim opr => str_prim_expr_un_op opr
     | EUPrint => "print"
     | EUArrayLen => "array_len"
+    | EUNat2Int => "nat2int"
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =

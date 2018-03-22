@@ -238,5 +238,13 @@ fun collect_EAppI e =
     | _ => (e, [])
 fun EAppIs (f, args) = foldl (swap EAppI) f args
                              
+fun TSumbool (s1, s2) =
+  let
+    val name = ("__p", dummy)
+    fun make_exists s = TExistsI $ IBindAnno ((name, s1), TUnit)
+  in
+    TSum (make_exists s1, make_exists s2)
+  end
+                  
 end
                                  

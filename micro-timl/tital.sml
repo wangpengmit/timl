@@ -41,10 +41,12 @@ datatype inst_un_op =
          | IUPrim of prim_expr_un_op
          | IUPrint
          | IUArrayLen
+         | IUNat2Int
              
 datatype inst_bin_op =
          IBPrim of prim_expr_bin_op
          | IBNat of nat_expr_bin_op
+         | IBNatCmp of nat_cmp
          | IBNew
          | IBRead
          | IBWrite

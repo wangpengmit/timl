@@ -746,7 +746,8 @@ val anno_EPair = ref false
 val anno_EBPrim = ref false
 val anno_ENew = ref false
 val anno_ERead = ref false
-val anno_ENatAdd = ref false
+val anno_ENat = ref false
+val anno_ENatCmp = ref false
 val anno_EWrite = ref false
 val anno_ECase = ref false
 val anno_EAbs = ref false
@@ -810,14 +811,23 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i)
         end
-      | EUnOp (EUTiML EUPArrayLen, e) =>
+      | EUnOp (EUTiML EUArrayLen, e) =>
         let
           val (e, t, j) = tc ctx e
           val (_, i) = case whnf itctx t of
                             TArr data => data
                           | _ => raise MTCError "EArrayLen"
         in
-          (EUnOp (EUTiML EUPArrayLen, e), TNat i, j)
+          (EUnOp (EUTiML EUArrayLen, e), TNat i, j)
+        end
+      | EUnOp (EUTiML EUNat2Int, e) =>
+        let
+          val (e, t, j) = tc ctx e
+          val i = case whnf itctx t of
+                            TNat data => data
+                          | _ => raise MTCError "ENat2Int"
+        in
+          (EUnOp (EUTiML EUNat2Int, e), TInt, j)
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
@@ -927,7 +937,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val i2 = case t2 of
                        TNat i => i
                      | _ => raise MTCError "ENatAdd 2"
-          val (e1, e2) = if !anno_ENatAdd then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val (e1, e2) = if !anno_ENat then (e1 %: t1, e2 %: t2) else (e1, e2)
           val i2 = Simp.simp_i $ update_i i2
           val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
         in
@@ -945,9 +955,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val i2 = case t2 of
                        TNat i => i
                      | _ => raise MTCError "ENatAdd 2"
-          (* val (e1, e2) = if !anno_ENatAdd then (e1 %: t1, e2 %: t2) else (e1, e2) *)
+          val (e1, e2) = if !anno_ENatCmp then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val t = TSumbool (Subset_from_prop dummy (i1 %< i2), Subset_from_prop dummy (i1 %>= i2))
         in
-          (*here*)
           (EBinOp (EBNatCmp NCLt, e1, e2), t, j1 %+ j2)
         end
       | ETriOp (ETWrite, e1, e2, e3) =>
@@ -1480,7 +1490,8 @@ datatype tc_flag =
        | Anno_EBPrim
        | Anno_ENew
        | Anno_ERead
-       | Anno_ENatAdd
+       | Anno_ENat
+       | Anno_ENatCmp
        | Anno_EWrite
        | Anno_ECase
        | Anno_EAbs
@@ -1507,7 +1518,8 @@ fun typecheck flags ctx e =
     val () = anno_EBPrim := mem Anno_EBPrim flags
     val () = anno_ENew := mem Anno_ENew flags
     val () = anno_ERead := mem Anno_ERead flags
-    val () = anno_ENatAdd := mem Anno_ENatAdd flags
+    val () = anno_ENat := mem Anno_ENat flags
+    val () = anno_ENatCmp := mem Anno_ENatCmp flags
     val () = anno_EWrite := mem Anno_EWrite flags
     val () = anno_ECase := mem Anno_ECase flags
     val () = anno_EAbs := mem Anno_EAbs flags

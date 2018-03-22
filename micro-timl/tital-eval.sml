@@ -2,6 +2,7 @@
 
 structure TiTALEval = struct
 
+open Expr
 open MicroTiMLExUtil
 open MicroTiMLExLongId
 open TiTAL
@@ -9,6 +10,19 @@ open TiTALVisitor
 
 infixr 0 $
        
+infix 9 %@
+infix 8 %^
+infix 7 %*
+infix 6 %+ 
+infix 4 %<=
+infix 4 %<
+infix 4 %>=
+infix 4 %=
+infixr 3 /\
+infixr 2 \/
+infixr 1 -->
+infix 1 <->
+
 fun adapt f d x v env = f (d + env) (x + env) v
 fun subst_i_insts d x v = subst_i_insts_fn (adapt substx_i_i d x v, adapt subst_i_t d x v)
 fun subst0_i_insts a = subst_i_insts 0 0 a
@@ -297,6 +311,8 @@ fun step (H, R, I) =
             (H, R @+ (rd, WVInt $ String.size $ assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v), I')
           | IUnOp (IUPrim opr, rd, v) =>
             (H, R @+ (rd, interp_prim_expr_un_op opr $ R @^ unInner v), I')
+          | IUnOp (IUNat2Int, rd, v) =>
+            (H, R @+ (rd, WVInt $ assert_WVNat $ R @^ unInner v), I')
           | IBinOp (IBPrim EBPStrConcat, rd, rs, v) =>
             let
               val l = fresh_label H
@@ -309,6 +325,22 @@ fun step (H, R, I) =
             (H, R @+ (rd, interp_prim_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
           | IBinOp (IBNat opr, rd, rs, v) =>
             (H, R @+ (rd, interp_nat_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
+          | IBinOp (IBNatCmp NCLt, rd, rs, v) =>
+            let
+              val n1 = assert_WVNat $ R @!! rs
+              val n2 = assert_WVNat $ R @^ unInner v
+              fun INat n = ConstIN (n, dummy)
+              val i1 = INat n1
+              val i2 = INat n2
+              val (inj, p) = if n1 < n2
+                             then (InjInl, i1 %< i2)
+                             else (InjInr, i1 %>= i2)
+              val t = TExistsI $ IBindAnno ((("__p", dummy), TypecheckUtil.Subset_from_prop dummy p), TUnit)
+              val l = fresh_label H
+              val hv = HVInj (inj, WVPackI (t, TTI dummy, WVTT))
+            in
+              (H @+ (l, hv), R @+ (rd, WVLabel l), I')
+            end
           | IMallocPair (rd, (v1, v2)) =>
             let
               (* val (v1, t1) = assert_VAscType $ unInner v1 *)

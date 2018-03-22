@@ -50,14 +50,6 @@ fun PEqs pairs = combine_And $ map PEq pairs
   
 val BSUnit = Base UnitSort
 
-fun TSumbool (s1, s2) =
-  let
-    val name = ("__p", dummy)
-    fun make_exists s = TExistsI $ IBindAnno ((name, s1), TUnit)
-  in
-    TSum (make_exists s1, make_exists s2)
-  end
-                  
 fun on_mt (t : S.mtype) =
   case t of
       S.Arrow (t1, i, t2) => TArrow (on_mt t1, i, on_mt t2)

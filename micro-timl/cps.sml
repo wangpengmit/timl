@@ -256,7 +256,7 @@ fun cont_type (t, i) = TArrow (t, i, TUnit)
 fun cps (e, t_e) (k, j_k) =
   let
     (* val () = println $ "CPS on " ^ (substr 0 400 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
-  in
+    fun main () =
   case e of
       S.EVar x =>
       (* [[ x ]](k) = k x *)
@@ -685,13 +685,18 @@ fun cps (e, t_e) (k, j_k) =
       in
         raise Unimpl $ "cps() on: " ^ s
       end
+    fun extra_msg () = "\nwhen cps-ing:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 5) ([], [], [], []) e)
+    val ret = main ()
+              handle Impossible m => raise Impossible (m ^ extra_msg ())
+  in
+    ret
   end
 
 val cps_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_EApp, Anno_EAppT, Anno_EAppI, Anno_EFold, Anno_EUnfold, Anno_EPack, Anno_EPackI, Anno_EUnpack, Anno_EUnpackI, Anno_EBPrim, Anno_ENew, Anno_ERead, Anno_ENatAdd, Anno_EProj, Anno_ECase, Anno_ELet, Anno_EWrite]
+      [Anno_EApp, Anno_EAppT, Anno_EAppI, Anno_EFold, Anno_EUnfold, Anno_EPack, Anno_EPackI, Anno_EUnpack, Anno_EUnpackI, Anno_EBPrim, Anno_ENew, Anno_ERead, Anno_ENat, Anno_ENatCmp, Anno_EProj, Anno_ECase, Anno_ELet, Anno_EWrite]
     end
                      
 (* Checks the form invariants after CPS, according to the 'System F to TAL' paper. *)

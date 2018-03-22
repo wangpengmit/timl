@@ -358,6 +358,7 @@ local
 		     else if x = "__&snd" then ESnd (elab e2, r)
 		     else if x = "__&not" then EUnOp (EUPrim EUPBoolNeg, elab e2, r)
 		     else if x = "__&int2str" then EUnOp (EUInt2Str, elab e2, r)
+		     else if x = "__&nat2int" then EUnOp (EUNat2Int, elab e2, r)
 		     else if x = "__&array_length" then EUnOp (EUArrayLen, elab e2, r)
 		     else if x = "__&print" then EUnOp (EUPrint, elab e2, r)
                      else if x = "__&builtin" then
