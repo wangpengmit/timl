@@ -38,8 +38,8 @@ type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_visitor_vtable =
        visit_insts : 'this -> 'env -> ('idx, 'ty) insts -> ('idx2, 'ty2) insts,
        visit_idx : 'this -> 'env -> 'idx -> 'idx2,
        visit_ty : 'this -> 'env -> 'ty -> 'ty2,
-       extend_i : 'this -> 'env -> iname -> 'env,
-       extend_t : 'this -> 'env -> tname -> 'env
+       extend_i : 'this -> 'env -> iname -> 'env * iname,
+       extend_t : 'this -> 'env -> tname -> 'env * tname
      }
        
 type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) tital_visitor_interface =
@@ -392,8 +392,8 @@ fun visit_hval (extend_i, extend_t, visit_idx, visit_sort, visit_kind, visit_ty,
 
 fun export_tital_visitor_vtable cast (omitted, visit_idx, visit_ty) =
   let
-    fun extend_i this (depth, (sctx, kctx)) name = (depth, (Name2str name :: sctx, kctx))
-    fun extend_t this (depth, (sctx, kctx)) name = (depth, (sctx, Name2str name :: kctx))
+    fun extend_i this (depth, (sctx, kctx)) name = ((depth, (Name2str name :: sctx, kctx)), name)
+    fun extend_t this (depth, (sctx, kctx)) name = ((depth, (sctx, Name2str name :: kctx)), name)
     fun ignore_this_depth f this (depth, ctx) = f ctx
     fun only_s f this (_, (sctx, kctx)) name = f sctx name
     fun only_sk f this (_, (sctx, kctx)) name = f (sctx, kctx) name
@@ -452,7 +452,7 @@ fun export_hval_fn visit_sort params depth h =
 
 fun subst_i_tital_visitor_vtable cast (visit_idx, visit_ty) =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
   in
     default_tital_visitor_vtable
       cast
@@ -475,8 +475,8 @@ fun subst_i_insts_fn params b =
 
 fun subst_t_tital_visitor_vtable cast visit_ty =
   let
-    fun extend_i this env _ = mapFst idepth_inc env
-    fun extend_t this env _ = mapSnd tdepth_inc env
+    fun extend_i this env name = (mapFst idepth_inc env, name)
+    fun extend_t this env name = (mapSnd tdepth_inc env, name)
   in
     default_tital_visitor_vtable
       cast

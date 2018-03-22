@@ -42,8 +42,8 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'va
        visit2_ibind_anno_bsort : 'this -> ('env -> 'bsort -> 'bsort2 -> 'bsort3) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty) -> 'env -> ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('bsort2, ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno -> ('bsort3, ('var3, 'bsort3, 'idx3, 'sort3) ty) ibind_anno,
        visit2_ibind_anno_sort : 'this -> ('env -> 'sort -> 'sort2 -> 'sort3) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty) -> 'env -> ('sort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('sort2, ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno -> ('sort3, ('var3, 'bsort3, 'idx3, 'sort3) ty) ibind_anno,
        visit2_tbind_anno : 'this -> ('env -> 'bsort kind -> 'bsort2 kind -> 'bsort3 kind) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty) -> 'env -> ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('bsort2 kind, ('var2, 'bsort2, 'idx2, 'sort2) ty) tbind_anno -> ('bsort3 kind, ('var3, 'bsort3, 'idx3, 'sort3) ty) tbind_anno,
-       extend_i : 'this -> 'env -> iname -> 'env,
-       extend_t : 'this -> 'env -> tname -> 'env
+       extend_i : 'this -> 'env -> iname -> 'env * iname,
+       extend_t : 'this -> 'env -> tname -> 'env * tname
      }
        
 type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2_interface =
@@ -170,7 +170,7 @@ fun visit2_abs visit2_'p env (Abs p1) (Abs p1') =
 fun visit2_binder extend (ctx : 'env ctx) (Binder x) (Binder x') =
   let
     val env = !(#current ctx)
-    val env = extend env x
+    val (env, x) = extend env x
     val () = #current ctx := env
   in
     Binder x

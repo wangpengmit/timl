@@ -465,7 +465,7 @@ fun find_unique ls name =
     name
   else
     let fun loop n =
-	  let val name' = name ^ (* "_x" ^  *)str_int n in
+	  let val name' = name ^ "_" ^str_int n in
 	    if not (mem op= name' ls) then name' else loop (n + 1)
 	  end in
       loop 2

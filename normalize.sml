@@ -480,9 +480,10 @@ fun normalize_k k = mapSnd (map normalize_bs) k
 fun normalize_type_visitor_vtable cast (ignore_dt, gctx) : ('this, kcontext) type_visitor_vtable =
   let
     fun adapt f this env b = f b
-    fun extend_i this kctx name = shiftx_i_kctx 1 kctx (*an optimization opportunity here by lazy shifting*)
-    fun extend_t this kctx name = add_kinding (fst name, Type) kctx
-    fun extend_t_anno this kctx (name, k) = add_kinding (fst name, k) kctx
+    (*an optimization opportunity here by lazy shifting*)
+    fun extend_i this kctx name = (shiftx_i_kctx 1 kctx, name) 
+    fun extend_t this kctx name = (add_kinding (fst name, Type) kctx, name)
+    fun extend_t_anno this kctx (name, k) = (add_kinding (fst name, k) kctx, name)
     val vtable =
         default_type_visitor_vtable
           cast

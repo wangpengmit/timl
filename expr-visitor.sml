@@ -93,10 +93,10 @@ type ('this, 'env) expr_visitor_vtable =
        visit_sort : 'this -> 'env -> sort -> T.sort,
        visit_mtype : 'this -> 'env -> mtype -> T.mtype,
        visit_ptrn_constr_tag : 'this -> 'env -> ptrn_constr_tag -> T.ptrn_constr_tag,
-       extend_i : 'this -> 'env -> iname -> 'env,
-       extend_t : 'this -> 'env -> tname -> 'env,
-       extend_c : 'this -> 'env -> cname -> 'env,
-       extend_e : 'this -> 'env -> ename -> 'env
+       extend_i : 'this -> 'env -> iname -> 'env * iname,
+       extend_t : 'this -> 'env -> tname -> 'env * tname,
+       extend_c : 'this -> 'env -> cname -> 'env * cname,
+       extend_e : 'this -> 'env -> ename -> 'env * ename
      }
        
 type ('this, 'env) expr_visitor_interface =

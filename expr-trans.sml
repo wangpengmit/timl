@@ -7,7 +7,7 @@ open ExprVisitor
 
 fun on_i_expr_visitor_vtable cast (visit_idx, visit_sort, visit_mtype, visit_ty) : ('this, int) expr_visitor_vtable =
   let
-    fun extend_one this env _ = env + 1
+    fun extend_one this env name = (env + 1, name)
   in
     default_expr_visitor_vtable
       cast
@@ -37,7 +37,7 @@ fun on_i_e params b =
     
 fun on_t_expr_visitor_vtable cast (visit_mtype, visit_ty) : ('this, int) expr_visitor_vtable =
   let
-    fun extend_one this env _ = env + 1
+    fun extend_one this env name = (env + 1, name)
   in
     default_expr_visitor_vtable
       cast
@@ -67,7 +67,7 @@ fun on_t_e params b =
     
 fun on_c_expr_visitor_vtable cast visit_cvar : ('this, int) expr_visitor_vtable =
   let
-    fun extend_one this env _ = env + 1
+    fun extend_one this env name = (env + 1, name)
   in
     default_expr_visitor_vtable
       cast
@@ -97,7 +97,7 @@ fun on_c_e params b =
     
 fun on_e_expr_visitor_vtable cast visit_var : ('this, int) expr_visitor_vtable =
   let
-    fun extend_one this env _ = env + 1
+    fun extend_one this env name = (env + 1, name)
   in
     default_expr_visitor_vtable
       cast
@@ -171,7 +171,7 @@ open ExprVisitor
 (* todo: this is the same as on_i_expr_visitor_vtable *)       
 fun subst_i_expr_visitor_vtable cast (visit_idx, visit_sort, visit_mtype, visit_ty) : ('this, int) expr_visitor_vtable =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
   in
     default_expr_visitor_vtable
       cast
@@ -214,8 +214,8 @@ fun subst_i_e_fn params b =
     
 fun subst_t_expr_visitor_vtable cast (visit_mtype, visit_ty) : ('this, idepth * tdepth) expr_visitor_vtable =
   let
-    fun extend_i this env _ = mapFst idepth_inc env
-    fun extend_t this env _ = mapSnd tdepth_inc env
+    fun extend_i this env name = (mapFst idepth_inc env, name)
+    fun extend_t this env name = (mapSnd tdepth_inc env, name)
   in
     default_expr_visitor_vtable
       cast

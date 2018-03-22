@@ -6,7 +6,7 @@ open TypeVisitor
                                          
 fun on_i_type_visitor_vtable cast (visit_idx, visit_sort) : ('this, int) type_visitor_vtable =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
   in
     default_type_visitor_vtable
       cast
@@ -52,7 +52,7 @@ fun on_i_c params b =
     
 fun on_t_type_visitor_vtable cast visit_var : ('this, int) type_visitor_vtable =
   let
-    fun extend_t this env _ = env + 1
+    fun extend_t this env name = (env + 1, name)
   in
     default_type_visitor_vtable
       cast
@@ -169,7 +169,7 @@ open TypeVisitor
                                          
 fun subst_i_type_visitor_vtable cast (visit_idx, visit_sort) : ('this, int) type_visitor_vtable =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
   in
     default_type_visitor_vtable
       cast
@@ -201,8 +201,8 @@ fun subst_i_t_fn params b =
 
 fun subst_t_type_visitor_vtable cast visit_MtVar : ('this, idepth * tdepth) type_visitor_vtable =
   let
-    fun extend_i this (di, dt) _ = (idepth_inc di, dt)
-    fun extend_t this (di, dt) _ = (di, tdepth_inc dt)
+    fun extend_i this (di, dt) name = ((idepth_inc di, dt), name)
+    fun extend_t this (di, dt) name = ((di, tdepth_inc dt), name)
     val vtable = 
         default_type_visitor_vtable
           cast

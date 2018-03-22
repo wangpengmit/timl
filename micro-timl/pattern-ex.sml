@@ -100,8 +100,8 @@ type ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable =
        visit_inj : 'this -> 'env -> inj -> inj,
        visit_ibinder : 'this -> 'env ctx -> iname binder -> iname binder,
        visit_ebinder : 'this -> 'env ctx -> ename binder -> ename binder,
-       extend_i : 'this -> 'env -> iname -> 'env,
-       extend_e : 'this -> 'env -> ename -> 'env
+       extend_i : 'this -> 'env -> iname -> 'env * iname,
+       extend_e : 'this -> 'env -> ename -> 'env * ename
      }
        
 type ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_interface =
@@ -368,7 +368,7 @@ fun new_ptrn_visitor vtable params =
     
 fun shift_i_ptrn_visitor_vtable cast (shift_e, shift_mt, n) : ('this, int, 'expr, 'mtype, 'expr2, 'mtype2) ptrn_visitor_vtable =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
     val extend_e = extend_noop
     fun do_shift shift this env b = shift env n b
   in
@@ -394,7 +394,7 @@ fun shift_i_pn_fn shift_e shift_mt x n b =
 fun shift_e_ptrn_visitor_vtable cast (shift_e, n) : ('this, int, 'mtype, 'expr, 'mtype, 'expr2) ptrn_visitor_vtable =
   let
     val extend_i = extend_noop
-    fun extend_e this env _ = env + 1
+    fun extend_e this env name = (env + 1, name)
     fun do_shift shift this env b = shift env n b
   in
     default_ptrn_visitor_vtable
@@ -418,8 +418,8 @@ fun shift_e_pn_fn shift_e x n b =
 
 fun subst_e_ptrn_visitor_vtable cast (subst_e, d, x, v) : ('this, idepth * tdepth * cdepth * edepth, 'mtype, 'expr, 'mtype, 'expr2) ptrn_visitor_vtable =
   let
-    fun extend_i this (di, dt, dc, de) _ = (idepth_inc di, dt, dc, de)
-    fun extend_e this (di, dt, dc, de) _ = (di, dt, dc, edepth_inc de)
+    fun extend_i this (di, dt, dc, de) name = ((idepth_inc di, dt, dc, de), name)
+    fun extend_e this (di, dt, dc, de) name = ((di, dt, dc, edepth_inc de), name)
     fun add_depth (di, dt, dc, de) (di', dt', dc', de') = (idepth_add (di, di'), tdepth_add (dt, dt'), cdepth_add (dc, dc'), edepth_add (de, de'))
     (* fun get_di (di, dt, dc, de) = di *)
     (* fun get_dt (di, dt, dc, de) = dt *)

@@ -49,7 +49,7 @@ type ('this, 'env) idx_visitor_vtable =
        visit_uvar_i : 'this -> 'env -> (bsort, idx) uvar_i * region -> (T.bsort, T.idx) T.uvar_i * region,
        visit_uvar_s : 'this -> 'env -> (bsort, sort) uvar_s * region -> (T.bsort, T.sort) T.uvar_s * region,
        visit_quan : 'this -> 'env -> idx exists_anno quan -> T.idx T.exists_anno quan,
-       extend : 'this -> 'env -> name -> 'env
+       extend : 'this -> 'env -> name -> 'env * name
      }
        
 type ('this, 'env) idx_visitor_interface =

@@ -53,7 +53,7 @@ fun visit_abs visit_'p env (Abs p1) =
 fun visit_binder extend (ctx : 'env ctx) (Binder x) =
   let
     val env = !(#current ctx)
-    val env = extend env x
+    val (env, x) = extend env x
     val () = #current ctx := env
   in
     Binder x

@@ -100,7 +100,7 @@ structure IV = IdxVisitor
     
 fun import_idx_visitor_vtable cast gctx : ('this, scontext) IV.idx_visitor_vtable =
   let
-    fun extend this env x = fst x :: env
+    fun extend this env name = (fst name :: env, name)
     fun visit_var this env x =
       on_long_id gctx #1 env x
     fun visit_quan _ _ q = on_quan q
@@ -220,8 +220,8 @@ structure TV = TypeVisitorFn (structure S = S.Type
                                          
 fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_visitor_vtable =
   let
-    fun extend_i this (sctx, kctx) name = (fst name :: sctx, kctx)
-    fun extend_t this (sctx, kctx) name = (sctx, fst name :: kctx)
+    fun extend_i this (sctx, kctx) name = ((fst name :: sctx, kctx), name)
+    fun extend_t this (sctx, kctx) name = ((sctx, fst name :: kctx), name)
     fun visit_var this (sctx, kctx) x =
       on_long_id gctx #2 kctx x
     fun for_idx f this (sctx, kctx) b = f gctx sctx b
@@ -498,14 +498,14 @@ structure EV = ExprVisitorFn (structure S = S
                              
 fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
   let
-    fun extend_i this (sctx, kctx, cctx, tctx) name = (Name2str name :: sctx, kctx, cctx, tctx)
-    fun extend_t this (sctx, kctx, cctx, tctx) name = (sctx, Name2str name :: kctx, cctx, tctx)
+    fun extend_i this (sctx, kctx, cctx, tctx) name = ((Name2str name :: sctx, kctx, cctx, tctx), name)
+    fun extend_t this (sctx, kctx, cctx, tctx) name = ((sctx, Name2str name :: kctx, cctx, tctx), name)
     (* Extending cctx will be performed by extend_c_data. We still need extend_c (can't just throw Impossible) because the default visit_DTypeDef and visit_SpecTypeDef use extend_c. *)
     val extend_c = extend_noop 
     (* fun extend_c this (sctx, kctx, cctx, tctx) name = raise Impossible $ "import_e/extend_c:" ^ Name2str name *)
     (* fun extend_c this (sctx, kctx, cctx, tctx) name = (sctx, kctx, Name2str name :: cctx, tctx) *)
-    fun extend_c_data (sctx, kctx, cctx, tctx) a = (sctx, kctx, a :: cctx, tctx)
-    fun extend_e this (sctx, kctx, cctx, tctx) name = (sctx, kctx, cctx, Name2str name :: tctx)
+    fun extend_c_data (sctx, kctx, cctx, tctx) a = ((sctx, kctx, a :: cctx, tctx), a)
+    fun extend_e this (sctx, kctx, cctx, tctx) name = ((sctx, kctx, cctx, Name2str name :: tctx), name)
     fun visit_cvar this (sctx, kctx, cctx, tctx) x =
       on_long_id gctx (map fst o #3) (map fst cctx) x
     fun for_idx f this (sctx, kctx, cctx, tctx) b = f gctx sctx b

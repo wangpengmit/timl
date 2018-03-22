@@ -23,7 +23,7 @@ structure IV = IdxVisitor
     
 fun export_idx_visitor_vtable cast gctx (* : ((* 'this *)string list IV.idx_visitor, ToStringUtil.scontext) IV.idx_visitor_vtable *) =
   let
-    fun extend this env name = fst name :: env
+    fun extend this env name = (fst name :: env, name)
     fun visit_var this ctx x =
       str_var #1 gctx ctx x
     fun visit_uvar_bs this ctx u =
@@ -110,8 +110,8 @@ fun export_k (n, sorts) = (n, map export_bs sorts)
   
 fun export_type_visitor_vtable cast gctx (* : ((string list * string list) TV.type_visitor, string list * string list) TV.type_visitor_vtable *) =
   let
-    fun extend_i this (sctx, kctx) name = (fst name :: sctx, kctx)
-    fun extend_t this (sctx, kctx) name = (sctx, fst name :: kctx)
+    fun extend_i this (sctx, kctx) name = ((fst name :: sctx, kctx), name)
+    fun extend_t this (sctx, kctx) name = ((sctx, fst name :: kctx), name)
     fun visit_var this (sctx, kctx) x =
       str_var #2 gctx kctx x
     fun for_idx f this (sctx, kctx) data = f gctx sctx data
@@ -181,10 +181,10 @@ structure EV = ToStringExprVisitor
 
 fun export_expr_visitor_vtable cast gctx =
   let
-    fun extend_i this (sctx, kctx, cctx, tctx) name = (Name2str name :: sctx, kctx, cctx, tctx)
-    fun extend_t this (sctx, kctx, cctx, tctx) name = (sctx, Name2str name :: kctx, cctx, tctx)
-    fun extend_c this (sctx, kctx, cctx, tctx) name = (sctx, kctx, Name2str name :: cctx, tctx)
-    fun extend_e this (sctx, kctx, cctx, tctx) name = (sctx, kctx, cctx, Name2str name :: tctx)
+    fun extend_i this (sctx, kctx, cctx, tctx) name = ((Name2str name :: sctx, kctx, cctx, tctx), name)
+    fun extend_t this (sctx, kctx, cctx, tctx) name = ((sctx, Name2str name :: kctx, cctx, tctx), name)
+    fun extend_c this (sctx, kctx, cctx, tctx) name = ((sctx, kctx, Name2str name :: cctx, tctx), name)
+    fun extend_e this (sctx, kctx, cctx, tctx) name = ((sctx, kctx, cctx, Name2str name :: tctx), name)
     fun visit_cvar this (sctx, kctx, cctx, tctx) x =
       str_var #3 gctx cctx x
     fun visit_var this (sctx, kctx, cctx, tctx) x =

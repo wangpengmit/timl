@@ -48,9 +48,9 @@ type ('this, 'env) type_visitor_vtable =
        visit_sort : 'this -> 'env -> sort -> T.sort,
        visit_kind : 'this -> 'env -> kind -> T.kind,
        visit_uvar : 'this -> 'env -> (bsort, kind, mtype) uvar_mt * region -> (T.bsort, T.kind, T.mtype) T.uvar_mt * region,
-       extend_i : 'this -> 'env -> name -> 'env,
-       extend_t_anno : 'this -> 'env -> name * T.kind -> 'env,
-       extend_t : 'this -> 'env -> name -> 'env
+       extend_i : 'this -> 'env -> name -> 'env * name,
+       extend_t_anno : 'this -> 'env -> name * T.kind -> 'env * name,
+       extend_t : 'this -> 'env -> name -> 'env * name
      }
        
 fun override_visit_mtype (record : ('this, 'env) type_visitor_vtable) new =
@@ -410,7 +410,8 @@ fun default_type_visitor_vtable
       let
         val vtable = cast this
         val Bind.Bind (name, t) = bind
-        val t = f (#extend_t_anno vtable this env (name, anno)) t
+        val (env, name) = #extend_t_anno vtable this env (name, anno)
+        val t = f env t
         val bind = Bind.Bind (name, t)
       in
         (anno, bind)

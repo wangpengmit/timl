@@ -95,10 +95,10 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        visit_sort : 'this -> 'env -> 'sort -> 'sort2,
        visit_kind : 'this -> 'env -> 'kind -> 'kind2,
        visit_ty : 'this -> 'env -> 'ty -> 'ty2,
-       extend_i : 'this -> 'env -> iname -> 'env,
-       extend_t : 'this -> 'env -> tname -> 'env,
-       extend_c : 'this -> 'env -> cname -> 'env,
-       extend_e : 'this -> 'env -> ename -> 'env
+       extend_i : 'this -> 'env -> iname -> 'env * iname,
+       extend_t : 'this -> 'env -> tname -> 'env * tname,
+       extend_c : 'this -> 'env -> cname -> 'env * cname,
+       extend_e : 'this -> 'env -> ename -> 'env * ename
      }
        
 type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 'ty2) expr_visitor_interface =
@@ -1516,7 +1516,7 @@ fun new_expr_visitor vtable params =
     
 fun shift_i_expr_visitor_vtable cast ((shift_i, shift_s, shift_t), n) : ('this, int, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx2, 'sort2, 'kind, 'ty2) expr_visitor_vtable =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
     fun do_shift shift this env b = shift env n b
   in
     default_expr_visitor_vtable
@@ -1545,7 +1545,7 @@ fun shift_i_e_fn shifts x n b =
     
 fun shift_t_expr_visitor_vtable cast (shift_t, n) : ('this, int, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty2) expr_visitor_vtable =
   let
-    fun extend_t this env _ = env + 1
+    fun extend_t this env name = (env + 1, name)
     fun do_shift shift this env b = shift env n b
   in
     default_expr_visitor_vtable
@@ -1574,7 +1574,7 @@ fun shift_t_e_fn shift_t x n b =
     
 fun shift_c_expr_visitor_vtable cast (shift_var, n) : ('this, int, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable =
   let
-    fun extend_c this env _ = env + 1
+    fun extend_c this env name = (env + 1, name)
     fun visit_cvar this env data = shift_var env n data
   in
     default_expr_visitor_vtable
@@ -1603,7 +1603,7 @@ fun shift_c_e_fn shift_var x n b =
     
 fun shift_e_expr_visitor_vtable cast (shift_var, n) : ('this, int, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable =
   let
-    fun extend_e this env _ = env + 1
+    fun extend_e this env name = (env + 1, name)
     fun visit_var this env data = shift_var env n data
   in
     default_expr_visitor_vtable
@@ -1633,7 +1633,7 @@ fun shift_e_e_fn shift_var x n b =
 (* todo: combine shift_i_expr_visitor_vtable and subst_i_expr_visitor_vtable *)    
 fun subst_i_expr_visitor_vtable cast (visit_idx, visit_sort, visit_ty) =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
   in
     default_expr_visitor_vtable
       cast
@@ -1661,8 +1661,8 @@ fun subst_i_e_fn params b =
 
 fun subst_t_expr_visitor_vtable cast visit_ty =
   let
-    fun extend_i this env _ = mapFst idepth_inc env
-    fun extend_t this env _ = mapSnd tdepth_inc env
+    fun extend_i this env name = (mapFst idepth_inc env, name)
+    fun extend_t this env name = (mapSnd tdepth_inc env, name)
   in
     default_expr_visitor_vtable
       cast
@@ -1690,10 +1690,10 @@ fun subst_t_e_fn params b =
 
 fun subst_c_expr_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_i_s, shift_i_t, shift_t_t), d, x, v) : ('this, idepth * tdepth * cdepth * edepth, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable =
   let
-    fun extend_i this (di, dt, dc, de) _ = (idepth_inc di, dt, dc, de)
-    fun extend_t this (di, dt, dc, de) _ = (di, tdepth_inc dt, dc, de)
-    fun extend_c this (di, dt, dc, de) _ = (di, dt, cdepth_inc dc, de)
-    fun extend_e this (di, dt, dc, de) _ = (di, dt, dc, edepth_inc de)
+    fun extend_i this (di, dt, dc, de) name = ((idepth_inc di, dt, dc, de), name)
+    fun extend_t this (di, dt, dc, de) name = ((di, tdepth_inc dt, dc, de), name)
+    fun extend_c this (di, dt, dc, de) name = ((di, dt, cdepth_inc dc, de), name)
+    fun extend_e this (di, dt, dc, de) name = ((di, dt, dc, edepth_inc de), name)
     fun add_depth (di, dt, dc, de) (di', dt', dc', de') = (idepth_add (di, di'), tdepth_add (dt, dt'), cdepth_add (dc, dc'), edepth_add (de, de'))
     fun get_di (di, dt, dc, de) = di
     fun get_dt (di, dt, dc, de) = dt
@@ -1749,10 +1749,10 @@ fun subst_c_e_fn params d x v b =
 
 fun subst_e_expr_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_i_s, shift_i_t, shift_t_t), d, x, v) : ('this, idepth * tdepth * cdepth * edepth, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable =
   let
-    fun extend_i this (di, dt, dc, de) _ = (idepth_inc di, dt, dc, de)
-    fun extend_t this (di, dt, dc, de) _ = (di, tdepth_inc dt, dc, de)
-    fun extend_c this (di, dt, dc, de) _ = (di, dt, cdepth_inc dc, de)
-    fun extend_e this (di, dt, dc, de) _ = (di, dt, dc, edepth_inc de)
+    fun extend_i this (di, dt, dc, de) name = ((idepth_inc di, dt, dc, de), name)
+    fun extend_t this (di, dt, dc, de) name = ((di, tdepth_inc dt, dc, de), name)
+    fun extend_c this (di, dt, dc, de) name = ((di, dt, cdepth_inc dc, de), name)
+    fun extend_e this (di, dt, dc, de) name = ((di, dt, dc, edepth_inc de), name)
     fun add_depth (di, dt, dc, de) (di', dt', dc', de') = (idepth_add (di, di'), tdepth_add (dt, dt'), cdepth_add (dc, dc'), edepth_add (de, de'))
     fun get_di (di, dt, dc, de) = di
     fun get_dt (di, dt, dc, de) = dt
@@ -1808,10 +1808,10 @@ fun subst_e_e_fn params d x v b =
 
 fun export_expr_visitor_vtable cast (omitted, visit_var, visit_cvar, visit_idx, visit_sort, visit_ty) =
   let
-    fun extend_i this (depth, (sctx, kctx, cctx, tctx)) name = (depth, (Name2str name :: sctx, kctx, cctx, tctx))
-    fun extend_t this (depth, (sctx, kctx, cctx, tctx)) name = (depth, (sctx, Name2str name :: kctx, cctx, tctx))
-    fun extend_c this (depth, (sctx, kctx, cctx, tctx)) name = (depth, (sctx, kctx, Name2str name :: cctx, tctx))
-    fun extend_e this (depth, (sctx, kctx, cctx, tctx)) name = (depth, (sctx, kctx, cctx, Name2str name :: tctx))
+    fun extend_i this (depth, (sctx, kctx, cctx, tctx)) name = ((depth, (Name2str name :: sctx, kctx, cctx, tctx)), name)
+    fun extend_t this (depth, (sctx, kctx, cctx, tctx)) name = ((depth, (sctx, Name2str name :: kctx, cctx, tctx)), name)
+    fun extend_c this (depth, (sctx, kctx, cctx, tctx)) name = ((depth, (sctx, kctx, Name2str name :: cctx, tctx)), name)
+    fun extend_e this (depth, (sctx, kctx, cctx, tctx)) name = ((depth, (sctx, kctx, cctx, Name2str name :: tctx)), name)
     fun ignore_this_depth f this (depth, ctx) = f ctx
     fun only_s f this (_, (sctx, kctx, cctx, tctx)) name = f sctx name
     fun only_sk f this (_, (sctx, kctx, cctx, tctx)) name = f (sctx, kctx) name
@@ -1941,40 +1941,55 @@ fun is_value e =
     (*     | EVar _ => true (* todo: is this right? *) *)
     (*     | _ => false *)
 
-(* (*********** the "uniquefy" visitor: makes variable names unique to remove shadowing ***************)     *)
+(*********** the "uniquefy" visitor: makes variable names unique to remove shadowing ***************)
 
-(* fun uniquefy_expr_visitor_vtable cast (visit_idx, visit_sort, visit_ty) = *)
-(*   let *)
-(*     fun extend_i this (sctx, kctx, cctx, tctx) name = (Name2str name :: sctx, kctx, cctx, tctx) *)
-(*     fun extend_t this (sctx, kctx, cctx, tctx) name = (sctx, Name2str name :: kctx, cctx, tctx) *)
-(*     fun extend_c this (sctx, kctx, cctx, tctx) name = (sctx, kctx, Name2str name :: cctx, tctx) *)
-(*     fun extend_e this (sctx, kctx, cctx, tctx) name = (sctx, kctx, cctx, Name2str name :: tctx) *)
-(*     fun only_s f this (sctx, kctx, cctx, tctx) name = f sctx name *)
-(*     fun only_sk f this (sctx, kctx, cctx, tctx) name = f (sctx, kctx) name *)
-(*     val vtable =  *)
-(*         default_expr_visitor_vtable *)
-(*           cast *)
-(*           extend_i *)
-(*           extend_t *)
-(*           extend_c *)
-(*           extend_e *)
-(*           visit_noop *)
-(*           vsiit_noop *)
-(*           (only_s visit_idx) *)
-(*           (only_s visit_sort) *)
-(*           (only_sk visit_ty) *)
-(*   in *)
-(*     vtable *)
-(*   end *)
+fun uniquefy_expr_visitor_vtable cast (visit_idx, visit_sort, visit_ty) =
+  let
+    fun extend names name =
+      let
+        val (tag, (name, r)) = name
+        val name = find_unique names name
+        val names = name :: names
+        val name = (tag, (name, r))
+      in
+        (names, name)
+      end
+    fun extend_i this (sctx, kctx, cctx, tctx) name =
+      let val (sctx, name) = extend sctx name in ((sctx, kctx, cctx, tctx), name) end
+    fun extend_t this (sctx, kctx, cctx, tctx) name =
+      let val (kctx, name) = extend kctx name in ((sctx, kctx, cctx, tctx), name) end
+    fun extend_c this (sctx, kctx, cctx, tctx) name =
+      let val (cctx, name) = extend cctx name in ((sctx, kctx, cctx, tctx), name) end
+    fun extend_e this (sctx, kctx, cctx, tctx) name =
+      let val (tctx, name) = extend tctx name in ((sctx, kctx, cctx, tctx), name) end
+    fun only_s f this (sctx, kctx, cctx, tctx) name = f sctx name
+    fun only_sk f this (sctx, kctx, cctx, tctx) name = f (sctx, kctx) name
+    val vtable =
+        default_expr_visitor_vtable
+          cast
+          extend_i
+          extend_t
+          extend_c
+          extend_e
+          visit_noop
+          visit_noop
+          (only_s visit_idx)
+          (only_s visit_sort)
+          (only_sk visit_ty)
+  in
+    vtable
+  end
 
-(* fun new_uniquefy_expr_visitor params = new_expr_visitor uniquefy_expr_visitor_vtable params *)
+fun new_uniquefy_expr_visitor params = new_expr_visitor uniquefy_expr_visitor_vtable params
     
-(* fun uniquefy_e_fn params depth ctx e = *)
-(*   let *)
-(*     val visitor as (ExprVisitor vtable) = new_uniquefy_expr_visitor params *)
-(*   in *)
-(*     #visit_expr vtable visitor ctx e *)
-(*   end *)
+fun uniquefy_e_fn params ctx e =
+  let
+    val visitor as (ExprVisitor vtable) = new_uniquefy_expr_visitor params
+  in
+    #visit_expr vtable visitor ctx e
+  end
+    
+fun uniquefy_e a = uniquefy_e_fn (return2, return2, return2) a
 
 end
                         

@@ -37,7 +37,8 @@ type ('classifier, 'name, 'inner) tbinds = (type_namespace, 'classifier, 'name, 
 fun visit_bind extend f env data =
   let
     val Bind (name, t) = data
-    val t = f (extend env name) t
+    val (env, name) = extend env name
+    val t = f env t
   in
     Bind (name, t)
   end

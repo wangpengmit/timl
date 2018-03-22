@@ -9,7 +9,7 @@ open ExprVisitor
 
 fun simp_expr_visitor_vtable cast (visit_idx, visit_sort, visit_mtype, visit_ty, visit_kind) : ('this, kcontext) expr_visitor_vtable =
   let
-    fun extend_t this env name = (Name2str name, KeKind Type) :: env
+    fun extend_t this env name = ((Name2str name, KeKind Type) :: env, name)
   in
     default_expr_visitor_vtable
       cast

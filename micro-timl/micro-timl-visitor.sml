@@ -42,8 +42,8 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_
        visit_ibind_anno_bsort : 'this -> ('env -> 'bsort -> 'bsort2) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty) -> 'env -> ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('bsort2, ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno,
        visit_ibind_anno_sort : 'this -> ('env -> 'sort -> 'sort2) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty) -> 'env -> ('sort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('sort2, ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno,
        visit_tbind_anno : 'this -> ('env -> 'bsort kind -> 'bsort2 kind) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty) -> 'env -> ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('bsort2 kind, ('var2, 'bsort2, 'idx2, 'sort2) ty) tbind_anno,
-       extend_i : 'this -> 'env -> iname -> 'env,
-       extend_t : 'this -> 'env -> tname -> 'env
+       extend_i : 'this -> 'env -> iname -> 'env * iname,
+       extend_t : 'this -> 'env -> tname -> 'env * tname
      }
        
 type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_interface =
@@ -715,9 +715,9 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        visit_sort : 'this -> 'env -> 'sort -> 'sort2,
        visit_kind : 'this -> 'env -> 'kind -> 'kind2,
        visit_ty : 'this -> 'env -> 'ty -> 'ty2,
-       extend_i : 'this -> 'env -> iname -> 'env,
-       extend_t : 'this -> 'env -> tname -> 'env,
-       extend_e : 'this -> 'env -> ename -> 'env
+       extend_i : 'this -> 'env -> iname -> 'env * iname,
+       extend_t : 'this -> 'env -> tname -> 'env * tname,
+       extend_e : 'this -> 'env -> ename -> 'env * ename
      }
        
 type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 'ty2) expr_visitor_interface =
@@ -1037,7 +1037,7 @@ fun new_expr_visitor vtable params =
     
 fun shift_i_ty_visitor_vtable cast ((shift_i, shift_s), n) : ('this, int, 'var, 'bsort, 'idx, 'sort, 'var, 'bsort, 'idx2, 'sort2) ty_visitor_vtable =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
     val extend_t = extend_noop
     val visit_var = visit_noop
     fun do_shift shift this env b = shift env n b
@@ -1066,7 +1066,7 @@ fun shift_i_t_fn shifts x n b =
 fun shift_t_ty_visitor_vtable cast (shift_var, n) : ('this, int, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort, 'idx, 'sort) ty_visitor_vtable =
   let
     val extend_i = extend_noop
-    fun extend_t this env _ = env + 1
+    fun extend_t this env name = (env + 1, name)
     fun visit_var this env data = shift_var env n data
   in
     default_ty_visitor_vtable
@@ -1092,7 +1092,7 @@ fun shift_t_t_fn shift_var x n b =
 
 fun subst_i_ty_visitor_vtable cast ((subst_i_i, subst_i_s), d, x, v) : ('this, int, 'var, 'bsort, 'idx, 'sort, 'var, 'bsort, 'idx2, 'sort2) ty_visitor_vtable =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
     fun visit_idx this env b = subst_i_i (d + env) (x + env) v b
     fun visit_sort this env b = subst_i_s (d + env) (x + env) v b
   in
@@ -1119,8 +1119,8 @@ fun subst_i_t_fn substs d x v b =
 
 fun subst_t_ty_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_i_s), d, x, v) : ('this, idepth * tdepth, 'var, 'bsort, 'idx, 'sort, 'var, 'bsort, 'idx, 'sort) ty_visitor_vtable =
   let
-    fun extend_i this (di, dt) _ = (idepth_inc di, dt)
-    fun extend_t this (di, dt) _ = (di, tdepth_inc dt)
+    fun extend_i this (di, dt) name = ((idepth_inc di, dt), name)
+    fun extend_t this (di, dt) name = ((di, tdepth_inc dt), name)
     fun add_depth (di, dt) (di', dt') = (idepth_add (di, di'), tdepth_add (dt, dt'))
     fun get_di (di, dt) = di
     fun get_dt (di, dt) = dt
@@ -1228,8 +1228,8 @@ fun normalize_t_fn params t =
 
 fun export_ty_visitor_vtable cast (omitted, visit_var, visit_idx, visit_sort) =
   let
-    fun extend_i this (depth, (sctx, kctx)) name = (depth, (Name2str name :: sctx, kctx))
-    fun extend_t this (depth, (sctx, kctx)) name = (depth, (sctx, Name2str name :: kctx))
+    fun extend_i this (depth, (sctx, kctx)) name = ((depth, (Name2str name :: sctx, kctx)), name)
+    fun extend_t this (depth, (sctx, kctx)) name = ((depth, (sctx, Name2str name :: kctx)), name)
     fun only_s f this (depth, (sctx, kctx)) name = f sctx name
     fun ignore_this_depth f this (depth, ctx) = f ctx
     val vtable = 

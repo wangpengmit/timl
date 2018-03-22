@@ -15,8 +15,8 @@ type ('this, 'env, 'cvar, 'mtype, 'cvar2, 'mtype2) ptrn_visitor_vtable =
        visit_AnnoP : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * 'mtype outer -> ('cvar2, 'mtype2) ptrn,
        visit_cvar : 'this -> 'env -> 'cvar -> 'cvar2,
        visit_mtype : 'this -> 'env -> 'mtype -> 'mtype2,
-       extend_i : 'this -> 'env -> iname -> 'env,
-       extend_e : 'this -> 'env -> ename -> 'env
+       extend_i : 'this -> 'env -> iname -> 'env * iname,
+       extend_e : 'this -> 'env -> ename -> 'env * ename
      }
        
 type ('this, 'env, 'cvar, 'mtype, 'cvar2, 'mtype2) ptrn_visitor_interface =
@@ -143,7 +143,7 @@ fun new_ptrn_visitor vtable params =
 
 fun subst_t_ptrn_visitor_vtable cast (subst_t_t, d, x, v) : ('this, idepth * tdepth, 'mtype, 'expr, 'mtype, 'expr2) ptrn_visitor_vtable =
   let
-    fun extend_i this env _ = mapFst idepth_inc env
+    fun extend_i this env name = (mapFst idepth_inc env, name)
     fun add_depth (di, dt) (di', dt') = (idepth_add (di, di'), tdepth_add (dt, dt'))
     fun visit_mtype this env b = subst_t_t (add_depth d env) (x + unTDepth (snd env)) v b
   in

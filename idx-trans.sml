@@ -7,7 +7,7 @@ open IdxVisitor
                                          
 fun on_i_idx_visitor_vtable cast visit_var : ('this, int) idx_visitor_vtable =
   let
-    fun extend_i this env _ = env + 1
+    fun extend_i this env name = (env + 1, name)
   in
     default_idx_visitor_vtable
       cast
@@ -139,7 +139,7 @@ open IdxVisitor
 (* depth [d] is used for shifting value [v] *)
 fun subst_i_idx_visitor_vtable cast visit_VarI_param : ('this, int) idx_visitor_vtable =
   let
-    fun extend_i this d _ = d + 1
+    fun extend_i this d name = (d + 1, name)
     fun visit_VarI this env (y, anno) =
         visit_VarI_param (#visit_sort (cast this) this env) env (y, anno)
     val vtable = 

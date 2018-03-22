@@ -946,12 +946,13 @@ fun test1 dirname =
     val () = println "Simplifying ..."
     val e = SimpExpr.simp_e [] e
     val () = println "Finished simplifying"
-    (* val () = println $ str_e empty ToStringUtil.empty_ctx e *)
+    val empty_ctx = ToStringUtil.empty_ctx
+    (* val () = println $ str_e empty empty_ctx e *)
     (* val () = println "" *)
     val () = println "Started translating ..."
     val e = trans_e e
     val () = println "Finished translating"
-    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    (* val () = pp_e $ export empty_ctx e *)
     (* val () = println "" *)
                      
     open MicroTiMLTypecheck
@@ -968,14 +969,14 @@ fun test1 dirname =
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    val () = pp_e (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx e
     val () = println ""
                      
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion ..."
-    val () = pp_e (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
+    val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx $ uniquefy_e empty_ctx e
     val () = println ""
     val () = println "Started post-CPS form checking"
     val () = check_CPSed_expr e

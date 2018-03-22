@@ -9,10 +9,10 @@ infixr 0 !!
 
 fun collect_names_expr_visitor_vtable cast () =
   let
-    fun extend_i this (sctx, kctx, cctx, tctx) name = (Name2str name :: sctx, kctx, cctx, tctx)
-    fun extend_t this (sctx, kctx, cctx, tctx) name = (sctx, Name2str name :: kctx, cctx, tctx)
-    fun extend_c this (sctx, kctx, cctx, tctx) name = (sctx, kctx, Name2str name :: cctx, tctx)
-    fun extend_e this (sctx, kctx, cctx, tctx) name = (sctx, kctx, cctx, Name2str name :: tctx)
+    fun extend_i this (sctx, kctx, cctx, tctx) name = ((Name2str name :: sctx, kctx, cctx, tctx), name)
+    fun extend_t this (sctx, kctx, cctx, tctx) name = ((sctx, Name2str name :: kctx, cctx, tctx), name)
+    fun extend_c this (sctx, kctx, cctx, tctx) name = ((sctx, kctx, Name2str name :: cctx, tctx), name)
+    fun extend_e this (sctx, kctx, cctx, tctx) name = ((sctx, kctx, cctx, Name2str name :: tctx), name)
   in
     default_expr_visitor_vtable
       cast
