@@ -86,6 +86,17 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str $ str_ty_const c;
           close_box ()
         )
+      | TBinOp (TBProd, t1, t2) =>
+        let
+          val ts = collect_TProd_left t
+          val (t, ts) = assert_cons ts
+          val pp_t = fn t => (str "("; pp_t t; str ")")
+        in
+          open_hbox ();
+          pp_t t;
+          app (fn t => (space (); str "*"; space (); pp_t t)) ts;
+          close_box ()
+        end
       | TBinOp (opr, t1, t2) =>
         (
           open_hbox ();

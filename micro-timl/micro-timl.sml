@@ -84,4 +84,14 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | ENever of 'ty
          | ELet of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
 
+fun collect_TBinOp_left opr t =
+  case t of
+      TBinOp (opr', t1, t2) =>
+      if opr' = opr then
+        collect_TBinOp_left opr t1 @ [t2]
+      else [t]
+    | _ => [t]
+             
+fun collect_TProd_left a = collect_TBinOp_left TBProd a
+                                            
 end
