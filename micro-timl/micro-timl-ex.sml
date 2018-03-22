@@ -1804,7 +1804,7 @@ fun subst_e_e_fn params d x v b =
     #visit_expr vtable visitor (IDepth 0, TDepth 0, CDepth 0, EDepth 0) b
   end
 
-(*********** the "export" visitor: convertnig de Bruijn indices to nameful terms ***************)    
+(*********** the "export" visitor: converting de Bruijn indices to nameful terms ***************)    
 
 fun export_expr_visitor_vtable cast (omitted, visit_var, visit_cvar, visit_idx, visit_sort, visit_ty) =
   let
@@ -1855,6 +1855,8 @@ fun export_e_fn params depth ctx e =
   in
     #visit_expr vtable visitor (depth, ctx) e
   end
+
+(*********** other utilities ***************)    
 
 fun collect_EAscTypeTime_rev e =
   let
@@ -1938,6 +1940,41 @@ fun is_value e =
     (*       end *)
     (*     | EVar _ => true (* todo: is this right? *) *)
     (*     | _ => false *)
+
+(* (*********** the "uniquefy" visitor: makes variable names unique to remove shadowing ***************)     *)
+
+(* fun uniquefy_expr_visitor_vtable cast (visit_idx, visit_sort, visit_ty) = *)
+(*   let *)
+(*     fun extend_i this (sctx, kctx, cctx, tctx) name = (Name2str name :: sctx, kctx, cctx, tctx) *)
+(*     fun extend_t this (sctx, kctx, cctx, tctx) name = (sctx, Name2str name :: kctx, cctx, tctx) *)
+(*     fun extend_c this (sctx, kctx, cctx, tctx) name = (sctx, kctx, Name2str name :: cctx, tctx) *)
+(*     fun extend_e this (sctx, kctx, cctx, tctx) name = (sctx, kctx, cctx, Name2str name :: tctx) *)
+(*     fun only_s f this (sctx, kctx, cctx, tctx) name = f sctx name *)
+(*     fun only_sk f this (sctx, kctx, cctx, tctx) name = f (sctx, kctx) name *)
+(*     val vtable =  *)
+(*         default_expr_visitor_vtable *)
+(*           cast *)
+(*           extend_i *)
+(*           extend_t *)
+(*           extend_c *)
+(*           extend_e *)
+(*           visit_noop *)
+(*           vsiit_noop *)
+(*           (only_s visit_idx) *)
+(*           (only_s visit_sort) *)
+(*           (only_sk visit_ty) *)
+(*   in *)
+(*     vtable *)
+(*   end *)
+
+(* fun new_uniquefy_expr_visitor params = new_expr_visitor uniquefy_expr_visitor_vtable params *)
+    
+(* fun uniquefy_e_fn params depth ctx e = *)
+(*   let *)
+(*     val visitor as (ExprVisitor vtable) = new_uniquefy_expr_visitor params *)
+(*   in *)
+(*     #visit_expr vtable visitor ctx e *)
+(*   end *)
 
 end
                         

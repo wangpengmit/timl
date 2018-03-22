@@ -282,23 +282,17 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
             space ();
             pp_e e2; close_box (); str ")"; close_box ()
         )
-      | ECase (e, e1, e2) =>
-        (
-          open_hbox ();
-          str "ECase";
-          space ();
-          str "(";
-          pp_e e;
-          comma ();
-          str "[";
-	  open_vbox ();
-          space ();
-          pp_list (pp_pair (str, pp_e) o get_bind) [e1, e2];
-	  close_box ();
-          str "]";
-          str ")";
-          close_box ()
-        )
+      | ECase (e, bind1, bind2) =>
+        let
+          val (name1, e1) = get_bind bind1
+          val (name2, e2) = get_bind bind2
+        in
+          open_vbox_noindent (); open_hbox (); str "ECase"; space (); str "("; pp_e e; close_box (); comma ();
+	  open_vbox (); str name1; str ":"; space ();
+            pp_e e1; close_box (); comma ();
+	  open_vbox (); str name2; str ":"; space ();
+            pp_e e2; close_box (); str ")"; close_box ()
+        end
       | ELet (e, branch) =>
         let
           val (name, e_body) = get_bind branch
