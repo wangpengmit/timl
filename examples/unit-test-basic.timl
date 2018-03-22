@@ -75,8 +75,14 @@ fun println s = print s; print "\n"
                                                         
 fun fact_tail {n : Nat} (n : nat {n}, acc) (* return using 3.0 * $n *) =
   ifdec n #< #1 then acc
-  else fact_tail (n #- #1, nat2int n * acc) using 4.0 * $n
+  else fact_tail (n #- #1, __&nat2int n * acc) using 4.0 * $n
                  
-(* val () = println <| "fact_tail (4, 1) = " ^ (int2str <| fact_tail (#4, 1)) *)
+val () = println <| "fact_tail (4, 1) = " ^ (int2str <| fact_tail (#4, 1))
+
+fun fact {n : Nat} (n : nat {n}) (* return using 3.0 * $n *) =
+  ifdec n #< #1 then 1
+  else __&nat2int n * fact (n #- #1) using 4.0 * $n
+                 
+val () = println <| "fact 4 = " ^ (int2str <| fact #4)
 
 end
