@@ -37,7 +37,8 @@ fun fromList ['a] {len : Nat} (l : list 'a {len}) return array 'a {len} using 8.
       in
         arr
       end
-        
+
+(* todo: shouldn't use List.tabulate which incurs extra space usage *)
 fun tabulate ['a] {len : Nat} {m : Time} (n : nat {len}, f : nat_less_than {len} -- m --> 'a) return array 'a {len} using (m + $12) * $len + $4 =
   fromList <| List.tabulate (n, f)
 
@@ -77,20 +78,44 @@ fun modifyi ['a] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a -- m --> '
 fun modify ['a] {m : Time} {len : Nat} (f : 'a -- m --> 'a) (a : array 'a {len}) return unit using (m + $6) * $len + 4.0 =
   modifyi (fn (_, x) => f x) a
 
-fun foldli ['a 'b] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a * 'b -- m --> 'b) (x : 'b) (a : array 'a {len}) return 'b using (m + $1) * $len =
-    __&builtin "Array.foldli"
+fun foldri ['a 'b] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a * 'b -- m --> 'b) (x : 'b) (a : array 'a {len}) return 'b using (m + $5) * $len + 2.0 =
+  let
+    fun loop {n | n <= len} (n : nat {n}, acc) (* return using (m + 4.0) * $n *) =
+      ifdec n #<= #0 then acc
+      else
+        let return using (m + 5.0) * $n
+          val n' = n #- #1
+          val acc = f (NatLT n', sub (a, n'), acc)
+        in
+          loop (n', acc)
+        end
+  in
+    loop (length a, x)
+  end
 
-fun foldri ['a 'b] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a * 'b -- m --> 'b) (x : 'b) (a : array 'a {len}) return 'b using (m + $1) * $len =
-    __&builtin "Array.foldri"
+fun foldr ['a 'b] {m : Time} (f : 'a * 'b -- m --> 'b) (acc : 'b) {len : Nat} (a : array 'a {len}) return 'b using (m + $6) * $len + 5.0 =
+  foldri (fn (_, x, acc) => f (x, acc)) acc a
+  
+fun foldli ['a 'b] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a * 'b -- m --> 'b) (x : 'b) (a : array 'a {len}) return 'b using (m + $5) * $len + 2.0 =
+  let
+    val len = length a
+    fun loop {n | n <= len} (n : nat {n}, acc) (* return using (m + 4.0) * $n *) =
+      ifdec n #>= len then acc
+      else
+        let return using (m + 5.0) * $(len - n)
+          val acc = f (NatLT n, sub (a, n), acc)
+        in
+          loop (n #+ #1, acc)
+        end
+  in
+    loop (#0, x)
+  end
 
-fun foldl ['a 'b] {m : Time} (f : 'a * 'b -- m --> 'b) (x : 'b) {len : Nat} (a : array 'a {len}) return 'b using (m + $1) * $len =
-    __&builtin "Array.foldl"
+fun foldl ['a 'b] {m : Time} (f : 'a * 'b -- m --> 'b) (acc : 'b) {len : Nat} (a : array 'a {len}) return 'b using (m + $6) * $len + 5.0 =
+  foldli (fn (_, x, acc) => f (x, acc)) acc a
 
-fun foldr ['a 'b] {m : Time} (f : 'a * 'b -- m --> 'b) (x : 'b) {len : Nat} (a : array 'a {len}) return 'b using (m + $1) * $len =
-    __&builtin "Array.foldr"
-
-fun find ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return option 'a using (m + $1) * $len =
-    __&builtin "Array.find"
+fun find ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return option 'a using (m + $7) * $len + 8.0 =
+  foldl (fn (x, acc) => case acc of SOME _ => acc | NONE => if f x then SOME x else NONE) NONE {_} a
 
 fun exi_sts ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return bool using (m + $1) * $len =
     __&builtin "Array.exi_sts"
