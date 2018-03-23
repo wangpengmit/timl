@@ -88,10 +88,14 @@ fun process_prog show_result filename gctx prog =
             end
               
           val ms = dedup $ UnderscoredCollectMod.collect_mod_prog prog
+          val () = println $ "ms: " ^ str_ls id ms 
           val ms = to_list $ trans_closure (get_dependency_graph gctx) $ to_set ms
+          val () = println $ "ms: " ^ str_ls id ms 
           (* val () = println $ "before restrict: " ^ str_int (Gctx.length gctx) *)
+          val () = println $ "before restrict: " ^ str_ls id (Gctx.domain gctx)
           val gctx = MU.restrict ms gctx
           (* val () = println $ "after restrict: " ^ str_int (Gctx.length gctx) *)
+          val () = println $ "after restrict: " ^ str_ls id (Gctx.domain gctx)
         in
           gctx
         end

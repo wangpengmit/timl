@@ -313,7 +313,7 @@ fun lookup_module gctx m =
 fun fetch_module gctx (m, r) =
   case lookup_module gctx m of
       SOME sg => sg
-    | NONE => raise Error (r, ["Unbounded module"])
+    | NONE => raise Error (r, [sprintf "Unbound module $ in module context $ " [m, str_ls id $ Gctx.domain gctx]])
                     
 fun fetch_from_module (params as (package, do_fetch)) (* sigs *) gctx ((m, mr) : mod_id, x) =
   let

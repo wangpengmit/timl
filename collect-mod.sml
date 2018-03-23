@@ -570,7 +570,7 @@ local
     case b of
         SpecVal (name, t) => on_t acc t
       | SpecIdx (name, s) => on_s acc s
-      | SpecType (name, k) => []
+      | SpecType (name, k) => acc
       | SpecTypeDef (name, t) => on_mt acc t
 in
 val on_spec = f
@@ -607,9 +607,13 @@ fun on_top_bind acc b =
       TopModBind m => on_mod acc m
     | TopFunctorBind (((arg_name, r2), arg), m) =>
       let 
+        val () = println $ "acc before TopFunctorBind: " ^ str_ls id acc
         val acc = on_sgn acc arg
+        val () = println $ "acc after on_sgn(): " ^ str_ls id acc
         val acc2 = diff op= (on_mod [] m) [arg_name]
+        val () = println $ "acc2: " ^ str_ls id acc2
         val acc = acc2 @ acc
+        val () = println $ "acc after TopFunctorBind: " ^ str_ls id acc
       in
         acc
       end
@@ -620,8 +624,10 @@ fun on_prog acc b =
   let
     fun iter (((name, r), b), acc) =
       let
+        val () = println $ sprintf "acc before $: $" [name, str_ls id acc]
         val acc = diff op= acc [name]
         val acc = on_top_bind acc b
+        val () = println $ sprintf "acc after $: $" [name, str_ls id acc]
       in
         acc
       end
