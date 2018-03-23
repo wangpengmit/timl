@@ -206,6 +206,8 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                 [IUnOp' (cg_expr_un_op opr, r, cg_v ectx v)]
               | EMallocPair (v1, v2) =>
                 [IMallocPair' (r, (cg_v ectx v1, cg_v ectx v2))]
+              | EEmptyArray t =>
+                [IEmptyArray (r, Inner $ cg_t t)]
               | EPairAssign (v1, proj, v2) =>
                 let
                   val r' = fresh_reg ()

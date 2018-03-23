@@ -1274,6 +1274,12 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EBuiltin (name, t), t, T0)
         end
+      | EEmptyArray t =>
+        let
+          val t = kc_against_kind itctx (t, KType)
+        in
+          (EEmptyArray t, TArr (t, N0 dummy), T0)
+        end
       (* | ELet data => *)
       (*   let *)
       (*     val (e1, (name, e2)) = unELet data *)

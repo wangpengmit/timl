@@ -142,6 +142,7 @@ fun on_e (e : S.expr) =
       (case opr of
            Op.ETNever => ENever (on_mt t)
          | Op.ETBuiltin name => EBuiltin (name, on_mt t)
+         | Op.ETEmptyArray => EEmptyArray (on_mt t)
       )
     | S.ECaseSumbool (e, bind1, bind2, r) =>
       let

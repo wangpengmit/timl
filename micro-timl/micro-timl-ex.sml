@@ -31,7 +31,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | ENever of 'ty
          | EBuiltin of string * 'ty
          | ELet of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
-         (* | EEmptyArray of 'ty *)
+         | EEmptyArray of 'ty
          (* extensions from MicroTiML *)
          | ELetIdx of 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr ibind
          | ELetType of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr tbind
@@ -1118,6 +1118,7 @@ fun default_expr_visitor_vtable
           | ENever data => #visit_ENever vtable this env data
           | EBuiltin data => #visit_EBuiltin vtable this env data
           | ELet data => #visit_ELet vtable this env data
+          | EEmptyArray t => EEmptyArray $ #visit_ty vtable this env t
           | ELetIdx data => #visit_ELetIdx vtable this env data
           | ELetType data => #visit_ELetType vtable this env data
           | ELetConstr data => #visit_ELetConstr vtable this env data
@@ -1929,6 +1930,7 @@ fun is_value e =
     | EVar _ => true (* variables denote values *)
     | ENever _ => true
     | EBuiltin _ => true
+    | EEmptyArray _ => false
     | _ => false
     (* | _ => *)
     (*   case fst $ collect_EAscTypeTime $ fst $ collect_EAppIT e of *)

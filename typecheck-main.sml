@@ -884,6 +884,7 @@ fun is_value (e : U.expr) : bool =
         (case opr of
              ETNever => true
            | ETBuiltin name => true
+           | ETEmptyArray => false
         )
       | EAbs _ => true
       | EAbsI _ => true
@@ -1255,6 +1256,12 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                           else raise Error (r, ["builtin keyword is only available in standard library"])
                in
 	         (EBuiltin (name, t, r), t, T0 r)
+               end
+	     | ETEmptyArray =>
+               let
+	         val t = check_kind_Type gctx (skctx, t)
+               in
+                 (ET (opr, t, r), TyArray (t, N0 r), T0 r)
                end
           )
 	| U.EAbs bind => 

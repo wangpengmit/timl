@@ -386,6 +386,14 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i
             end
+          | IEmptyArray (rd, t) =>
+            let
+              val t = kc_against_kind itctx (unInner t, KType)
+              val t = TArr (t, N0 dummy)
+              val i = tc_insts (add_r (rd, t) ctx) I
+            in
+              i %+ T1
+            end
       end
     fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)TiTALExportPP.pp_insts_to_string $ TiTALExportPP.export_insts (SOME 2, SOME 5) (itctx_names itctx) insts)
     val ret = main ()

@@ -6,8 +6,8 @@ open Basic
 open Nat
 open List
 
-fun empty_array ['a] () return array 'a {0} = __&builtin "Array.empty_array"
-(* fun empty_array ['a] () return array 'a {0} = __&empty_array *)
+(* fun empty_array ['a] () return array 'a {0} = __&builtin "Array.empty_array" *)
+fun empty_array ['a] () return array 'a {0} = __&empty_array
 fun array {n : Nat} (a : nat {n}, b) = __&array (a, b)
 fun length {len : Nat} (a : array _ {len}) = __&array_length a
        

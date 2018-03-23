@@ -250,11 +250,11 @@ datatype expr_EI =
 datatype expr_ET =
          EETAppT
          | EETAsc
-         (* | EETEmptyArray *)
 
 datatype expr_T =
          ETNever
          | ETBuiltin of string
+         | ETEmptyArray
              
 fun str_idx_const c =
   case c of
@@ -330,5 +330,6 @@ fun str_expr_T opr =
   case opr of
       ETNever => "ETNever"
     | ETBuiltin name => sprintf "ETBuiltin($)" [name]
+    | ETEmptyArray => "ETEmptyArray"
                   
 end

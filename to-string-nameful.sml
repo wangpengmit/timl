@@ -358,6 +358,7 @@ fun strn_e e =
       (case opr of
            ETNever => sprintf "(never [$])" [strn_mt t]
          | ETBuiltin name => sprintf "(builtin $ [$])" [name, strn_mt t]
+         | ETEmptyArray => sprintf "(empty_array [$])" [strn_mt t]
       )
     | EAbs bind => 
       let

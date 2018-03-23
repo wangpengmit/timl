@@ -290,10 +290,10 @@ local
                   EConst (ECBool true, r)
                 else if x = "__&false" andalso eia = false then
                   EConst (ECBool false, r)
-                (* else if x = "__&empty_array" andalso eia = false then *)
-                (*   EET (EETEmptyArray, elab_mt (S.VarT (NONE, ("_", r))), r) *)
                 (* else if x = "never" andalso eia = false then *)
                 (*   ENever (elab_mt (S.VarT (NONE, ("_", r))), r) *)
+                else if x = "__&empty_array" andalso eia = false then
+                  ET (ETEmptyArray, elab_mt (S.VarT (NONE, ("_", r))), r)
                 else if x = "__&builtin" then raise Error (r, "should be '__&builtin \"name\"'")
                 else
                   def ()
