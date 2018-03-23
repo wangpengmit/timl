@@ -60,5 +60,12 @@ fun pp_e a = MicroTiMLExPP.pp_e_fn (
     pp_t_to
   ) a
 
+(* val uniquefy_i = return2 *)
+(* val uniquefy_s = return2 *)
+val uniquefy_i = UniquefyIdx.uniquefy_i
+val uniquefy_s = UniquefyIdx.uniquefy_s
+fun uniquefy_t a = uniquefy_t_fn (uniquefy_i, uniquefy_s) a
+fun uniquefy_e a = uniquefy_e_fn (uniquefy_i, uniquefy_s, uniquefy_t) a
+
 end
 

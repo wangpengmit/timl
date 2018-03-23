@@ -1804,8 +1804,7 @@ fun subst_e_e_fn params d x v b =
     #visit_expr vtable visitor (IDepth 0, TDepth 0, CDepth 0, EDepth 0) b
   end
 
-(*********** the "export" visitor: converting de Bruijn indices to nameful terms ***************)    
-
+(*********** the "export" visitor: converting de Bruijn indices to nameful terms ***************)
 fun export_expr_visitor_vtable cast (omitted, visit_var, visit_cvar, visit_idx, visit_sort, visit_ty) =
   let
     fun extend_i this (depth, (sctx, kctx, cctx, tctx)) name = ((depth, (Name2str name :: sctx, kctx, cctx, tctx)), name)
@@ -1941,8 +1940,7 @@ fun is_value e =
     (*     | EVar _ => true (* todo: is this right? *) *)
     (*     | _ => false *)
 
-(*********** the "uniquefy" visitor: makes variable names unique to remove shadowing ***************)
-
+(********* the "uniquefy" visitor: makes variable names unique to remove shadowing *********)
 fun uniquefy_expr_visitor_vtable cast (visit_idx, visit_sort, visit_ty) =
   let
     fun extend names name =
@@ -1989,7 +1987,5 @@ fun uniquefy_e_fn params ctx e =
     #visit_expr vtable visitor ctx e
   end
     
-fun uniquefy_e a = uniquefy_e_fn (return2, return2, return2) a
-
 end
                         

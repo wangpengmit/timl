@@ -48,9 +48,17 @@ structure ToString = ToStringFn (structure Expr = Expr
                                  structure CanToString = CanToString
                                 )
                                 
+structure ToString = ToStringFn (structure Expr = Expr
+                                 structure CanToString = CanToString
+                                )
+                                
 structure ToStringRaw = ToStringRawFn (structure Expr = Expr
                                     open CanToString
                                    )
+                                
+structure UniquefyIdx = UniquefyIdxFn (structure Idx = Expr
+                                       open CanToString
+                                      )
                                 
 structure LongIdHasEqual = struct
 open LongId

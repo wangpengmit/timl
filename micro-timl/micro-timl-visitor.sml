@@ -1224,8 +1224,7 @@ fun normalize_t_fn params t =
     #visit_ty vtable visitor () t
   end
     
-(***************** the "export" visitor: convertnig de Bruijn indices to nameful terms **********************)    
-
+(********* the "export" visitor: convertnig de Bruijn indices to nameful terms *************)
 fun export_ty_visitor_vtable cast (omitted, visit_var, visit_idx, visit_sort) =
   let
     fun extend_i this (depth, (sctx, kctx)) name = ((depth, (Name2str name :: sctx, kctx)), name)
@@ -1268,6 +1267,46 @@ fun export_t_fn params depth ctx b =
     val visitor as (TyVisitor vtable) = new_export_ty_visitor params
   in
     #visit_ty vtable visitor (depth, ctx) b
+  end
+
+(********* the "uniquefy" visitor: makes variable names unique to remove shadowing *********)
+fun uniquefy_ty_visitor_vtable cast (visit_idx, visit_sort) =
+  let
+    fun extend names name =
+      let
+        val (tag, (name, r)) = name
+        val name = find_unique names name
+        val names = name :: names
+        val name = (tag, (name, r))
+      in
+        (names, name)
+      end
+    fun extend_i this (sctx, kctx) name =
+      let val (sctx, name) = extend sctx name in ((sctx, kctx), name) end
+    fun extend_t this (sctx, kctx) name =
+      let val (kctx, name) = extend kctx name in ((sctx, kctx), name) end
+    fun only_s f this (sctx, kctx) name = f sctx name
+    fun ignore_this_depth f this ctx = f ctx
+    val vtable = 
+        default_ty_visitor_vtable
+          cast
+          extend_i
+          extend_t
+          visit_noop
+          visit_noop
+          (only_s visit_idx)
+          (only_s visit_sort)
+  in
+    vtable
+  end
+
+fun new_uniquefy_ty_visitor params = new_ty_visitor uniquefy_ty_visitor_vtable params
+    
+fun uniquefy_t_fn params ctx b =
+  let
+    val visitor as (TyVisitor vtable) = new_uniquefy_ty_visitor params
+  in
+    #visit_ty vtable visitor ctx b
   end
 
 end

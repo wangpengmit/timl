@@ -147,6 +147,7 @@ to-string-raw.sml
 to-string-nameful.sml
 to-string.sml
 uvar.sml
+uniquefy.sml
 expr.sml
 underscore-exprs.sml
 elaborate.sml

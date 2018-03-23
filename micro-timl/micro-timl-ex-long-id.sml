@@ -47,4 +47,5 @@ fun subst_c_e a = subst_c_e_fn (compare_var, shift_var, shiftx_i_i, shiftx_i_s, 
 fun subst0_c_e a = subst_c_e (IDepth 0, TDepth 0, CDepth 0, EDepth 0) 0 a
 fun subst_e_e a = subst_e_e_fn (compare_var, shift_var, shiftx_i_i, shiftx_i_s, shift_i_t, shift_t_t) a
 fun subst0_e_e a = subst_e_e (IDepth 0, TDepth 0, CDepth 0, EDepth 0) 0 a
+
 end

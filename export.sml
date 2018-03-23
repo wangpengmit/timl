@@ -19,8 +19,7 @@ structure IdxVisitor = IdxVisitorFn (Params)
 (* open IdxVisitor *)
 structure IV = IdxVisitor
                            
-(******** the "export" visitor: convertnig de Bruijn indices to nameful terms **************)
-    
+(******** the "export" visitor: convertnig de Bruijn indices to nameful terms **************)    
 fun export_idx_visitor_vtable cast gctx (* : ((* 'this *)string list IV.idx_visitor, ToStringUtil.scontext) IV.idx_visitor_vtable *) =
   let
     fun extend this env name = (fst name :: env, name)
@@ -235,5 +234,3 @@ fun export_decls gctx env b =
   end
 
 end
-
-                            
