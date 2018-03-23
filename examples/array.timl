@@ -117,13 +117,25 @@ fun foldl ['a 'b] {m : Time} (f : 'a * 'b -- m --> 'b) (acc : 'b) {len : Nat} (a
 fun find ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return option 'a using (m + $7) * $len + 8.0 =
   foldl (fn (x, acc) => case acc of SOME _ => acc | NONE => if f x then SOME x else NONE) NONE {_} a
 
-fun exi_sts ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return bool using (m + $1) * $len =
-    __&builtin "Array.exi_sts"
+fun exi_sts ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return bool using (m + $8) * $len + 8.0 =
+  foldl (fn (x, acc) => acc || f x) false {_} a
 
-fun all ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return bool using (m + $1) * $len =
-    __&builtin "Array.all"
+fun all ['a] {m : Time} (f : 'a -- m --> bool) {len : Nat} (a : array 'a {len}) return bool using (m + $8) * $len + 8.0 =
+  foldl (fn (x, acc) => acc && f x) true {_} a
 
-fun toList ['a] {len : Nat} (a : array 'a {len}) return list 'a {len} using $len =
-    __&builtin "Array.toList"
-      
+fun toList ['a] {len : Nat} (a : array 'a {len}) return list 'a {len} using 3.0 * $len + 2.0 =
+  let
+    fun loop {n | n <= len} {acc_len | n + acc_len = len} (n : nat {n}, acc : list _ {acc_len}) (* return list _ {len} *) (* using (m + 4.0) * $n *) =
+      ifdec n #<= #0 then acc : list _ {len}
+      else
+        let return list _ {len} using 3.0 * $n
+          val n' = n #- #1
+          val acc = sub (a, n') :: acc
+        in
+          loop (n', acc)
+        end
+  in
+    loop (length a, [])
+  end
+    
 end
