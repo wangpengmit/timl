@@ -179,5 +179,7 @@ type reporter = string * pos * pos -> unit
 
 fun underscore r = (NONE, ("_", r))
 
+fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
+                                       
 end
 

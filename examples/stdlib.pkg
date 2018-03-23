@@ -3,3 +3,6 @@ basic.timl
 nat.timl
 list.timl
 array.timl
+
+dynamic-table.timl
+dynamic-table-test.timl

@@ -7,15 +7,10 @@ open Nat
 open List
 
 fun empty_array ['a] () return array 'a {0} = __&builtin "Array.empty_array"
+(* fun empty_array ['a] () return array 'a {0} = __&empty_array *)
 fun array {n : Nat} (a : nat {n}, b) = __&array (a, b)
 fun length {len : Nat} (a : array _ {len}) = __&array_length a
        
-(* fun array ['a] {len : Nat} (n : nat {len}, x : 'a) return array 'a {len} using $len = *)
-(*     __&builtin *)
-
-(* fun length ['a] {len : Nat} (a : array 'a {len}) return nat {len} using 0.0 = *)
-(*     __&builtin *)
-
 fun sub ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}) return 'a using 0.0 =
     __&sub (a, n)
 

@@ -12,15 +12,14 @@ fun print a = __&print a
 val str_int = int2str
 fun println s = print s; print "\n"
                   
+val s = ""
+          
 val a = 1
 val a = ()
           
 val x = 1 + 2
 val y = x + 1
 val z = x + y + x
-
-(* (* val print = builtin "print" : string -- 1.0 --> unit *) *)
-(* (* val str_int = builtin "str_int" : int -- 1.0 --> string *) *)
 
 (* fun println s = let val () = print s in print "\n" end *)
 

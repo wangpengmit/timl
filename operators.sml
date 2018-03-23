@@ -250,6 +250,7 @@ datatype expr_EI =
 datatype expr_ET =
          EETAppT
          | EETAsc
+         (* | EETEmptyArray *)
 
 datatype expr_T =
          ETNever

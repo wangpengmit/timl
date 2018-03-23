@@ -69,6 +69,11 @@ fun nat_max {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a max b} using 2.
       Lt => b
     | Ge => a
 
+fun nat_min {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a min b} using 2.0 =
+  case lt_dec (a, b) of
+      Lt => a
+    | Ge => b
+
 fun floor_half {n : Nat} (n : nat {n}) return nat {floor ($n / 2)} =
   n #/ #2
 

@@ -169,13 +169,9 @@ string = [^\"];
 <INITIAL>{id_init}({id_init}|{digit}|&)* => ((getOpt (is_keyword yytext, fn r => (T.ID o flat) (yytext, r)))
 				  (make_region (yypos, size yytext)));
 <INITIAL>"(*" => (inc_ref comment_level; YYBEGIN COMMENT; continue());
-<INITIAL>"\"" => (YYBEGIN STRING; continue());
+<INITIAL>\"{string}*\" => ((T.STRING o flat) (yytext, make_region (yypos, size yytext)));
 <INITIAL>. => ((reporter o flat) (sprintf "Bad character: $" [yytext], make_region (yypos, size yytext)); (T.BOGUS o flat) (yytext, make_region (yypos, size yytext)));
 
 <COMMENT>"(*" => (inc_ref comment_level; continue());
 <COMMENT>"*)" => (dec_ref comment_level; if !comment_level = 0 then YYBEGIN INITIAL else (); continue());
 <COMMENT>. => (continue());
-
-<STRING>"\"" => (YYBEGIN INITIAL; continue());
-<STRING>{string}* => ((T.STRING o flat)
-                 (yytext, make_region (yypos, size yytext)));

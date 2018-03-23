@@ -31,6 +31,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | ENever of 'ty
          | EBuiltin of string * 'ty
          | ELet of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
+         (* | EEmptyArray of 'ty *)
          (* extensions from MicroTiML *)
          | ELetIdx of 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr ibind
          | ELetType of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr tbind

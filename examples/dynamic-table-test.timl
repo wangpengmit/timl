@@ -1,15 +1,64 @@
 structure DummyTable = struct
 
-  datatype table 'a {size : Nat} {num : Nat} = DummyTable of table 'a {0} {0}
-  val ['a] table_num_le_size = builtin : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> Basic.le {num} {size}
-  val ['a] alloc = builtin : forall {size : Nat}, nat {size} -- 1.0 --> table 'a {size} {0}
-  val ['a] do_insert = builtin : forall {size num : Nat} {num < size}, table 'a {size} {num} ->> 'a -- 1.0 --> table 'a {size} {num + 1}
-  datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num}
-  val ['a] do_delete = builtin : forall {size num : Nat}, table 'a {size} {num} ->> 'a -- 1.0 --> do_delete 'a {size} {num}
-  val ['a] copy = builtin : forall {size num size' num' : Nat}, table 'a {size} {num} ->> table 'a {size'} {num'} -- $num --> table 'a {size'} {num min size'}
-  val ['a] num = builtin : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {num}
-  val ['a] size = builtin : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {size}
+open Basic
+open Array
+       
+datatype table 'a {size : Nat} {num : Nat} =
+         Table {num <= size} of array 'a {size} * nat {num} --> table 'a {size} {num}
+                                     
+fun table_num_le_size ['a] {size num : Nat} (t : table 'a {size} {num}) return le {num} {size} using 1.0 =
+  let                                          
+    val Table _ = t
+  in
+    LE
+  end
+    
+fun alloc ['a] {size : Nat} (size : nat {size}, init : 'a) return table 'a {size} {0} using 1.0 =
+  Table (array (size, init), #0)
+        
+fun do_insert ['a] {size num : Nat} {num < size} (t : table 'a {size} {num}) (x : 'a) return table 'a {size} {num + 1} using 2.0 =
+  let
+    val Table (a, num) = t
+    val () = update (a, num, x) 
+  in
+    Table (a, num #+ #1)
+  end
+  
+datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num}
+                                                                                                 
+fun do_delete ['a] {size num : Nat} (t : table 'a {size} {num}) return do_delete 'a {size} {num} using 1.0 =
+  let
+    val Table (a, num) = t
+  in
+    DoDelete (Table (a, num #- #1))
+  end
+  
+fun copy ['a] {size num size' num' : Nat} (s : table 'a {size} {num}) (t : table 'a {size'} {num'}) return table 'a {size'} {num min size'} using 4.0 * $num + 5.0 =
+  let
+    val Table (a, num) = s
+    val Table (a', num') = t
+    val size' = Array.length a'
+    val num'' = nat_min (num, size')
+    (* val nat {num''} = num'' *)
+    idx num'' = num min size'
+    fun loop {i | i <= num''} (i : nat {i}) =
+      ifdec i #>= num'' then ()
+      else update (a', i, sub (a, i)); loop (i #+ #1) using 4.0 * $(num'' - i)
+    val () = loop #0
+  in
+    Table (a', num'')
+  end
+  
+  val ['a] num = __&builtin "" : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {num}
+  val ['a] size = __&builtin "" : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {size}
                      
+  fun any_value ['a] {size num : Nat} {size > 0} (t : table 'a {size} {num}) return using 1.0 =
+    let
+      val Table (a, _) = t
+    in
+      sub (a, #0)
+    end
+        
 end
 
 structure DummyDynamicTable = DynamicTable (DummyTable)

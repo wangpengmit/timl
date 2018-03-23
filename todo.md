@@ -130,7 +130,8 @@
 - [x] anf_decls() shouldn't alway use "x" as the new variable name, because it will replace other meaningful names after post_process(); it should take suggestions from surrounding ELet.
 - [ ] Add a simplification for ECase where if the two branches are identical and don't mention the local variable, combine them and remove ECase.
 - [ ] Remove datatype "micro_timl" and rename "micro_timl_ex" to "micro_timl".
-- [ ] Rename "micro-timl/" to "compiler/"
+- [ ] Rename "micro-timl/" to "compiler/".
+- [ ] Add "let nat {i} = x in ..." to name the index of nat.
 
 # To-do for Examples:
 
