@@ -9,10 +9,10 @@ datatype list 'a : {Nat} =
          Nil of list 'a {0}
        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1}
 
-fun length_i [a] {n : Nat} (l : list a {n}) return using $(2 * n) =
-    case l of
-        [] => 0
-      | _ :: xs => 1 + length_i xs
+(* fun length_int [a] {n : Nat} (l : list a {n}) return using $(2 * n) = *)
+(*     case l of *)
+(*         [] => 0 *)
+(*       | _ :: xs => 1 + length_int xs *)
                                   
 fun length [a] {n : Nat} (l : list a {n}) return nat {n} using $(2 * n) =
     case l of
@@ -65,4 +65,14 @@ absidx T_rev : BigO (fn n => $n) with
 fun rev {n : Nat} (xs : list _ {n}) return list _ {n} using T_rev n = rev_append_2 xs []
 end
 
+open Nat
+       
+fun tabulate' ['a] {start len : Nat} {m : Time} (start : nat {start}, len : nat {len}, f : nat_less_than {start + len} -- m --> 'a) return list 'a {len} (* using (m + $4) * $len *) =
+  ifdec len #<= #0 then [] : list 'a {len}
+  else
+    f (NatLT start) :: tabulate' (start #+ #1, len #- #1, f) : list 'a {len} using (m + $4) * $len
+                                 
+fun tabulate ['a] {len : Nat} {m : Time} (n : nat {len}, f : nat_less_than {len} -- m --> 'a) =
+  tabulate' (#0, n, f)
+  
 end

@@ -6,6 +6,7 @@ open Basic
 open Nat
 open List
 
+fun empty_array ['a] () return array 'a {0} = __&builtin "Array.empty_array"
 fun array {n : Nat} (a : nat {n}, b) = __&array (a, b)
 fun length {len : Nat} (a : array _ {len}) = __&array_length a
        
@@ -21,23 +22,60 @@ fun sub ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}) ret
 fun update ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}, x : 'a) return unit using 0.0 =
     __&update (a, n, x)
 
-fun fromList ['a] {len : Nat} (l : list 'a {len}) return array 'a {len} using $len =
-    __&builtin "Array.fromList"
+fun fromList ['a] {len : Nat} (l : list 'a {len}) return array 'a {len} using 8.0 * $len + 1.0 =
+  case l of
+      [] => empty_array ()
+    | _ :: _ =>
+      let
+        val len = List.length l
+        val arr = array (len, hd l)
+        fun loop {len2 i : Nat} {i + len2 = len} (ls : list _ {len2}, i : nat {i}) return using 3.0 * $len2 =
+          case ls of
+              [] => ()
+            | x :: ls => update (arr, i, x); loop (ls, i #+ #1)
+        val () = loop (l, #0)
+      in
+        arr
+      end
+        
+fun tabulate ['a] {len : Nat} {m : Time} (n : nat {len}, f : nat_less_than {len} -- m --> 'a) return array 'a {len} using (m + $12) * $len + $4 =
+  fromList <| List.tabulate (n, f)
 
-fun tabulate ['a] {len : Nat} {m : Time} (n : nat {len}, f : nat_less_than {len} -- m --> 'a) return array 'a {len} using (m + $1) * $len =
-    __&builtin "Array.tabulate"
+fun appi ['a] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a -- m --> unit) (a : array 'a {len}) return unit using (m + $4) * $len + 2.0 =
+  let
+    fun loop {n | n <= len} (n : nat {n}) (* return using (m + 4.0) * $n *) =
+      ifdec n #<= #0 then ()
+      else
+        let return using (m + 4.0) * $n
+          val n' = n #- #1
+        in
+          f (NatLT n', sub (a, n')); loop n'
+        end
+  in
+    loop <| length a
+  end
 
-fun appi ['a] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a -- m --> unit) (a : array 'a {len}) return unit using (m + $1) * $len =
-    __&builtin "Array.appi"
+fun app ['a] {m : Time} {len : Nat} (f : 'a -- m --> unit) (a : array 'a {len}) return unit using (m + $5) * $len + $4 =
+  appi (fn (_, x) => f x) a
 
-fun app ['a] {m : Time} {len : Nat} (f : 'a -- m --> unit) (a : array 'a {len}) return unit using (m + $1) * $len =
-    __&builtin "Array.app"
+fun modifyi ['a] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a -- m --> 'a) (a : array 'a {len}) return unit using (m + $5) * $len + 2.0 =
+  let
+    fun loop {n | n <= len} (n : nat {n}) (* return using (m + 4.0) * $n *) =
+      ifdec n #<= #0 then ()
+      else
+        let return using (m + 5.0) * $n
+          val n' = n #- #1
+          val v = f (NatLT n', sub (a, n'))
+          val () = update (a, n', v)
+        in
+          loop n'
+        end
+  in
+    loop <| length a
+  end
 
-fun modifyi ['a] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a -- m --> 'a) (a : array 'a {len}) return unit using (m + $1) * $len =
-    __&builtin "Array.modifyi"
-
-fun modify ['a] {m : Time} {len : Nat} (f : 'a -- m --> 'a) (a : array 'a {len}) return unit using (m + $1) * $len =
-    __&builtin "Array.modify"
+fun modify ['a] {m : Time} {len : Nat} (f : 'a -- m --> 'a) (a : array 'a {len}) return unit using (m + $6) * $len + 4.0 =
+  modifyi (fn (_, x) => f x) a
 
 fun foldli ['a 'b] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a * 'b -- m --> 'b) (x : 'b) (a : array 'a {len}) return 'b using (m + $1) * $len =
     __&builtin "Array.foldli"
