@@ -25,7 +25,6 @@ functor DynamicTable (T : sig
   val any_value ['a] : forall {size num : Nat} {size > 0}, table 'a {size} {num} -- 1.0 --> 'a
 end) = struct
 
-(* open Array (* bug: need this to allow "open Array" in ArrayTable *) *)
 open T
 open Basic
 open List
