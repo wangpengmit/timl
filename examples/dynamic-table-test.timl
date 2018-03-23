@@ -1,4 +1,4 @@
-structure DummyTable = struct
+structure ArrayTable = struct
 
 open Basic
 open Array
@@ -37,7 +37,7 @@ fun copy ['a] {size num size' num' : Nat} (s : table 'a {size} {num}) (t : table
   let
     val Table (a, num) = s
     val Table (a', num') = t
-    val size' = Array.length a'
+    val size' = length a'
     val num'' = nat_min (num, size')
     (* val nat {num''} = num'' *)
     idx num'' = num min size'
@@ -49,17 +49,28 @@ fun copy ['a] {size num size' num' : Nat} (s : table 'a {size} {num}) (t : table
     Table (a', num'')
   end
   
-  val ['a] num = __&builtin "" : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {num}
-  val ['a] size = __&builtin "" : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {size}
+fun num ['a] {size num : Nat} (t : table 'a {size} {num}) return nat {num} using 1.0 =
+  let
+    val Table (_, num) = t
+  in
+    num
+  end
+    
+fun size ['a] {size num : Nat} (t : table 'a {size} {num}) return nat {size} using 1.0 =
+  let
+    val Table (a, _) = t
+  in
+    length a
+  end
                      
-  fun any_value ['a] {size num : Nat} {size > 0} (t : table 'a {size} {num}) return using 1.0 =
-    let
-      val Table (a, _) = t
-    in
-      sub (a, #0)
-    end
+fun any_value ['a] {size num : Nat} {size > 0} (t : table 'a {size} {num}) return using 1.0 =
+  let
+    val Table (a, _) = t
+  in
+    sub (a, #0)
+  end
         
 end
 
-structure DummyDynamicTable = DynamicTable (DummyTable)
+structure ArrayDynamicTable = DynamicTable (ArrayTable)
 
