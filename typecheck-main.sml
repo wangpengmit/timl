@@ -1153,15 +1153,16 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	           val (e2, _, d2) = check_mtype (ctx, e2, BaseType (get_prim_expr_bin_op_arg2_ty opr, dummy)) in
 	         (EBinOp (EBPrim opr, e1, e2), BaseType (get_prim_expr_bin_op_res_ty opr, dummy), d1 %+ d2 %+ T1 dummy)
 	       end
-             | EBNatCmp NCLt =>
+             | EBNatCmp opr =>
                let
                  val r = U.get_region_e e_all
                  val i1 = fresh_i gctx sctx (Base Time) r
                  val i2 = fresh_i gctx sctx (Base Time) r
                  val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
+                 val (p, not_p) = interp_nat_cmp r opr
                in
-                 (EBinOp (opr, e1, e2), TSumbool (Subset_from_prop r (i1 %< i2), Subset_from_prop r (i1 %>= i2)), d1 %+ d2)
+                 (EBinOp (EBNatCmp opr, e1, e2), TSumbool (Subset_from_prop r $ p (i1, i2), Subset_from_prop r $ not_p (i1, i2)), d1 %+ d2)
                end
           )
 	| U.ETriOp (ETWrite, e1, e2, e3) =>

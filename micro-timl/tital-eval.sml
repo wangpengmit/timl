@@ -325,17 +325,26 @@ fun step (H, R, I) =
             (H, R @+ (rd, interp_prim_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
           | IBinOp (IBNat opr, rd, rs, v) =>
             (H, R @+ (rd, interp_nat_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
-          | IBinOp (IBNatCmp NCLt, rd, rs, v) =>
+          | IBinOp (IBNatCmp opr, rd, rs, v) =>
             let
               val n1 = assert_WVNat $ R @!! rs
               val n2 = assert_WVNat $ R @^ unInner v
               fun INat n = ConstIN (n, dummy)
               val i1 = INat n1
               val i2 = INat n2
-              val (inj, p) = if n1 < n2
-                             then (InjInl, i1 %< i2)
-                             else (InjInr, i1 %>= i2)
-              val t = TExistsI $ IBindAnno ((("__p", dummy), TypecheckUtil.Subset_from_prop dummy p), TUnit)
+              fun eval_nat_cmp opr =
+                case opr of
+                    NCLt => op<
+                  | NCGt => op>
+                  | NCLe => op<=
+                  | NCGe => op>=
+                  | NCEq => op=
+                  | NCNEq => op<>
+              val (p, not_p) = interp_nat_cmp dummy opr
+              val (inj, p) = if eval_nat_cmp opr (n1, n2)
+                             then (InjInl, p)
+                             else (InjInr, not_p)
+              val t = TExistsI $ IBindAnno ((("__p", dummy), TypecheckUtil.Subset_from_prop dummy $ p  (i1, i2)), TUnit)
               val l = fresh_label H
               val hv = HVInj (inj, WVPackI (t, TTI dummy, WVTT))
             in

@@ -263,13 +263,14 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i %+ T1
             end
-          | IBinOp (IBNatCmp NCLt, rd, rs, v) =>
+          | IBinOp (IBNatCmp opr, rd, rs, v) =>
             let
               val t1 = tc_v ctx $ VReg rs
               val i1 = assert_TNat t1
               val t2 = tc_v ctx $ unInner v
               val i2 = assert_TNat t2
-              val t = TSumbool (Subset_from_prop dummy (i1 %< i2), Subset_from_prop dummy (i1 %>= i2))
+              val (p, not_p) = interp_nat_cmp dummy opr
+              val t = TSumbool (Subset_from_prop dummy $ p (i1, i2), Subset_from_prop dummy $ not_p (i1, i2))
               val i = tc_insts (add_r (rd, t) ctx) I
             in
               i %+ T1

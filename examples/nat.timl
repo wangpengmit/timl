@@ -26,10 +26,11 @@ datatype le_result : {Nat} {Nat} =
        | Gt {a b : Nat} {a > b} of le_result {a} {b} 
 
 fun le {x : Nat} {y : Nat} (x : nat {x}, y : nat {y}) return le_result {x} {y} using 7.0 =
-    case cmp (x, y) of
-        Equal => Le
-      | Less => Le
-      | Greater => Gt
+  ifdec x #<= y then Le else Gt
+    (* case cmp (x, y) of *)
+    (*     Equal => Le *)
+    (*   | Less => Le *)
+    (*   | Greater => Gt *)
 
 datatype min_max_result : {Nat} {Nat} =
          MinMaxResult {a b a' b' : Nat} {(a <= b -> a' = a /\ b' = b) /\ (a > b -> a' = b /\ b' = a)} of nat {a'} * nat {b'} --> min_max_result {a} {b} 
@@ -44,10 +45,11 @@ datatype eq_dec {a b : Nat} =
        | Neq {a <> b} of eq_dec {a} {b}
 
 fun eq_dec {x y : Nat} (x : nat {x}, y : nat {y}) return eq_dec {x} {y} using 5.0 =
-    case cmp (x, y) of
-        Equal => Eq
-      | Less => Neq
-      | Greater => Neq
+  ifdec x #= y then Eq else Neq
+    (* case cmp (x, y) of *)
+    (*     Equal => Eq *)
+    (*   | Less => Neq *)
+    (*   | Greater => Neq *)
 
 val nat_1 : nat {1} = #1
 val nat_2 : nat {2} = #2

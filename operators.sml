@@ -135,6 +135,11 @@ datatype nat_expr_bin_op =
 
 datatype nat_cmp =
          NCLt
+         | NCGt
+         | NCLe
+         | NCGe
+         | NCEq
+         | NCNEq
          
 datatype expr_bin_op =
          EBApp
@@ -171,6 +176,11 @@ fun str_nat_expr_bin_op opr =
 fun str_nat_cmp opr =
   case opr of
       NCLt => "nat_lt"
+    | NCGt => "nat_gt"
+    | NCLe => "nat_le"
+    | NCGe => "nat_ge"
+    | NCEq => "nat_eq"
+    | NCNEq => "nat_neq"
                     
 fun str_expr_bin_op opr =
   case opr of
@@ -208,6 +218,11 @@ fun pretty_str_nat_expr_bin_op opr =
 fun pretty_str_nat_cmp opr =
   case opr of
       NCLt => "#<"
+    | NCGt => "#>"
+    | NCLe => "#<="
+    | NCGe => "#>="
+    | NCEq => "#="
+    | NCNEq => "#<>"
                     
 fun pretty_str_expr_bin_op opr =
   case opr of

@@ -41,6 +41,7 @@ infix 6 %+
 infix 4 %<=
 infix 4 %<
 infix 4 %>=
+infix 4 %>
 infix 4 %=
 infixr 3 /\
 infixr 2 \/
@@ -54,6 +55,7 @@ fun a %+ b = BinOpI (AddI, a, b)
 fun a %<= b = BinPred (LeP, a, b)
 fun a %< b = BinPred (LtP, a, b)
 fun a %>= b = BinPred (GeP, a, b)
+fun a %> b = BinPred (GtP, a, b)
 fun a %= b = PEq (a, b)
 fun a /\ b = BinConn (And, a, b)
 fun a \/ b = BinConn (Or, a, b)
@@ -181,4 +183,17 @@ fun interp_nat_expr_bin_op opr (i1, i2) err =
           IConst (ICNat n, r) => UnOpI (IUDiv n, i1, r)
         | _ => err ()
          
+fun interp_nat_cmp r opr =
+  let
+    fun neq (a, b) = Not (a %= b, r)
+  in
+  case opr of
+      NCLt => (op%<, op%>=)
+    | NCGt => (op%>, op%<=)
+    | NCLe => (op%<=, op%>)
+    | NCGe => (op%>=, op%<)
+    | NCEq => (op%=, neq)
+    | NCNEq => (neq, op%=)
+  end
+    
 end

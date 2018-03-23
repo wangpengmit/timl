@@ -38,6 +38,11 @@ open Ast
     | NAT_MULT
     | NAT_DIV
     | NAT_LT
+    | NAT_GT
+    | NAT_LE
+    | NAT_GE
+    | NAT_EQ
+    | NAT_NEQ
     | INT of int
     | NNREAL of string
     | BAR
@@ -264,17 +269,22 @@ exp : aexp (aexp)
      | exp MINUS exp (BinOp (EBPrim EBPIntMinus, exp1, exp2, (exp1left, exp2right)))
      | exp MULT exp (BinOp (EBPrim EBPIntMult, exp1, exp2, (exp1left, exp2right)))
      | exp DIV exp (BinOp (EBPrim EBPIntDiv, exp1, exp2, (exp1left, exp2right)))
-     | exp NAT_PLUS exp (BinOp (EBNat EBNAdd, exp1, exp2, (exp1left, exp2right)))
-     | exp NAT_MINUS exp (BinOp (EBNat EBNBoundedMinus, exp1, exp2, (exp1left, exp2right)))
-     | exp NAT_MULT exp (BinOp (EBNat EBNMult, exp1, exp2, (exp1left, exp2right)))
-     | exp NAT_DIV exp (BinOp (EBNat EBNDiv, exp1, exp2, (exp1left, exp2right)))
-     | exp NAT_LT exp (BinOp (EBNatCmp NCLt, exp1, exp2, (exp1left, exp2right)))
      | exp LT exp (BinOp (EBPrim EBPIntLt, exp1, exp2, (exp1left, exp2right)))
      | exp GT exp (BinOp (EBPrim EBPIntGt, exp1, exp2, (exp1left, exp2right)))
      | exp LE exp (BinOp (EBPrim EBPIntLe, exp1, exp2, (exp1left, exp2right)))
      | exp GE exp (BinOp (EBPrim EBPIntGe, exp1, exp2, (exp1left, exp2right)))
      | exp EQ exp (BinOp (EBPrim EBPIntEq, exp1, exp2, (exp1left, exp2right)))
      | exp NEQ exp (BinOp (EBPrim EBPIntNEq, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_PLUS exp (BinOp (EBNat EBNAdd, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_MINUS exp (BinOp (EBNat EBNBoundedMinus, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_MULT exp (BinOp (EBNat EBNMult, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_DIV exp (BinOp (EBNat EBNDiv, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_LT exp (BinOp (EBNatCmp NCLt, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_GT exp (BinOp (EBNatCmp NCGt, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_LE exp (BinOp (EBNatCmp NCLe, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_GE exp (BinOp (EBNatCmp NCGe, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_EQ exp (BinOp (EBNatCmp NCEq, exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_NEQ exp (BinOp (EBNatCmp NCNEq, exp1, exp2, (exp1left, exp2right)))
      | exp DOUBLE_POND exp (BinOp (EBPrim EBPBoolAnd, exp1, exp2, (exp1left, exp2right)))
      | exp DOUBLE_BAR exp (BinOp (EBPrim EBPBoolOr, exp1, exp2, (exp1left, exp2right)))
      | exp STR_CONCAT exp (BinOp (EBPrim EBPStrConcat, exp1, exp2, (exp1left, exp2right)))
