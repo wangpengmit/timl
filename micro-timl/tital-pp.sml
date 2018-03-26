@@ -322,6 +322,18 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
           str ")";
           close_box ()
         )
+      | IEmptyArray (r, t) =>
+        (
+          open_hbox ();
+          str "empty_array";
+          space ();
+          str "(";
+          str $ str_reg r;
+          comma ();
+          pp_t $ unInner t;
+          str ")";
+          close_box ()
+        )
       | IString (r, s) =>
         (
           open_hbox ();
