@@ -24,7 +24,7 @@ contract tokenRecipient = contract
       require(transferFrom t ( _from, this, _value));
       receivedTokens(_from, _value, _token, _extraData)
 
-    public fun default () guardedby payable =
+    public fun default () payable =
       receivedEther(msg.sender, msg.value)
 
 endcontract

@@ -27,7 +27,7 @@ contract TokenERC20 = contract
   event Burn(indexed from : address, value : uint256)
 
   (**
-   * Constrctor function
+   * Constructor function
    *
    * Initializes contract with initial supply tokens to the creator of the contract
    *)

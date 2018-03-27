@@ -22,7 +22,7 @@ contract Crowdsale = contract
   event FundTransfer(backer : address, amount : uint, isContribution : bool)
 
   (**
-   * Constrctor function
+   * Constructor function
    *
    * Setup the owner
    *)
@@ -44,7 +44,7 @@ contract Crowdsale = contract
    *
    * The function without name is the default function that is called whenever anyone sends funds to a contract
    *)
-  fun default () guardedby payable =
+  fun default () payable =
     require(not crowdsaleClosed);
     let amount : uint = msg_value;
     amap_modify balanceOf msg_sender (+= amount);
@@ -81,7 +81,7 @@ contract Crowdsale = contract
       amap_set balanceOf msg_sender 0;
       if amount > 0 then
         if send(msg_sender, amount) then
-          FundTransfer(msg.sender, amount, false)
+          FundTransfer(msg_sender, amount, false)
         else 
           amap_set balanceOf msg_sender amount
         endif

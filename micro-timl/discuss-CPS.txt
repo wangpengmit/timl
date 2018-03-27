@@ -16,3 +16,5 @@ Without CPS, callcc is hard to implement.
 --> A way to have "get current PC" in C: call a function and use pointer arithmetics to read the return address. It's basically a mimic of callcc.
 
 --> Early return is less powerful than continuations, but it guarantees single invocation of continuation (no store-and-call-multiple-times), so the continuation can safely discard its call-frame (i.e. its closure environment).
+
+We can use linear (affine) types to record the fact that continuations will be used at most once.
