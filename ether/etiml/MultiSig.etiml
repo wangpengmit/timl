@@ -254,7 +254,7 @@ contract daylimit = contract inherited_from multiowned
   (* MODIFIERS *)
 
   (* simple modifier for daily limit. *)
-  foo limitedDaily (_value : uint) k =
+  fun limitedDaily (_value : uint) k =
     if underLimit(_value) then
       k ()
     else
@@ -272,7 +272,6 @@ contract daylimit = contract inherited_from multiowned
   external fun setDailyLimit (_newLimit : uint) guarded_by onlymanyowners(sha3(msg.data, block.number)) =
     m_dailyLimit := _newLimit
 
-  (* (re)sets the daily limit. needs many of the owners to confirm. doesn't alter the amount already spent today. *)
   external fun resetSpentToday () guarded_by onlymanyowners(sha3(msg.data, block.number)) =
     m_spentToday := 0
 

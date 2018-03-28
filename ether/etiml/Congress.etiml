@@ -87,7 +87,7 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
         minimumQuorumForProposals : uint,
         minutesForDebate : uint,
         marginOfVotesForMajority : int
-    ) guardedby payable =
+    ) payable =
     changeVotingRules(minimumQuorumForProposals, minutesForDebate, marginOfVotesForMajority);
     (* It’s necessary to add an empty first member *)
     addMember(0, "");
