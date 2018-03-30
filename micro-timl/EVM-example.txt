@@ -1,9 +1,9 @@
 0: heap free pointer (free_ptr)
-1: frame pointer (frame_ptr)
+1: frame pointer (frame_ptr) a.k.a. base pointer (base_ptr)
 
 compile (reg1 * (reg2 + reg3)) ==
 {// compile (Reg reg1)
-// push frame[arg1] (frame[arg1] == m[m[frame_ptr] + arg1] == m[m[1] + arg1])
+// push base[arg1] (base[arg1] == m[m[base_ptr] + arg1] == m[m[1] + arg1])
 push1 1 
 mload
 push2 reg1
@@ -25,14 +25,54 @@ add
 }
 mul
 
+br_sum expr inr_branch_label ==
+compile(expr)
+{// br_sum inr_branch_label
+unpack_sum "c"
+dup1
+push1 1
+add
+mload
+swap1
+mload
+push32 inr_branch_label
+jumpi_sum
+}
+
+inl [t_other] expr ==
+compile(expr)
+{// inl
+malloc [ibool{False}, t_expr]
+push1 0
+mload
+dup1
+push1 #false
+swap1
+mstore
+swap1
+dup2
+push1 1
+add
+mstore
+dup1
+push1 2
+add
+push1 0
+mstore
+pack_inl [t_other]
+}
+
+Calling convention 1:
+
 call result_reg callee_addr_expr arg_expr ret_addr_label ==
 compile(callee_addr_expr)
 compile(arg_expr)
+swap1
 {// call ret_addr_label
 {// heap_push ret_addr_label
 push32 ret_addr_label
 {// heap_push
-{// m[free_ptr] := top (m[m[0]] = top)
+{// m[free_ptr] <= top (m[m[0]] = top)
 push1 0 
 mload
 mstore
@@ -53,7 +93,7 @@ jump
 }
 ret_addr_label:
 jumpdest
-{// pop_to frame[result_reg] (m[m[1]+result_reg] = top)
+{// pop_to base[result_reg] (m[m[1]+result_reg] = top)
 push1 1
 mload
 push2 result_reg
@@ -62,31 +102,30 @@ mstore
 }
 
 function_prelude ==
-{// heap_push m[frame_ptr]
+{// heap_push m[base_ptr]
 push1 1
 mload
 heap_push
 }
-{// frame_ptr := m[free_ptr] (m[1] = m[0])
+{// base_ptr <= m[free_ptr] (m[1] = m[0])
 push1 0
 mload
 push1 1
 mstore
 }
-{// free_ptr += frame_size
-push2 frame_size
+{// free_ptr += base_size
+push2 base_size
 inc_free_ptr
 }
-{// pop_to frame[0] (m[m[1]] = top) (pop arg to frame[0])
+{// pop_to base[0] (m[m[1]] = top) (pop arg to base[0])
 push1 1
 mload
 mstore
 }
 
-function_epilogue ==
 return result_expr ==
 compile result_expr
-{// push frame[-2] (i.e. m[m[1]-2], the return ptr)
+{// push base[-2] (i.e. m[m[1]-2], the return ptr)
 // equivalent to: compile (Reg -2)
 push1 1
 mload
@@ -94,7 +133,7 @@ push1 2
 sub
 mload
 }
-{// frame_ptr := frame[-1] (m[1] = m[m[1]-1])
+{// base_ptr <= base[-1] (m[1] = m[m[1]-1])
 {// equivalent to: compile (Reg -1)
 push1 1
 mload
@@ -105,5 +144,88 @@ mload
 push1 1
 mstore
 }
-ret // == jump
+jump_ret // == jump
+
+Calling convention 2:
+
+call result_reg callee_addr_expr arg_expr ret_addr_label ==
+compile(callee_addr_expr)
+compile(arg_expr)
+swap1
+{// call ret_addr_label
+push32 ret_addr_label
+swap1
+jump
+}
+ret_addr_label:
+jumpdest
+{// pop_to base[result_reg] (m[m[1]+result_reg] = top)
+push1 1
+mload
+push2 result_reg
+add
+mstore
+}
+
+function_prelude ==
+{// heap_push
+{// m[free_ptr] <= top (m[m[0]] = top)
+push1 0 
+mload
+mstore
+}
+{// free_ptr += 1 (m[0] = 1 + m[0])
+push1 1
+{// inc_free_ptr (m[0] = top + m[0])
+push1 0 
+mload
+add
+push1 0
+mstore
+}
+}
+}
+{// heap_push m[base_ptr]
+push1 1
+mload
+heap_push
+}
+{// base_ptr <= m[free_ptr] (m[1] = m[0])
+push1 0
+mload
+push1 1
+mstore
+}
+{// free_ptr += base_size
+push2 base_size
+inc_free_ptr
+}
+{// pop_to base[0] (m[m[1]] = top) (pop arg to base[0])
+push1 1
+mload
+mstore
+}
+
+return result_expr ==
+compile result_expr
+{// push base[-2] (i.e. m[m[1]-2], the return ptr)
+// equivalent to: compile (Reg -2)
+push1 1
+mload
+push1 2
+sub
+mload
+}
+{// base_ptr <= base[-1] (m[1] = m[m[1]-1])
+{// equivalent to: compile (Reg -1)
+push1 1
+mload
+push1 1
+sub
+mload
+}
+push1 1
+mstore
+}
+jump_ret // == jump
 
