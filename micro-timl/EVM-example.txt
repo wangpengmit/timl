@@ -1,0 +1,109 @@
+0: heap free pointer (free_ptr)
+1: frame pointer (frame_ptr)
+
+compile (reg1 * (reg2 + reg3)) ==
+{// compile (Reg reg1)
+// push frame[arg1] (frame[arg1] == m[m[frame_ptr] + arg1] == m[m[1] + arg1])
+push1 1 
+mload
+push2 reg1
+add
+mload
+}
+{// compile (reg2 + reg3)
+push1 1
+mload
+push2 reg2
+add
+mload
+push1 1
+mload
+push2 reg3
+add
+mload
+add
+}
+mul
+
+call result_reg callee_addr_expr arg_expr ret_addr_label ==
+compile(callee_addr_expr)
+compile(arg_expr)
+{// call ret_addr_label
+{// heap_push ret_addr_label
+push32 ret_addr_label
+{// heap_push
+{// m[free_ptr] := top (m[m[0]] = top)
+push1 0 
+mload
+mstore
+}
+{// free_ptr += 1 (m[0] = 1 + m[0])
+push1 1
+{// inc_free_ptr (m[0] = top + m[0])
+push1 0 
+mload
+add
+push1 0
+mstore
+}
+}
+}
+}
+jump
+}
+ret_addr_label:
+jumpdest
+{// pop_to frame[result_reg] (m[m[1]+result_reg] = top)
+push1 1
+mload
+push2 result_reg
+add
+mstore
+}
+
+function_prelude ==
+{// heap_push m[frame_ptr]
+push1 1
+mload
+heap_push
+}
+{// frame_ptr := m[free_ptr] (m[1] = m[0])
+push1 0
+mload
+push1 1
+mstore
+}
+{// free_ptr += frame_size
+push2 frame_size
+inc_free_ptr
+}
+{// pop_to frame[0] (m[m[1]] = top) (pop arg to frame[0])
+push1 1
+mload
+mstore
+}
+
+function_epilogue ==
+return result_expr ==
+compile result_expr
+{// push frame[-2] (i.e. m[m[1]-2], the return ptr)
+// equivalent to: compile (Reg -2)
+push1 1
+mload
+push1 2
+sub
+mload
+}
+{// frame_ptr := frame[-1] (m[1] = m[m[1]-1])
+{// equivalent to: compile (Reg -1)
+push1 1
+mload
+push1 1
+sub
+mload
+}
+push1 1
+mstore
+}
+ret // == jump
+
