@@ -42,25 +42,110 @@ jumpi_sum
 inl [t_other] expr ==
 compile(expr)
 {// inl
-malloc [ibool{False}, t_expr]
+malloc_tuple [ibool{False}, t_expr]
 push1 0
 mload
 dup1
 push1 #false
 swap1
-mstore
+mstore // m[m[0]] = #false
 swap1
 dup2
 push1 1
 add
-mstore
+mstore // m[m[0]+1] = expr
 dup1
 push1 2
 add
 push1 0
-mstore
+mstore // m[0] = m[0] + 2
 pack_inl [t_other]
 }
+
+new_array e1 e2 ==
+compile(e1)
+compile(e2)
+swap1
+dup1
+malloc_array i_e1 t_e2
+push1 0 
+mload
+swap1
+dup2
+mstore // m[m[0]] = len
+push1 32
+add
+dup1
+dup3
+push1 32
+mul
+add
+push1 0
+mstore // m[0] = m[0] + 32 + len * 32
+swap1
+push1 32
+mul // n = len * 32
+loop:
+jumpdest
+dup1
+iszero // n<=0 ?
+push32 loop_exit
+jumpi
+push1 32
+swap1
+sub
+dup3
+dup3
+dup3
+add
+mstore // m[arr+(n-32)] = v
+jump loop
+loop_exit:
+jumpdest
+pop // pop 0
+swap1
+pop // pop v
+// now arr is top
+
+new_empty_array [t] ==
+malloc_array 0 t
+push1 0 
+mload
+push1 0
+dup2
+mstore // m[m[0]] = 0
+push1 32
+add
+dup1
+push1 0
+mstore // m[0] = m[0] + 32
+
+
+read e1 e2 ==
+compile(e1)
+compile(e2)
+push1 32
+mul
+add
+mload
+
+write e1 e2 e3 ==
+compile(e1)
+compile(e2)
+compile(e3)
+swap2
+swap1
+push1 32
+mul
+add
+mstore
+
+array_len e ==
+compile(e)
+push1 32
+swap1
+sub
+mload
 
 Calling convention 1:
 
@@ -130,6 +215,7 @@ compile result_expr
 push1 1
 mload
 push1 2
+swap1
 sub
 mload
 }
@@ -138,6 +224,7 @@ mload
 push1 1
 mload
 push1 1
+swap1
 sub
 mload
 }
@@ -213,6 +300,7 @@ compile result_expr
 push1 1
 mload
 push1 2
+swap1
 sub
 mload
 }
@@ -221,6 +309,7 @@ mload
 push1 1
 mload
 push1 1
+swap1
 sub
 mload
 }
