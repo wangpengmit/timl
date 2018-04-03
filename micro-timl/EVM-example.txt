@@ -124,9 +124,11 @@ mstore // m[0] = m[0] + 32
 read e1 e2 ==
 compile(e1)
 compile(e2)
+{// array_pt
 push1 32
 mul
 add
+}
 mload
 
 write e1 e2 e3 ==
@@ -135,9 +137,7 @@ compile(e2)
 compile(e3)
 swap2
 swap1
-push1 32
-mul
-add
+array_ptr 
 mstore
 
 array_len e ==
@@ -147,7 +147,7 @@ swap1
 sub
 mload
 
-tuple e_1 ... e_n =
+tuple e_1 ... e_n ==
 compile(e_1)
 ...
 compile(e_n)
@@ -164,6 +164,62 @@ dup2
 dup2
 mstore // m[m[0]+(i-1)*32] = e_i
 }
+
+map_get reg_i reg_(i+1) e1 e2 ==
+compile(e1)
+compile(e2)
+{// map_ptr reg_i reg_(i+1)
+push32 i*32
+mstore
+push2 (i+1)*32
+mstore
+push1 64
+push32 i*32
+sha3
+}
+sload
+
+map_set reg_i reg_(i+1) e1 e2 e3 ==
+compile(e1)
+compile(e2)
+compile(e3)
+swap2
+swap1
+map_ptr reg_i reg_(i+1)
+sstore
+
+vector_get r e1 e2 ==
+compile(e1)
+compile(e2)
+swap1
+{// vector_ptr r
+push2 r*32
+mstore
+push1 32
+push32 r*32
+sha3
+add
+}
+sload
+
+vector_set r e1 e2 e3 ==
+compile(e1)
+dup1
+compile(e2)
+compile(e3)
+swap2
+vector_ptr r
+sstore
+dup1 // update length
+sload
+push1 1
+add
+swap1
+sstore
+
+vector_len e ==
+compile(e1)
+mload
 
 Calling convention 1:
 
