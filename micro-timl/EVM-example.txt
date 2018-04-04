@@ -2,12 +2,8 @@
 32: frame pointer (frame_ptr) a.k.a. base pointer (base_ptr)
 
 compile (reg1 * (reg2 + reg3)) ==
-{// compile (Reg reg1)
-// push base[arg1] (base[arg1] == m[m[base_ptr] + arg1] == m[m[32] + arg1])
-push1 32
-mload
+{// compile (Reg reg1) // get_reg reg1
 push2 reg1
-add
 mload
 }
 {// compile (reg2 + reg3)
@@ -25,101 +21,132 @@ add
 }
 mul
 
+(let reg1 = e) ==
+compile(e)
+{// set_reg reg1
+push2 reg1
+mstore
+}
+
+tuple e_1 ... e_n ==
+compile(e_1)
+...
+compile(e_n)
+{// malloc_tuple [t_1, ..., t_n]
+push1 0
+mload
+dup1
+push2 n*32
+add
+push1 0
+mstore
+}
+push2 n*32
+add
+repeat n {
+push1 32
+swap1
+sub
+swap1
+{// tuple_assign
+dup2
+mstore // m[m[0]+(i-1)*32] = e_i
+}
+}
+
 br_sum expr inr_branch_label ==
 compile(expr)
 {// br_sum inr_branch_label
-unpack_sum "c"
-dup1
-push1 32
-add
-mload
-swap1
-mload
-push32 inr_branch_label
+push32 inr_branch_label // [code, l]
+swap1 // [l, code]
+//unpack_sum "c"
+dup1 // [l, l, code]
+//push1 32
+//add
+//mload
+//swap1
+mload // [b, l, code]
+swap1 // [l, b, code]
+swap2 // [code, b, l]
 jumpi_sum
-}
+} // [l]
 
 inl [t_other] expr ==
 compile(expr)
 {// inl
-malloc_tuple [ibool{False}, t_expr]
+{// malloc_tuple [ibool{False}, t_expr]
 push1 0
 mload
 dup1
-push1 #false
-swap1
+push1 64
+add
+push1 0
+mstore
+}
+{// inl_assign [t_other]
+push1 false
+dup2
 mstore // m[m[0]] = #false
 swap1
 dup2
 push1 32
 add
 mstore // m[m[0]+32] = expr
-dup1
-push1 64
-add
-push1 0
-mstore // m[0] = m[0] + 64
 pack_inl [t_other]
+}
 }
 
 new_array e1 e2 ==
 compile(e1)
 compile(e2)
-swap1
-dup1
-malloc_array i_e1 t_e2
+swap1 // [len, v]
+dup1 // [len, len, v]
+{// malloc_array t_e2 // [len]
 push1 0 
-mload
-swap1
-dup2
-mstore // m[m[0]] = len
+mload // [m[0], len]
+dup2 // [len, m[0], len]
+dup2  // [m[0], len, m[0], len]
+mstore // m[m[0]] = len // [m[0], len]
 push1 32
-add
-dup1
-dup3
+add // [m[0]+32, len]
+dup1 // [m[0]+32, m[0]+32, len]
+swap2 // [len, m[0]+32, m[0]+32]
 push1 32
 mul
-add
+add // [m[0]+32+len*32, m[0]+32]
 push1 0
-mstore // m[0] = m[0] + 32 + len * 32
-swap1
+mstore // m[0] = m[0] + 32 + len * 32 // [m[0]+32]
+} // [m[0]+32, len, v]
+swap1 // [len, m[0]+32, v]
 push1 32
-mul // n = len * 32
+mul // n = len*32, arr = m[0]+32 // [len*32(i.e. n), m[0]+32(i.e. arr), v]
 loop:
 jumpdest
-dup1
+dup1 // [n, n, m[0]+32, v]
 iszero // n<=0 ?
 push32 loop_exit
-jumpi
+jumpi // [n, m[0]+32, v]
 push1 32
 swap1
-sub
-dup3
-dup3
-dup3
-add
-mstore // m[arr+(n-32)] = v
+sub // [n-32, m[0]+32, v]
+{// array_assign 
+dup3 // [v, n-32, m[0]+32, v]
+dup3 // [m[0]+32, v, n-32, m[0]+32, v]
+dup3 // [n-32, m[0]+32, v, n-32, m[0]+32, v]
+add  // [m[0]+32+(n-32), v, n-32, m[0]+32, v]
+mstore // m[arr+(n-32)] = v // [n-32, m[0]+32, v]
+}
 jump loop
-loop_exit:
+loop_exit: // [n(=0), m[0]+32, v]
 jumpdest
-pop // pop 0
+pop // pop 0 // [m[0]+32, v]
 swap1
-pop // pop v
+pop // pop v // [m[0]+32]
 // now arr is top
 
 new_empty_array [t] ==
-malloc_array 0 t
-push1 0 
-mload
 push1 0
-dup2
-mstore // m[m[0]] = 0
-push1 32
-add
-dup1
-push1 0
-mstore // m[0] = m[0] + 32
-
+malloc_array t
 
 read e1 e2 ==
 compile(e1)
@@ -146,24 +173,6 @@ push1 32
 swap1
 sub
 mload
-
-tuple e_1 ... e_n ==
-compile(e_1)
-...
-compile(e_n)
-malloc_tuple [t_1, ..., t_n]
-push1 0
-mload
-push2 n*32
-add
-repeat n {
-push1 32
-swap1
-sub
-dup2
-dup2
-mstore // m[m[0]+(i-1)*32] = e_i
-}
 
 map_get reg_i reg_(i+1) e1 e2 ==
 compile(e1)
@@ -204,18 +213,32 @@ sload
 
 vector_set r e1 e2 e3 ==
 compile(e1)
-dup1
 compile(e2)
 compile(e3)
 swap2
 vector_ptr r
 sstore
-dup1 // update length
-sload
+
+vector_push_back r vector_label e2
+compile(e2)
+{// inc length
+push32 vector_label
+swap1 // [v, l]
+dup2 // [l, v, l]
+dup1 // [l, l, v, l]
+sload // [len, l, v, l]
+swap1
+dup2 // [len, l, len, v, l]
 push1 1
 add
-swap1
-sstore
+swap1 // [l, len+1, len, v, l]
+sstore // s[l] = s[l]+1 // [len, v, l]
+}
+swap1 // [v, len, l]
+swap2 // [l, len, v]
+vector_ptr r // [sha3(l)+len), v]
+store // s[sha3(l)+len] = v // []
+push1 ()
 
 vector_len e ==
 compile(e1)
