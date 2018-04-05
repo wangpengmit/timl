@@ -54,6 +54,12 @@ mstore // m[m[0]+(i-1)*32] = e_i
 }
 }
 
+e.n ==
+compile(e)
+push2 n*32
+add
+mload
+
 br_sum_to expr inr_branch_label ==
 compile(expr)
 push32 inr_branch_label // [code, l]
@@ -93,6 +99,48 @@ mstore // m[m[0]+32] = expr
 pack_inl [t_other]
 }
 }
+
+new_string s ==
+{// malloc_string |s|
+push1 0
+mload
+push32 |s|
+dup2
+mstore // m[m[0]] = |s|
+dup1
+push32 32+|s|
+add
+push1 0
+mstore // m[0] = m[0]+32+|s|
+}
+push1 32+|s|
+add
+for n = |s| to 1 {
+push1 1
+swap1
+sub
+push1 s[n-1]
+dup2
+mstore8
+}
+
+string_len e ==
+compile(e)
+{// get_str_len
+push1 32
+swap1
+sub
+mload
+}
+
+string_concat e1 e2 ==
+compile(e1)
+compile(e2)
+dup2
+get_str_len
+dup2
+get_str_len
+
 
 new_array e1 e2 ==
 compile(e1)
@@ -150,7 +198,7 @@ malloc_array t
 read e1 e2 ==
 compile(e1)
 compile(e2)
-{// array_pt
+{// array_ptr
 push1 32
 mul
 add

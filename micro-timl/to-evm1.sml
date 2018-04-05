@@ -102,7 +102,6 @@ fun cg_v ectx v =
     | EAppI (v, i) => VAppI (cg_v ectx v, i)
     | EPack (t_pack, t, v) => VPack (cg_t t_pack, cg_t t, cg_v ectx v)
     | EPackI (t_pack, i, v) => VPackI (cg_t t_pack, i, cg_v ectx v)
-    | EUnOp (EUFold t, v) => VFold (cg_t t, cg_v ectx v)
     | EAscType (v, t) => VAscType (cg_v ectx v, cg_t t)
     | ENever t => VNever $ cg_t t
     | EBuiltin (name, t) => VBuiltin (name, cg_t t)
@@ -136,17 +135,65 @@ fun VAppITs_ctx (e, itctx) =
   end
 
 (* fun get_reg r = [PUSH_REG $ RegAddr r, MLOAD] *)
+fun array_ptr = [PUSH1 32, MUL, ADD]
+
+fun impl_prim_expr_un_opr opr =
+  case opr of
+      EUPIntNeg => [PUSH1 0, SUB]
+    | EUPBoolNeg => [ISZERO]
+    | _ => raise Impossible $ "impl_prim_expr_up_op() on " ^ str_prim_expr_un_op opr
+      
+fun impl_prim_expr_bin_op opr =
+  case opr of
+       EBPIntAdd => [ADD]
+     | EBPIntMul => [MUL]
+     | EBPIntMinus => [SWAP1, SUB]
+     | EBPIntDiv => [SWAP1, SDIV]
+     | EBPIntLt => [SWAP1, LT]
+     | EBPIntGt => [SWAP1, GT]
+     | EBPIntLe => [GT, ISZERO]
+     | EBPIntGe => [LT, ISZERO]
+     | EBPIntEq => [EQ]
+     | EBPIntNEq => [EQ, ISZERO]
+     | EBPBoolAnd => [AND]
+     | EBPBoolOr => [OR]
+     | EBPStrConcat => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat"
                   
+fun impl_expr_un_op opr =
+  case opr of
+      EUPrim opr => impl_prim_expr_un_opr opr
+    | EUNat2Int => [NAT2INT]
+    | EUPrint => [PRINT]
+    | EUArrayLen => [PUSH1 32, SWAP1, SUB, MLOAD]
+    | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD, MLOAD]
+                        
+fun impl_nat_expr_bin_op opr =
+  case opr of
+      EBNAdd => [ADD]
+    | EBNMult => [MUL]
+    | EBNDiv => [SWAP1, DIV]
+    | EBNMinus => [SWAP1, SUB]
+    | EBNBoundedMinus => raise Impossible "impl_nat_expr_bin_op() on EBNBoundedMinus"
+
+fun impl_nat_cmp opr =
+  case opr of
+     NCLt => [SWAP1, LT]
+   | NCGt => [SWAP1, GT]
+   | NCLe => [GT, ISZERO]
+   | NCGe => [LT, ISZERO]
+   | NCEq => [EQ]
+   | NCNEq => [EQ, ISZERO]
+      
 fun compile e =
   case e of
-      EBinOp (EBPrim EBPIntAdd, e1, e2) =>
-      compile e1 @ compile e2 @ [ADD]
+      EBinOp (EBPrim opr, e1, e2) =>
+      compile e1 @ compile e2 @ impl_prim_expr_bin_op opr
     | EVar (ID (x, _)) =>
       (case nth_error ectx x of
            SOME (name, v) =>
            (case v of
                 inl r => get_reg r
-              | inr l => [PUSH_Value $ VLabel l])
+              | inr l => [PUSH_value $ VLabel l])
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
     | EBinOp (EBPair, e1, e2) =>
       let
@@ -155,7 +202,7 @@ fun compile e =
         val t1 = cg_t t1
         val t2 = cg_t t2
       in
-        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_TUPLE_LEN (2*32), ADD] @ concat $ repeat 2 [PUSH1 32; SWAP1; SUB; SWAP1] @ tuple_assign
+        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concat $ repeat 2 [PUSH1 32; SWAP1; SUB; SWAP1] @ tuple_assign
       end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
@@ -166,45 +213,36 @@ fun compile e =
       in
         compile e @ malloc_tuple [TiBool $ ICBool b, t_e] @ [PUSH1 b, DUP2, MSTORE, SWAP1, DUP2, PUSH1 32, ADD, MSTORE, PACK_SUM (inj, t_other)]
       end
-      
-    | EBinOp (EBNat opr, v1, v2) =>
-      [IMov' (r, cg_v ectx v1),
-       IBinOp' (IBNat opr, r, r, cg_v ectx v2)]
+    | EEmptyArray t =>
+      PUSH1 0 :: malloc_array $ cg_t t
+    | EBinOp (EBRead, e1, e2) =>
+      compile e1 @
+      compile e2 @
+      array_ptr @
+      MLOAD
+    | ETriOp (ETWrite, e1, e2, e3) =>
+      compile e1 @
+      compile e2 @
+      compile e3 @
+      [SWAP2, SWAP1] @
+      array_ptr @
+      MSTORE
+    | EUnOp (EUUnfold, e) =>
+      compile e @ [UNFOLD]
+    | EUnOp (EUFold t, e) =>
+      compile e @ [FOLD $ cg_t t]
+    | EUnOp (EUTiML opr, e) =>
+      compile e @ impl_expr_un_opr opr
+    | EBinOp (EBNat opr, e1, e2) =>
+      compile e1 @ 
+      compile e2 @
+      impl_nat_expr_bin_op opr
     | EBinOp (EBNatCmp opr, v1, v2) =>
-      [IMov' (r, cg_v ectx v1),
-       IBinOp' (IBNatCmp opr, r, r, cg_v ectx v2)]
-    | EBinOp (EBRead, v1, v2) =>
-      [IMov' (r, cg_v ectx v1),
-       IBinOp' (IBRead, r, r, cg_v ectx v2)]
-    | ETriOp (ETWrite, v1, v2, v3) =>
-      let
-        val r' = fresh_reg ()
-      in
-        [IMov' (r, cg_v ectx v1),
-         IMov' (r', cg_v ectx v2),
-         IBinOp' (IBWrite, r, r', cg_v ectx v3)]
-      end
-    | EUnOp (EUInj (inj, t), v) =>
-      [IInj' (r, inj, cg_v ectx v, cg_t t)]
+      compile e1 @ 
+      compile e2 @
+      impl_nat_cmp opr
     | EConst (ECString s) =>
       [IString (r, s)]
-    | EUnOp (EUUnfold, v) =>
-      [IUnfold' (r, cg_v ectx v)]
-    | EUnOp (EUTiML opr, v) =>
-      [IUnOp' (cg_expr_un_op opr, r, cg_v ectx v)]
-    | EMallocPair (v1, v2) =>
-      [IMallocPair' (r, (cg_v ectx v1, cg_v ectx v2))]
-    | EEmptyArray t =>
-      [IEmptyArray (r, Inner $ cg_t t)]
-    | EPairAssign (v1, proj, v2) =>
-      let
-        val r' = fresh_reg ()
-      in
-        [IMov' (r, cg_v ectx v1),
-         IMov' (r', cg_v ectx v2),
-         ISt ((r, proj), r')]
-      end
-    | v => [IMov' (r, cg_v ectx v)]
 
 fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
   let
@@ -246,13 +284,12 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
             val (e, i_e) = assert_EAscTime e
             val exit_label = fresh_label ()
             val loop_label = fresh_label ()
-            val cont_label = fresh_label ()
             val loop_block =
                 let
                   val s = Subset ("i", Nat, IV 0 %<= shift01_i_i len)
                   val i = fresh_ivar ()
-                  val loop_code = [DUP1, ISZERO, PUSH_Value $ VAppITs_ctx (VLabel exit_label, itctx), JUMPI, PUSH1 32, SWAP1, SUB] @ array_assign @ [PUSH_Value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ i %- N1]), JUMP]
-                  val block = ((rctx, [TNat (ConstIN 32 %* i), TPreArray (t, len, i), t], ToReal (i %* ConstIN 8) + T1 %+ T1 %+ i_e), loop_code)
+                  val loop_code = [DUP1, ISZERO, PUSH_value $ VAppITs_ctx (VLabel exit_label, itctx), JUMPI, PUSH1 32, SWAP1, SUB] @ array_assign @ [PUSH_value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ i %- N1]), JUMP]
+                  val block = ((rctx, [TNat (ConstIN 32 %* i), TPreArray (t, len, i), t], ToReal (i %* ConstIN 8) + T1 %+ i_e), loop_code)
                   val block = close0_i_block i block
                 in
                   HCode' (rev $ inl ("i", s) :: itctx, block)
@@ -260,25 +297,18 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
             val () = output_heap ((l, "new_array_loop"), loop_block)
             val exit_block =
                 let
-                  val exit_code = [POP, SWAP1, POP, PUSH_Value $ VAppITs_ctx (VLabel cont_label, itctx), JUMP]
+                  val r = fresh_reg ()
+                  val exit_code = [POP, SWAP1, POP] @ set_reg r @ cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArrow (t, len))) e
                 in
-                  HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ T1 %+ i_e), cont_code))
+                  HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), exit_code))
                 end
             val () = output_heap ((l, "new_array_loop_exit"), exit_block)
-            val cont_block =
-                let
-                  val r = fresh_reg ()
-                  val cont_code = set_reg r @ cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArrow (t, len))) e
-                in
-                  HCode' (rev itctx, ((rctx, [TArray (t, len)], T1 %+ i_e), cont_code))
-                end
-            val () = output_heap ((l, "new_array_cont"), cont_block)
           in
             compile e1 @
             compile e2 @
             [SWAP1, DUP1] @
             malloc_array t @
-            [SWAP1, PUSH1 32, MUL, PUSH_Value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len]), JUMP]
+            [SWAP1, PUSH1 32, MUL, PUSH_value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len]), JUMP]
           end
         | _ =>
           let
@@ -334,7 +364,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val () = output_heap ((l, "inr_branch"), hval)
       in
         compile e @
-        [PUSH_Value $ VAppITs_ctx (VLabel l, itctx)] @
+        [PUSH_value $ VAppITs_ctx (VLabel l, itctx)] @
         br_sum @
         branch_prelude @
         I1
@@ -350,7 +380,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val () = output_heap ((l, "else_branch"), hval)
       in
         compile e @
-        [PUSH_Value $ VAppITs_ctx (VLabel l, itctx)] @
+        [PUSH_value $ VAppITs_ctx (VLabel l, itctx)] @
         JUMPI @
         I1
       end
