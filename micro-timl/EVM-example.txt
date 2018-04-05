@@ -54,20 +54,18 @@ mstore // m[m[0]+(i-1)*32] = e_i
 }
 }
 
-br_sum expr inr_branch_label ==
+br_sum_to expr inr_branch_label ==
 compile(expr)
-{// br_sum inr_branch_label
 push32 inr_branch_label // [code, l]
-swap1 // [l, code]
+{// br_sum
+dup2 // [l, code, l]
 //unpack_sum "c"
-dup1 // [l, l, code]
 //push1 32
 //add
 //mload
 //swap1
-mload // [b, l, code]
-swap1 // [l, b, code]
-swap2 // [code, b, l]
+mload // [b, code, l]
+swap1 // [code, b, l]
 jumpi_sum
 } // [l]
 
@@ -120,7 +118,7 @@ mstore // m[0] = m[0] + 32 + len * 32 // [m[0]+32]
 swap1 // [len, m[0]+32, v]
 push1 32
 mul // n = len*32, arr = m[0]+32 // [len*32(i.e. n), m[0]+32(i.e. arr), v]
-loop:
+loop: // [n, m[0]+32, v]
 jumpdest
 dup1 // [n, n, m[0]+32, v]
 iszero // n<=0 ?
@@ -136,7 +134,8 @@ dup3 // [n-32, m[0]+32, v, n-32, m[0]+32, v]
 add  // [m[0]+32+(n-32), v, n-32, m[0]+32, v]
 mstore // m[arr+(n-32)] = v // [n-32, m[0]+32, v]
 }
-jump loop
+push32 loop
+jump
 loop_exit: // [n(=0), m[0]+32, v]
 jumpdest
 pop // pop 0 // [m[0]+32, v]
@@ -414,4 +413,12 @@ push1 32
 mstore
 }
 jump_ret // == jump
+
+Calling convention in CPS:
+
+call e1 e2 ==
+compile(e1)
+compile(e2)
+set_reg 0
+jump
 
