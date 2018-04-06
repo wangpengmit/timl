@@ -1,9 +1,9 @@
 (* Code generation to TiTAL *)
 
-structure CodeGen = struct
+structure ToEVM1 = struct
 
 open CompilerUtil
-open TiTAL
+open EVM1
 
 infixr 0 $
          
@@ -80,46 +80,6 @@ type kind = bsort kind
 val heap_ref = ref ([] : ((label * string) * (idx, sort, kind, ty) hval) list)
 fun output_heap pair = push_ref heap_ref pair
 
-fun cg_c c =
-  case c of
-      ECTT => WCTT
-    | ECNat n => WCNat n
-    | ECInt n => WCInt n
-    | ECBool n => WCBool n
-    | ECString s => raise Impossible $ "cg_c() on ECString"
-                                
-fun cg_v ectx v =
-  case v of
-      EVar (ID (x, _)) =>
-      (case nth_error ectx x of
-           SOME (name, v) =>
-           (case v of
-                inl r => VReg r
-              | inr l => VLabel l)
-         | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
-    | EConst c => VConst $ cg_c c
-    | EAppT (v, t) => VAppT (cg_v ectx v, cg_t t)
-    | EAppI (v, i) => VAppI (cg_v ectx v, i)
-    | EPack (t_pack, t, v) => VPack (cg_t t_pack, cg_t t, cg_v ectx v)
-    | EPackI (t_pack, i, v) => VPackI (cg_t t_pack, i, cg_v ectx v)
-    | EAscType (v, t) => VAscType (cg_v ectx v, cg_t t)
-    | ENever t => VNever $ cg_t t
-    | EBuiltin (name, t) => VBuiltin (name, cg_t t)
-    | _ =>
-      let
-        val ectxn = map (fst o fst) ectx
-      in
-        raise Impossible $ "cg_v() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], ectxn) v)
-      end
-
-fun cg_expr_un_op opr =
-  case opr of
-      EUPrim opr => IUPrim opr
-    | EUPrint => IUPrint
-    | EUArrayLen => IUArrayLen
-    | EUNat2Int => IUNat2Int
-    | EUProj _ => raise Impossible "cg_expr_un_op() on EUProj"
-      
 fun VAppITs_ctx (e, itctx) =
   let
     fun IV n = VarI (ID (n, dummy), [])
@@ -135,12 +95,21 @@ fun VAppITs_ctx (e, itctx) =
   end
 
 (* fun get_reg r = [PUSH_REG $ RegAddr r, MLOAD] *)
-fun array_ptr = [PUSH1 32, MUL, ADD]
+val array_ptr = [PUSH1 $ WCNat 32, MUL, ADD]
 
+fun cg_c c =
+  case c of
+      ECTT => WCTT
+    | ECNat n => WCNat n
+    | ECInt n => WCInt n
+    | ECBool n => WCBool n
+    | ECString s => raise Impossible $ "cg_c() on ECString"
+                                
 fun impl_prim_expr_un_opr opr =
   case opr of
       EUPIntNeg => [PUSH1 0, SUB]
     | EUPBoolNeg => [ISZERO]
+    | EUPStrLen => [PUSH1 32, SWAP1, SUB, MLOAD]
     | _ => raise Impossible $ "impl_prim_expr_up_op() on " ^ str_prim_expr_un_op opr
       
 fun impl_prim_expr_bin_op opr =
@@ -184,7 +153,10 @@ fun impl_nat_cmp opr =
    | NCEq => [EQ]
    | NCNEq => [EQ, ISZERO]
       
-fun compile e =
+fun compile ectx e =
+  let
+    val compile = compile ectx
+  in
   case e of
       EBinOp (EBPrim opr, e1, e2) =>
       compile e1 @ compile e2 @ impl_prim_expr_bin_op opr
@@ -195,6 +167,15 @@ fun compile e =
                 inl r => get_reg r
               | inr l => [PUSH_value $ VLabel l])
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
+    | EConst c => [PUSH_value $ VConst $ cg_c c]
+    | EAppT (e, t) => compile e @ VALUE_VAppT (cg_t t)
+    | EAppI (e, i) => compile e @ VALUE_VAppI i
+    | EPack (t_pack, t, e) => compile e @ VALUE_VPack (cg_t t_pack, cg_t t)
+    (* | EPackI (t_pack, i, v) => VPackI (cg_t t_pack, i, cg_v ectx v) *)
+    | EUnOp (EUFold t, e) => compile e @ [VALUE_VFold $ cg_t t]
+    | EAscType (e, t) => compile e @ VALUE_VAscType (cg_t t)
+    | ENever t => [PUSH_value $ VNever $ cg_t t]
+    | EBuiltin (name, t) => [PUSH_value $ VBuiltin (name, cg_t t)]
     | EBinOp (EBPair, e1, e2) =>
       let
         val (e1, t1) = assert_EAscType e1
@@ -202,7 +183,7 @@ fun compile e =
         val t1 = cg_t t1
         val t2 = cg_t t2
       in
-        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concat $ repeat 2 [PUSH1 32; SWAP1; SUB; SWAP1] @ tuple_assign
+        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concat $ repeat 2 [PUSH1 32, SWAP1, SUB, SWAP1] @ tuple_assign
       end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
@@ -215,6 +196,16 @@ fun compile e =
       end
     | EEmptyArray t =>
       PUSH1 0 :: malloc_array $ cg_t t
+    | ENewArrayValues es =>
+      let
+        val n = length es
+      in
+        [PUSH_tuple_offset n] @
+        malloc_array @
+        [DUP1] @
+        map (fn e => compile e @ [DUP2, MSTORE, PUSH1 32, ADD]) es @
+        [POP]
+      end
     | EBinOp (EBRead, e1, e2) =>
       compile e1 @
       compile e2 @
@@ -229,8 +220,6 @@ fun compile e =
       MSTORE
     | EUnOp (EUUnfold, e) =>
       compile e @ [UNFOLD]
-    | EUnOp (EUFold t, e) =>
-      compile e @ [FOLD $ cg_t t]
     | EUnOp (EUTiML opr, e) =>
       compile e @ impl_expr_un_opr opr
     | EBinOp (EBNat opr, e1, e2) =>
@@ -241,8 +230,7 @@ fun compile e =
       compile e1 @ 
       compile e2 @
       impl_nat_cmp opr
-    | EConst (ECString s) =>
-      [IString (r, s)]
+  end
 
 fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
   let
@@ -282,33 +270,41 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
             val t = cg_t t
             val (name, e) = unBindSimpName bind
             val (e, i_e) = assert_EAscTime e
-            val exit_label = fresh_label ()
+            val post_loop_label = fresh_label ()
             val loop_label = fresh_label ()
+            val pre_loop_code =
+                [SWAP1, DUP1] @
+                malloc_array t @
+                [SWAP1, PUSH1 32, MUL, PUSH_value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len]), JUMP]
+            (* val pre_loop_label = fresh_label () *)
+            (* val pre_loop_block = *)
+            (*     let *)
+            (*     in *)
+            (*       HCode' ([inr ("t", KType), inl ("j", STime), inl ("len", SNat)], ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), post_loop_code)) *)
+            (*     end *)
             val loop_block =
                 let
                   val s = Subset ("i", Nat, IV 0 %<= shift01_i_i len)
                   val i = fresh_ivar ()
-                  val loop_code = [DUP1, ISZERO, PUSH_value $ VAppITs_ctx (VLabel exit_label, itctx), JUMPI, PUSH1 32, SWAP1, SUB] @ array_assign @ [PUSH_value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ i %- N1]), JUMP]
+                  val loop_code = [DUP1, ISZERO, PUSH_value $ VAppITs_ctx (VLabel post_loop_label, itctx), JUMPI, PUSH1 32, SWAP1, SUB] @ array_assign @ [PUSH_value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ i %- N1]), JUMP]
                   val block = ((rctx, [TNat (ConstIN 32 %* i), TPreArray (t, len, i), t], ToReal (i %* ConstIN 8) + T1 %+ i_e), loop_code)
                   val block = close0_i_block i block
                 in
                   HCode' (rev $ inl ("i", s) :: itctx, block)
                 end
             val () = output_heap ((l, "new_array_loop"), loop_block)
-            val exit_block =
+            val post_loop_block =
                 let
                   val r = fresh_reg ()
-                  val exit_code = [POP, SWAP1, POP] @ set_reg r @ cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArrow (t, len))) e
+                  val post_loop_code = [POP, SWAP1, POP] @ set_reg r @ cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArrow (t, len))) e
                 in
-                  HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), exit_code))
+                  HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), post_loop_code))
                 end
-            val () = output_heap ((l, "new_array_loop_exit"), exit_block)
+            val () = output_heap ((l, "new_array_post_loop"), post_loop_block)
           in
             compile e1 @
             compile e2 @
-            [SWAP1, DUP1] @
-            malloc_array t @
-            [SWAP1, PUSH1 32, MUL, PUSH_value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len]), JUMP]
+            pre_loop_code
           end
         | _ =>
           let
@@ -359,7 +355,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2)) e2
         val branch_prelude = [PUSH1 32, ADD, MLOAD] @ set_reg r
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((rctx, [TPair (TiBool TrueI, t2)](*the stack spec*), i_e2), branch_prelude @ I2))
+        val hval = HCode' (itbinds, ((rctx, [TProd (TiBool TrueI, t2)](*the stack spec*), i_e2), branch_prelude @ I2))
         val l = fresh_label ()
         val () = output_heap ((l, "inr_branch"), hval)
       in
@@ -389,7 +385,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val (e, t) = assert_EAscType e
         val t = cg_t t
       in
-        compile e @ [PUSH1 32, SWAP1, RETURN t]
+        compile e @ [PUSH1 32, SWAP1, RETURN (* t *)]
       end
     | EAscTime (e, i) => IAscTime' i @:: cg_e params e
     | EAscType (e, _) => cg_e params e

@@ -267,6 +267,19 @@ new_empty_array [t] ==
 push1 0
 malloc_array t
 
+new_array_values (e_1, ..., e_n) ==
+push2 n
+malloc_array
+dup1
+for i = 0 to n-1 {
+compile(e_i)
+dup2
+mstore
+push1 32
+add
+}
+pop
+
 read e1 e2 ==
 compile(e1)
 compile(e2)

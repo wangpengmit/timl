@@ -1,0 +1,56 @@
+structure String = struct
+
+open Array
+       
+datatype string = String {len : Nat} of array char {len}
+
+new_string "abc" == String (new_array {'a', 'b', 'c'})
+    
+fun size s =
+  let
+    val String arr = s
+  in
+    nat2int $ length arr
+  end
+
+fun concat (s1, s2) =
+  let
+    val String arr1 = s1
+    val String arr2 = s2
+    val len1 = length s1
+    val len2 = length s2
+    val len = len1 #+ len2
+    val arr = array (len, 0)
+    for i = #0 to len1 do
+      update (arr, i, sub(arr1, i))
+    end
+    for i = #0 to len2 do
+      update (arr, len1 #+ i, sub(arr2, i))
+    end
+  in 
+    String arr
+end
+
+fun print s =
+  let
+    val String arr = s
+    val len = length s
+    for i = #0 to len do
+      printc $ sub(arr, i)
+    end
+  in
+    ()
+end
+
+fun nat2chars {d : Nat} {i : Nat | 10 ** d <= i < 10 ** (d+1) \/ i = 0 /\ d = 0} (i : nat {i}) return list char {d+1} using d =
+  ifdec i #< #10 then [nat2char i]
+  else int2char (nat2int i mod 10) :: @nat2chars {d-1} {_} (i #/ 10)
+
+fun int2str i return using 20 =
+  let
+    val Nat n = int2nat i
+  in
+    String (fromList $ rev $ list2ilist chars)
+  end
+
+end

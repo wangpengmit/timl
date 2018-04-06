@@ -115,6 +115,7 @@
 - [ ] Complete parser support for string literals and unescape().
 - [ ] If a primitive shouldn't be redefined (especially base type names because type names appear in feedback messages), it should be made a keyword in timl.lex.
 - [ ] Propogate return clauses through [ifdec] and [if]; let those time specs mean entire time including the matchee.
+- [ ] Have sprintf.
 
 # To-do for MicroTiML
 
@@ -132,6 +133,7 @@
 - [ ] Remove datatype "micro_timl" and rename "micro_timl_ex" to "micro_timl".
 - [ ] Rename "micro-timl/" to "compiler/".
 - [ ] Add "let nat {i} = x in ..." to name the index of nat.
+- [ ] Add register-file polymorphism so that EVM snippets for new_array and string_concat can be shared instead of inlined.
 
 # To-do for Examples:
 
