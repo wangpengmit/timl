@@ -38,6 +38,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TQuanI of unit Operators.quan * ('sort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno
          | TRec of ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
          | TNat of 'idx
+         | TiBool of 'idx
          | TArr of ('var, 'bsort, 'idx, 'sort) ty * 'idx
          | TAbsT of ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
          | TAppT of ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
@@ -45,6 +46,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool)
          (* used by compiler/code-gen *)
          | TArrowTAL of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx
+         | TPreArray of ('var, 'bsort, 'idx, 'sort) ty * 'idx * 'idx
 
 type loc = int
              

@@ -43,7 +43,6 @@ fun assert_TForallI t =
   case t of
       TQuanI (Forall, bind) => unBindAnno bind
     | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-
 fun assert_TExists t =
   case t of
       TQuan (Exists _, bind) => unBindAnno bind
@@ -56,11 +55,26 @@ fun assert_TRec t =
   case t of
       TRec bind => unBindAnno bind
     | _ => raise assert_fail $ "assert_TRec; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-
 fun assert_TUnit msg t =
   case t of
       TConst TCUnit => ()
     | _ => raise assert_fail msg
+fun assert_TProdEx t =
+  case t of
+      TProdEx a => a
+    | _ => raise assert_fail $ "assert_TProdEx; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TArrowTAL t =
+  case t of
+      TArrowTAL a => a
+    | _ => raise assert_fail "assert_TArrowTAL"
+fun assert_TArr t =
+  case t of
+      TArr a => a
+    | _ => raise assert_fail $ "assert_TArr; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TNat t =
+  case t of
+      TNat a => a
+    | _ => raise assert_fail $ "assert_TNat; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                  
 fun assert_EAbs e =
   case e of

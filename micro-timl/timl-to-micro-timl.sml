@@ -594,7 +594,6 @@ fun test1 dirname =
     val t_list = TiML.TDatatype (dt, dummy)
     val t = trans_mt t_list
     (* val () = println $ str_e empty ([], ["'a", "list"], ["Cons", "Nil"], []) e *)
-    val BSNat = Base Nat
     val e = SimpExpr.simp_e [("'a", KeKind Type), ("list", KeKind (1, [BSNat]))] e
     val () = println $ str_e empty ([], ["'a", "list"], ["Cons", "Nil2", "Nil"], []) e
     val () = println ""

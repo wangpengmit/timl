@@ -26,23 +26,6 @@ infixr 5 @@
 infix  6 @+
 infix  9 @!
 
-fun assert_TProdEx t =
-  case t of
-      TProdEx a => a
-    | _ => raise assert_fail $ "assert_TProdEx; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-fun assert_TArrowTAL t =
-  case t of
-      TArrowTAL a => a
-    | _ => raise assert_fail "assert_TArrowTAL"
-fun assert_TArr t =
-  case t of
-      TArr a => a
-    | _ => raise assert_fail $ "assert_TArr; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-fun assert_TNat t =
-  case t of
-      TNat a => a
-    | _ => raise assert_fail $ "assert_TNat; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-
 fun add_sorting_full new (hctx, (ictx, tctx), rctx) = (hctx, (new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx)
 fun add_kinding_full new (hctx, (ictx, tctx), rctx) = (hctx, (ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx)
 fun add_r p (hctx, itctx, rctx) = (hctx, itctx, rctx @+ p)

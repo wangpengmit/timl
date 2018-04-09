@@ -72,6 +72,8 @@ open ExprUtil
        
 (* some shorthands *)
 
+val BSNat = Base Nat
+                 
 val STime = Basic (Base Time, dummy)
 val SNat = Basic (Base Nat, dummy)
 val SBool = Basic (Base BoolSort, dummy)

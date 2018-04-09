@@ -1,12 +1,30 @@
-(* Code generation to TiTAL *)
+(* Code generation to EVM1 *)
 
 structure ToEVM1 = struct
 
+open Expr
 open CompilerUtil
 open EVM1
 
 infixr 0 $
          
+infix 9 %@
+infix 8 %^
+infix 7 %*
+infix 6 %+ 
+infix 4 %<=
+infix 4 %<
+infix 4 %>=
+infix 4 %>
+infix 4 %=
+infixr 3 /\
+infixr 2 \/
+infixr 1 -->
+infix 1 <->
+
+infix 6 %-
+fun a %- b = BinOpI (BoundedMinusI, a, b)
+        
 fun collect_ELetRec e =
   case e of
       ELet (e1, bind) =>
@@ -80,10 +98,15 @@ type kind = bsort kind
 val heap_ref = ref ([] : ((label * string) * (idx, sort, kind, ty) hval) list)
 fun output_heap pair = push_ref heap_ref pair
 
+fun IV n = VarI (ID (n, dummy), [])
+fun TV n = TVar (ID (n, dummy), [])
+fun FIV x = VarI (make_Free_i x, [])
+val T0 = T0 dummy
+val T1 = T1 dummy
+val N1 = N1 dummy
+                
 fun VAppITs_ctx (e, itctx) =
   let
-    fun IV n = VarI (ID (n, dummy), [])
-    fun TV n = TVar (ID (n, dummy), [])
     val itargs = fst $ foldl
                      (fn (bind, (acc, (ni, nt))) =>
                          case bind of
@@ -94,9 +117,21 @@ fun VAppITs_ctx (e, itctx) =
     VAppITs (e, itargs)
   end
 
-(* fun get_reg r = [PUSH_REG $ RegAddr r, MLOAD] *)
-val array_ptr = [PUSH1 $ WCNat 32, MUL, ADD]
+fun reg_addr r = 32 * (r + 1)
+fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD]
+fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE]
+val array_ptr = [PUSH1nat 32, MUL, ADD]
+fun malloc_tuple ts = [PUSH1nat 0, MLOAD, DUP1, PUSH_tuple_offset $ 32 * (length ts), ADD, PUSH1 $WNat 0, MSTORE]
+fun malloc_array t = [PUSH1nat 0, MLOAD, DUP2, DUP2, MSTORE, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
+val tuple_assign = [DUP2, MSTORE]
+val array_assign = [DUP3, DUP3, DUP3, ADD, MSTORE]
+val br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
 
+fun concatRepeat n v = List.concat $ repeat n v
+fun TiBoolConst b =
+  TiBool $ IConst (ICBool b, dummy)
+  (* raise Unimpl "TiBoolConst" *)
+               
 fun cg_c c =
   case c of
       ECTT => WCTT
@@ -107,9 +142,9 @@ fun cg_c c =
                                 
 fun impl_prim_expr_un_opr opr =
   case opr of
-      EUPIntNeg => [PUSH1 0, SUB]
+      EUPIntNeg => [PUSH1 $ WInt 0, SUB]
     | EUPBoolNeg => [ISZERO]
-    | EUPStrLen => [PUSH1 32, SWAP1, SUB, MLOAD]
+    | EUPStrLen => [PUSH1nat 32, SWAP1, SUB, MLOAD]
     | _ => raise Impossible $ "impl_prim_expr_up_op() on " ^ str_prim_expr_un_op opr
       
 fun impl_prim_expr_bin_op opr =
@@ -132,8 +167,9 @@ fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
     | EUNat2Int => [NAT2INT]
-    | EUPrint => [PRINT]
-    | EUArrayLen => [PUSH1 32, SWAP1, SUB, MLOAD]
+    (* | EUPrint => [PRINT] *)
+    | EUPrintc => [PRINTC]
+    | EUArrayLen => [PUSH1nat 32, SWAP1, SUB, MLOAD]
     | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD, MLOAD]
                         
 fun impl_nat_expr_bin_op opr =
@@ -165,17 +201,17 @@ fun compile ectx e =
            SOME (name, v) =>
            (case v of
                 inl r => get_reg r
-              | inr l => [PUSH_value $ VLabel l])
+              | inr l => PUSH_value $ VLabel l)
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
-    | EConst c => [PUSH_value $ VConst $ cg_c c]
-    | EAppT (e, t) => compile e @ VALUE_VAppT (cg_t t)
-    | EAppI (e, i) => compile e @ VALUE_VAppI i
-    | EPack (t_pack, t, e) => compile e @ VALUE_VPack (cg_t t_pack, cg_t t)
+    | EConst c => PUSH_value $ VConst $ cg_c c
+    | EAppT (e, t) => compile e @ [VALUE_AppT $ Inner $ cg_t t]
+    | EAppI (e, i) => compile e @ [VALUE_AppI $ Inner i]
+    | EPack (t_pack, t, e) => compile e @ [VALUE_Pack (Inner $ cg_t t_pack, Inner $ cg_t t)]
     (* | EPackI (t_pack, i, v) => VPackI (cg_t t_pack, i, cg_v ectx v) *)
-    | EUnOp (EUFold t, e) => compile e @ [VALUE_VFold $ cg_t t]
-    | EAscType (e, t) => compile e @ VALUE_VAscType (cg_t t)
-    | ENever t => [PUSH_value $ VNever $ cg_t t]
-    | EBuiltin (name, t) => [PUSH_value $ VBuiltin (name, cg_t t)]
+    | EUnOp (EUFold t, e) => compile e @ [VALUE_Fold $ Inner $ cg_t t]
+    | EAscType (e, t) => compile e @ [VALUE_AscType $ Inner $ cg_t t]
+    | ENever t => PUSH_value $ VNever $ cg_t t
+    | EBuiltin (name, t) => PUSH_value $ VBuiltin (name, cg_t t)
     | EBinOp (EBPair, e1, e2) =>
       let
         val (e1, t1) = assert_EAscType e1
@@ -183,7 +219,7 @@ fun compile ectx e =
         val t1 = cg_t t1
         val t2 = cg_t t2
       in
-        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concat $ repeat 2 [PUSH1 32, SWAP1, SUB, SWAP1] @ tuple_assign
+        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 [PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign
       end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
@@ -192,41 +228,42 @@ fun compile ectx e =
         val t_other = cg_t t_other
         val b = choose_inj (false, true) inj
       in
-        compile e @ malloc_tuple [TiBool $ ICBool b, t_e] @ [PUSH1 b, DUP2, MSTORE, SWAP1, DUP2, PUSH1 32, ADD, MSTORE, PACK_SUM (inj, t_other)]
+        compile e @ malloc_tuple [TiBoolConst b, t_e] @ [PUSH1 $ WiBool b, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE, PACK_SUM (inj, t_other)]
       end
     | EEmptyArray t =>
-      PUSH1 0 :: malloc_array $ cg_t t
-    | ENewArrayValues es =>
+      PUSH1nat 0 :: malloc_array (cg_t t)
+    | ENewArrayValues (t, es) =>
       let
+        val t = cg_t t
         val n = length es
       in
         [PUSH_tuple_offset n] @
-        malloc_array @
+        malloc_array t @
         [DUP1] @
-        map (fn e => compile e @ [DUP2, MSTORE, PUSH1 32, ADD]) es @
+        concatMap (fn e => compile e @ [DUP2, MSTORE, PUSH1nat 32, ADD]) es @
         [POP]
       end
     | EBinOp (EBRead, e1, e2) =>
       compile e1 @
       compile e2 @
       array_ptr @
-      MLOAD
+      [MLOAD]
     | ETriOp (ETWrite, e1, e2, e3) =>
       compile e1 @
       compile e2 @
       compile e3 @
       [SWAP2, SWAP1] @
       array_ptr @
-      MSTORE
+      [MSTORE]
     | EUnOp (EUUnfold, e) =>
       compile e @ [UNFOLD]
     | EUnOp (EUTiML opr, e) =>
-      compile e @ impl_expr_un_opr opr
+      compile e @ impl_expr_un_op opr
     | EBinOp (EBNat opr, e1, e2) =>
       compile e1 @ 
       compile e2 @
       impl_nat_expr_bin_op opr
-    | EBinOp (EBNatCmp opr, v1, v2) =>
+    | EBinOp (EBNatCmp opr, e1, e2) =>
       compile e1 @ 
       compile e2 @
       impl_nat_cmp opr
@@ -235,6 +272,7 @@ fun compile ectx e =
 fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
   let
     (* val () = print $ "cg_e() started:\n" *)
+    val compile = compile ectx
     val cg_e = cg_e reg_counter
     fun fresh_reg () =
       let
@@ -273,9 +311,11 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
             val post_loop_label = fresh_label ()
             val loop_label = fresh_label ()
             val pre_loop_code =
-                [SWAP1, DUP1] @
-                malloc_array t @
-                [SWAP1, PUSH1 32, MUL, PUSH_value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len]), JUMP]
+                [SWAP1, DUP1] @@
+                malloc_array t @@
+                [SWAP1, PUSH1nat 32, MUL] @@
+                PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len])) @@
+                JUMP
             (* val pre_loop_label = fresh_label () *)
             (* val pre_loop_block = *)
             (*     let *)
@@ -284,26 +324,39 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
             (*     end *)
             val loop_block =
                 let
-                  val s = Subset ("i", Nat, IV 0 %<= shift01_i_i len)
+                  fun MakeSubset (name, s, p) = Subset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
+                  val s = MakeSubset ("i", BSNat, IV 0 %<= shift01_i_i len)
                   val i = fresh_ivar ()
-                  val loop_code = [DUP1, ISZERO, PUSH_value $ VAppITs_ctx (VLabel post_loop_label, itctx), JUMPI, PUSH1 32, SWAP1, SUB] @ array_assign @ [PUSH_value $ VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ i %- N1]), JUMP]
-                  val block = ((rctx, [TNat (ConstIN 32 %* i), TPreArray (t, len, i), t], ToReal (i %* ConstIN 8) + T1 %+ i_e), loop_code)
+                  val loop_code =
+                      [DUP1, ISZERO] @@
+                      PUSH_value (VAppITs_ctx (VLabel post_loop_label, itctx)) @@
+                      [JUMPI, PUSH1nat 32, SWAP1, SUB] @@
+                      array_assign @@
+                      PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
+                      JUMP
+                  fun IToReal i = UnOpI (ToReal, i, dummy)
+                  fun close0_i_insts x I = raise Unimpl "close0_i_insts"
+                  fun close0_i_block x ((rctx, ts, i), I) = ((Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
+                  val block = ((rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
                   val block = close0_i_block i block
                 in
-                  HCode' (rev $ inl ("i", s) :: itctx, block)
+                  HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
                 end
-            val () = output_heap ((l, "new_array_loop"), loop_block)
+            val () = output_heap ((loop_label, "new_array_loop"), loop_block)
             val post_loop_block =
                 let
                   val r = fresh_reg ()
-                  val post_loop_code = [POP, SWAP1, POP] @ set_reg r @ cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArrow (t, len))) e
+                  val post_loop_code =
+                      [POP, SWAP1, POP] @@
+                      set_reg r @@
+                      cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len))) e
                 in
                   HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), post_loop_code))
                 end
-            val () = output_heap ((l, "new_array_post_loop"), post_loop_block)
+            val () = output_heap ((post_loop_label, "new_array_post_loop"), post_loop_block)
           in
-            compile e1 @
-            compile e2 @
+            compile e1 @@
+            compile e2 @@
             pre_loop_code
           end
         | _ =>
@@ -311,9 +364,10 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
             val (e1, t) = assert_EAscType e1
             val t = cg_t t
             val (name, e2) = unBindSimpName bind
+            val r = fresh_reg ()
             val I = cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, t)) e2
           in
-            compile e1 @ set_reg r @ I
+            compile e1 @@ set_reg r @@ I
           end)
     | EUnpack (e1, bind) =>
       let
@@ -325,7 +379,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val r = fresh_reg ()
         val I = cg_e ((name_x, inl r) :: ectx, inr (name_a, k) :: itctx, Rctx.map shift01_t_t rctx @+ (r, t)) e2
       in
-        compile e1 @ [UNPACK] @ set_reg r @ I
+        compile e1 @@ [UNPACK $ TBinder name_a] @@ set_reg r @@ I
       end
     (* | EUnpackI (v, bind) => *)
     (*   let *)
@@ -341,7 +395,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
     (*     i @:: I *)
     (*   end *)
     | EBinOp (EBApp, e1, e2) =>
-      compile e1 @ compile e2 @ set_reg 0 @ [JUMP]
+      compile e1 @@ compile e2 @@ set_reg 0 @@ JUMP
     | ECase (e, bind1, bind2) =>
       let
         val (e, t) = assert_EAscType e
@@ -353,16 +407,16 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val r = fresh_reg ()
         val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1)) e1
         val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2)) e2
-        val branch_prelude = [PUSH1 32, ADD, MLOAD] @ set_reg r
+        val branch_prelude = [PUSH1nat 32, ADD, MLOAD] @ set_reg r
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((rctx, [TProd (TiBool TrueI, t2)](*the stack spec*), i_e2), branch_prelude @ I2))
+        val hval = HCode' (itbinds, ((rctx, [TProd (TiBoolConst true, t2)](*the stack spec*), i_e2), branch_prelude @@ I2))
         val l = fresh_label ()
         val () = output_heap ((l, "inr_branch"), hval)
       in
-        compile e @
-        [PUSH_value $ VAppITs_ctx (VLabel l, itctx)] @
-        br_sum @
-        branch_prelude @
+        compile e @@
+        PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
+        br_sum @@
+        branch_prelude @@
         I1
       end
     | ETriOp (ETIte, e, e1, e2) =>
@@ -375,9 +429,9 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val l = fresh_label ()
         val () = output_heap ((l, "else_branch"), hval)
       in
-        compile e @
-        [PUSH_value $ VAppITs_ctx (VLabel l, itctx)] @
-        JUMPI @
+        compile e @@
+        PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
+        [JUMPI] @@
         I1
       end
     | EHalt e =>
@@ -385,9 +439,9 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val (e, t) = assert_EAscType e
         val t = cg_t t
       in
-        compile e @ [PUSH1 32, SWAP1, RETURN (* t *)]
+        compile e @@ [PUSH1nat 32, SWAP1] @@ RETURN (* t *)
       end
-    | EAscTime (e, i) => IAscTime' i @:: cg_e params e
+    | EAscTime (e, i) => ASCTIME (Inner i) @:: cg_e params e
     | EAscType (e, _) => cg_e params e
     | _ => raise Impossible $ "cg_e() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
     fun extra_msg () = "\nwhen code-gen-ing:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 5) (ictxn, tctxn, [], ectxn) e)
@@ -416,7 +470,7 @@ fun cg_hval ectx (e, t_all) =
       in
         i
       end
-    val hval = HCode' (itbinds, ((rctx, get_time t_all), I))
+    val hval = HCode' (itbinds, ((rctx, [], get_time t_all), I))
   in
     hval
   end
@@ -478,8 +532,8 @@ open TestUtil
        
 fun test1 dirname =
   let
-    val () = println "CodeGen.UnitTest started"
-    val filename = join_dir_file (dirname, "code-gen-test1.pkg")
+    val () = println "ToEVM1.UnitTest started"
+    val filename = join_dir_file (dirname, "to-evm1-test.pkg")
     val filenames = map snd $ ParseFilename.expand_pkg (fn msg => raise Impossible msg) (true, filename)
     open Parser
     val prog = concatMap parse_file filenames
@@ -603,27 +657,28 @@ fun test1 dirname =
     val () = println "Started Code Generation ..."
     val prog = cg_prog e
     val () = println "Finished Code Generation"
-    val prog_str = TiTALExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
-    val () = write_file ("unit-test-after-code-gen.tmp", prog_str)
-    val () = println prog_str
-    val () = println ""
-    open TiTALTypecheck
-    val () = println "Started TiTAL typechecking ..."
-    val (i, vcs, admits) = tital_typecheck prog
-    val () = println "Finished TiTAL typechecking"
-    val () = println "Time:"
-    (* val i = simp_i i *)
-    val () = println $ ToString.str_i Gctx.empty [] i
+    (* val prog_str = TiTALExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog *)
+    (* val () = write_file ("unit-test-after-code-gen.tmp", prog_str) *)
+    (* val () = println prog_str *)
+    (* val () = println "" *)
+    (* open TiTALTypecheck *)
+    (* val () = println "Started TiTAL typechecking ..." *)
+    (* val (i, vcs, admits) = tital_typecheck prog *)
+    (* val () = println "Finished TiTAL typechecking" *)
+    (* val () = println "Time:" *)
+    (* (* val i = simp_i i *) *)
+    (* val () = println $ ToString.str_i Gctx.empty [] i *)
 
-    open TiTALEval
-    val (H, I) = prog
-    fun get_max_k H = max_ls ~1 $ map (fst o fst) H
-    val P = ((RctxUtil.fromList $ map (fn ((l, _), c) => (l, HVCode c)) H, get_max_k H), (Rctx.empty, 0), I)
-    val () = println "Started TiTAL evaluation"              
-    val w = eval P
-    val () = assert_WVTT w
-    val () = println "Finished TiTAL evaluation"              
-    val () = println "CodeGen.UnitTest passed"
+    (* open TiTALEval *)
+    (* val (H, I) = prog *)
+    (* fun get_max_k H = max_ls ~1 $ map (fst o fst) H *)
+    (* val P = ((RctxUtil.fromList $ map (fn ((l, _), c) => (l, HVCode c)) H, get_max_k H), (Rctx.empty, 0), I) *)
+    (* val () = println "Started TiTAL evaluation"               *)
+    (* val w = eval P *)
+    (* val () = assert_WVTT w *)
+    (* val () = println "Finished TiTAL evaluation" *)
+                     
+    val () = println "ToEVM1.UnitTest passed"
   in
     ((* t, e *))
   end
