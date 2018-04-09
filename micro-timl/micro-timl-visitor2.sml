@@ -269,6 +269,16 @@ fun default_ty_visitor2_vtable
           | TAppT data => #visit2_TAppT vtable this env data other
           | TProdEx data => #visit2_TProdEx vtable this env data other
           | TArrowTAL data => #visit2_TArrowTAL vtable this env data other
+          | TiBool i =>
+            (case other of
+                 TiBool i' =>
+                 TiBool $ #visit2_idx vtable this env i i'
+               | _ => error (TiBool i) other)
+          | TPreArray (t, i1, i2) =>
+            (case other of
+                 TPreArray (t', i1', i2') =>
+                 TPreArray (#visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2')
+               | _ => error (TPreArray (t, i1, i2)) other)
       end
     fun visit2_TVar this env data other =
       let

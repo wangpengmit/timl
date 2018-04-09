@@ -215,6 +215,16 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
+      | TiBool i =>
+        (
+          open_hbox ();
+          str "TiBool";
+          space ();
+          str "(";
+          str $ str_i i;
+          str ")";
+          close_box ()
+        )
       | TArr (t, i) =>
         (
           open_hbox ();
@@ -224,6 +234,20 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           pp_t t;
           comma ();
           str $ str_i i;
+          str ")";
+          close_box ()
+        )
+      | TPreArray (t, i1, i2) =>
+        (
+          open_hbox ();
+          str "TArr";
+          space ();
+          str "(";
+          pp_t t;
+          comma ();
+          str $ str_i i1;
+          comma ();
+          str $ str_i i2;
           str ")";
           close_box ()
         )

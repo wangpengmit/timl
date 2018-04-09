@@ -646,6 +646,22 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
+      | ENewArrayValues (t, es) =>
+        (
+          open_vbox ();
+          open_hbox ();
+          str "ENewArrayValues";
+          space ();
+          str "(";
+          pp_t t;
+          close_box ();
+          comma ();
+          open_vbox_noindent ();
+          app (fn e => (pp_e e; comma ())) es;
+          str ")";
+          close_box ();
+          close_box ()
+        )
       | ELetIdx (i, branch) =>
         let
           val (name, e_body) = get_bind branch

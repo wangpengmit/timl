@@ -150,7 +150,7 @@ fun impl_prim_expr_un_opr opr =
 fun impl_prim_expr_bin_op opr =
   case opr of
        EBPIntAdd => [ADD]
-     | EBPIntMul => [MUL]
+     | EBPIntMult => [MUL]
      | EBPIntMinus => [SWAP1, SUB]
      | EBPIntDiv => [SWAP1, SDIV]
      | EBPIntLt => [SWAP1, LT]
@@ -167,10 +167,10 @@ fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
     | EUNat2Int => [NAT2INT]
-    (* | EUPrint => [PRINT] *)
-    | EUPrintc => [PRINTC]
     | EUArrayLen => [PUSH1nat 32, SWAP1, SUB, MLOAD]
     | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD, MLOAD]
+    (* | EUPrint => [PRINT] *)
+    | EUPrintc => [PRINTC]
                         
 fun impl_nat_expr_bin_op opr =
   case opr of

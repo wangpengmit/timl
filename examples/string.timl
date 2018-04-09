@@ -1,5 +1,8 @@
 structure String = struct
 
+(* fun int2str a = __&int2str a *)
+(* fun print a = __&print a *)
+                
 open Array
        
 datatype string = String {len : Nat} of array char {len}

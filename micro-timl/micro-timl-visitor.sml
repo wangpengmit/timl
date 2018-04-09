@@ -527,6 +527,8 @@ fun default_ty_visitor_vtable
           | TAppT data => #visit_TAppT vtable this env data
           | TProdEx data => #visit_TProdEx vtable this env data
           | TArrowTAL data => #visit_TArrowTAL vtable this env data
+          | TiBool idx => TiBool $ #visit_idx vtable this env idx
+          | TPreArray (t, i1, i2) => TPreArray (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
       end
     fun visit_TVar this env data =
       let

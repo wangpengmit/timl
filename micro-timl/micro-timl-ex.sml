@@ -1119,7 +1119,6 @@ fun default_expr_visitor_vtable
           | ENever data => #visit_ENever vtable this env data
           | EBuiltin data => #visit_EBuiltin vtable this env data
           | ELet data => #visit_ELet vtable this env data
-          | EEmptyArray t => EEmptyArray $ #visit_ty vtable this env t
           | ELetIdx data => #visit_ELetIdx vtable this env data
           | ELetType data => #visit_ELetType vtable this env data
           | ELetConstr data => #visit_ELetConstr vtable this env data
@@ -1133,6 +1132,8 @@ fun default_expr_visitor_vtable
           | EPairAssign data => #visit_EPairAssign vtable this env data
           | EProjProtected data => #visit_EProjProtected vtable this env data
           | EHalt data => #visit_EHalt vtable this env data
+          | EEmptyArray t => EEmptyArray $ #visit_ty vtable this env t
+          | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_list (#visit_expr vtable this) env es)
       end
     fun visit_EVar this env data =
       let
