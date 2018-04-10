@@ -7,7 +7,7 @@ open Nat
 open List
 
 fun empty_array ['a] () return array 'a {0} = __&empty_array
-fun array {n : Nat} (a : nat {n}, b) = __&array (a, b)
+fun array ['a] {n : Nat} (len : nat {n}, v : 'a) = __&array (len, v)
 fun length {len : Nat} (a : array _ {len}) = __&array_length a
        
 fun sub ['a] {len who : Nat} {who < len} (a : array 'a {len}, n : nat {who}) return 'a using 0.0 =

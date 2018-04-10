@@ -5,7 +5,6 @@ fun snd a = __&snd a
 fun not a = __&not a
 val true = __&true
 val false = __&false
-fun nat2int {n : Nat} (a : nat {n}) = __&nat2int a
 val str_int = int2str
 fun println s = print s; print "\n"
                   

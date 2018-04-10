@@ -96,6 +96,7 @@ open Ast
     | SEMI_COLON
     | NEVER
     | IFDEC
+    | MOD
 
 %nonterm start of prog
        | exp of exp
@@ -269,6 +270,7 @@ exp : aexp (aexp)
      | exp MINUS exp (BinOp (EBPrim EBPIntMinus, exp1, exp2, (exp1left, exp2right)))
      | exp MULT exp (BinOp (EBPrim EBPIntMult, exp1, exp2, (exp1left, exp2right)))
      | exp DIV exp (BinOp (EBPrim EBPIntDiv, exp1, exp2, (exp1left, exp2right)))
+     | exp MOD exp (BinOp (EBPrim EBPIntMod, exp1, exp2, (exp1left, exp2right)))
      | exp LT exp (BinOp (EBPrim EBPIntLt, exp1, exp2, (exp1left, exp2right)))
      | exp GT exp (BinOp (EBPrim EBPIntGt, exp1, exp2, (exp1left, exp2right)))
      | exp LE exp (BinOp (EBPrim EBPIntLe, exp1, exp2, (exp1left, exp2right)))

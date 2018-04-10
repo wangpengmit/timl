@@ -237,6 +237,7 @@ fun interp_prim_expr_bin_op opr (a, b) =
     | EBPIntMult => WVInt $ assert_WVInt a * assert_WVInt b
     | EBPIntMinus => WVInt $ assert_WVInt a - assert_WVInt b
     | EBPIntDiv => WVInt $ assert_WVInt a div assert_WVInt b
+    | EBPIntMod => WVInt $ assert_WVInt a mod assert_WVInt b
     | EBPIntLt => WVBool $ assert_WVInt a < assert_WVInt b
     | EBPIntGt => WVBool $ assert_WVInt a > assert_WVInt b
     | EBPIntLe => WVBool $ assert_WVInt a <= assert_WVInt b

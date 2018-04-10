@@ -350,8 +350,10 @@ local
                       String.implode $ rev $ loop (ls, [])
                     end
                   val s = unescape s
+                  val e = ENewArrayValues (BaseType (Byte, r), map (fn c => EByte (c, r)) $ String.explode s, r)
+                  val e = EApp (EVar (QID $ qid_add_r r $ CSTR_STRING_NAMEFUL, false), e)
                 in
-                  ENewArrayValues (BaseType (Byte, r), map (fn c => EByte (c, r)) $ String.explode s, r)
+                  e
                 end)
 	| S.BinOp (EBApp, e1, e2, r) =>
 	  let 
@@ -366,6 +368,9 @@ local
 		     else if x = "__&not" then EUnOp (EUPrim EUPBoolNeg, elab e2, r)
 		     (* else if x = "__&int2str" then EUnOp (EUInt2Str, elab e2, r) *)
 		     else if x = "__&nat2int" then EUnOp (EUNat2Int, elab e2, r)
+		     else if x = "__&int2nat" then EUnOp (EUInt2Nat, elab e2, r)
+		     else if x = "__&byte2int" then EUnOp (EUPrim EUPByte2Int, elab e2, r)
+		     else if x = "__&int2byte" then EUnOp (EUPrim EUPInt2Byte, elab e2, r)
 		     else if x = "__&array_length" then EUnOp (EUArrayLen, elab e2, r)
 		     (* else if x = "__&print" then EUnOp (EUPrint, elab e2, r) *)
 		     else if x = "__&printc" then EUnOp (EUPrintc, elab e2, r)

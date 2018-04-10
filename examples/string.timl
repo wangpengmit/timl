@@ -2,10 +2,11 @@ structure String = struct
 
 (* fun int2str a = __&int2str a *)
 (* fun print a = __&print a *)
+fun printc a = __&printc a
                 
 open Array
        
-datatype string = String {len : Nat} of array byte {len}
+datatype string = String {len : Nat} of array byte {len} --> string
 
 (* new_string "abc" == String (new_array {'a', 'b', 'c'}) *)
     
@@ -13,47 +14,48 @@ fun size s =
   let
     val String arr = s
   in
-    nat2int $ length arr
+    nat2int <| length arr
   end
 
 fun concat (s1, s2) =
   let
-    val String arr1 = s1
-    val String arr2 = s2
-    val len1 = length s1
-    val len2 = length s2
+    val @String {len1} arr1 = s1
+    val @String {len2} arr2 = s2
+    val len1 = length arr1
+    val len2 = length arr2
     val len = len1 #+ len2
-    val arr = array (len, 0)
-    for i = #0 to len1 do
-      update (arr, i, sub(arr1, i))
-    end
-    for i = #0 to len2 do
-      update (arr, len1 #+ i, sub(arr2, i))
-    end
+    val arr = array (len, int2byte 0)
+    val () = for (#0, len1, (), fn {i : Nat | i < len1} (i : nat {i}, _) =>
+      update (arr, i, sub (arr1, i)))
+    val () = for (#0, len2, (), fn {i : Nat | i < len2} (i : nat {i}, _) =>
+      update (arr, len1 #+ i, sub (arr2, i)))
   in 
     String arr
-end
+  end
 
 fun print s =
   let
-    val String arr = s
-    val len = length s
-    for i = #0 to len do
-      printc $ sub(arr, i)
-    end
+    val @String {len} arr = s
+    val len = length arr
+    val () = for (#0, len, (), fn {i : Nat | i < len} (i : nat {i}, _) =>
+      printc <| sub (arr, i))
   in
     ()
 end
 
-fun nat2bytes {d : Nat} {i : Nat | 10 ** d <= i < 10 ** (d+1) \/ i = 0 /\ d = 0} (i : nat {i}) return list byte {d+1} using d =
+fun nat2byte i = int2byte <| nat2int i
+                          
+fun nat2bytes {d : Nat} {i : Nat | 10 ** d <= i /\ i < 10 ** (d+1) \/ i = 0 /\ d = 0} (i : nat {i}) return list byte {d+1} using $d =
   ifdec i #< #10 then [nat2byte i]
-  else int2byte (nat2int i mod 10) :: @nat2bytes {d-1} {_} (i #/ 10)
+  else int2byte (nat2int i mod 10) :: (@nat2bytes {d-1} {_} (i #/ #10)) (* todo: need to fix precedence here *)
 
-fun int2str i return using 20 =
+fun int2str i return using 20.0 =
   let
-    val Nat n = int2nat i
+    val SomeNat n = int2nat i
   in
-    String (fromList $ rev $ nat2bytes n)
+    String (fromList <| rev <| nat2bytes n)
   end
+
+val str_int = int2str
 
 end

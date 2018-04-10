@@ -126,6 +126,7 @@ datatype prim_expr_bin_op =
          | EBPIntMinus
          | EBPIntMult
          | EBPIntDiv
+         | EBPIntMod
          | EBPIntLt
          | EBPIntGt
          | EBPIntLe
@@ -166,6 +167,7 @@ fun str_prim_expr_bin_op opr =
     | EBPIntMult => "mult"
     | EBPIntMinus => "minus"
     | EBPIntDiv => "div"
+    | EBPIntMod => "mod"
     | EBPIntLt => "lt"
     | EBPIntGt => "gt"
     | EBPIntLe => "le"
@@ -208,6 +210,7 @@ fun pretty_str_prim_expr_bin_op opr =
     | EBPIntMult => "*"
     | EBPIntMinus => "-"
     | EBPIntDiv => "/"
+    | EBPIntMod => "mod"
     | EBPIntLt => "<"
     | EBPIntGt => ">"
     | EBPIntLe => "<="

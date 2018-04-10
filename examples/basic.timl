@@ -2,17 +2,20 @@
 
 structure Basic = struct
 
+open Pervasive
+       
 fun fst a = __&fst a
 fun snd a = __&snd a
 fun not a = __&not a
 val true = __&true
 val false = __&false
-fun int2str a = __&int2str a
-fun print a = __&print a
+fun nat2int {n : Nat} (a : nat {n}) = __&nat2int a
+fun int2nat a = __&int2nat a
+fun int2byte a = __&int2byte a
+fun byte2int a = __&byte2int a
+(* fun int2str a = __&int2str a *)
+(* fun print a = __&print a *)
                 
-val str_int = int2str
-fun println s = print s; print "\n"
-
 (* a datatype version of boolean that is suitable for pattern-matching *)
 datatype Bool = True | False
 

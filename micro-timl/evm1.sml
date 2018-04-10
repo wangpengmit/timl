@@ -40,6 +40,7 @@ datatype ('idx, 'ty) inst =
          | SUB
          | DIV
          | SDIV
+         | MOD
          | LT
          | GT
          | SLT

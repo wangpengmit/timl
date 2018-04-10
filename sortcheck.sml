@@ -273,7 +273,7 @@ and get_bsort gctx (ctx, i) =
                  end
                | IUExp n =>
                  let 
-                   val i = check_bsort (ctx, i, Base Time)
+                   val i = check_bsort (ctx, i, Base Time(* todo: bug. This is not enforced in rbt.timl *))
                  in
                    (ExpI (i, (n, r)), Base Time)
                  end

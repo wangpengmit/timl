@@ -159,6 +159,7 @@ fun impl_prim_expr_bin_op opr =
      | EBPIntMult => [MUL]
      | EBPIntMinus => [SWAP1, SUB]
      | EBPIntDiv => [SWAP1, SDIV]
+     | EBPIntMod => [SWAP1, MOD]
      | EBPIntLt => [SWAP1, LT]
      | EBPIntGt => [SWAP1, GT]
      | EBPIntLe => [GT, ISZERO]

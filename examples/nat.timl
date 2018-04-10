@@ -83,4 +83,14 @@ fun ceil_half {n : Nat} (n : nat {n}) return nat {ceil ($n / 2)} =
 datatype nat_less_than {m : Nat} =
          NatLT {n : Nat} {n < m} of nat {n} --> nat_less_than {m}
 
+fun for ['a] {m : Time} {start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend}, nat {i} * 'a -- m --> 'a) return 'a using 1.0 + (m + 3.0) * $(eend - start) =
+  let
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* return using (m + 3.0) * $(eend - i) *) =
+      ifdec i #>= eend then acc
+      else
+        loop (i #+ #1, f (i, acc)) using (m + 3.0) * $(eend - i)
+  in
+    loop (start, init)
+  end
+  
 end
