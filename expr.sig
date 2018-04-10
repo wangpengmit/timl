@@ -30,6 +30,7 @@ signature EXPR = sig
            | EEI of Operators.expr_EI * expr * idx
            | EET of Operators.expr_ET * expr * mtype
            | ET of Operators.expr_T * mtype * Region.region
+           | ENewArrayValues of mtype * expr list * Region.region
 	   | EAbs of (ptrn, expr) Unbound.bind
 	   | EAbsI of (sort, expr) Binders.ibind_anno * Region.region
 	   | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option

@@ -86,7 +86,7 @@ fun cg_c c =
     | ECNat n => WCNat n
     | ECInt n => WCInt n
     | ECBool n => WCBool n
-    | ECString s => raise Impossible $ "cg_c() on ECString"
+    (* | ECString s => raise Impossible $ "cg_c() on ECString" *)
                                 
 fun cg_v ectx v =
   case v of
@@ -198,16 +198,14 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                 end
               | EUnOp (EUInj (inj, t), v) =>
                 [IInj' (r, inj, cg_v ectx v, cg_t t)]
-              | EConst (ECString s) =>
-                [IString (r, s)]
+              (* | EConst (ECString s) => *)
+              (*   [IString (r, s)] *)
               | EUnOp (EUUnfold, v) =>
                 [IUnfold' (r, cg_v ectx v)]
               | EUnOp (EUTiML opr, v) =>
                 [IUnOp' (cg_expr_un_op opr, r, cg_v ectx v)]
               | EMallocPair (v1, v2) =>
                 [IMallocPair' (r, (cg_v ectx v1, cg_v ectx v2))]
-              | EEmptyArray t =>
-                [IEmptyArray (r, Inner $ cg_t t)]
               | EPairAssign (v1, proj, v2) =>
                 let
                   val r' = fresh_reg ()

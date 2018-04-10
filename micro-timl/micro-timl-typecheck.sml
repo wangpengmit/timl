@@ -571,22 +571,22 @@ fun get_expr_const_type c =
       ECTT => TUnit
     | ECNat n => TNat $ INat n
     | ECInt _ => TInt
-    | ECString _ => TString
     | ECBool _ => TBool
+    (* | ECString _ => TString *)
 
 fun get_prim_expr_un_op_arg_ty opr =
   case opr of
       EUPIntNeg => TInt
     | EUPBoolNeg => TBool
-    | EUPInt2Str => TInt
-    | EUPStrLen => TString
+    (* | EUPInt2Str => TInt *)
+    (* | EUPStrLen => TString *)
                
 fun get_prim_expr_un_op_res_ty opr =
   case opr of
       EUPIntNeg => TInt
     | EUPBoolNeg => TBool
-    | EUPInt2Str => TString
-    | EUPStrLen => TInt
+    (* | EUPInt2Str => TString *)
+    (* | EUPStrLen => TInt *)
                
 fun get_prim_expr_bin_op_arg1_ty opr =
   case opr of
@@ -602,7 +602,7 @@ fun get_prim_expr_bin_op_arg1_ty opr =
     | EBPIntNEq => TInt
     | EBPBoolAnd => TBool
     | EBPBoolOr => TBool
-    | EBPStrConcat => TString
+    (* | EBPStrConcat => TString *)
       
 fun get_prim_expr_bin_op_arg2_ty opr =
   case opr of
@@ -618,7 +618,7 @@ fun get_prim_expr_bin_op_arg2_ty opr =
     | EBPIntNEq => TInt
     | EBPBoolAnd => TBool
     | EBPBoolOr => TBool
-    | EBPStrConcat => TString
+    (* | EBPStrConcat => TString *)
       
 fun get_prim_expr_bin_op_res_ty opr =
   case opr of
@@ -634,7 +634,7 @@ fun get_prim_expr_bin_op_res_ty opr =
     | EBPIntNEq => TBool
     | EBPBoolAnd => TBool
     | EBPBoolOr => TBool
-    | EBPStrConcat => TString
+    (* | EBPStrConcat => TString *)
 
 val T0 = T0 dummy
 val T1 = T1 dummy
@@ -813,12 +813,18 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EProj (proj, e), choose (t1, t2) proj, i)
         end
-      | EUnOp (EUTiML EUPrint, e) =>
+      | EUnOp (EUTiML EUPrintc, e) =>
         let
-          val (e, i) = tc_against_ty ctx (e, TString)
+          val (e, i) = tc_against_ty ctx (e, TByte)
         in
-          (EUnOp (EUTiML EUPrint, e), TUnit, i)
+          (EUnOp (EUTiML EUPrintc, e), TUnit, i)
         end
+      (* | EUnOp (EUTiML EUPrint, e) => *)
+      (*   let *)
+      (*     val (e, i) = tc_against_ty ctx (e, TString) *)
+      (*   in *)
+      (*     (EUnOp (EUTiML EUPrint, e), TUnit, i) *)
+      (*   end *)
       | EUnOp (EUTiML (EUPrim opr), e) =>
         let
           val (e, i) = tc_against_ty ctx (e, get_prim_expr_un_op_arg_ty opr)
@@ -1287,12 +1293,6 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val t = kc_against_kind itctx (t, KType)
         in
           (EBuiltin (name, t), t, T0)
-        end
-      | EEmptyArray t =>
-        let
-          val t = kc_against_kind itctx (t, KType)
-        in
-          (EEmptyArray t, TArr (t, N0 dummy), T0)
         end
       (* | ELet data => *)
       (*   let *)

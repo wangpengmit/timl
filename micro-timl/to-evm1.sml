@@ -138,7 +138,7 @@ fun cg_c c =
     | ECNat n => WCNat n
     | ECInt n => WCInt n
     | ECBool n => WCBool n
-    | ECString s => raise Impossible $ "cg_c() on ECString"
+    (* | ECString s => raise Impossible $ "cg_c() on ECString" *)
                                 
 fun impl_prim_expr_un_opr opr =
   case opr of
@@ -230,8 +230,6 @@ fun compile ectx e =
       in
         compile e @ malloc_tuple [TiBoolConst b, t_e] @ [PUSH1 $ WiBool b, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE, PACK_SUM (inj, t_other)]
       end
-    | EEmptyArray t =>
-      PUSH1nat 0 :: malloc_array (cg_t t)
     | ENewArrayValues (t, es) =>
       let
         val t = cg_t t

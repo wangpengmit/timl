@@ -132,6 +132,7 @@ fun get_region_e e =
     | EEI (_, e, i) => combine_region (get_region_e e) (get_region_i i)
     | EET (_, e, t) => combine_region (get_region_e e) (get_region_mt t)
     | ET (_, _, r) => r
+    | ENewArrayValues (_, _, r) => r
     | EAbs bind => get_region_bind get_region_pn get_region_e bind
     | EAbsI (_, r) => r
     | EAppConstr ((x, _), _, _, e, _) => combine_region (get_region_cvar x) (get_region_e e)

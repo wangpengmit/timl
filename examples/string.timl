@@ -5,7 +5,7 @@ structure String = struct
                 
 open Array
        
-datatype string = String {len : Nat} of array char {len}
+datatype string = String {len : Nat} of array byte {len}
 
 new_string "abc" == String (new_array {'a', 'b', 'c'})
     
@@ -45,15 +45,15 @@ fun print s =
     ()
 end
 
-fun nat2chars {d : Nat} {i : Nat | 10 ** d <= i < 10 ** (d+1) \/ i = 0 /\ d = 0} (i : nat {i}) return list char {d+1} using d =
-  ifdec i #< #10 then [nat2char i]
-  else int2char (nat2int i mod 10) :: @nat2chars {d-1} {_} (i #/ 10)
+fun nat2bytes {d : Nat} {i : Nat | 10 ** d <= i < 10 ** (d+1) \/ i = 0 /\ d = 0} (i : nat {i}) return list byte {d+1} using d =
+  ifdec i #< #10 then [nat2byte i]
+  else int2byte (nat2int i mod 10) :: @nat2bytes {d-1} {_} (i #/ 10)
 
 fun int2str i return using 20 =
   let
     val Nat n = int2nat i
   in
-    String (fromList $ rev $ list2ilist chars)
+    String (fromList $ rev $ nat2bytes n)
   end
 
 end

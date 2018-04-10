@@ -168,10 +168,10 @@ fun anf_decls_expr_visitor_vtable cast output =
             | ERec bind => false
             | ECase _ => false
             | ETriOp (ETIte, _, _, _) => false
-            | EConst c =>
-              (case c of
-                   ECString s => true (* string literal needs a standalone command *)
-                 | _ => false)
+            | EConst c => false
+              (* (case c of *)
+              (*      ECString s => true (* string literal needs a standalone command *) *)
+              (*    | _ => false) *)
             | EVar _ => false
             | EAscType _ => false
             | EAscTime _ => false

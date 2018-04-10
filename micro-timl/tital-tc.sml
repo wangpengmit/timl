@@ -193,13 +193,20 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i %+ T1
             end
-          | IUnOp (IUPrint, rd, v) =>
+          | IUnOp (IUPrintc, rd, v) =>
             let
-              val () = tc_v_against_ty ctx (unInner v, TString)
+              val () = tc_v_against_ty ctx (unInner v, TByte)
               val i = tc_insts (add_r (rd, TUnit) ctx) I
             in
               i %+ T1
             end
+          (* | IUnOp (IUPrint, rd, v) => *)
+          (*   let *)
+          (*     val () = tc_v_against_ty ctx (unInner v, TString) *)
+          (*     val i = tc_insts (add_r (rd, TUnit) ctx) I *)
+          (*   in *)
+          (*     i %+ T1 *)
+          (*   end *)
           | IUnOp (IUArrayLen, rd, v) =>
             let
               val t1 = tc_v ctx $ unInner v
@@ -355,12 +362,12 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i %+ T1
             end
-          | IString (rd, s) =>
-            let
-              val i = tc_insts (add_r (rd, TString) ctx) I
-            in
-              i %+ T1
-            end
+          (* | IString (rd, s) => *)
+          (*   let *)
+          (*     val i = tc_insts (add_r (rd, TString) ctx) I *)
+          (*   in *)
+          (*     i %+ T1 *)
+          (*   end *)
           | IAscTime i =>
             let
               val i = sc_against_sort ictx (unInner i, STime)
@@ -368,14 +375,6 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val () = check_prop ictx (i' %<= i)
             in
               i
-            end
-          | IEmptyArray (rd, t) =>
-            let
-              val t = kc_against_kind itctx (unInner t, KType)
-              val t = TArr (t, N0 dummy)
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
             end
       end
     fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)TiTALExportPP.pp_insts_to_string $ TiTALExportPP.export_insts (SOME 2, SOME 5) (itctx_names itctx) insts)

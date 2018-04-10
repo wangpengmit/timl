@@ -902,27 +902,29 @@ fun get_expr_const_type (c, r) =
       else
 	raise Error (r, ["Natural number constant must be non-negative"])
     | ECTT => 
-      Unit dummy
+      Unit r
     | ECInt n => 
-      BaseType (Int, dummy)
-    | ECString s => 
-      BaseType (String, dummy)
+      BaseType (Int, r)
     | ECBool _ => 
-      BaseType (Bool, dummy)
+      BaseType (Bool, r)
+    | ECByte _ =>
+      BaseType (Byte, r)
+    (* | ECString s =>  *)
+    (*   BaseType (String, r) *)
 
 fun get_prim_expr_un_op_arg_ty opr =
   case opr of
       EUPIntNeg => Int
     | EUPBoolNeg => Bool
-    | EUPInt2Str => Int
-    | EUPStrLen => String
+    (* | EUPInt2Str => Int *)
+    (* | EUPStrLen => String *)
                
 fun get_prim_expr_un_op_res_ty opr =
   case opr of
       EUPIntNeg => Int
     | EUPBoolNeg => Bool
-    | EUPInt2Str => String
-    | EUPStrLen => Int
+    (* | EUPInt2Str => String *)
+    (* | EUPStrLen => Int *)
                
 fun get_prim_expr_bin_op_arg1_ty opr =
   case opr of
@@ -938,7 +940,7 @@ fun get_prim_expr_bin_op_arg1_ty opr =
     | EBPIntNEq => Int
     | EBPBoolAnd => Bool
     | EBPBoolOr => Bool
-    | EBPStrConcat => String
+    (* | EBPStrConcat => String *)
       
 fun get_prim_expr_bin_op_arg2_ty opr =
   case opr of
@@ -954,7 +956,7 @@ fun get_prim_expr_bin_op_arg2_ty opr =
     | EBPIntNEq => Int
     | EBPBoolAnd => Bool
     | EBPBoolOr => Bool
-    | EBPStrConcat => String
+    (* | EBPStrConcat => String *)
       
 fun get_prim_expr_bin_op_res_ty opr =
   case opr of
@@ -970,7 +972,7 @@ fun get_prim_expr_bin_op_res_ty opr =
     | EBPIntNEq => Bool
     | EBPBoolAnd => Bool
     | EBPBoolOr => Bool
-    | EBPStrConcat => String
+    (* | EBPStrConcat => String *)
 
 fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, tctx : tcontext), e_all : U.expr) : expr * mtype * idx =
   let
@@ -1067,23 +1069,29 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                in 
                  (ESnd (e, r), t2, d)
 	       end
-             | EUPrint =>
+             | EUPrintc =>
                let
-                 val (e, _, d) = check_mtype (ctx, e, BaseType (String, dummy)) 
+                 val (e, _, d) = check_mtype (ctx, e, BaseType (Byte, r)) 
                in
-                 (EUnOp (EUPrint, e, r), Unit dummy, d)
+                 (EUnOp (EUPrintc, e, r), Unit r, d)
                end
+             (* | EUPrint => *)
+             (*   let *)
+             (*     val (e, _, d) = check_mtype (ctx, e, BaseType (String, dummy))  *)
+             (*   in *)
+             (*     (EUnOp (EUPrint, e, r), Unit dummy, d) *)
+             (*   end *)
              | EUPrim opr =>
                let
-                 val (e, _, d) = check_mtype (ctx, e, BaseType (get_prim_expr_un_op_arg_ty opr, dummy)) 
+                 val (e, _, d) = check_mtype (ctx, e, BaseType (get_prim_expr_un_op_arg_ty opr, r)) 
                in
-                 (EUnOp (EUPrim opr, e, r), BaseType (get_prim_expr_un_op_res_ty opr, dummy), d)
+                 (EUnOp (EUPrim opr, e, r), BaseType (get_prim_expr_un_op_res_ty opr, r), d)
                end
 	     | EUArrayLen =>
                let
                  val r = U.get_region_e e_all
                  val t = fresh_mt gctx (sctx, kctx) r
-                 val i = fresh_i gctx sctx (Base Time) r
+                 val i = fresh_i gctx sctx (Base Time(*bug*)) r
                  val (e, _, d) = check_mtype (ctx, e, TyArray (t, i))
                in
                  (EUnOp (opr, e, r), TyNat (i, r), d)
@@ -1091,10 +1099,19 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	     | EUNat2Int =>
                let
                  val r = U.get_region_e e_all
-                 val i = fresh_i gctx sctx (Base Time) r
+                 val i = fresh_i gctx sctx (Base Time(*bug*)) r
                  val (e, _, d) = check_mtype (ctx, e, TyNat (i, r))
                in
                  (EUnOp (opr, e, r), BaseType (Int, r), d)
+               end
+	     | EUInt2Nat =>
+               let
+                 val r = U.get_region_e e_all
+                 val (e, _, d) = check_mtype (ctx, e, BaseType (Int, r))
+                 fun add_r r (name, x) = ((name, r), (x, r))
+                 val SOME_NAT_ID = ("Pervasive", 0)
+               in
+                 (EUnOp (opr, e, r), MtVar $ QID $ add_r r SOME_NAT_ID, d)
                end
           )
 	| U.EBinOp (opr, e1, e2) =>

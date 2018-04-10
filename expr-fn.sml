@@ -39,6 +39,7 @@ datatype expr =
          | EEI of expr_EI * expr * idx
          | EET of expr_ET * expr * mtype
          | ET of expr_T * mtype * region
+         | ENewArrayValues of mtype * expr list * region
 	 | EAbs of (ptrn, expr) bind
 	 | EAbsI of (sort, expr) ibind_anno * region
 	 | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option

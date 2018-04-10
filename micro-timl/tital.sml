@@ -61,7 +61,6 @@ datatype ('idx, 'ty) inst =
          | IUnpackI of ibinder * reg * ('idx, 'ty) value outer
          | IInj of reg * injector * ('idx, 'ty) value inner * 'ty inner
          | IString of reg * string
-         | IEmptyArray of reg * 'ty inner
          | IAscTime of 'idx inner
 
 datatype ('idx, 'ty) insts =

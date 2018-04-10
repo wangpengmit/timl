@@ -569,7 +569,6 @@ fun cc e =
       | EAscTime (e, i) => EAscTime (cc e, i)
       | ENever t => ENever (cc_t t)
       | EBuiltin (name, t) => EBuiltin (name, cc_t t)
-      | EEmptyArray t => EEmptyArray (cc_t t)
       | ETriOp (ETWrite, e1, e2, e3) => EWrite (cc e1, cc e2, cc e3)
       | EHalt e => EHalt (cc e)
       | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)

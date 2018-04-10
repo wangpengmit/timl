@@ -165,10 +165,12 @@ local
                   Unit r
                 else if x = "int" then
                   BaseType (Int, r)
-                else if x = "string" then
-                  BaseType (String, r)
                 else if x = "bool" then
                   BaseType (Bool, r)
+                else if x = "byte" then
+                  BaseType (Byte, r)
+                (* else if x = "string" then *)
+                (*   BaseType (String, r) *)
                 else if x = "_" then
                   UVar ((), r)
                 else
@@ -293,7 +295,7 @@ local
                 (* else if x = "never" andalso eia = false then *)
                 (*   ENever (elab_mt (S.VarT (NONE, ("_", r))), r) *)
                 else if x = "__&empty_array" andalso eia = false then
-                  ET (ETEmptyArray, elab_mt (S.VarT (NONE, ("_", r))), r)
+                  EEmptyArray (elab_mt (S.VarT (NONE, ("_", r))), r)
                 else if x = "__&builtin" then raise Error (r, "should be '__&builtin \"name\"'")
                 else
                   def ()
@@ -330,24 +332,26 @@ local
 	| S.Let (return, decs, e, r) =>
           ELet (elab_return return, Unbound.Bind (Teles $ map elab_decl decs, elab e), r)
 	| S.Const (c, r) =>
-          let
-            fun unescape s =
-              let
-                val ls = String.explode s
-                fun loop (ls, acc) =
-                  case ls of
-                      #"\\" :: #"n" :: ls => loop (ls, #"\n" :: acc)
-                    | c :: ls => loop (ls, c :: acc)
-                    | [] => acc
-              in
-                String.implode $ rev $ loop (ls, [])
-              end
-          in
-            case c of
+            (case c of
                 S.ECInt n => EConstInt (n, r)
 	      | S.ECNat n => EConstNat (n, r)
-	      | S.ECString s => EConstString (unescape s, r)
-          end
+	      | S.ECString s =>
+                let
+                  fun unescape s =
+                    let
+                      val ls = String.explode s
+                      fun loop (ls, acc) =
+                        case ls of
+                            #"\\" :: #"n" :: ls => loop (ls, #"\n" :: acc)
+                          | c :: ls => loop (ls, c :: acc)
+                          | [] => acc
+                    in
+                      String.implode $ rev $ loop (ls, [])
+                    end
+                  val s = unescape s
+                in
+                  ENewArrayValues (BaseType (Byte, r), map (fn c => EByte (c, r)) $ String.explode s, r)
+                end)
 	| S.BinOp (EBApp, e1, e2, r) =>
 	  let 
 	    fun default () = EApp (elab e1, elab e2)
@@ -359,10 +363,11 @@ local
 		     if x = "__&fst" then EFst (elab e2, r)
 		     else if x = "__&snd" then ESnd (elab e2, r)
 		     else if x = "__&not" then EUnOp (EUPrim EUPBoolNeg, elab e2, r)
-		     else if x = "__&int2str" then EUnOp (EUInt2Str, elab e2, r)
+		     (* else if x = "__&int2str" then EUnOp (EUInt2Str, elab e2, r) *)
 		     else if x = "__&nat2int" then EUnOp (EUNat2Int, elab e2, r)
 		     else if x = "__&array_length" then EUnOp (EUArrayLen, elab e2, r)
-		     else if x = "__&print" then EUnOp (EUPrint, elab e2, r)
+		     (* else if x = "__&print" then EUnOp (EUPrint, elab e2, r) *)
+		     else if x = "__&printc" then EUnOp (EUPrintc, elab e2, r)
                      else if x = "__&builtin" then
                        (case e2 of
                             S.Const (S.ECString s, _) =>

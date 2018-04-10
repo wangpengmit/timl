@@ -1,0 +1,5 @@
+structure Pervasive = struct
+
+datatype some_nat = SomeNat {n : Nat} of nat {n}
+
+end

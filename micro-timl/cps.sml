@@ -310,9 +310,6 @@ fun cps (e, t_e) (k, j_k) =
     | S.EBuiltin (name, t) =>
       (* [[ builtin ]](k) = k(builtin) *)
       (k $$ EBuiltin (name, cps_t t), j_k %+ T_1)
-    | S.EEmptyArray t =>
-      (* [[ empty_array ]](k) = let x = empty_array in k(x) *)
-      (k $$ EEmptyArray (cps_t t), j_k %+ T_1)
     | S.ERec bind =>
       (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
       let
@@ -564,8 +561,10 @@ fun cps (e, t_e) (k, j_k) =
                 in
                   (t_e, opr)
                 end
-              | EUTiML EUPrint =>
-                (TString, opr)
+              | EUTiML EUPrintc =>
+                (TByte, opr)
+              (* | EUTiML EUPrint => *)
+              (*   (TString, opr) *)
               | EUTiML EUInt2Str =>
                 (TInt, opr)
       in
@@ -846,7 +845,6 @@ and check_decl e =
          check_value e2;
          check_value e3)
       | EMallocPair _ => ()
-      | EEmptyArray _ => ()
       | EPairAssign (e1, _, e2) =>
         (check_value e1;
          check_value e2)

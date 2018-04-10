@@ -237,7 +237,6 @@ fun default_tital_visitor_vtable
           | IInj data => #visit_IInj vtable this env data
           | IString data => #visit_IString vtable this env data
           | IAscTime data => #visit_IAscTime vtable this env data
-          | IEmptyArray (r, t) => IEmptyArray (r, visit_inner (#visit_ty vtable this) env t)
       end
     fun visit_IUnOp this env (opr, r, v) = 
       let

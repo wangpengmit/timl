@@ -10,14 +10,15 @@ infixr 0 $
 
 val EUFst = EUProj ProjFst
 val EUSnd = EUProj ProjSnd
-val EUInt2Str = EUPrim EUPInt2Str
+(* val EUInt2Str = EUPrim EUPInt2Str *)
 val EBAdd = EBPrim EBPIntAdd
 val EBNatAdd = EBNat EBNAdd
                    
 fun ETT r = EConst (ECTT, r)
 fun EConstInt (n, r) = EConst (ECInt n, r)
 fun EConstNat (n, r) = EConst (ECNat n, r)
-fun EConstString (n, r) = EConst (ECString n, r)
+(* fun EConstString (n, r) = EConst (ECString n, r) *)
+fun EByte (c, r) = EConst (ECByte c, r)
 fun EFst (e, r) = EUnOp (EUFst, e, r)
 fun ESnd (e, r) = EUnOp (EUSnd, e, r)
 fun EApp (e1, e2) = EBinOp (EBApp, e1, e2)
@@ -33,6 +34,7 @@ fun EBuiltin (name, t, r) = ET (ETBuiltin name, t, r)
 fun ENew (e1, e2) = EBinOp (EBNew, e1, e2)
 fun ERead (e1, e2) = EBinOp (EBRead, e1, e2)
 fun EWrite (e1, e2, e3) = ETriOp (ETWrite, e1, e2, e3)
+fun EEmptyArray (t, r) = ENewArrayValues (t, [], r)
   
 fun collect_Pair e =
   case e of

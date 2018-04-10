@@ -387,12 +387,6 @@ fun step (H, R, I) =
             in
               (H @+ (l, HVArray $ repeat n $ R @^ unInner v), R @+ (rd, WVLabel l), I')
             end
-          | IEmptyArray (rd, t) =>
-            let
-              val l = fresh_label H
-            in
-              (H @+ (l, HVArray []), R @+ (rd, WVLabel l), I')
-            end
           | IBinOp (IBRead, rd, rs, v) =>
             let
               val l = assert_WVLabel $ R @!! rs

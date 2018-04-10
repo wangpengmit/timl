@@ -60,8 +60,9 @@ datatype expr_const =
          ECTT
          | ECNat of nat
          | ECInt of int
-         | ECString of string
          | ECBool of bool
+         | ECByte of String.char
+         (* | ECString of string *)
 
 (* projector for product type *)
 datatype projector =
@@ -72,23 +73,28 @@ datatype projector =
 datatype prim_expr_un_op =
          EUPIntNeg
          | EUPBoolNeg
-         | EUPInt2Str
-         | EUPStrLen
+         | EUPInt2Byte
+         | EUPByte2Int
+         (* | EUPInt2Str *)
+         (* | EUPStrLen *)
                          
 datatype expr_un_op =
          EUProj of projector
          | EUPrim of prim_expr_un_op
-         | EUPrint
          | EUArrayLen
          | EUNat2Int
+         | EUPInt2Nat
+         | EUPrintc
+         (* | EUPrint *)
 
 fun str_expr_const c =
   case c of
       ECTT => "()"
     | ECInt n => str_int n
     | ECNat n => sprintf "#$" [str_int n]
-    | ECString s => surround "\"" "\"" s
     | ECBool b => str_bool b
+    | ECByte c => Char.toCString c
+    (* | ECString s => surround "\"" "\"" s *)
                                 
 fun str_proj opr =
   case opr of
@@ -99,16 +105,17 @@ fun str_prim_expr_un_op opr =
   case opr of
       EUPIntNeg => "int_neg"
     | EUPBoolNeg => "not"
-    | EUPInt2Str => "int2str"
-    | EUPStrLen => "str_len"
+    (* | EUPInt2Str => "int2str" *)
+    (* | EUPStrLen => "str_len" *)
                    
 fun str_expr_un_op opr = 
   case opr of
       EUProj opr => str_proj opr
     | EUPrim opr => str_prim_expr_un_op opr
-    | EUPrint => "print"
     | EUArrayLen => "array_len"
     | EUNat2Int => "nat2int"
+    | EUPrintc => "printc"
+    (* | EUPrint => "print" *)
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =
@@ -124,7 +131,7 @@ datatype prim_expr_bin_op =
          | EBPIntNEq
          | EBPBoolAnd
          | EBPBoolOr
-         | EBPStrConcat
+         (* | EBPStrConcat *)
 
 (* binary nat operators *)
 datatype nat_expr_bin_op =
@@ -164,7 +171,7 @@ fun str_prim_expr_bin_op opr =
     | EBPIntNEq => "neq"
     | EBPBoolAnd => "and"
     | EBPBoolOr => "or"
-    | EBPStrConcat => "str_concat"
+    (* | EBPStrConcat => "str_concat" *)
 
 fun str_nat_expr_bin_op opr =
   case opr of
@@ -206,7 +213,7 @@ fun pretty_str_prim_expr_bin_op opr =
     | EBPIntNEq => "<>"
     | EBPBoolAnd => "$$"
     | EBPBoolOr => "||"
-    | EBPStrConcat => "^"
+    (* | EBPStrConcat => "^" *)
 
 fun pretty_str_nat_expr_bin_op opr =
   case opr of
@@ -254,7 +261,7 @@ datatype expr_ET =
 datatype expr_T =
          ETNever
          | ETBuiltin of string
-         | ETEmptyArray
+         (* | ETEmptyArray *)
              
 fun str_idx_const c =
   case c of
@@ -330,6 +337,5 @@ fun str_expr_T opr =
   case opr of
       ETNever => "ETNever"
     | ETBuiltin name => sprintf "ETBuiltin($)" [name]
-    | ETEmptyArray => "ETEmptyArray"
                   
 end
