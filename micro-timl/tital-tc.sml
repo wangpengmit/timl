@@ -26,6 +26,9 @@ infixr 5 @@
 infix  6 @+
 infix  9 @!
 
+val T0 = T0 dummy
+val T1 = T1 dummy
+
 fun add_sorting_full new (hctx, (ictx, tctx), rctx) = (hctx, (new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx)
 fun add_kinding_full new (hctx, (ictx, tctx), rctx) = (hctx, (ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx)
 fun add_r p (hctx, itctx, rctx) = (hctx, itctx, rctx @+ p)
@@ -36,6 +39,7 @@ fun get_word_const_type c =
     | WCNat n => TNat $ INat n
     | WCInt _ => TInt
     | WCBool _ => TBool
+    | WCByte _ => TByte
 
 fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
   case w of
@@ -224,6 +228,14 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i %+ T1
             end
+          | IUnOp (IUInt2Nat, rd, v) =>
+            let
+              val t1 = tc_v ctx $ unInner v
+              val () = assert_TInt t1
+              val i = tc_insts (add_r (rd, TSomeNat ()) ctx) I
+            in
+              i %+ T1
+            end
           | IUnOp (IUPrim opr, rd, v) =>
             let
               val () = tc_v_against_ty ctx (unInner v, get_prim_expr_un_op_arg_ty opr)
@@ -248,6 +260,7 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val i1 = assert_TNat t1
               val t2 = tc_v ctx $ unInner v
               val i2 = assert_TNat t2
+              val () = if opr = EBNBoundedMinus then check_prop ictx (i2 %<= i1) else ()
               val t = TNat $ interp_nat_expr_bin_op opr (i1, Simp.simp_i i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
               val i = tc_insts (add_r (rd, t) ctx) I
             in

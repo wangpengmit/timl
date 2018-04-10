@@ -354,11 +354,11 @@ fun strn_e e =
            EETAppT => sprintf "($ [$])" [strn_e e, strn_mt t]
          | EETAsc => sprintf "($ : $)" [strn_e e, strn_mt t]
       )
+    | ENewArrayValues (t, es, _) => sprintf "array [$] {$}" [strn_mt t, join ", " $ map strn_e es]
     | ET (opr, t, _) =>
       (case opr of
            ETNever => sprintf "(never [$])" [strn_mt t]
          | ETBuiltin name => sprintf "(builtin $ [$])" [name, strn_mt t]
-         | ETEmptyArray => sprintf "(empty_array [$])" [strn_mt t]
       )
     | EAbs bind => 
       let

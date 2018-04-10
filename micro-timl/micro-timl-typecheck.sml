@@ -90,6 +90,7 @@ structure Sortcheck = SortcheckFn (structure U = Expr
 open Sortcheck
 
 open MicroTiMLExLongId
+open MicroTiMLExUtilTiML
 open MicroTiMLExUtil
 open MicroTiMLEx
 
@@ -572,12 +573,15 @@ fun get_expr_const_type c =
     | ECNat n => TNat $ INat n
     | ECInt _ => TInt
     | ECBool _ => TBool
+    | ECByte _ => TByte
     (* | ECString _ => TString *)
 
 fun get_prim_expr_un_op_arg_ty opr =
   case opr of
       EUPIntNeg => TInt
     | EUPBoolNeg => TBool
+    | EUPInt2Byte => TInt
+    | EUPByte2Int => TByte
     (* | EUPInt2Str => TInt *)
     (* | EUPStrLen => TString *)
                
@@ -585,6 +589,8 @@ fun get_prim_expr_un_op_res_ty opr =
   case opr of
       EUPIntNeg => TInt
     | EUPBoolNeg => TBool
+    | EUPInt2Byte => TByte
+    | EUPByte2Int => TInt
     (* | EUPInt2Str => TString *)
     (* | EUPStrLen => TInt *)
                
@@ -775,7 +781,7 @@ val anno_ELet = ref false
 val anno_EHalt = ref false
 val anno_ECase_e2_time = ref false
 val anno_EIte_e2_time = ref false
-           
+
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
     (* val () = print "tc() start: " *)
@@ -848,6 +854,15 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                           | _ => raise MTCError "ENat2Int"
         in
           (EUnOp (EUTiML EUNat2Int, e), TInt, j)
+        end
+      | EUnOp (EUTiML EUInt2Nat, e) =>
+        let
+          val (e, t, j) = tc ctx e
+          val () = case whnf itctx t of
+                            TConst TCInt => ()
+                          | _ => raise MTCError "EInt2Nat"
+        in
+          (EUnOp (EUTiML EUInt2Nat, e), TSomeNat (), j)
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
@@ -959,6 +974,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                      | _ => raise MTCError "ENatAdd 2"
           val (e1, e2) = if !anno_ENat then (e1 %: t1, e2 %: t2) else (e1, e2)
           val i2 = Simp.simp_i $ update_i i2
+          val () = if opr = EBNBoundedMinus then check_prop ictx (i2 %<= i1) else ()
           val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
         in
           (EBinOp (EBNat opr, e1, e2), t, j1 %+ j2)

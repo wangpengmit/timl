@@ -1,5 +1,6 @@
 structure Pervasive = struct
 
-datatype some_nat = SomeNat {n : Nat} of nat {n}
+(* assuming 256-bit integers *)
+datatype some_nat = SomeNat {n : Nat | n < 2 ** 256} of nat {n}
 
 end

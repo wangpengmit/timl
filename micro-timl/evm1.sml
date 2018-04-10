@@ -13,6 +13,7 @@ datatype word_const =
          | WCNat of nat
          | WCInt of int
          | WCBool of bool
+         | WCByte of Char.char
          | WCiBool of bool
          | WCLabel of label
 
@@ -47,6 +48,7 @@ datatype ('idx, 'ty) inst =
          | ISZERO
          | AND
          | OR
+         | BYTE
          (* | SHA3 *)
          | POP
          | MLOAD
@@ -67,8 +69,11 @@ datatype ('idx, 'ty) inst =
          | VALUE_Fold of 'ty inner
          | VALUE_AscType of 'ty inner
          | UNPACK of tbinder
+         | UNPACKI of ibinder
          | UNFOLD
          | NAT2INT
+         | INT2NAT
+         | BYTE2INT
          | PRINTC
          | PACK_SUM of injector * 'ty
          | ASCTIME of 'idx inner

@@ -143,6 +143,7 @@ fun on_e (e : S.expr) =
            Op.ETNever => ENever (on_mt t)
          | Op.ETBuiltin name => EBuiltin (name, on_mt t)
       )
+    | S.ENewArrayValues (t, es, r) => ENewArrayValues (on_mt t, map on_e es)
     | S.ECaseSumbool (e, bind1, bind2, r) =>
       let
         fun on_bind bind =

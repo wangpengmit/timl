@@ -61,7 +61,7 @@ datatype expr_const =
          | ECNat of nat
          | ECInt of int
          | ECBool of bool
-         | ECByte of String.char
+         | ECByte of Char.char
          (* | ECString of string *)
 
 (* projector for product type *)
@@ -83,7 +83,7 @@ datatype expr_un_op =
          | EUPrim of prim_expr_un_op
          | EUArrayLen
          | EUNat2Int
-         | EUPInt2Nat
+         | EUInt2Nat
          | EUPrintc
          (* | EUPrint *)
 
@@ -105,6 +105,8 @@ fun str_prim_expr_un_op opr =
   case opr of
       EUPIntNeg => "int_neg"
     | EUPBoolNeg => "not"
+    | EUPInt2Byte => "int2byte"
+    | EUPByte2Int => "byte2int"
     (* | EUPInt2Str => "int2str" *)
     (* | EUPStrLen => "str_len" *)
                    
@@ -114,6 +116,7 @@ fun str_expr_un_op opr =
     | EUPrim opr => str_prim_expr_un_op opr
     | EUArrayLen => "array_len"
     | EUNat2Int => "nat2int"
+    | EUInt2Nat => "int2nat"
     | EUPrintc => "printc"
     (* | EUPrint => "print" *)
 

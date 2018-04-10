@@ -1,6 +1,7 @@
 structure CompilerUtil = struct
 
 open MicroTiMLExLocallyNameless
+open MicroTiMLExUtilTiML
 open MicroTiMLExUtil
 
 infixr 0 $
@@ -59,6 +60,10 @@ fun assert_TUnit msg t =
   case t of
       TConst TCUnit => ()
     | _ => raise assert_fail msg
+fun assert_TInt t =
+  case t of
+      TConst TCInt => ()
+    | _ => raise assert_fail "assert_TInt"
 fun assert_TProdEx t =
   case t of
       TProdEx a => a

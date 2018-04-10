@@ -13,6 +13,7 @@ fun str_word_const c =
     | WCInt n => str_int n
     | WCNat n => sprintf "#$" [str_int n]
     | WCBool b => str_bool b
+    | WCByte c => Char.toCString c
                                 
 fun str_inst_un_op opr =
   case opr of
@@ -21,9 +22,11 @@ fun str_inst_un_op opr =
     | IUBrBool => "br_bool"
     | IUUnfold => "unfold"
     | IUPrim opr => str_prim_expr_un_op opr
-    | IUPrint => "print"
     | IUArrayLen => "array_len"
     | IUNat2Int => "nat2int"
+    | IUInt2Nat => "int2nat"
+    | IUPrintc => "printc"
+    (* | IUPrint => "print" *)
 
 fun str_inst_bin_op opr =
   case opr of
@@ -322,18 +325,18 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
           str ")";
           close_box ()
         )
-      | IString (r, s) =>
-        (
-          open_hbox ();
-          str "string";
-          space ();
-          str "(";
-          str $ str_reg r;
-          comma ();
-          str s;
-          str ")";
-          close_box ()
-        )
+      (* | IString (r, s) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "string"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     str $ str_reg r; *)
+      (*     comma (); *)
+      (*     str s; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | IAscTime i =>
         (
           open_hbox ();

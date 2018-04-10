@@ -13,6 +13,7 @@ datatype word_const =
          | WCNat of nat
          | WCInt of int
          | WCBool of bool
+         | WCByte of Char.char
 
 (* atomic word values *)
 datatype 'ty word =
@@ -39,9 +40,11 @@ datatype inst_un_op =
          | IUBrBool
          | IUUnfold
          | IUPrim of prim_expr_un_op
-         | IUPrint
          | IUArrayLen
          | IUNat2Int
+         | IUInt2Nat
+         | IUPrintc
+         (* | IUPrint *)
              
 datatype inst_bin_op =
          IBPrim of prim_expr_bin_op
@@ -60,7 +63,7 @@ datatype ('idx, 'ty) inst =
          | IUnpack of tbinder * reg * ('idx, 'ty) value outer
          | IUnpackI of ibinder * reg * ('idx, 'ty) value outer
          | IInj of reg * injector * ('idx, 'ty) value inner * 'ty inner
-         | IString of reg * string
+         (* | IString of reg * string *)
          | IAscTime of 'idx inner
 
 datatype ('idx, 'ty) insts =

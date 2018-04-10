@@ -180,41 +180,6 @@ fun collect_TAbsIT b =
       end
     | _ => ([], b)
 
-open MicroTiMLExLongId
-       
-val unTAbsT = unBindAnnoName
-                
-fun whnf ctx t =
-    case t of
-        TAppT (t1, t2) =>
-        let
-          val t1 = whnf ctx t1
-        in
-          case t1 of
-              TAbsT data =>
-              let
-                val (_, (_, t1)) = unTAbsT data
-              in
-                whnf ctx $ subst0_t_t t2 t1
-              end
-            | _ => TAppT (t1, t2)
-        end
-      | TAppI (t, i) =>
-        let
-          val t = whnf ctx t
-        in
-          case t of
-              TAbsI data =>
-              let
-                val (_, (_, t)) = unTAbsT data
-              in
-                whnf ctx $ subst0_i_t i t
-              end
-            | _ => TAppI (t, i)
-        end
-      | TVar x => TVar x (* todo: look up type aliasing in ctx *)
-      | _ => t
-
 fun eq_t a = MicroTiMLVisitor2.eq_t_fn (curry Equal.eq_var, Equal.eq_bs, Equal.eq_i, Equal.eq_s) a
                      
 fun collect_ELet e =

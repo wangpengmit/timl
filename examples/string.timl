@@ -7,7 +7,7 @@ open Array
        
 datatype string = String {len : Nat} of array byte {len}
 
-new_string "abc" == String (new_array {'a', 'b', 'c'})
+(* new_string "abc" == String (new_array {'a', 'b', 'c'}) *)
     
 fun size s =
   let

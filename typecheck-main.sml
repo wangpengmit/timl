@@ -3,6 +3,7 @@ structure U = UnderscoredExpr
 open CollectUVar
 open RedundantExhaust
 open Region
+open Pervasive
 open Expr
 open Simp
 open Subst
@@ -848,10 +849,12 @@ fun is_value (e : U.expr) : bool =
       | EUnOp (opr, e, _) =>
         (case opr of
              EUProj _ => false
-           | EUPrint => false
            | EUArrayLen => false
            | EUPrim _ => false
            | EUNat2Int => false
+           | EUInt2Nat => false
+           | EUPrintc => false
+           (* | EUPrint => false *)
         )
       | EBinOp (opr, e1, e2) =>
         (case opr of
@@ -863,6 +866,7 @@ fun is_value (e : U.expr) : bool =
            | EBNat _ => false
            | EBNatCmp _ => false
         )
+      | ENewArrayValues _ => false
       | ETriOp (opr, _, _, _) =>
         (case opr of
              ETWrite => false
@@ -884,7 +888,6 @@ fun is_value (e : U.expr) : bool =
         (case opr of
              ETNever => true
            | ETBuiltin name => true
-           | ETEmptyArray => false
         )
       | EAbs _ => true
       | EAbsI _ => true
@@ -916,6 +919,8 @@ fun get_prim_expr_un_op_arg_ty opr =
   case opr of
       EUPIntNeg => Int
     | EUPBoolNeg => Bool
+    | EUPInt2Byte => Int
+    | EUPByte2Int => Byte
     (* | EUPInt2Str => Int *)
     (* | EUPStrLen => String *)
                
@@ -923,6 +928,8 @@ fun get_prim_expr_un_op_res_ty opr =
   case opr of
       EUPIntNeg => Int
     | EUPBoolNeg => Bool
+    | EUPInt2Byte => Byte
+    | EUPByte2Int => Int
     (* | EUPInt2Str => String *)
     (* | EUPStrLen => Int *)
                
@@ -1091,7 +1098,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                let
                  val r = U.get_region_e e_all
                  val t = fresh_mt gctx (sctx, kctx) r
-                 val i = fresh_i gctx sctx (Base Time(*bug*)) r
+                 val i = fresh_i gctx sctx (Base Time(* todo: bug. How is it undetected? *)) r
                  val (e, _, d) = check_mtype (ctx, e, TyArray (t, i))
                in
                  (EUnOp (opr, e, r), TyNat (i, r), d)
@@ -1099,7 +1106,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	     | EUNat2Int =>
                let
                  val r = U.get_region_e e_all
-                 val i = fresh_i gctx sctx (Base Time(*bug*)) r
+                 val i = fresh_i gctx sctx (Base Time(*todo: bug*)) r
                  val (e, _, d) = check_mtype (ctx, e, TyNat (i, r))
                in
                  (EUnOp (opr, e, r), BaseType (Int, r), d)
@@ -1108,10 +1115,8 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                let
                  val r = U.get_region_e e_all
                  val (e, _, d) = check_mtype (ctx, e, BaseType (Int, r))
-                 fun add_r r (name, x) = ((name, r), (x, r))
-                 val SOME_NAT_ID = ("Pervasive", 0)
                in
-                 (EUnOp (opr, e, r), MtVar $ QID $ add_r r SOME_NAT_ID, d)
+                 (EUnOp (opr, e, r), MtVar $ QID $ qid_add_r r SOME_NAT_ID, d)
                end
           )
 	| U.EBinOp (opr, e1, e2) =>
@@ -1151,7 +1156,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val i2 = fresh_i gctx sctx (Base Time) r
                  val (e1, _, d1) = check_mtype (ctx, e1, TyArray (t, i1))
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
-                 val () = write_le (i2, i1, r)
+                 val () = write_lt (i2, i1, r)
                in
                  (EBinOp (opr, e1, e2), t, d1 %+ d2)
                end
@@ -1163,6 +1168,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
                  val i2 = Simp.simp_i $ update_i i2
+                 val () = if opr = EBNBoundedMinus then write_le (i2, i1, r) else ()
                in
                  (EBinOp (EBNat opr, e1, e2), TyNat (interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Error (r, ["Can only divide by a nat whose index is a constant, not: " ^ str_i gctxn sctxn i2])), r), d1 %+ d2 %+ T1 r)
                end
@@ -1191,7 +1197,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
             val i2 = fresh_i gctx sctx (Base Time) r
             val (e1, _, d1) = check_mtype (ctx, e1, TyArray (t, i1))
             val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
-            val () = write_le (i2, i1, r)
+            val () = write_lt (i2, i1, r)
             val (e3, _, d3) = check_mtype (ctx, e3, t)
           in
             (ETriOp (ETWrite, e1, e2, e3), Unit r, d1 %+ d2 %+ d3)
@@ -1274,13 +1280,16 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                in
 	         (EBuiltin (name, t, r), t, T0 r)
                end
-	     | ETEmptyArray =>
-               let
-	         val t = check_kind_Type gctx (skctx, t)
-               in
-                 (ET (opr, t, r), TyArray (t, N0 r), T0 r)
-               end
           )
+        | U.ENewArrayValues (t, es, r) =>
+          let
+	    val t = check_kind_Type gctx (skctx, t)
+            fun ignore2 (a, _, c) = (a, c)
+            val (es, ds) = unzip $ map (fn e => ignore2 $ check_mtype (ctx, e, t)) es
+            val d = combine_AddI_Time ds
+          in
+            (ENewArrayValues (t, es, r), TyArray (t, ConstIN (length es, r)), d)
+          end
 	| U.EAbs bind => 
 	  let
             val (pn, e) = Unbound.unBind bind

@@ -18,13 +18,15 @@ infix 8 %^
 infix 7 %*
 infix 6 %+ 
 infix 4 %<=
+infix 4 %<
 infix 4 %>=
+infix 4 %>
 infix 4 %=
 infixr 3 /\
 infixr 2 \/
 infixr 1 -->
 infix 1 <->
-        
+
 exception Error of region * string list
 
 type kind_ext = kind * mtype option (*aliasing*)
@@ -544,6 +546,9 @@ fun write_admit (p, r) =
 
 fun write_le (d : idx, d' : idx, r) =
   write_prop (d %<= d', r)
+	     
+fun write_lt (d : idx, d' : idx, r) =
+  write_prop (d %< d', r)
 	     
 fun check_length_n r (ls, n) =
   if length ls = n then

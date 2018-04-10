@@ -150,6 +150,7 @@ uvar.sml
 uniquefy.sml
 expr.sml
 underscore-exprs.sml
+pervasive.sml
 elaborate.sml
 name-resolve.sml
 package.sml
@@ -198,6 +199,7 @@ remove-open.sml
 merge-modules.sml
 micro-timl/export-pp.sml
 micro-timl/timl-to-micro-timl.sml
+micro-timl/micro-timl-ex-util-timl.sml
 micro-timl/micro-timl-typecheck.sml
 micro-timl/micro-timl-ex-locally-nameless.sml
 micro-timl/compiler-util.sml

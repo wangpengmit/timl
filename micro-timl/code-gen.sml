@@ -86,6 +86,7 @@ fun cg_c c =
     | ECNat n => WCNat n
     | ECInt n => WCInt n
     | ECBool n => WCBool n
+    | ECByte c => WCByte c
     (* | ECString s => raise Impossible $ "cg_c() on ECString" *)
                                 
 fun cg_v ectx v =
@@ -116,9 +117,11 @@ fun cg_v ectx v =
 fun cg_expr_un_op opr =
   case opr of
       EUPrim opr => IUPrim opr
-    | EUPrint => IUPrint
     | EUArrayLen => IUArrayLen
     | EUNat2Int => IUNat2Int
+    | EUInt2Nat => IUInt2Nat
+    | EUPrintc => IUPrintc
+    (* | EUPrint => IUPrint *)
     | EUProj _ => raise Impossible "cg_expr_un_op() on EUProj"
       
 fun VAppITs_ctx (e, itctx) =

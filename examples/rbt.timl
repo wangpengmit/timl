@@ -4,7 +4,7 @@
 
 structure LogFacts = struct
 datatype lemma1 {a b : Nat} =
-         Lemma1 {2 ^^ a <= b + 1 -> a <= ceil (log2 $(b + 1))} of lemma1 {a} {b}
+         Lemma1 {2 ** a <= b + 1 -> a <= ceil (log2 $(b + 1))} of lemma1 {a} {b}
 
 fun lemma1 {a b : Nat} () return lemma1 {a} {b} =
     @Lemma1 {a} {b} {admit} (* assume this fact as axiom *)
@@ -40,12 +40,12 @@ datatype rbt 'a : {Nat(*size*)} {Bool} {Nat(*black-height*)} =
               {lsize rsize bh : Nat}
               {color = false -> lcolor = true /\ rcolor = true }
               (* We have to add the following two extra invariants. These two invariants can be derived from the other invariants, but because in TiML lemmas, lemma invocations, and inductions must be written as ordinary functions (like in Dafny) which increase a program's running time, deriving these invariants on the fly will increase asymptotic complexity. *)
-              {2 ^^ (bh + b2n (not lcolor) + 1) <= 2 * (lsize + 1) /\ 2 * (lsize + 1) <= 2 ^^ (2 * bh + b2n (not lcolor) + 1)}
-              {2 ^^ (bh + b2n (not rcolor) + 1) <= 2 * (rsize + 1) /\ 2 * (rsize + 1) <= 2 ^^ (2 * bh + b2n (not rcolor) + 1)}
+              {2 ** (bh + b2n (not lcolor) + 1) <= 2 * (lsize + 1) /\ 2 * (lsize + 1) <= 2 ** (2 * bh + b2n (not lcolor) + 1)}
+              {2 ** (bh + b2n (not rcolor) + 1) <= 2 * (rsize + 1) /\ 2 * (rsize + 1) <= 2 ** (2 * bh + b2n (not rcolor) + 1)}
          of color {color} * rbt 'a {lsize} {lcolor} {bh} * (key * 'a) * rbt 'a {rsize} {rcolor} {bh} --> rbt 'a {lsize + 1 + rsize} {color} {bh + b2n color}
 
 datatype size_good {color : Bool} {size bh : Nat} =
-         SizeGood {2 ^^ (bh + b2n (not color) + 1) <= 2 * (size + 1) /\ 2 * (size + 1) <= 2 ^^ (2 * bh + b2n (not color) + 1)}
+         SizeGood {2 ** (bh + b2n (not color) + 1) <= 2 * (size + 1) /\ 2 * (size + 1) <= 2 ** (2 * bh + b2n (not color) + 1)}
          of size_good {color} {size} {bh}
                  
 fun rbt_size_good ['a] {color : Bool} {size bh : Nat} (tr : rbt 'a {size} {color} {bh}) return size_good {color} {size} {bh} =

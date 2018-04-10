@@ -126,6 +126,9 @@ fun malloc_array t = [PUSH1nat 0, MLOAD, DUP2, DUP2, MSTORE, PUSH1nat 32, ADD, D
 val tuple_assign = [DUP2, MSTORE]
 val array_assign = [DUP3, DUP3, DUP3, ADD, MSTORE]
 val br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
+(* val int2byte = [] (* noop, relying on type discipline *) *)
+val int2byte = [PUSH1nat 31, BYTE]
+val byte2int = [BYTE2INT]
 
 fun concatRepeat n v = List.concat $ repeat n v
 fun TiBoolConst b =
@@ -138,14 +141,17 @@ fun cg_c c =
     | ECNat n => WCNat n
     | ECInt n => WCInt n
     | ECBool n => WCBool n
+    | ECByte c => WCByte c
     (* | ECString s => raise Impossible $ "cg_c() on ECString" *)
                                 
 fun impl_prim_expr_un_opr opr =
   case opr of
       EUPIntNeg => [PUSH1 $ WInt 0, SUB]
     | EUPBoolNeg => [ISZERO]
-    | EUPStrLen => [PUSH1nat 32, SWAP1, SUB, MLOAD]
-    | _ => raise Impossible $ "impl_prim_expr_up_op() on " ^ str_prim_expr_un_op opr
+    | EUPInt2Byte => int2byte
+    | EUPByte2Int => byte2int
+    (* | EUPStrLen => [PUSH1nat 32, SWAP1, SUB, MLOAD] *)
+    (* | _ => raise Impossible $ "impl_prim_expr_up_op() on " ^ str_prim_expr_un_op opr *)
       
 fun impl_prim_expr_bin_op opr =
   case opr of
@@ -161,24 +167,24 @@ fun impl_prim_expr_bin_op opr =
      | EBPIntNEq => [EQ, ISZERO]
      | EBPBoolAnd => [AND]
      | EBPBoolOr => [OR]
-     | EBPStrConcat => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat"
+     (* | EBPStrConcat => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat" *)
                   
 fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
     | EUNat2Int => [NAT2INT]
+    | EUInt2Nat => [INT2NAT, VALUE_Fold $ Inner $ TSomeNat ()]
     | EUArrayLen => [PUSH1nat 32, SWAP1, SUB, MLOAD]
     | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD, MLOAD]
-    (* | EUPrint => [PRINT] *)
     | EUPrintc => [PRINTC]
+    (* | EUPrint => [PRINT] *)
                         
 fun impl_nat_expr_bin_op opr =
   case opr of
       EBNAdd => [ADD]
     | EBNMult => [MUL]
     | EBNDiv => [SWAP1, DIV]
-    | EBNMinus => [SWAP1, SUB]
-    | EBNBoundedMinus => raise Impossible "impl_nat_expr_bin_op() on EBNBoundedMinus"
+    | EBNBoundedMinus => [SWAP1, SUB]
 
 fun impl_nat_cmp opr =
   case opr of
@@ -207,7 +213,7 @@ fun compile ectx e =
     | EAppT (e, t) => compile e @ [VALUE_AppT $ Inner $ cg_t t]
     | EAppI (e, i) => compile e @ [VALUE_AppI $ Inner i]
     | EPack (t_pack, t, e) => compile e @ [VALUE_Pack (Inner $ cg_t t_pack, Inner $ cg_t t)]
-    (* | EPackI (t_pack, i, v) => VPackI (cg_t t_pack, i, cg_v ectx v) *)
+    | EPackI (t_pack, i, e) => compile e @ [VALUE_PackI (Inner $ cg_t t_pack, Inner i)]
     | EUnOp (EUFold t, e) => compile e @ [VALUE_Fold $ Inner $ cg_t t]
     | EAscType (e, t) => compile e @ [VALUE_AscType $ Inner $ cg_t t]
     | ENever t => PUSH_value $ VNever $ cg_t t
@@ -265,6 +271,7 @@ fun compile ectx e =
       compile e1 @ 
       compile e2 @
       impl_nat_cmp opr
+    | _ => raise Impossible $ "compile() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
 
 fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
@@ -378,6 +385,18 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val I = cg_e ((name_x, inl r) :: ectx, inr (name_a, k) :: itctx, Rctx.map shift01_t_t rctx @+ (r, t)) e2
       in
         compile e1 @@ [UNPACK $ TBinder name_a] @@ set_reg r @@ I
+      end
+    | EUnpackI (e1, bind) =>
+      let
+        val (e1, t) = assert_EAscType e1
+        val ((_, s), t) = assert_TExistsI t
+        val t = cg_t t
+        val (name_a, bind) = unBindSimpName bind
+        val (name_x, e2) = unBindSimpName bind
+        val r = fresh_reg ()
+        val I = cg_e ((name_x, inl r) :: ectx, inl (name_a, s) :: itctx, Rctx.map shift01_i_t rctx @+ (r, t)) e2
+      in
+        compile e1 @@ [UNPACKI $ IBinder name_a] @@ set_reg r @@ I
       end
     (* | EUnpackI (v, bind) => *)
     (*   let *)

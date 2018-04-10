@@ -3,6 +3,7 @@ structure S = Ast
 structure E = NamefulExpr
 open S
 open E
+open Pervasive
 open Bind
        
 infixr 0 $
@@ -401,6 +402,7 @@ local
         | S.ETriOp (S.ETIte, e1, e2, e3, _) => ETriOp (ETIte, elab e1, elab e2, elab e3)
         | S.ETriOp (S.ETIfDec, e, e1, e2, r) => ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.VarT (NONE, ("_", r))), r)
+        | S.EStrConcat (e1, e2, r) => EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, false), EPair (elab e1, elab e2))
 
   and elab_decl decl =
       case decl of

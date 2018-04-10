@@ -3,6 +3,7 @@
 structure TiTALEval = struct
 
 open Expr
+open MicroTiMLExUtilTiML
 open MicroTiMLExUtil
 open MicroTiMLExLongId
 open TiTAL
@@ -168,6 +169,12 @@ fun assert_WVInt t =
       WVConst (WCInt a) => a
     | _ => raise assert_fail "assert_WVInt"
 
+fun WVByte n = WVConst $ WCByte n
+fun assert_WVByte t =
+  case t of
+      WVConst (WCByte a) => a
+    | _ => raise assert_fail "assert_WVByte"
+
 fun WVNat n = WVConst $ WCNat n
 fun assert_WVNat t =
   case t of
@@ -220,7 +227,9 @@ fun interp_prim_expr_un_op opr a =
   case opr of
       EUPIntNeg => WVInt $ ~ (assert_WVInt a)
     | EUPBoolNeg => WVBool $ not (assert_WVBool a)
-    | _ => raise Impossible $ "interp_prim_expr_un_op() on: " ^ str_prim_expr_un_op opr
+    | EUPInt2Byte => WVByte $ Char.chr $ assert_WVInt a mod 256
+    | EUPByte2Int => WVInt $ Char.ord $ assert_WVByte a
+    (* | _ => raise Impossible $ "interp_prim_expr_un_op() on: " ^ str_prim_expr_un_op opr *)
                    
 fun interp_prim_expr_bin_op opr (a, b) =
   case opr of
@@ -236,7 +245,7 @@ fun interp_prim_expr_bin_op opr (a, b) =
     | EBPIntNEq => WVBool $ assert_WVInt a <> assert_WVInt b
     | EBPBoolAnd => WVBool (assert_WVBool a andalso assert_WVBool b)
     | EBPBoolOr => WVBool (assert_WVBool a orelse assert_WVBool b)
-    | EBPStrConcat => raise Impossible "interp_prim_expr_bin_op() on EBPStrConcat"
+    (* | EBPStrConcat => raise Impossible "interp_prim_expr_bin_op() on EBPStrConcat" *)
                             
 fun interp_nat_expr_bin_op opr (a, b) =
   case opr of
@@ -260,7 +269,9 @@ fun get_code (H, R) v =
   in
     I'
   end
-    
+
+fun char2str c = String.implode [c]
+                               
 fun step (H, R, I) =
   case I of
       ISHalt _ => raise Impossible "can't step() on ISHalt"
@@ -290,9 +301,12 @@ fun step (H, R, I) =
               (H, R, get_code (H, R) $ unInner v)
           | IUnOp (IUMov, rd, v) =>
             (H, R @+ (rd, R @^ unInner v), I')
-          | IUnOp (IUPrint, rd, v) =>
-            (print $ assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v;
+          | IUnOp (IUPrintc, rd, v) =>
+            (print $ char2str $ assert_WVByte $ R @^ unInner v;
             (H, R @+ (rd, WVTT), I'))
+          (* | IUnOp (IUPrint, rd, v) => *)
+          (*   (print $ assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v; *)
+          (*   (H, R @+ (rd, WVTT), I')) *)
           | IUnOp (IUUnfold, rd, v) =>
             let
               val (t, w) = assert_WVFold $ R @^ unInner v
@@ -301,26 +315,34 @@ fun step (H, R, I) =
             end
           | IUnOp (IUArrayLen, rd, v) =>
             (H, R @+ (rd, WVNat $ length $ assert_HVArray $ must_find H $ assert_WVLabel $ R @^ unInner v), I')
-          | IUnOp (IUPrim EUPInt2Str, rd, v) =>
-            let
-              val l = fresh_label H
-            in
-              (H @+ (l, HVString $ str_int $ assert_WVInt $ R @^ unInner v), R @+ (rd, WVLabel l), I')
-            end
-          | IUnOp (IUPrim EUPStrLen, rd, v) =>
-            (H, R @+ (rd, WVInt $ String.size $ assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v), I')
+          (* | IUnOp (IUPrim EUPInt2Str, rd, v) => *)
+          (*   let *)
+          (*     val l = fresh_label H *)
+          (*   in *)
+          (*     (H @+ (l, HVString $ str_int $ assert_WVInt $ R @^ unInner v), R @+ (rd, WVLabel l), I') *)
+          (*   end *)
+          (* | IUnOp (IUPrim EUPStrLen, rd, v) => *)
+          (*   (H, R @+ (rd, WVInt $ String.size $ assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v), I') *)
           | IUnOp (IUPrim opr, rd, v) =>
             (H, R @+ (rd, interp_prim_expr_un_op opr $ R @^ unInner v), I')
           | IUnOp (IUNat2Int, rd, v) =>
             (H, R @+ (rd, WVInt $ assert_WVNat $ R @^ unInner v), I')
-          | IBinOp (IBPrim EBPStrConcat, rd, rs, v) =>
+          | IUnOp (IUInt2Nat, rd, v) =>
             let
-              val l = fresh_label H
-              val s1 = assert_HVString $ must_find H $ assert_WVLabel $ R @!! rs
-              val s2 = assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v
+              val n = assert_WVInt $ R @^ unInner v
+              val v = WVPackI (TSomeNat_packed (), ConstIN (n, dummy), WVNat n)
+              val v = WVFold (TSomeNat (), v)
             in
-              (H @+ (l, HVString $ s1 ^ s2), R @+ (rd, WVLabel l), I')
+              (H, R @+ (rd, v), I')
             end
+          (* | IBinOp (IBPrim EBPStrConcat, rd, rs, v) => *)
+          (*   let *)
+          (*     val l = fresh_label H *)
+          (*     val s1 = assert_HVString $ must_find H $ assert_WVLabel $ R @!! rs *)
+          (*     val s2 = assert_HVString $ must_find H $ assert_WVLabel $ R @^ unInner v *)
+          (*   in *)
+          (*     (H @+ (l, HVString $ s1 ^ s2), R @+ (rd, WVLabel l), I') *)
+          (*   end *)
           | IBinOp (IBPrim opr, rd, rs, v) =>
             (H, R @+ (rd, interp_prim_expr_bin_op opr (R @!! rs, R @^ unInner v)), I')
           | IBinOp (IBNat opr, rd, rs, v) =>
@@ -413,12 +435,12 @@ fun step (H, R, I) =
             in
               (H @+ (l, HVInj (inj, R @^ unInner v)), R @+ (rd, WVLabel l), I')
             end
-          | IString (rd, s) =>
-            let
-              val l = fresh_label H
-            in
-              (H @+ (l, HVString s), R @+ (rd, WVLabel l), I')
-            end
+          (* | IString (rd, s) => *)
+          (*   let *)
+          (*     val l = fresh_label H *)
+          (*   in *)
+          (*     (H @+ (l, HVString s), R @+ (rd, WVLabel l), I') *)
+          (*   end *)
           | IAscTime _ => (H, R, I')
       end
 

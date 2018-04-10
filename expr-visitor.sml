@@ -148,6 +148,7 @@ fun default_expr_visitor_vtable
           | EEI data => #visit_EEI vtable this env data
           | EET data => #visit_EET vtable this env data
           | ET data => #visit_ET vtable this env data
+          | ENewArrayValues (t, es, r) => T.ENewArrayValues (#visit_mtype vtable this env t, visit_list (#visit_expr vtable this) env es, r)
 	  | EAbs data => #visit_EAbs vtable this env data
 	  | EAbsI data => #visit_EAbsI vtable this env data
 	  | EAppConstr data => #visit_EAppConstr vtable this env data
