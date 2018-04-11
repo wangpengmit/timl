@@ -195,14 +195,14 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
         in
           open_hbox ();
           str "TRec";
-          (* space (); *)
-          (* str "("; *)
-          (* str name; *)
-          (* comma (); *)
-          (* str $ str_k k; *)
-          (* comma (); *)
-          (* pp_t t; *)
-          (* str ")"; *)
+          space ();
+          str "(";
+          str name;
+          comma ();
+          str $ str_k k;
+          comma ();
+          pp_t t;
+          str ")";
           close_box ()
         end
       | TNat i =>

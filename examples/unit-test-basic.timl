@@ -1,13 +1,34 @@
 structure CCTestBasic = struct
 
-fun fst a = __&fst a
-fun snd a = __&snd a
-fun not a = __&not a
-val true = __&true
-val false = __&false
+open String
+
+(* fun fst a = __&fst a *)
+(* fun snd a = __&snd a *)
+(* fun not a = __&not a *)
+(* val true = __&true *)
+(* val false = __&false *)
 val str_int = int2str
 fun println s = print s; print "\n"
-                  
+fun print_int i return using 1810.0 =
+  let
+    val StringFromInt s = int2str i
+  in
+    print s
+  end
+
+datatype printable =
+         S {len : Nat | len <= 361} of string {len} --> printable
+       | I of int --> printable
+       | Ln
+
+fun print_printable a return using 1811.0 =
+  case a of
+      S s => print s
+    | I i => print_int i
+    | Ln => println ""
+                   
+fun printls {len : Nat} (ls : list _ {len}) = List.app print_printable ls
+                                                
 val s = ""
           
 val a = 1
@@ -21,7 +42,9 @@ val z = x + y + x
 
 (* (* val () = print "z=" *) *)
 (* (* val () = println (int2str z) *) *)
-val () = println <| "z=" ^ int2str z
+val () = print "z="
+val () = print_int <| z
+val () = println ""
 (* (* val () = println $ str_int z *) *)
               
 val p = (1, ())
@@ -41,7 +64,7 @@ val a = f 2
 fun f x y = x + y
 
 val a = f 1 2
-val () = println <| "a=" ^ int2str a
+val () = printls [S "a=", I a, Ln]
 
 fun foo {i : Nat} {j | j > i} () =
     let
@@ -66,18 +89,18 @@ val a = f ()
 fun twice f x = f (f x)
 
 val n = if 1 > 2 then 1 else 2
-val () = println <| "n=" ^ int2str n
+val () = printls [S "n=", I n, Ln]
                                                         
 fun fact_tail {n : Nat} (n : nat {n}, acc) (* return using 3.0 * $n *) =
   ifdec n #< #1 then acc
   else fact_tail (n #- #1, __&nat2int n * acc) using 4.0 * $n
                  
-val () = println <| "fact_tail (4, 1) = " ^ (int2str <| fact_tail (#4, 1))
+val () = printls [S "fact_tail (4, 1) = ", I <| fact_tail (#4, 1), Ln]
 
 fun fact {n : Nat} (n : nat {n}) (* return using 3.0 * $n *) =
   ifdec n #< #1 then 1
-  else __&nat2int n * fact (n #- #1) using 4.0 * $n
+  else nat2int n * fact (n #- #1) using 4.0 * $n
                  
-val () = println <| "fact 4 = " ^ (int2str <| fact #4)
+val () = printls [S "fact 4 = ", I <| fact #4, Ln]
 
 end

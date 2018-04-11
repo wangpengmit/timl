@@ -787,9 +787,9 @@ val anno_EIte_e2_time = ref false
 
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
-    (* val () = print "tc() start: " *)
-    (* val e_input_str = (* substr 0 100 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 1) (ctx_names ctx) e_input *)
-    (* val () = print $ e_input_str *)
+    val () = print "tc() start: "
+    val e_input_str = (* substr 0 100 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input
+    val () = print $ e_input_str
     val itctx = (ictx, tctx)
     fun main () =
         case e_input of
@@ -860,10 +860,9 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         end
       | EUnOp (EUTiML EUInt2Nat, e) =>
         let
-          val (e, t, j) = tc ctx e
-          val () = case whnf itctx t of
-                            TConst TCInt => ()
-                          | _ => raise MTCError "EInt2Nat"
+          val () = println "begin Int2Nat"
+          val (e, j) = tc_against_ty ctx (e, TInt)
+          val () = println "end Int2Nat"
         in
           (EUnOp (EUTiML EUInt2Nat, e), TSomeNat (), j)
         end
@@ -1415,17 +1414,17 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           (EHalt e, TUnit, i_e)
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
-    fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 2, SOME 5) (ctx_names ctx) e_input)
+    fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, SOME 5) (ctx_names ctx) e_input)
     val (e_output, t, i) = main ()
                  handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
                       | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())
                       | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
                       | MTCError m => raise MTCError (m ^ extra_msg ())
                       | Impossible m => raise Impossible (m ^ extra_msg ())
-    (* val () = println "tc() finished:" *)
-    (* val () = println $ e_input_str *)
-    (* val () = println "of type:" *)
-    (* val () = println $ (* substr 0 100 $  *)ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
+    val () = println "tc() finished:"
+    val () = println $ e_input_str
+    val () = println "of type:"
+    val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) t
     (* val () = println "of time:" *)
     (* val () = println $ (* substr 0 100 $  *)ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) i *)
   in

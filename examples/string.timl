@@ -72,6 +72,4 @@ fun int2str i return string_from_int using 1400.0 =
     StringFromInt (fromList <| rev <| (@nat2bytes {floor (log10 $n)} {_} n))
   end
 
-val str_int = int2str
-
 end

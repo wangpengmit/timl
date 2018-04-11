@@ -331,7 +331,9 @@ fun step (H, R, I) =
           | IUnOp (IUInt2Nat, rd, v) =>
             let
               val n = assert_WVInt $ R @^ unInner v
-              val v = WVPackI (TSomeNat_packed (), ConstIN (n, dummy), WVNat n)
+              val v = WVNat n
+              val v = WVPackI (TSomeNat_packed (), TTI dummy, v)
+              val v = WVPackI (TSomeNat_packed2 (), ConstIN (n, dummy), v)
               val v = WVFold (TSomeNat (), v)
             in
               (H, R @+ (rd, v), I')

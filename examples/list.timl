@@ -26,6 +26,11 @@ fun map ['a 'b] {m n : Nat} (f : 'a -- $m --> 'b) (ls : list (* 'a *)_ {n}) retu
             | Cons (x, xs) => Cons (f x, map f xs)
 end
 
+fun app ['a] {m : Time} {n : Nat} (f : 'a -- m --> unit) (ls : list _ {n}) return using (m + 3.0) * $n =
+  case ls of
+      Nil => ()
+    | Cons (x, xs) => f x; app f xs
+                   
 (* fold-left *)
 fun foldl ['a 'b] {m n : Nat} (f : 'a * 'b -- $m --> 'b) acc (l : list 'a {n}) return (* 'b *) using $(m + 4) * $n =
   case l of

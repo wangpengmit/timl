@@ -62,8 +62,9 @@ fun MakeSubset (name, s, p) = Subset ((s, dummy), Bind.Bind ((name, dummy), p), 
 local
   fun IV n = VarI (ID (n, dummy), [])
 in
-fun TSomeNat_packed () = TExistsI $ IBindAnno ((("n", dummy), MakeSubset ("n", BSNat, IV 0 %< ConstIN (2, dummy) %** ("256", dummy))), TNat $ IV 0)
-fun TSomeNat () = TRec $ TBindAnno ((("some_nat", dummy), KType), TSomeNat_packed ())
+fun TSomeNat_packed () = TExistsI $ IBindAnno ((("__VC", dummy), MakeSubset ("__VC", BSUnit, True dummy)), TNat $ IV 0)
+fun TSomeNat_packed2 () = TExistsI $ IBindAnno ((("n", dummy), MakeSubset ("n", BSNat, IV 0 %< ConstIN (2, dummy) %** ("256", dummy))), TSomeNat_packed ())
+fun TSomeNat () = TRec $ TBindAnno ((("some_nat", dummy), KType), TSomeNat_packed2 ())
 end
            
 end
