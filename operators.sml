@@ -11,13 +11,16 @@ datatype idx_const =
 
 datatype idx_un_op =
          ToReal
-         | Log2
          | Ceil
          | Floor
          | B2n
          | Neg
          | IUDiv of int
+         | Log of string
          | IUExp of string
+
+val Log2 = Log "2"
+val Log10 = Log "10"
                
 datatype idx_bin_op =
 	 AddI
@@ -282,7 +285,7 @@ fun str_idx_const c =
 fun str_idx_un_op opr =
   case opr of
       ToReal => "$"
-    | Log2 => "log2"
+    | Log base => sprintf "log$" [base]
     | Ceil => "ceil"
     | Floor => "floor"
     | B2n => "b2n"

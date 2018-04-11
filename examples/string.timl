@@ -51,16 +51,23 @@ fun nat2bytes {d : Nat} {i : Nat | 10 ** d <= i /\ i < 10 ** (d+1) \/ i = 0 /\ d
   in
   ifdec i #< #10 then
     [nat2byte i] : list byte {d+1}
-  (* todo: need to fix precedence here *)
+  (* todo: bug. Need to fix precedence here *)
   else int2byte (nat2int i mod 10) :: (@nat2bytes {d-1} {_} (i #/ #10)) : list byte {d+1} using 3.0 + 8.0 * $d
   end
 
 (*   10**77 < 2**256 < 10**78   *)
+datatype lemma2 {n : Nat} =
+         Lemma2 {n < 2 ** 256 -> floor (log10 $n) < 78} {10 ** floor (log10 $n) <= n /\ n < 10 * floor (log10 $n)} of lemma2 {n}
+
+fun lemma2 {n : Nat} () return lemma2 {n} =
+  @Lemma2 {n} {admit} {admit}
+          
 datatype string_from_int = StringFromInt {len : Nat | len <= 78} of string {len} --> string_from_int
                                                                         
-fun int2str i return string_from_int using 78.0 =
+fun int2str i return string_from_int using 1400.0 =
   let
     val @SomeNat {n} n = int2nat i
+    val Lemma2 _ = @lemma2 {n} ()
   in
     StringFromInt (fromList <| rev <| (@nat2bytes {floor (log10 $n)} {_} n))
   end

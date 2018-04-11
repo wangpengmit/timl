@@ -49,7 +49,7 @@ infixr 0 !!
 fun idx_un_op_type opr =
   case opr of
       ToReal => (Nat, Time)
-    | Log2 => (Time, Time)
+    | Log _ => (Time, Time)
     | Ceil => (Time, Nat)
     | Floor => (Time, Nat)
     | B2n => (BoolSort, Nat)

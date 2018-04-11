@@ -70,7 +70,18 @@ fun substr start len s = substring (s, start, min (len, size s - start))
 fun str_ls f ls = (surround "[" "]" o join ", " o map f) ls
 fun str_pair (f, g) (a, b) = sprintf "($, $)" [f a, g b]
 fun str_opt f opt = (default "" o Option.map f) opt
-val str_int = Int.toString
+(* val str_int = Int.toString *)
+fun str_int i =
+  let
+    val ord0 = Char.ord #"0"
+    fun d2c d = Char.chr (ord0 + d)
+    fun nat2list i =
+      if i < 10 then [d2c i]
+      else d2c (i mod 10) :: (nat2list (i div 10))
+    val (sgn, abs) = if i < 0 then ([#"-"], ~i) else ([], i)
+  in
+    String.implode $ sgn @ (rev $ nat2list abs)
+  end
 fun str_bool b = if b then "true" else "false"
 
 fun id x = x

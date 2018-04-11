@@ -52,8 +52,8 @@ fun print_i ctx i =
     | UnOpI (opr, i, _) => 
       (case opr of
            ToReal => sprintf "(to_real $)" [print_i ctx i]
-         | Log2 =>
-           sprintf "(log2 $)" [print_i ctx i]
+         | Log base =>
+           sprintf "(log $ $)" [base, print_i ctx i]
            (* raise SMTError "can't handle log2" *)
          | Ceil => sprintf "(ceil $)" [print_i ctx i]
          | Floor => sprintf "(floor $)" [print_i ctx i]
@@ -200,7 +200,7 @@ fun prelude get_ce = [
     (* "  (! (=> (= 0 y) (= (exp_i_i x y) 1))", *)
     (* "  :pattern ((exp_i_i x y)))))", *)
     
-    "(declare-fun log2 (Real) Real)",
+    "(declare-fun log (Real Real) Real)",
     (* "(assert (forall ((x Real) (y Real))", *)
     (* "  (! (=> (and (< 0 x) (< 0 y)) (= (log2 ( * x y)) (+ (log2 x) (log2 y))))", *)
     (* "    :pattern ((log2 ( * x y))))))", *)
