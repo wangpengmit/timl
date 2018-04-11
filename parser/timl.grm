@@ -43,6 +43,12 @@ open Ast
     | NAT_GE
     | NAT_EQ
     | NAT_NEQ
+    | B_LT
+    | B_GT
+    | B_LE
+    | B_GE
+    | B_EQ
+    | B_NEQ
     | INT of int
     | NNREAL of string
     | BAR
@@ -166,6 +172,9 @@ open Ast
        | datatype_def of datatype_def
          (* | sig_anno_opt of sig_anno option *)
        | datatype_def_kind of bsort list
+       | id_or_bsort_bind of id_or_bsort_bind list
+       | id_or_bsort_bind_plus of id_or_bsort_bind list
+       | id_or_bsort_bind_star of id_or_bsort_bind list
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
 
@@ -186,9 +195,10 @@ open Ast
 %left DOUBLE_POND
 %left DOUBLE_EQ
 %nonassoc TILDE
-%nonassoc EQ NEQ LE LT GE GT NAT_LT
+%nonassoc EQ NEQ LE LT GE GT NAT_EQ NAT_NEQ NAT_LT NAT_GT NAT_LE NAT_GE B_EQ B_NEQ B_LT B_GT B_LE B_GE
 %left PLUS MINUS NAT_PLUS NAT_MINUS
-%left MULT DIV MAX MIN NAT_MULT NAT_DIV
+%left MULT DIV MOD MAX MIN NAT_MULT NAT_DIV
+%left EXP
 (* %left APP *)
 (* %left APPR *)
 
@@ -264,6 +274,7 @@ ty_term : ty_atom (ty_atom)
 ty_atom : long_id (VarT long_id)
         | LPAREN ty RPAREN (ty)
         | quan sort_bind_plus COMMA ty (Quan (quan, sort_bind_plus, ty, (quanleft, tyright)))
+        | FN id_or_bsort_bind_plus DARROW ty (TAbs (id_or_bsort_bind_plus, ty, (FNleft, tyright)))
 
 exp : aexp (aexp)
      | exp PLUS exp (BinOp (EBPrim EBPIntAdd, exp1, exp2, (exp1left, exp2right)))
@@ -327,9 +338,12 @@ idx : aidx (aidx)
     | idx MULT idx (BinOpI (MultI, idx1, idx2, (idx1left, idx2right)))
     | idx DIV INT (DivI (idx, (INT, (INTleft, INTright)), (idxleft, INTright)))
     | idx EXP idx (BinOpI (ExpNI, idx1, idx2, (idx1left, idx2right)))
-    | idx DOUBLE_EQ idx (BinOpI (EqI, idx1, idx2, (idx1left, idx2right)))
-    | idx LT idx (BinOpI (LtI, idx1, idx2, (idx1left, idx2right)))
-    | idx GE idx (BinOpI (GeI, idx1, idx2, (idx1left, idx2right)))
+    | idx B_EQ idx (BinOpI (EqI, idx1, idx2, (idx1left, idx2right)))
+    | idx B_NEQ idx (let val r = (idx1left, idx2right) in UnOpI (Neg, BinOpI (EqI, idx1, idx2, r), r) end)
+    | idx B_LT idx (BinOpI (LtI, idx1, idx2, (idx1left, idx2right)))
+    | idx B_GT idx (BinOpI (GtI, idx1, idx2, (idx1left, idx2right)))
+    | idx B_LE idx (BinOpI (LeI, idx1, idx2, (idx1left, idx2right)))
+    | idx B_GE idx (BinOpI (GeI, idx1, idx2, (idx1left, idx2right)))
     | idx DOUBLE_POND idx (BinOpI (AndI, idx1, idx2, (idx1left, idx2right)))
     | idx aidx (BinOpI (IApp, idx, aidx, (idxleft, aidxright)))
 
@@ -492,3 +506,11 @@ tnames : LSQ id_star RSQ (id_star)
 
 optional_colon_sort : COLON sort (SOME sort)
                     | (NONE)
+
+id_or_bsort_bind : id ([inl id])
+                 | bsorting (map inr bsorting)
+id_or_bsort_bind_star : id_or_bsort_bind id_or_bsort_bind_star (id_or_bsort_bind @ id_or_bsort_bind_star)
+	  | ([])
+id_or_bsort_bind_plus : id_or_bsort_bind id_or_bsort_bind_star (id_or_bsort_bind @ id_or_bsort_bind_star)
+
+                        

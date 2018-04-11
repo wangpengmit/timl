@@ -13,9 +13,9 @@ end
 signature SIMP_PARAMS = sig
   structure Idx : IDX where type var = int LongId.long_id
                                  and type base_sort = BaseSorts.base_sort
-                                 and type name = string * Region.region
-                                          and type region = Region.region
-                                                   and type 'idx exists_anno = ('idx -> unit) option
+                                          and type name = string * Region.region
+                                                   and type region = Region.region
+                                                            and type 'idx exists_anno = ('idx -> unit) option
   val get_region_i : Idx.idx -> Region.region
   val get_region_p : Idx.prop -> Region.region
   val eq_i : Idx.idx -> Idx.idx -> bool
@@ -205,7 +205,7 @@ local
                       N1 r
                 in
                   case i2 of
-                      IConst (ICNat n, _) => exp i1 n
+                      IConst (ICNat n, _) => if n <= 8 then mark $ exp i1 n else def ()
                     | UnOpI (B2n, i, _) => Ite (i, i1, N1 r, r)
                     | _ =>
                       let
@@ -221,12 +221,11 @@ local
                           | NONE => def ()
                       end
                 end
-              | LtI =>
-                def ()
-              | GeI =>
-                def ()
-              | BoundedMinusI =>
-                def ()
+              | LtI => def ()
+              | GtI => def ()
+              | LeI => def ()
+              | GeI => def ()
+              | BoundedMinusI => def ()
               | MinusI => raise Impossible "simp_p()/MinusI"
           end
         | Ite (i, i1, i2, r) =>
@@ -275,7 +274,7 @@ local
   fun passp p =
     let
       fun r () = get_region_p p
-      (* val () = println $ str_p p *)
+                              (* val () = println $ str_p p *)
     in
       case p of
 	  BinConn (opr, p1, p2) =>
@@ -512,7 +511,7 @@ local
             val _ = unset ()
             (* val () = println "before f()" *)
             val a = f a
-            (* val () = println "after f()" *)
+                      (* val () = println "after f()" *)
           in
 	    if !changed then loop a
 	    else a
@@ -526,12 +525,12 @@ fun simp_i i =
   let
     (* val () = println $ "Before simp_i: " ^ str_i [] [] i *)
     val i = until_unchanged passi i
-    (* val () = println $ "After simp_i:  " ^ str_i [] [] i *)
-    (* val () = println "" *)
+                            (* val () = println $ "After simp_i:  " ^ str_i [] [] i *)
+                            (* val () = println "" *)
   in
     i
   end
-                             
+    
 fun simp_i_with_plugin plugin i =
   let
     fun iter i =
@@ -550,8 +549,8 @@ fun simp_p p =
   let
     (* val () = println $ "Before simp_p: " (* ^ str_p [] [] p *) *)
     val p = until_unchanged passp p
-    (* val () = println $ "After simp_p:  " (* ^ str_p [] [] p *) *)
-    (* val () = println "" *)
+                            (* val () = println $ "After simp_p:  " (* ^ str_p [] [] p *) *)
+                            (* val () = println "" *)
   in
     p      
   end

@@ -42,6 +42,8 @@ type bsort_bind = id * bsort * region
 
 fun sortings (ids, s, r) = map (fn id => (id, s, r)) ids
 fun bsortings (ids, b, r) = map (fn id => (id, b, r)) ids
+
+type id_or_bsort_bind = (id, bsort_bind) sum 
                                
 datatype ty =
 	 VarT of long_id
@@ -50,6 +52,7 @@ datatype ty =
 	 | Quan of quan * sort_bind list * ty * region
 	 | AppTT of ty * ty * region
 	 | AppTI of ty * idx * region
+	 | TAbs of id_or_bsort_bind list * ty * region
 
 fun get_region_long_id (m, (_, r)) =
     case m of
@@ -64,6 +67,7 @@ fun get_region_t t =
       | Quan (_, _, _, r) => r
       | AppTT (_, _, r) => r
       | AppTI (_, _, r) => r
+      | TAbs (_, _, r) => r
 
 type constr_core = ty * ty option
 type constr_decl = id * sort_bind list * constr_core option * region
@@ -181,6 +185,8 @@ type reporter = string * pos * pos -> unit
 fun underscore r = (NONE, ("_", r))
 
 fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
-                                       
+
+fun UnOpI (opr, i, r) = BinOpI (IApp, VarI (NONE, (str_idx_un_op opr, r)), i, r)
+  
 end
 

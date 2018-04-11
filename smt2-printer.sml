@@ -22,11 +22,15 @@ fun print_idx_bin_op opr =
       | EqI => "="
       | AndI => "and"
       | ExpNI => "exp_i_i"
+      (* | ExpNI => "^" *)
       | LtI => "<"
+      | GtI => ">"
+      | LeI => "<="
       | GeI => ">="
       | MaxI => raise Impossible "print_idx_bin_op ()"
       | MinI => raise Impossible "print_idx_bin_op ()"
-      | TimeApp => raise Impossible "print_idx_bin_op ()"
+      | IApp => raise Impossible "print_idx_bin_op ()"
+      | MinusI => raise Impossible "print_idx_bin_op ()"
         
 fun print_i ctx i =
   case i of
@@ -189,7 +193,12 @@ fun prelude get_ce = [
     "(declare-datatypes () ((Unit TT)))",
 
     "(declare-fun exp_i_i (Int Int) Int)",
-    (* "(declare-fun exp_i_i (Int) Int)", *)
+    (* "(assert (forall ((x Real) (y Real))", *)
+    (* "  (! (=> (<= 1 y) (= (exp_i_i x y) ( * x (exp_i_i x (- y 1)))))", *)
+    (* "  :pattern ((exp_i_i x y)))))", *)
+    (* "(assert (forall ((x Real) (y Real))", *)
+    (* "  (! (=> (= 0 y) (= (exp_i_i x y) 1))", *)
+    (* "  :pattern ((exp_i_i x y)))))", *)
     
     "(declare-fun log2 (Real) Real)",
     (* "(assert (forall ((x Real) (y Real))", *)

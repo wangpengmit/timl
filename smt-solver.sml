@@ -54,7 +54,7 @@ fun smt_solver filename get_ce(*get counterexample?*) solver vcs =
       (* val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs *)
       val get_ce = if length vcs = 1 then get_ce else false
       val smt2 = to_smt2 get_ce vcs
-      (* val () = println smt2 *)
+      val () = println smt2
       val (dir, file) = split_dir_file filename
       val smt2_filename = curry join_dir_file dir $ "." ^ file ^ ".smt2"
       val resp_filename = curry join_dir_file dir $ "." ^ file ^ ".lisp"
@@ -70,7 +70,7 @@ fun smt_solver filename get_ce(*get counterexample?*) solver vcs =
       (* val () = print $ sprintf "Solving by SMT solver \"$\" ... " [smt_cmd] *)
       val _ = system (sprintf "$ $ > $" [smt_cmd, smt2_filename, resp_filename])
       (* val () = println "Finished SMT solving." *)
-      (* val () = println $ read_file resp_filename *)
+      val () = println $ read_file resp_filename
       val resps = SExpParserString.parse_file resp_filename
       (* val () = println $ str_int $ length resps *)
       val group_size = if get_ce then 2 else 1

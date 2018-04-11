@@ -66,6 +66,8 @@ fun idx_bin_op_type opr =
     | IApp => raise Impossible "idx_bin_op_type ()"
     | EqI => raise Impossible "idx_bin_op_type ()"
     | LtI => raise Impossible "idx_bin_op_type ()"
+    | GtI => raise Impossible "idx_bin_op_type ()"
+    | LeI => raise Impossible "idx_bin_op_type ()"
     | GeI => raise Impossible "idx_bin_op_type ()"
     | AddI => raise Impossible "idx_bin_op_type ()"
     | MultI => raise Impossible "idx_bin_op_type ()"
@@ -273,7 +275,7 @@ and get_bsort gctx (ctx, i) =
                  end
                | IUExp n =>
                  let 
-                   val i = check_bsort (ctx, i, Base Time(* todo: bug. This is not enforced in rbt.timl *))
+                   val i = check_bsort (ctx, i, Base Time)
                  in
                    (ExpI (i, (n, r)), Base Time)
                  end
@@ -327,8 +329,10 @@ and get_bsort gctx (ctx, i) =
                 | MaxI => overloaded [Nat, Time] NONE
                 | MinI => overloaded [Nat, Time] NONE
                 | EqI => overloaded [Nat, BoolSort, UnitSort] (SOME BoolSort)
-                | LtI => overloaded [Nat, Time, BoolSort, UnitSort] (SOME BoolSort)
-                | GeI => overloaded [Nat, Time, BoolSort, UnitSort] (SOME BoolSort)
+                | LtI => overloaded [Nat, Time(* , BoolSort, UnitSort *)] (SOME BoolSort)
+                | GtI => overloaded [Nat, Time(* , BoolSort, UnitSort *)] (SOME BoolSort)
+                | LeI => overloaded [Nat, Time(* , BoolSort, UnitSort *)] (SOME BoolSort)
+                | GeI => overloaded [Nat, Time(* , BoolSort, UnitSort *)] (SOME BoolSort)
                 | _ =>
                   let
                     val (arg1type, arg2type, rettype) = idx_bin_op_type opr

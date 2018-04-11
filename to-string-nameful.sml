@@ -224,7 +224,7 @@ fun strn_mt t =
         else
           sprintf "($ -- $ --> $)" [strn_mt t1, strn_i d, strn_mt t2]
       | TyNat (i, _) => sprintf "(nat $)" [strn_i i]
-      | TyArray (t, i) => sprintf "(arr $ $)" [strn_mt t, strn_i i]
+      | TyArray (t, i) => sprintf "(array $ $)" [strn_mt t, strn_i i]
       | Unit _ => "unit"
       | Prod (t1, t2) => sprintf "($ * $)" [strn_mt t1, strn_mt t2]
       | UniI _ =>

@@ -29,6 +29,8 @@ datatype idx_bin_op =
          | AndI
          | ExpNI
          | LtI
+         | GtI
+         | LeI
          | GeI
          | BoundedMinusI
          | MinusI (* only used internally for annotation propagation *)
@@ -295,11 +297,13 @@ fun str_idx_bin_op opr =
     | MaxI => "max"
     | MinI => "min"
     | IApp => "app"
-    | EqI => "=="
     | AndI => "&&"
     | ExpNI => "^"
-    | LtI => "<"
-    | GeI => ">="
+    | EqI => "=?"
+    | LtI => "<?"
+    | GtI => ">?"
+    | LeI => "<=?"
+    | GeI => ">=?"
     | BoundedMinusI => "-"
     | MinusI => "MinusI"
 

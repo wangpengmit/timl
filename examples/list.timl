@@ -52,6 +52,8 @@ fun rev_append {n m : Nat} (l : list _ {n}, acc : list _ {m}) return list _ {n +
         [] => acc
       | hd :: tl => rev_append (tl, hd :: acc)
 
+fun rev {n : Nat} (xs : list _ {n}) return list _ {n} using 1.0 + $n = rev_append (xs, [])
+                                                                                  
 (* another version with Big-O complexity *)
 absidx T_rev_append : BigO (fn n => $n) (* = fn n => 2.0 * $n *) with
 fun rev_append_2 {n1 n2 : Nat} (xs : list _ {n1}) (ys : list _ {n2}) return list _ {n1 + n2} using T_rev_append n1 =
@@ -61,8 +63,8 @@ fun rev_append_2 {n1 n2 : Nat} (xs : list _ {n1}) (ys : list _ {n2}) return list
 end
 
 (* reverse *)
-absidx T_rev : BigO (fn n => $n) with
-fun rev {n : Nat} (xs : list _ {n}) return list _ {n} using T_rev n = rev_append_2 xs []
+absidx T_rev2 : BigO (fn n => $n) with
+fun rev2 {n : Nat} (xs : list _ {n}) return list _ {n} using T_rev2 n = rev_append_2 xs []
 end
 
 open Nat

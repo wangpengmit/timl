@@ -6,54 +6,63 @@ fun printc a = __&printc a
                 
 open Array
        
-datatype string = String {len : Nat} of array byte {len} --> string
+(* datatype string = String {len : Nat} of array byte {len} --> string *)
+type string = fn {len : Nat} => array byte {len}
 
 (* new_string "abc" == String (new_array {'a', 'b', 'c'}) *)
+val a : string {3} = "abc"
     
-fun size s =
-  let
-    val String arr = s
-  in
-    nat2int <| length arr
-  end
+fun size {len : Nat} (s : string {len}) return nat {len} = length s
 
-fun concat (s1, s2) =
+fun concat {len1 len2 : Nat} (s1 : string {len1}, s2 : string {len2}) =
   let
-    val @String {len1} arr1 = s1
-    val @String {len2} arr2 = s2
-    val len1 = length arr1
-    val len2 = length arr2
+    val len1 = size s1
+    val len2 = size s2
     val len = len1 #+ len2
-    val arr = array (len, int2byte 0)
+    val s = array (len, int2byte 0)
     val () = for (#0, len1, (), fn {i : Nat | i < len1} (i : nat {i}, _) =>
-      update (arr, i, sub (arr1, i)))
+      update (s, i, sub (s1, i)))
     val () = for (#0, len2, (), fn {i : Nat | i < len2} (i : nat {i}, _) =>
-      update (arr, len1 #+ i, sub (arr2, i)))
-  in 
-    String arr
+      update (s, len1 #+ i, sub (s2, i)))
+  in
+    s
   end
 
-fun print s =
+fun print {len : Nat} (s : string {len}) =
   let
-    val @String {len} arr = s
-    val len = length arr
+    val len = size s
     val () = for (#0, len, (), fn {i : Nat | i < len} (i : nat {i}, _) =>
-      printc <| sub (arr, i))
+      printc <| sub (s, i))
   in
     ()
-end
+  end
 
-fun nat2byte i = int2byte <| nat2int i
+fun nat2byte {i : Nat} (i : nat {i}) = int2byte <| nat2int i
                           
-fun nat2bytes {d : Nat} {i : Nat | 10 ** d <= i /\ i < 10 ** (d+1) \/ i = 0 /\ d = 0} (i : nat {i}) return list byte {d+1} using $d =
-  ifdec i #< #10 then [nat2byte i]
-  else int2byte (nat2int i mod 10) :: (@nat2bytes {d-1} {_} (i #/ #10)) (* todo: need to fix precedence here *)
+datatype lemma1 {n : Nat} =
+         Lemma1 {n = 0 -> 10 ** n = 1} {n >= 1 -> 10 ** n >= 10} {n >= 1 -> 10 ** n = 10 ** (n-1) * 10} of lemma1 {n}
 
-fun int2str i return using 20.0 =
+fun lemma1 {n : Nat} () return lemma1 {n} =
+  @Lemma1 {n} {_} {admit} {admit}
+          
+fun nat2bytes {d : Nat} {i : Nat | 10 ** d <= i /\ i < 10 ** (d+1) \/ i = 0 /\ d = 0} (i : nat {i}) return list byte {d+1} using 4.0 + 8.0 * $d =
   let
-    val SomeNat n = int2nat i
+    val Lemma1 _ = @lemma1 {d} ()
   in
-    String (fromList <| rev <| nat2bytes n)
+  ifdec i #< #10 then
+    [nat2byte i] : list byte {d+1}
+  (* todo: need to fix precedence here *)
+  else int2byte (nat2int i mod 10) :: (@nat2bytes {d-1} {_} (i #/ #10)) : list byte {d+1} using 3.0 + 8.0 * $d
+  end
+
+(*   10**77 < 2**256 < 10**78   *)
+datatype string_from_int = StringFromInt {len : Nat | len <= 78} of string {len} --> string_from_int
+                                                                        
+fun int2str i return string_from_int using 78.0 =
+  let
+    val @SomeNat {n} n = int2nat i
+  in
+    StringFromInt (fromList <| rev <| (@nat2bytes {floor (log10 $n)} {_} n))
   end
 
 val str_int = int2str

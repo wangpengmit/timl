@@ -180,7 +180,7 @@ fun interp_nat_expr_bin_op opr (i1, i2) err =
     | EBNMult => i1 %* i2
     | EBNDiv =>
       case i2 of
-          IConst (ICNat n, r) => UnOpI (IUDiv n, i1, r)
+          IConst (ICNat n, r) => UnOpI (Floor, UnOpI (IUDiv n, UnOpI (ToReal, i1, r), r), r)
         | _ => err ()
          
 fun interp_nat_cmp r opr =

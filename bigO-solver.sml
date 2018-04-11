@@ -133,7 +133,7 @@ fun use_bigO_hyp hs i =
 local
   open CollectVar
 in
-  fun contains i x = mem eq_var x $ collect_var_i_i i
+fun contains i x = mem eq_var x $ collect_var_i_i i
 end
 
 local
@@ -157,7 +157,7 @@ val add_class_entries = foldl' add_class_entry (0, 0)
 structure M = LongIdMap.LongIdBinaryMap
 structure MU = MapUtilFn (M)
 open MU
-                
+       
 val mult_class = M.unionWith mult_class_entry
                              
 val add_class = M.unionWith add_class_entry
@@ -280,15 +280,15 @@ fun timefun_le is_outer hs a b =
         val () = if arity = length names2 then () else raise Error "timefun_le: arity must equal"
         val a =
             (* if arity <= 2 then *)
-              use_bigO_hyp hs a
-            (* else *)
-            (*   a *)
+            use_bigO_hyp hs a
+        (* else *)
+        (*   a *)
         val summarize = summarize (is_outer, fn s => raise Error s)
         val (_, i1) = collect_IAbs a
         val (_, i2) = collect_IAbs b
         val cls1 = summarize i1
         val cls2 = summarize i2
-        (* val () = println $ sprintf "$ <=? $" [str_cls cls1, str_cls cls2] *)
+                             (* val () = println $ sprintf "$ <=? $" [str_cls cls1, str_cls cls2] *)
       in
         class_le (cls1, cls2)
       end
@@ -313,7 +313,7 @@ fun is_VarI i =
 fun somes ls = List.mapPartial id ls
 
 fun mapWithState f s ls = rev $ fst $ foldl (fn (x, (acc, s)) => let val (x, s) = f (x, s) in (x :: acc, s) end) ([], s) ls
-                               
+                              
 local
   (* for early return *)        
   exception Succeeded of idx
@@ -399,10 +399,10 @@ fun by_master_theorem uvar (hs, p) =
     val arity = is_time_fun b !! (fn () => raise Error $ sprintf "bsort $ not time fun" [str_raw_bs b])
     fun time_fun_var_name n =
       "__x" ^ str_int n
-      (* if n = 0 then "n" *)
-      (* else if n = 1 then "m" *)
-      (* else *)
-      (*   "m" ^ str_int n *)
+    (* if n = 0 then "n" *)
+    (* else if n = 1 then "m" *)
+    (* else *)
+    (*   "m" ^ str_int n *)
     val ext_ctx = Range.map (fn n => (time_fun_var_name n, Base Nat)) $ Range.zero_to arity
     val uvar_ctx = ext_ctx @ uvar_ctx
     (* val () = println "  to solve this: " *)
@@ -495,20 +495,20 @@ fun by_master_theorem uvar (hs, p) =
               val bs = infer_b_i n' @ concatMap infer_b_hyp hs
               fun good_b b =
                 ((* println (str_int b); *)
-                if ask_smt (n' %<= UnOpI (Ceil, DivI (n_, (b, dummy)), dummy)) then
-                  SOME b
-                else NONE)
+                  if ask_smt (n' %<= UnOpI (Ceil, DivI (n_, (b, dummy)), dummy)) then
+                    SOME b
+                  else NONE)
             in
               firstSuccess good_b bs
             end
           fun is_sub_problem i =
             ((* println (str_raw_i i); *)
-            case i of
-                BinOpI (IApp, g, n') =>
-                if eq_i g main_fun then
-                  ((* println (str_i [] hs_ctx n');  *)infer_b n_ n')
-                else NONE
-              | _ => NONE
+              case i of
+                  BinOpI (IApp, g, n') =>
+                  if eq_i g main_fun then
+                    ((* println (str_i [] hs_ctx n');  *)infer_b n_ n')
+                  else NONE
+                | _ => NONE
             )
           val (a, b, others) = get_params is_sub_problem is
           val () = if b > 1 then () else raise Error "b > 1"
@@ -571,11 +571,11 @@ fun by_master_theorem uvar (hs, p) =
           raise Succeeded i
         end
         handle Error msg =>
-        let
-          (* val () = println $ sprintf "Case failed because: $" [msg] *)
-        in
-          ()
-        end
+               let
+                 (* val () = println $ sprintf "Case failed because: $" [msg] *)
+               in
+                 ()
+               end
     val () =
         let
           val () = println "Trying [f n <= T n] case ..."
@@ -595,12 +595,12 @@ fun by_master_theorem uvar (hs, p) =
           raise Succeeded i
         end
         handle Error msg =>
-        let
-          (* val () = println $ sprintf "Case failed because: $" [msg] *)
-        in
-          ()
-        end
-    (* val () = println "Big-O inference failed because none of the cases applies" *)
+               let
+                 (* val () = println $ sprintf "Case failed because: $" [msg] *)
+               in
+                 ()
+               end
+                 (* val () = println "Big-O inference failed because none of the cases applies" *)
   in
     NONE    
   end
@@ -618,7 +618,7 @@ fun by_master_theorem uvar (hs, p) =
            NONE
          end
 end
-    
+
 fun go_through f ls =
   case ls of
       [] => []
@@ -637,13 +637,13 @@ fun inside_arity arity id =
     | QID _ => false
 fun outside_arity arity id =
   not $ inside_arity arity id
-                                                            
+      
 exception MasterTheoremCheckFail of region * string list
 
 structure Unify = UnifyFn (struct exception UnifyError = TypecheckUtil.Error end)
                           
 local
-exception Succeeded of vc list * vc list
+  exception Succeeded of vc list * vc list
 in
 fun solve_exists (vc as (hs, p), vcs) =
   let
@@ -652,7 +652,7 @@ fun solve_exists (vc as (hs, p), vcs) =
     (* val () = app println $ str_vc false "" vc *)
     val hs_ctx = hyps2ctx hs
     val p = normalize_p p
-    exception Error of string
+    exception SolveExistsError of string
     val () =
         let
           val () = println "Trying case [_ <== spec] ..."
@@ -660,17 +660,17 @@ fun solve_exists (vc as (hs, p), vcs) =
               case p of
                   BinPred (BigO, f, spec) =>
                   (f, spec)
-                | _ => raise Error "wrong pattern"
-          val ((uvar, _), args) = is_IApp_UVarI f !! (fn () => raise Error "not [uvar arg1 ...]")
-          val (_, uvar_ctx, b) = get_uvar_info uvar !! (fn () => raise Error "not fresh uvar")
+                | _ => raise SolveExistsError "wrong pattern"
+          val ((uvar, _), args) = is_IApp_UVarI f !! (fn () => raise SolveExistsError "not [uvar arg1 ...]")
+          val (_, uvar_ctx, b) = get_uvar_info uvar !! (fn () => raise SolveExistsError "not fresh uvar")
           val b = update_bs b
-          val arity = is_time_fun b !! (fn () => raise Error $ sprintf "bsort $ not time fun" [str_raw_bs b])
-          val () = if arity >= 1 then () else raise Error "not (arity >= 1)"
-          val () = if length args = length uvar_ctx then () else raise Error "length args <> length uvar_ctx"
-                                  
-          (* val () = if null args then () else raise Error "args not null" *)
-          (* val () = if null ctx then () else raise Error "ctx not null" *)
-                                                
+          val arity = is_time_fun b !! (fn () => raise SolveExistsError $ sprintf "bsort $ not time fun" [str_raw_bs b])
+          val () = if arity >= 1 then () else raise SolveExistsError "not (arity >= 1)"
+          val () = if length args = length uvar_ctx then () else raise SolveExistsError "length args <> length uvar_ctx"
+                                                                       
+          (* val () = if null args then () else raise SolveExistsError "args not null" *)
+          (* val () = if null ctx then () else raise SolveExistsError "ctx not null" *)
+                                                                       
           val () = println "Infer and check ..."
           fun on_fail_all () =
             let
@@ -688,11 +688,11 @@ fun solve_exists (vc as (hs, p), vcs) =
             let
               (* val (ctx1, _) = collect_IAbs a *)
               (* val (ctx2, _) = collect_IAbs b *)
-              (* val () = if length ctx1 = length ctx2 then () else raise Error "combine_fun(): arities don't match" *)
-              (* val () = if length ctx1 = arity then () else raise Error "combine_fun(): wrong arity" *)
+              (* val () = if length ctx1 = length ctx2 then () else raise SolveExistsError "combine_fun(): arities don't match" *)
+              (* val () = if length ctx1 = arity then () else raise SolveExistsError "combine_fun(): wrong arity" *)
               val ret = if timefun_le is_outer hs a b then b
                         else if timefun_le is_outer hs b a then a
-                        else raise Error(* Impossible *) $ sprintf "combine_fun(): neither a <= b nor b <= a\n  a=$\n  b=$" [str_i empty hs_ctx a, str_i empty hs_ctx b]
+                        else raise SolveExistsError(* Impossible *) $ sprintf "combine_fun(): neither a <= b nor b <= a\n  a=$\n  b=$" [str_i empty hs_ctx a, str_i empty hs_ctx b]
             in
               ret
             end
@@ -710,21 +710,21 @@ fun solve_exists (vc as (hs, p), vcs) =
         in
           raise Succeeded ([], vcs)
         end
-        handle Error msg =>
-        let
-          (* val () = println $ sprintf "Case failed because: $" [msg] *)
-        in
-          ()
-        end
+        handle SolveExistsError msg =>
+               let
+                 val () = println $ sprintf "Case failed because: $" [msg]
+               in
+                 ()
+               end
     fun unify (uvar_side, value_side) =
       let
         val () = println $ sprintf "try to unify $ with $" [str_i empty hs_ctx uvar_side, str_i empty hs_ctx value_side]
-        val ((x, _), args) = is_IApp_UVarI uvar_side !! (fn () => raise Error "not [uvar arg1 ...]")
-        val (name, _, _) = get_uvar_info x !! (fn () => raise Error "uvar not fresh")
+        val ((x, _), args) = is_IApp_UVarI uvar_side !! (fn () => raise SolveExistsError "not [uvar arg1 ...]")
+        val (name, _, _) = get_uvar_info x !! (fn () => raise SolveExistsError "uvar not fresh")
         val value_side = normalize_i value_side
-        val () = if mem op= x (map #1 $ CollectUVar.collect_uvar_i_i value_side) then raise Error "uvar appears in value_side" else ()
+        val () = if mem op= x (map #1 $ CollectUVar.collect_uvar_i_i value_side) then raise SolveExistsError "uvar appears in value_side" else ()
 
-                           
+                                                                                                                                      
         val args = map normalize_i args
         open CollectVar
         val vars = dedup eq_var $ collect_var_i_i value_side
@@ -732,9 +732,9 @@ fun solve_exists (vc as (hs, p), vcs) =
         fun forget_nonconsuming (var : var) b =
           let
             val x = case var of
-                         ID (x, _) => x
-                       | QID _ =>
-                         raise Error "can't forget decorated variable"
+                        ID (x, _) => x
+                      | QID _ =>
+                        raise SolveExistsError "can't forget decorated variable"
             open UVarForget
             val () = println $ sprintf "forgeting $ in $" [str_i empty hs_ctx (VarI (var, [])), str_i empty hs_ctx b]
             val b = forget_i_i x 1 b
@@ -743,15 +743,15 @@ fun solve_exists (vc as (hs, p), vcs) =
             b
           end
         val value_side = foldl (fn (x, acc) => forget_nonconsuming x acc) value_side uncovered
-                  handle ForgetError _ => raise Error "forgetting failed"
+                         handle ForgetError _ => raise SolveExistsError "forgetting failed"
         val value_side = normalize_i value_side
         val uvar_side = normalize_i uvar_side
 
-                              
+                                    
         val () = println $ sprintf "Forgetting succeeded. Now try to unify $ with $" [str_i empty hs_ctx uvar_side, str_i empty hs_ctx value_side]
         val () =  Unify.unify_IApp dummy uvar_side value_side
                   handle
-                  Unify.UnifyAppUVarFailed _ => raise Error "unify_IApp() failed"
+                  Unify.UnifyAppUVarFailed _ => raise SolveExistsError "unify_IApp() failed"
         val () = println $ sprintf "?$ is instantiated to $" [str_int name, str_i empty [] (UVarI (x, dummy))]
       in
         ()
@@ -762,18 +762,18 @@ fun solve_exists (vc as (hs, p), vcs) =
           val (lhs, rhs) =
               case p of
                   BinPred (Le, lhs, rhs) => (lhs, rhs)
-                | _ => raise Error "wrong pattern"
+                | _ => raise SolveExistsError "wrong pattern"
           val () = unify (rhs, lhs)
         in
           raise Succeeded ([], vcs)
         end
-        handle Error msg =>
-        let
-          (* val () = println $ sprintf "Case failed because: $" [msg] *)
-        in
-          ()
-        end
-(*                          
+        handle SolveExistsError msg =>
+               let
+                 val () = println $ sprintf "Case failed because: $" [msg]
+               in
+                 ()
+               end
+  (*                          
     val () =
         let
           fun infer_exists hs (name_arity1 as (name1, arity1)) p =
@@ -800,7 +800,7 @@ fun solve_exists (vc as (hs, p), vcs) =
                     else NONE
                   | _ => NONE
             end
-          val (i, ret) = infer_exists hs (name, arity) p !! fn () => Error
+          val (i, ret) = infer_exists hs (name, arity) p !! fn () => SolveExistsError
           val () = println "Inferred by infer_exists():"
           val () = println $ sprintf "$ = $" [name, str_i empty [] i]
           val () = case ins of
@@ -809,7 +809,7 @@ fun solve_exists (vc as (hs, p), vcs) =
         in
           raise Succeeded (ret, vcs)
         end
-        handle Error => ()
+        handle SolveExistsError => ()
     val () = 
         let
           (* ToDo: a bit too aggressive inference strategy: infer [i] from [p1] and substitute for [i] in [p2] (assuming that [p2] doesn't contribute to inferring [i]) *)
@@ -821,7 +821,7 @@ fun solve_exists (vc as (hs, p), vcs) =
                            (* val () = app println $ (str_vc false "" (VarH (name, TimeFun arity) :: hs, p1) @ [""]) *)
                            (* val () = println "solve_exists() to solve this: " *)
                            (* val () = app println $ (str_vc false "" vc @ [""]) *)
-          val (i, vcs1) = infer_exists hs (name, arity) p1 !! fn () => Error
+          val (i, vcs1) = infer_exists hs (name, arity) p1 !! fn () => SolveExistsError
           val () = println "Inferred by infer_exists():"
           val () = println $ sprintf "$ = $" [name, str_i empty [] i]
           val () = case ins of
@@ -835,8 +835,8 @@ fun solve_exists (vc as (hs, p), vcs) =
         in
           raise Succeeded vcs
         end
-        handle Error => ()
-  *)
+        handle SolveExistsError => ()
+    *)
   in
     ([vc], vcs)
   end
@@ -852,7 +852,7 @@ fun solve_bigO_compare (vc as (hs, p)) =
         fun get_arity i = length $ fst $ collect_IAbs i
         val arity = get_arity i2
         val result = timefun_le (outside_arity arity) hs i1 i2
-        (* val () = println $ sprintf "bigO-compare result: $" [str_bool result] *)
+                                (* val () = println $ sprintf "bigO-compare result: $" [str_bool result] *)
       in
         if result then
           []
@@ -909,7 +909,7 @@ fun solve_vcs (vcs : vc list) : vc list =
     (* val () = app uvar_i_ignore_args uvars *)
     (* val vcs = map normalize_vc vcs *)
 
-                  
+    
     val vcs = go_through solve_exists vcs
     val vcs = concatMap solve_bigO_compare vcs
     val vcs = concatMap solve_fun_compare vcs
@@ -962,7 +962,7 @@ fun infer_numbers vcs0 =
         val vcs = map normalize_vc vcs
         val vcs = List.mapPartial id $ SMTSolver.smt_solver "" false NONE vcs
         val ret = null vcs
-        (* val () = println $ str_bool ret *)
+                       (* val () = println $ str_bool ret *)
       in
         ret
       end

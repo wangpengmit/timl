@@ -21,12 +21,12 @@ local
   val un_op_names = zip (un_ops, map str_idx_un_op un_ops)
   fun is_un_op (opr, i1) =
       case (opr, i1) of
-          (TimeApp, S.VarI (NONE, (x, r1))) => find_by_snd_eq op= x un_op_names
+          (IApp, S.VarI (NONE, (x, r1))) => find_by_snd_eq op= x un_op_names
         | _ => NONE
 
   fun is_ite i =
       case i of
-          S.BinOpI (IApp, S.BinOpI (IApp, S.BinOpI (TimeApp, S.VarI (NONE, (x, _)), i1, _), i2, _), i3, _) =>
+          S.BinOpI (IApp, S.BinOpI (IApp, S.BinOpI (IApp, S.VarI (NONE, (x, _)), i1, _), i2, _), i3, _) =>
           if x = "ite" then SOME (i1, i2, i3)
           else NONE
         | _ => NONE
@@ -199,6 +199,14 @@ local
 		SOME (x, ts) => AppV (to_long_id x, map elab_mt ts, map elab_i is, r)
 	      | NONE => raise Error (r, "The form of type-index application can only be [Variable Types Indices]")
 	  end
+	| S.TAbs (binds, t, r) =>
+	  let fun f (bind, t) =
+                case bind of
+                    inr (x, b, _) => MtAbsI (fst $ elab_b b, Bind (x, t), r)
+                  | inl x => MtAbs (Type, Bind (x, t), r)
+	  in
+	    foldr f (elab_mt t) binds
+	  end
 
   fun elab_return return = mapPair (Option.map elab_mt, Option.map elab_i) return
                                    
@@ -351,7 +359,7 @@ local
                     end
                   val s = unescape s
                   val e = ENewArrayValues (BaseType (Byte, r), map (fn c => EByte (c, r)) $ String.explode s, r)
-                  val e = EApp (EVar (QID $ qid_add_r r $ CSTR_STRING_NAMEFUL, false), e)
+                  (* val e = EApp (EVar (QID $ qid_add_r r $ CSTR_STRING_NAMEFUL, false), e) *)
                 in
                   e
                 end)
