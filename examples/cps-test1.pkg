@@ -1,10 +1,10 @@
-(* unit-test-basic.timl *)
-            
 (* (* basic.timl *) *)
 (* (* list.timl *) *)
 
-(* (* stdlib.pkg *) *)
+(* stdlib.pkg *)
 
+(* unit-test-basic.timl *)
+            
 (* (* unit-test-bool.timl *) *)
 (* (* unit-test-array.timl *) *)
 (* (* unit-test-list.timl *) *)

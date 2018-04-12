@@ -787,9 +787,9 @@ val anno_EIte_e2_time = ref false
 
 fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
   let
-    val () = print "tc() start: "
-    val e_input_str = (* substr 0 100 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input
-    val () = print $ e_input_str
+    (* val () = print "tc() start: " *)
+    (* val e_input_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input *)
+    (* val () = print $ e_input_str *)
     val itctx = (ictx, tctx)
     fun main () =
         case e_input of
@@ -1406,6 +1406,14 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (e, t, i_e)
         end
+      | ENewArrayValues (t, es) =>
+        let
+          val t = kc_against_kind itctx (t, KType)
+          val (es, is) = unzip $ map (fn e => tc_against_ty ctx (e, t)) es
+          val i = combine_AddI_Time is
+        in
+          (ENewArrayValues (t, es), TArr (t, ConstIN (length es, dummy)), i)
+        end
       | EHalt e =>
         let
           val (e, t_e, i_e) = tc ctx e
@@ -1421,10 +1429,10 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                       | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
                       | MTCError m => raise MTCError (m ^ extra_msg ())
                       | Impossible m => raise Impossible (m ^ extra_msg ())
-    val () = println "tc() finished:"
-    val () = println $ e_input_str
-    val () = println "of type:"
-    val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) t
+    (* val () = println "tc() finished:" *)
+    (* val () = print $ e_input_str *)
+    (* val () = println "of type:" *)
+    (* val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) t *)
     (* val () = println "of time:" *)
     (* val () = println $ (* substr 0 100 $  *)ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) i *)
   in

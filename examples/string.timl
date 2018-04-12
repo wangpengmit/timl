@@ -37,7 +37,9 @@ fun print {len : Nat} (s : string {len}) =
     ()
   end
 
-fun nat2byte {i : Nat} (i : nat {i}) = int2byte <| nat2int i
+fun int2char i = int2byte (i + 48)
+                          
+fun nat2byte {i : Nat} (i : nat {i}) = int2char <| nat2int i
                           
 datatype lemma1 {n : Nat} =
          Lemma1 {n = 0 -> 10 ** n = 1} {n >= 1 -> 10 ** n >= 10} {n >= 1 -> 10 ** n = 10 ** (n-1) * 10} of lemma1 {n}
@@ -45,14 +47,14 @@ datatype lemma1 {n : Nat} =
 fun lemma1 {n : Nat} () return lemma1 {n} =
   @Lemma1 {n} {_} {admit} {admit}
           
-fun nat2bytes {d : Nat} {i : Nat | 10 ** d <= i /\ i < 10 ** (d+1) \/ i = 0 /\ d = 0} (i : nat {i}) return list byte {d+1} using 4.0 + 8.0 * $d =
+fun nat2bytes {d : Nat} {i : Nat | 10 ** d <= i /\ i < 10 ** (d+1) \/ i = 0 /\ d = 0} (i : nat {i}) return list byte {d+1} using 6.0 + 8.0 * $d =
   let
     val Lemma1 _ = @lemma1 {d} ()
   in
   ifdec i #< #10 then
     [nat2byte i] : list byte {d+1}
   (* todo: bug. Need to fix precedence here *)
-  else int2byte (nat2int i mod 10) :: (@nat2bytes {d-1} {_} (i #/ #10)) : list byte {d+1} using 3.0 + 8.0 * $d
+  else int2char (nat2int i mod 10) :: (@nat2bytes {d-1} {_} (i #/ #10)) : list byte {d+1} using 5.0 + 8.0 * $d
   end
 
 (*   10**77 < 2**256 < 10**78   *)

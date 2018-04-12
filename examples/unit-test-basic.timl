@@ -42,7 +42,7 @@ val z = x + y + x
 
 (* (* val () = print "z=" *) *)
 (* (* val () = println (int2str z) *) *)
-val () = print "z="
+val () = print "z=(1+2)+((1+2)+1)+(1+2)="
 val () = print_int <| z
 val () = println ""
 (* (* val () = println $ str_int z *) *)
@@ -64,7 +64,7 @@ val a = f 2
 fun f x y = x + y
 
 val a = f 1 2
-val () = printls [S "a=", I a, Ln]
+val () = printls [S "a=1+2=", I a, Ln]
 
 fun foo {i : Nat} {j | j > i} () =
     let
@@ -89,7 +89,7 @@ val a = f ()
 fun twice f x = f (f x)
 
 val n = if 1 > 2 then 1 else 2
-val () = printls [S "n=", I n, Ln]
+val () = printls [S "n=(if 1 > 2 then 1 else 2)=", I n, Ln]
                                                         
 fun fact_tail {n : Nat} (n : nat {n}, acc) (* return using 3.0 * $n *) =
   ifdec n #< #1 then acc

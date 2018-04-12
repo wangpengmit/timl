@@ -63,8 +63,9 @@ datatype ('idx, 'ty) inst =
          | IUnpack of tbinder * reg * ('idx, 'ty) value outer
          | IUnpackI of ibinder * reg * ('idx, 'ty) value outer
          | IInj of reg * injector * ('idx, 'ty) value inner * 'ty inner
-         (* | IString of reg * string *)
          | IAscTime of 'idx inner
+         | INewArrayValues of reg * 'ty inner * ('idx, 'ty) value inner list (* the ability to take unlimited number of arguments is a bit unrealistic for an instruction *)
+         (* | IString of reg * string *)
 
 datatype ('idx, 'ty) insts =
          ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind

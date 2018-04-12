@@ -487,37 +487,21 @@ fun cps (e, t_e) (k, j_k) =
       in
         cps (e1, t_e1) (e, i_e)
       end
-    (* | S.EBinOp (EBPair, e1, e2) => *)
-    (*   (* [[ (e1, e2) ]](k) = [[e1]] (\x1. [[e2]] (\x2. k (x1, x2))) *) *)
-    (*   let *)
-    (*     val (t_e1, t_e2) = assert_TProd t_e *)
-    (*     val x1 = fresh_evar () *)
-    (*     val x2 = fresh_evar () *)
-    (*     val t_x1 = cps_t t_e1 *)
-    (*     val t_x2 = cps_t t_e2 *)
-    (*     val e = k $$ EPair (EV x1, EV x2) *)
-    (*     val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e) *)
-    (*     val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T_1) *)
-    (*     val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e) *)
-    (*   in *)
-    (*     cps (e1, t_e1) (e, i_e) *)
-    (*   end *)
-    (* | S.EBinOp (EBRead, e1, e2) => *)
-    (*   (* [[ read e1 e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. k (read x1 x2))) *) *)
-    (*   let *)
-    (*     val (e1, t_e1) = assert_EAscType e1 *)
-    (*     val (e2, t_e2) = assert_EAscType e2 *)
-    (*     val x1 = fresh_evar () *)
-    (*     val x2 = fresh_evar () *)
-    (*     val t_x1 = cps_t t_e1 *)
-    (*     val t_x2 = cps_t t_e2 *)
-    (*     val e = k $$ EBinOp (EBRead, EV x1, EV x2) *)
-    (*     val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e) *)
-    (*     val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T_1) *)
-    (*     val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e) *)
-    (*   in *)
-    (*     cps (e1, t_e1) (e, i_e) *)
-    (*   end *)
+    | S.ENewArrayValues (t, es) =>
+      let
+        val t_x = cps_t t
+        val xs_names_es = mapi (fn (i, e) => (fresh_evar (), "x" ^ str_int (i+1), e)) es
+        val xs = map (fn (x, _, _) => x) xs_names_es
+        val ek = k $$ ENewArrayValues (t_x, map EV xs)
+        fun f ((x, name, e), (ek, i_ek)) =
+          let
+            val ek = EAbs $ close0_e_e_anno ((x, name, t_x), ek)
+          in
+            cps (e, t) (ek, i_ek)
+          end
+      in
+        foldr f (ek, j_k %+ T_1) xs_names_es
+      end
     | S.EUnOp (opr, e) =>
       (* [[ opr e ]](k) = [[e]](\x. k (opr x)) *)
       let
@@ -844,6 +828,7 @@ and check_decl e =
         (check_value e1;
          check_value e2;
          check_value e3)
+      | ENewArrayValues (t, es) => app check_value es
       | EMallocPair _ => ()
       | EPairAssign (e1, _, e2) =>
         (check_value e1;

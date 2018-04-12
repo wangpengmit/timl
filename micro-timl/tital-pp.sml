@@ -325,6 +325,24 @@ fun pp_inst (params as (str_i, pp_t, pp_v)) s inst =
           str ")";
           close_box ()
         )
+      | INewArrayValues (r, t, vs) =>
+        (
+          open_vbox ();
+          open_hbox ();
+          str "new_array_with_values";
+          space ();
+          str "(";
+          str $ str_reg r;
+          comma ();
+          pp_t $ unInner t;
+          close_box ();
+          comma ();
+          open_vbox_noindent ();
+          app (fn v => (pp_v v; comma ())) vs;
+          str ")";
+          close_box ();
+          close_box ()
+        )
       (* | IString (r, s) => *)
       (*   ( *)
       (*     open_hbox (); *)

@@ -457,7 +457,7 @@ fun test1 dirname =
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
     val () = println "Time:"
-    val i = simp_i i
+    (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
     val () = pp_e (NONE, NONE) $ export ((* (SOME 1) *)NONE, NONE) ToStringUtil.empty_ctx e
     val () = println ""
@@ -481,7 +481,7 @@ fun test1 dirname =
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
     val () = println "Time:"
-    val i = simp_i i
+    (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
                      
     val () = println "PairAlloc.UnitTest passed"

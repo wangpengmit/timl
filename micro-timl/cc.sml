@@ -570,6 +570,7 @@ fun cc e =
       | ENever t => ENever (cc_t t)
       | EBuiltin (name, t) => EBuiltin (name, cc_t t)
       | ETriOp (ETWrite, e1, e2, e3) => EWrite (cc e1, cc e2, cc e3)
+      | ENewArrayValues (t, es) => ENewArrayValues (cc_t t, map cc es)
       | EHalt e => EHalt (cc e)
       | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
     (* val () = println $ "cc() finished: " ^ e_str *)
@@ -1084,7 +1085,7 @@ fun test1 dirname =
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
     val () = println "Time:"
-    val i = simp_i i
+    (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
                      
     val () = println "CC.UnitTest passed"

@@ -288,6 +288,15 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i %+ T1
             end
+          | INewArrayValues (rd, t, vs) =>
+            let
+              val t = kc_against_kind itctx (unInner t, KType)
+              val () = app (fn v => tc_v_against_ty ctx (unInner v, t)) vs
+              val t = TArr (t, ConstIN (length vs, dummy))
+              val i = tc_insts (add_r (rd, t) ctx) I
+            in
+              i %+ T1
+            end
           | IBinOp (IBRead, rd, rs, v) =>
             let
               val t1 = tc_v ctx $ VReg rs

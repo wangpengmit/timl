@@ -235,8 +235,9 @@ fun default_tital_visitor_vtable
           | IUnpack data => #visit_IUnpack vtable this env data
           | IUnpackI data => #visit_IUnpackI vtable this env data
           | IInj data => #visit_IInj vtable this env data
-          (* | IString data => #visit_IString vtable this env data *)
           | IAscTime data => #visit_IAscTime vtable this env data
+          | INewArrayValues (r, t, vs) => INewArrayValues (r, visit_inner (#visit_ty vtable this) env t, visit_list (visit_inner $ #visit_value vtable this) env vs)
+          (* | IString data => #visit_IString vtable this env data *)
       end
     fun visit_IUnOp this env (opr, r, v) = 
       let
