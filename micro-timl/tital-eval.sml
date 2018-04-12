@@ -3,9 +3,9 @@
 structure TiTALEval = struct
 
 open Expr
-open MicroTiMLExUtilTiML
-open MicroTiMLExUtil
-open MicroTiMLExLongId
+open MicroTiMLUtilTiML
+open MicroTiMLUtil
+open MicroTiMLLongId
 open TiTAL
 open TiTALVisitor
 

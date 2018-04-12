@@ -5,10 +5,10 @@ structure PairAlloc = struct
 open Expr
 open CompilerUtil
 open MicroTiMLVisitor
-open MicroTiMLExLongId
-open MicroTiMLExLocallyNameless
-open MicroTiMLExUtil
-open MicroTiMLEx
+open MicroTiMLLongId
+open MicroTiMLLocallyNameless
+open MicroTiMLUtil
+open MicroTiML
        
 infixr 0 $
          
@@ -332,7 +332,7 @@ fun pair_alloc e =
     val e = pa e
     (* val () = println $ "before anf():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ToStringUtil.empty_ctx e) *)
     val e = anf e
-    val e = MicroTiMLExPostProcess.post_process e
+    val e = MicroTiMLPostProcess.post_process e
   in
     e
   end
@@ -349,8 +349,8 @@ open LongId
 open Util
 open MicroTiML
 open MicroTiMLVisitor
-open MicroTiMLExLongId
-open MicroTiMLEx
+open MicroTiMLLongId
+open MicroTiML
        
 infixr 0 $
 infixr 0 !!

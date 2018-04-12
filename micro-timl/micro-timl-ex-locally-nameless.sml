@@ -1,7 +1,7 @@
-structure MicroTiMLExLocallyNameless = struct
+structure MicroTiMLLocallyNameless = struct
 
 open MicroTiMLVisitor
-open MicroTiMLEx
+open MicroTiML
        
 infixr 0 $
 
@@ -136,9 +136,9 @@ infix 4 %=
         
 fun test1 dirname =
     let
-      val () = println "MicroTiMLExLocallyNameless.UnitTest started"
+      val () = println "MicroTiMLLocallyNameless.UnitTest started"
       open Expr
-      open MicroTiMLExUtil
+      open MicroTiMLUtil
       val t = TNat $ VarI (ID (1, dummy), [])
       val s = Subset ((Base Nat, dummy), Bind.Bind (("_VC", dummy), ConstIN (0, dummy) %= VarI (ID (1, dummy), [])), dummy)
       val t = MakeTForallI (s, ("_VC", dummy), t)
@@ -157,9 +157,9 @@ fun test1 dirname =
       val () = assert_b "" $ eq_t t t_expected
                         
       (* val t = t0 *)
-      (* val t = MicroTiMLExLongId.shift_i_t 0 999 t *)
+      (* val t = MicroTiMLLongId.shift_i_t 0 999 t *)
       (* val () = println $ "after shift0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
-      val () = println "MicroTiMLExLocallyNameless.UnitTest passed"
+      val () = println "MicroTiMLLocallyNameless.UnitTest passed"
     in
       ()
     end

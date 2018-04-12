@@ -1,8 +1,8 @@
-structure MicroTiMLExUtil = struct
+structure MicroTiMLUtil = struct
 
 open Util
 open Binders
-open MicroTiMLEx
+open MicroTiML
 
 infixr 0 $
 

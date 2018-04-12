@@ -1,8 +1,8 @@
 structure CompilerUtil = struct
 
-open MicroTiMLExLocallyNameless
-open MicroTiMLExUtilTiML
-open MicroTiMLExUtil
+open MicroTiMLLocallyNameless
+open MicroTiMLUtilTiML
+open MicroTiMLUtil
 
 infixr 0 $
 

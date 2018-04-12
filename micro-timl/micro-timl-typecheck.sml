@@ -89,10 +89,10 @@ structure Sortcheck = SortcheckFn (structure U = Expr
                                   )
 open Sortcheck
 
-open MicroTiMLExLongId
-open MicroTiMLExUtilTiML
-open MicroTiMLExUtil
-open MicroTiMLEx
+open MicroTiMLLongId
+open MicroTiMLUtilTiML
+open MicroTiMLUtil
+open MicroTiML
 
 fun sc ctx i = get_bsort Gctx.empty (ctx, i)
 fun sc_against_sort ctx (i, s) = check_sort Gctx.empty (ctx, i, s)
@@ -1593,8 +1593,8 @@ open LongId
 open Util
 open MicroTiML
 open MicroTiMLVisitor
-open MicroTiMLExLongId
-open MicroTiMLEx
+open MicroTiMLLongId
+open MicroTiML
        
 fun fail () = OS.Process.exit OS.Process.failure
                    

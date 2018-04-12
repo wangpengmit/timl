@@ -4,8 +4,8 @@ open LongId
 open Util
 open MicroTiML
 open MicroTiMLVisitor
-open MicroTiMLExLongId
-open MicroTiMLEx
+open MicroTiMLLongId
+open MicroTiML
        
 infixr 0 $
 infixr 0 !!
@@ -45,14 +45,14 @@ fun pp_t_to s b =
 (* str s "<ty>" *)
 fun pp_t b = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
 fun pp_t_to_string b = MicroTiMLPP.pp_t_to_string_fn (str_var, str_bs, str_i, str_s, const_fun "<kind>") b
-fun pp_e_to_string a = MicroTiMLExPP.pp_e_to_string_fn (
+fun pp_e_to_string a = MicroTiMLPP.pp_e_to_string_fn (
     str_var,
     str_i,
     str_s,
     str_k,
     pp_t_to
   ) a
-fun pp_e a = MicroTiMLExPP.pp_e_fn (
+fun pp_e a = MicroTiMLPP.pp_e_fn (
     str_var,
     str_i,
     str_s,

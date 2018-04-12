@@ -1,7 +1,7 @@
-structure MicroTiMLExPostProcess = struct
+structure MicroTiMLPostProcess = struct
 
-open MicroTiMLExLongId
-open MicroTiMLExUtil
+open MicroTiMLLongId
+open MicroTiMLUtil
 
 infixr 0 $
          

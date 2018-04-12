@@ -2,7 +2,7 @@
 
 structure TiTAL = struct
 
-open MicroTiMLEx
+open MicroTiML
 open Binders
 
 type reg = int

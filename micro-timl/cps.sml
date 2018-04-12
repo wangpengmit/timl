@@ -4,11 +4,11 @@ structure CPS = struct
 
 open Expr
 open CompilerUtil
-open MicroTiMLExLongId
-open MicroTiMLExLocallyNameless
-open MicroTiMLExUtil
-open MicroTiMLEx
-structure S = MicroTiMLEx
+open MicroTiMLLongId
+open MicroTiMLLocallyNameless
+open MicroTiMLUtil
+open MicroTiML
+structure S = MicroTiML
 
 infixr 0 $
 
@@ -889,8 +889,8 @@ open LongId
 open Util
 open MicroTiML
 open MicroTiMLVisitor
-open MicroTiMLExLongId
-open MicroTiMLEx
+open MicroTiMLLongId
+open MicroTiML
        
 fun fail () = OS.Process.exit OS.Process.failure
                    
@@ -963,7 +963,7 @@ fun test1 dirname =
     val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion ..."
-    val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx $ uniquefy_e empty_ctx $ MicroTiMLExPostProcess.post_process e
+    val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx $ uniquefy_e empty_ctx $ MicroTiMLPostProcess.post_process e
     val () = println ""
     val () = println "Started post-CPS form checking"
     val () = check_CPSed_expr e

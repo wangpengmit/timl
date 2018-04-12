@@ -2,7 +2,7 @@
 
 structure EVM1 = struct
 
-open MicroTiMLEx
+open MicroTiML
 open Binders
        
 type nat = int

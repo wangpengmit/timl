@@ -2,7 +2,7 @@
 
 structure TiTALPP = struct
 
-open MicroTiMLExPP
+open MicroTiMLPP
 open TiTAL
        
 infixr 0 $

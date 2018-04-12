@@ -20,10 +20,10 @@ fun free_vars_with_anno_0 f b =
 open Expr
 open CompilerUtil
 open MicroTiMLVisitor
-open MicroTiMLExLongId
-open MicroTiMLExLocallyNameless
-open MicroTiMLExUtil
-open MicroTiMLEx
+open MicroTiMLLongId
+open MicroTiMLLocallyNameless
+open MicroTiMLUtil
+open MicroTiML
        
 fun free_ivars_with_anno_idx_visitor_vtable cast output =
   let
@@ -977,8 +977,8 @@ open LongId
 open Util
 open MicroTiML
 open MicroTiMLVisitor
-open MicroTiMLExLongId
-open MicroTiMLEx
+open MicroTiMLLongId
+open MicroTiML
        
 fun fail () = OS.Process.exit OS.Process.failure
                    
@@ -1047,7 +1047,7 @@ fun test1 dirname =
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
-    val e = uniquefy_e empty_ctx $ MicroTiMLExPostProcess.post_process e
+    val e = uniquefy_e empty_ctx $ MicroTiMLPostProcess.post_process e
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export empty_ctx e *)
     (* val () = println "" *)
@@ -1068,7 +1068,7 @@ fun test1 dirname =
                      
     val () = println "Started CC ..."
     val e = cc e
-    val e = uniquefy_e empty_ctx $ MicroTiMLExPostProcess.post_process e
+    val e = uniquefy_e empty_ctx $ MicroTiMLPostProcess.post_process e
     val () = println "Finished CC"
     (* val () = pp_e $ export empty_ctx e *)
     (* val () = println "" *)

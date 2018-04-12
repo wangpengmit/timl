@@ -1,10 +1,10 @@
-(* Utilities for MicroTiMLEx specialized to Expr *)
+(* Utilities for MicroTiML specialized to Expr *)
 
-structure MicroTiMLExUtilTiML = struct
+structure MicroTiMLUtilTiML = struct
 
 open Expr
-open MicroTiMLExLongId
-open MicroTiMLExUtil
+open MicroTiMLLongId
+open MicroTiMLUtil
 
 infixr 0 $
        

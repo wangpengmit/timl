@@ -1,11 +1,11 @@
-structure MicroTiMLExLongId = struct
+structure MicroTiMLLongId = struct
 
 open LongId
 open VisitorUtil
 open Util
 open Subst
 open MicroTiMLVisitor
-open MicroTiMLEx
+open MicroTiML
        
 infixr 0 $
          

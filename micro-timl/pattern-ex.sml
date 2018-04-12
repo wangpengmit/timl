@@ -610,7 +610,7 @@ fun get_pn_alias p =
     | PnAnno (p, _) => get_pn_alias p
     | _ => NONE
              
-open MicroTiMLEx
+open MicroTiML
        
 fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e)) matchees pks =
   let
@@ -817,7 +817,7 @@ infixr 0 $
 val shift_var = ShiftUtil.shiftx_int  
 fun compare_var y x =
   let
-    open MicroTiMLEx
+    open MicroTiML
   in
     if y = x then CmpEq
     else if y > x then
@@ -830,7 +830,8 @@ fun pp_e_to_string e = "<E>"
 fun test () =
   let
     open Expr
-    open MicroTiMLEx
+    open MicroTiMLVisitor
+    open MicroTiML
     open Subst
            
     fun shift_i_e a = shift_i_e_fn (shiftx_i_i, shiftx_i_s, shiftx_i_mt) a
@@ -856,8 +857,9 @@ fun test2 () =
     open Subst
     fun IVar n = VarI (ID (n, dummy), [])
                       
-    open MicroTiMLEx
-    open MicroTiMLExPP
+    open MicroTiMLVisitor
+    open MicroTiML
+    open MicroTiMLPP
            
     val IName = fn s => IName (s, dummy)
     val EName = fn s => EName (s, dummy)

@@ -6,7 +6,7 @@ open S
 open Subst
 open MicroTiML
 open MicroTiMLVisitor
-open MicroTiMLEx
+open MicroTiML
 structure Op = Operators
 open Util
 open Bind
@@ -18,7 +18,7 @@ infixr 0 !!
 
 exception T2MTError of string
 
-open MicroTiMLExUtil
+open MicroTiMLUtil
        
 fun on_k ((n, bs) : S.kind) : bsort kind = KArrowTypes n $ KArrows bs KType
 
@@ -104,7 +104,7 @@ fun on_mt (t : S.mtype) =
 
 val trans_mt = on_mt
                  
-open MicroTiMLExLongId
+open MicroTiMLLongId
 open PatternEx
 structure S = TiML
                 
@@ -547,7 +547,7 @@ and on_DRec (name, bind, _) =
       (e, t)
     end
 
-fun trans_e e = MicroTiMLExPostProcess.post_process $ on_e e
+fun trans_e e = MicroTiMLPostProcess.post_process $ on_e e
 (* val trans_decls = on_decls *)
 
 (* fun on_mod m = *)

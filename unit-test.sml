@@ -3,7 +3,7 @@ structure UnitTest = struct
 val test_suites = [] : (string -> unit) list
                                         
 val test_suites = test_suites @ MicroTiMLVisitor2.UnitTest.test_suites
-val test_suites = test_suites @ MicroTiMLExLocallyNameless.UnitTest.test_suites
+val test_suites = test_suites @ MicroTiMLLocallyNameless.UnitTest.test_suites
                                   
 val test_suites = test_suites @ TiML2MicroTiML.UnitTest.test_suites
 val test_suites = test_suites @ MicroTiMLTypecheck.UnitTest.test_suites

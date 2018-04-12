@@ -84,7 +84,28 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EAscTime of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx (* time ascription *)
          | EAscType of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty (* type ascription *)
          | ENever of 'ty
+         | EBuiltin of string * 'ty
          | ELet of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
+         | ENewArrayValues of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr list
+         (* extensions from MicroTiML *)
+         | ELetIdx of 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr ibind
+         | ELetType of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr tbind
+         | ELetConstr of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr cbind
+         | EAbsConstr of (tbinder list * ibinder list * ebinder, ('var, 'idx, 'sort, 'kind, 'ty) expr) bind
+         | EAppConstr of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty list * 'idx list * ('var, 'idx, 'sort, 'kind, 'ty) expr
+         | EVarConstr of 'var (* todo: should be 'cvar *)
+         | EPackIs of 'ty * 'idx list * ('var, 'idx, 'sort, 'kind, 'ty) expr
+         | EMatchSum of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind list
+         | EMatchPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ebind
+         | EMatchUnfold of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
+         (* introduced by compiler/CPS *)
+         | EHalt of ('var, 'idx, 'sort, 'kind, 'ty) expr
+         (* introduced by compiler/pair-alloc *)
+         | EMallocPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr (* These two expressions are only here to determine the types. They have no runtime behavior and should always be values. They are used to avoid type annotations here which could be large. *)
+         | EPairAssign of ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
+         | EProjProtected of projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
+
+(*********** utilities ***************)    
 
 fun collect_TBinOp_left opr t =
   case t of
@@ -96,4 +117,89 @@ fun collect_TBinOp_left opr t =
              
 fun collect_TProd_left a = collect_TBinOp_left TBProd a
                                             
+infixr 0 $
+         
+fun collect_EAscTypeTime_rev e =
+  let
+    val self = collect_EAscTypeTime_rev
+  in
+    case e of
+        EAscType (e, t) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inl t :: args)
+        end
+      | EAscTime (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inr i :: args)
+        end
+      | _ => (e, [])
+  end
+fun collect_EAscTypeTime e = mapSnd rev $ collect_EAscTypeTime_rev e
+
+(* ignores EAscType/Time except those for the core *)
+fun collect_EAppIT_rev e =
+  let
+    val self = collect_EAppIT_rev
+  in
+    case fst $ collect_EAscTypeTime e of
+        EAppI (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inl i :: args)
+        end
+      | EAppT (e, t) =>
+        let
+          val (e, args) = self e
+        in
+          (e, inr t :: args)
+        end
+      | _ => (e, [])
+  end
+fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
+
+(* Treats EAppI/T (v, _) as a value. This is OK because EAbsI/T is always around a value, therefore deferring the reduction of EAppI/T (EAbsI/T _, _) won't change any side effect. Another angle to look at it is that if we use SML's erasure semantics where all types are erased before execution, then the reduction of EAppI/T (EAbsI/T _, _) is a no-op.
+*)
+fun is_value e =
+  case e of
+      EConst _ => true
+    | EBinOp (EBPair, e1, e2) => is_value e1 andalso is_value e2
+    | EUnOp (EUInj _, e) => is_value e
+    | EAbs _ =>  true
+    | EAbsT _ => true
+    | EAbsI _ => true
+    | EPack (_, _, e) => is_value e
+    | EPackI (_, _, e) => is_value e
+    | EPackIs (_, _, e) => is_value e
+    | EUnOp (EUFold _, e) => is_value e
+    | EAscType (e, _) => is_value e
+    | EAscTime (e, _) => is_value e
+    (* | ELoc _ => true *)
+    | EAppT (e, _) => is_value e
+    | EAppI (e, _) => is_value e
+    | ERec data =>
+      let
+        val (_, (_, e)) = unBindAnnoName data
+      in
+        is_value e
+      end
+    | EVar _ => true (* variables denote values *)
+    | ENever _ => true
+    | EBuiltin _ => true
+    | _ => false
+    (* | _ => *)
+    (*   case fst $ collect_EAscTypeTime $ fst $ collect_EAppIT e of *)
+    (*       ERec data => *)
+    (*       let *)
+    (*         val (_, (_, e)) = unBindAnnoName data *)
+    (*       in *)
+    (*         is_value e *)
+    (*       end *)
+    (*     | EVar _ => true (* todo: is this right? *) *)
+    (*     | _ => false *)
+
 end
