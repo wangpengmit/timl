@@ -1101,7 +1101,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                let
                  val r = U.get_region_e e_all
                  val t = fresh_mt gctx (sctx, kctx) r
-                 val i = fresh_i gctx sctx (Base Time(* todo: bug. How is it undetected? *)) r
+                 val i = fresh_i gctx sctx (Base Nat) r
                  val (e, _, d) = check_mtype (ctx, e, TyArray (t, i))
                in
                  (EUnOp (opr, e, r), TyNat (i, r), d)
@@ -1109,7 +1109,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	     | EUNat2Int =>
                let
                  val r = U.get_region_e e_all
-                 val i = fresh_i gctx sctx (Base Time(*todo: bug*)) r
+                 val i = fresh_i gctx sctx (Base Nat) r
                  val (e, _, d) = check_mtype (ctx, e, TyNat (i, r))
                in
                  (EUnOp (opr, e, r), BaseType (Int, r), d)

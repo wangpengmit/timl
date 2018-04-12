@@ -212,6 +212,7 @@ micro-timl/tital-tc.sml
 micro-timl/tital-eval.sml
 micro-timl/code-gen.sml
 micro-timl/evm1.sml
+micro-timl/evm1-visitor.sml
 micro-timl/to-evm1.sml
 unit-test.sml
 main.sml

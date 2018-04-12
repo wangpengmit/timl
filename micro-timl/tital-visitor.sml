@@ -496,4 +496,52 @@ fun subst_t_insts_fn params b =
     #visit_insts vtable visitor (IDepth 0, TDepth 0) b
   end
 
+(***************** the "shift_i_insts" visitor  **********************)    
+    
+fun shift_i_tital_visitor_vtable cast ((shift_i, shift_s, shift_t), n) =
+  let
+    fun extend_i this env name = (env + 1, name)
+    fun do_shift shift this env b = shift env n b
+  in
+    default_tital_visitor_vtable
+      cast
+      extend_i
+      extend_noop
+      (do_shift shift_i)
+      (do_shift shift_t)
+  end
+
+fun new_shift_i_tital_visitor params = new_tital_visitor shift_i_tital_visitor_vtable params
+    
+fun shift_i_insts_fn shifts x n b =
+  let
+    val visitor as (TiTALVisitor vtable) = new_shift_i_tital_visitor (shifts, n)
+  in
+    #visit_insts vtable visitor x b
+  end
+    
+(***************** the "shift_t_insts" visitor  **********************)    
+    
+fun shift_t_tital_visitor_vtable cast (shift_t, n) =
+  let
+    fun extend_t this env name = (env + 1, name)
+    fun do_shift shift this env b = shift env n b
+  in
+    default_tital_visitor_vtable
+      cast
+      extend_noop
+      extend_t
+      visit_noop
+      (do_shift shift_t)
+  end
+
+fun new_shift_t_tital_visitor params = new_tital_visitor shift_t_tital_visitor_vtable params
+    
+fun shift_t_insts_fn shift_t x n b =
+  let
+    val visitor as (TiTALVisitor vtable) = new_shift_t_tital_visitor (shift_t, n)
+  in
+    #visit_insts vtable visitor x b
+  end
+    
 end

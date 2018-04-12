@@ -24,16 +24,6 @@ datatype 'ty word =
          | WBuiltin of string * 'ty
          | WNever of 'ty
            
-(* small values *)
-datatype ('idx, 'ty) value =
-         VWord of 'ty word
-         | VAppT of ('idx, 'ty) value * 'ty
-         | VAppI of ('idx, 'ty) value * 'idx
-         | VPack of 'ty * 'ty * ('idx, 'ty) value
-         | VPackI of 'ty * 'idx * ('idx, 'ty) value
-         | VFold of 'ty * ('idx, 'ty) value
-         | VAscType of ('idx, 'ty) value * 'ty
-
 datatype ('idx, 'ty) inst =
          ADD
          | MUL
@@ -59,7 +49,7 @@ datatype ('idx, 'ty) inst =
          (* | SSTORE *)
          | JUMPI
          | JUMPDEST
-         | PUSH of int * 'ty word
+         | PUSH of int * 'ty word inner
          | DUP of int
          | SWAP of int
          (* extensions *)
@@ -76,7 +66,7 @@ datatype ('idx, 'ty) inst =
          | INT2NAT
          | BYTE2INT
          | PRINTC
-         | PACK_SUM of injector * 'ty
+         | PACK_SUM of injector * 'ty inner
          | ASCTIME of 'idx inner
 
 datatype ('idx, 'ty) insts =
@@ -85,6 +75,16 @@ datatype ('idx, 'ty) insts =
          | RETURN
          (* only for debug/printing purpose *)
          | ISDummy of string
+
+(* small values *)
+datatype ('idx, 'ty) value =
+         VWord of 'ty word
+         | VAppT of ('idx, 'ty) value * 'ty
+         | VAppI of ('idx, 'ty) value * 'idx
+         | VPack of 'ty * 'ty * ('idx, 'ty) value
+         | VPackI of 'ty * 'idx * ('idx, 'ty) value
+         | VFold of 'ty * ('idx, 'ty) value
+         | VAscType of ('idx, 'ty) value * 'ty
 
 type 'v rctx = 'v IntBinaryMap.map
                   
@@ -121,11 +121,11 @@ fun m @! k = Rctx.find (m, k)
 fun HCode' (binds, body) =
   Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, body)
 
-fun PUSH1 w = PUSH (1, w)
+fun PUSH1 w = PUSH (1, Inner w)
 fun PUSH1nat n = PUSH1 $ WNat n
-fun PUSH32 w = PUSH (32, w)
-fun PUSH_tuple_offset n = PUSH (2, WNat n)
-fun PUSH_reg n = PUSH (2, WNat n)
+fun PUSH32 w = PUSH (32, Inner w)
+fun PUSH_tuple_offset n = PUSH (2, Inner $ WNat n)
+fun PUSH_reg n = PUSH (2, Inner $ WNat n)
 val DUP1 = DUP 1
 val DUP2 = DUP 2
 val DUP3 = DUP 3
@@ -134,7 +134,7 @@ val SWAP2 = SWAP 2
 
 fun PUSH_value v =
   case v of
-      VWord w => [PUSH (32, w)]
+      VWord w => [PUSH (32, Inner w)]
     | VAppT (v, t) => PUSH_value v @ [VALUE_AppT $ Inner t]
     | VAppI (v, i) => PUSH_value v @ [VALUE_AppI $ Inner i]
     | VPack (t', t, v) => PUSH_value v @ [VALUE_Pack (Inner t', Inner t)]

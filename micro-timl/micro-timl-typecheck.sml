@@ -766,6 +766,7 @@ val anno_EFold = ref false
 val anno_EUnfold = ref false
 val anno_EApp = ref false
 val anno_EPair = ref false
+val anno_EInj = ref false
 val anno_EBPrim = ref false
 val anno_ENew = ref false
 val anno_ERead = ref false
@@ -870,6 +871,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         let
           val t' = kc_against_kind itctx (t', KType)
           val (e, t, i) = tc ctx e
+          val e = if !anno_EInj then e %: t else e
         in
           (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i)
         end
@@ -1534,6 +1536,7 @@ datatype tc_flag =
        | Anno_EUnfold
        | Anno_EApp
        | Anno_EPair
+       | Anno_EInj
        | Anno_EBPrim
        | Anno_ENew
        | Anno_ERead
@@ -1562,6 +1565,7 @@ fun typecheck flags ctx e =
     val () = anno_EUnfold := mem Anno_EUnfold flags
     val () = anno_EApp := mem Anno_EApp flags
     val () = anno_EPair := mem Anno_EPair flags
+    val () = anno_EInj := mem Anno_EInj flags
     val () = anno_EBPrim := mem Anno_EBPrim flags
     val () = anno_ENew := mem Anno_ENew flags
     val () = anno_ERead := mem Anno_ERead flags

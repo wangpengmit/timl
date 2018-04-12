@@ -4,6 +4,7 @@ structure ToEVM1 = struct
 
 open Expr
 open CompilerUtil
+open EVM1Visitor
 open EVM1
 
 infixr 0 $
@@ -45,6 +46,12 @@ infixr 5 @::
 infixr 5 @@
 infix  6 @+
 infix  9 @!
+
+fun close_i_insts a = shift_i_insts_fn (close_i_i, close_i_s, close_i_t) a
+fun close_t_insts a = shift_t_insts_fn close_t_t a
+
+fun close0_i_insts a = close_i_insts 0 a
+fun close0_t_insts a = close_t_insts 0 a
 
 fun cg_ty_visitor_vtable cast () =
   let
@@ -133,7 +140,6 @@ val byte2int = [BYTE2INT]
 fun concatRepeat n v = List.concat $ repeat n v
 fun TiBoolConst b =
   TiBool $ IConst (ICBool b, dummy)
-  (* raise Unimpl "TiBoolConst" *)
                
 fun cg_c c =
   case c of
@@ -235,7 +241,7 @@ fun compile ectx e =
         val t_other = cg_t t_other
         val b = choose_inj (false, true) inj
       in
-        compile e @ malloc_tuple [TiBoolConst b, t_e] @ [PUSH1 $ WiBool b, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE, PACK_SUM (inj, t_other)]
+        compile e @ malloc_tuple [TiBoolConst b, t_e] @ [PUSH1 $ WiBool b, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE, PACK_SUM (inj, Inner t_other)]
       end
     | ENewArrayValues (t, es) =>
       let
@@ -305,76 +311,74 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
     fun main () =
   case e of
       ELet (e1, bind) =>
-      (case e1 of
-          EBinOp (EBNew, e1, e2) =>
-          let
-            val (e1, t_e1) = assert_EAscType e1
-            val len = assert_TNat t_e1
-            val (e2, t) = assert_EAscType e2
-            val t = cg_t t
-            val (name, e) = unBindSimpName bind
-            val (e, i_e) = assert_EAscTime e
-            val post_loop_label = fresh_label ()
-            val loop_label = fresh_label ()
-            val pre_loop_code =
-                [SWAP1, DUP1] @@
-                malloc_array t @@
-                [SWAP1, PUSH1nat 32, MUL] @@
-                PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len])) @@
-                JUMP
-            (* val pre_loop_label = fresh_label () *)
-            (* val pre_loop_block = *)
-            (*     let *)
-            (*     in *)
-            (*       HCode' ([inr ("t", KType), inl ("j", STime), inl ("len", SNat)], ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), post_loop_code)) *)
-            (*     end *)
-            val loop_block =
-                let
-                  fun MakeSubset (name, s, p) = Subset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
-                  val s = MakeSubset ("i", BSNat, IV 0 %<= shift01_i_i len)
-                  val i = fresh_ivar ()
-                  val loop_code =
-                      [DUP1, ISZERO] @@
-                      PUSH_value (VAppITs_ctx (VLabel post_loop_label, itctx)) @@
-                      [JUMPI, PUSH1nat 32, SWAP1, SUB] @@
-                      array_assign @@
-                      PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
-                      JUMP
-                  fun IToReal i = UnOpI (ToReal, i, dummy)
-                  fun close0_i_insts x I = raise Unimpl "close0_i_insts"
-                  fun close0_i_block x ((rctx, ts, i), I) = ((Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
-                  val block = ((rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
-                  val block = close0_i_block i block
-                in
-                  HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
-                end
-            val () = output_heap ((loop_label, "new_array_loop"), loop_block)
-            val post_loop_block =
-                let
-                  val r = fresh_reg ()
-                  val post_loop_code =
-                      [POP, SWAP1, POP] @@
-                      set_reg r @@
-                      cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len))) e
-                in
-                  HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), post_loop_code))
-                end
-            val () = output_heap ((post_loop_label, "new_array_post_loop"), post_loop_block)
-          in
-            compile e1 @@
-            compile e2 @@
-            pre_loop_code
-          end
+      let
+        val (e1, t) = assert_EAscType e1
+        val t = cg_t t
+        val r = fresh_reg ()
+      in        
+        case e1 of
+            EBinOp (EBNew, e1, e2) =>
+            let
+              val (t, len) = assert_TArr t
+              val (name, e) = unBindSimpName bind
+              val (e, i_e) = assert_EAscTime e
+              val post_loop_label = fresh_label ()
+              val loop_label = fresh_label ()
+              val pre_loop_code =
+                  [SWAP1, DUP1] @@
+                  malloc_array t @@
+                  [SWAP1, PUSH1nat 32, MUL] @@
+                  PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len])) @@
+                  JUMP
+              (* val pre_loop_label = fresh_label () *)
+              (* val pre_loop_block = *)
+              (*     let *)
+              (*     in *)
+              (*       HCode' ([inr ("t", KType), inl ("j", STime), inl ("len", SNat)], ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), post_loop_code)) *)
+              (*     end *)
+              val loop_block =
+                  let
+                    fun MakeSubset (name, s, p) = Subset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
+                    val s = MakeSubset ("i", BSNat, IV 0 %<= shift01_i_i len)
+                    val i = fresh_ivar ()
+                    val loop_code =
+                        [DUP1, ISZERO] @@
+                        PUSH_value (VAppITs_ctx (VLabel post_loop_label, itctx)) @@
+                        [JUMPI, PUSH1nat 32, SWAP1, SUB] @@
+                        array_assign @@
+                        PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
+                        JUMP
+                    fun IToReal i = UnOpI (ToReal, i, dummy)
+                    fun close0_i_block x ((rctx, ts, i), I) = ((Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
+                    val block = ((rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
+                    val block = close0_i_block i block
+                  in
+                    HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
+                  end
+              val () = output_heap ((loop_label, "new_array_loop"), loop_block)
+              val post_loop_block =
+                  let
+                    val post_loop_code =
+                        [POP, SWAP1, POP] @@
+                        set_reg r @@
+                        cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len))) e
+                  in
+                    HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), post_loop_code))
+                  end
+              val () = output_heap ((post_loop_label, "new_array_post_loop"), post_loop_block)
+            in
+              compile e1 @@
+              compile e2 @@
+              pre_loop_code
+            end
         | _ =>
           let
-            val (e1, t) = assert_EAscType e1
-            val t = cg_t t
             val (name, e2) = unBindSimpName bind
-            val r = fresh_reg ()
             val I = cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, t)) e2
           in
             compile e1 @@ set_reg r @@ I
-          end)
+          end
+      end
     | EUnpack (e1, bind) =>
       let
         val (e1, t) = assert_EAscType e1
@@ -522,7 +526,7 @@ val code_gen_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time]
+      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EPair, Anno_EInj]
     end
                      
 structure UnitTest = struct
@@ -628,40 +632,38 @@ fun test1 dirname =
                      
     val () = println "Started CC ..."
     val e = cc e
+    val e = MicroTiMLPostProcess.post_process e
     val () = println "Finished CC"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1, NONE) ToStringUtil.empty_ctx e
     val () = write_file ("unit-test-after-cc.tmp", e_str)
-    (* val () = println e_str *)
-    (* val () = println "" *)
-    (* val () = println "Done" *)
-    (* val () = println "Checking closed-ness of ERec's" *)
-    (* val () = check_ERec_closed e *)
-    val () = println "Started MicroTiML typechecking #3 ..."
-    val ((e, t, i), vcs, admits) = typecheck pair_alloc_tc_flags ([], [], [](* , HeapMap.empty *)) e
-    val () = println "Finished MicroTiML typechecking #3"
-    val () = println "Type:"
-    val () = pp_t NONE $ export_t (SOME 1) ([], []) t
-    val () = println "Time:"
-    (* val i = simp_i i *)
-    val () = println $ ToString.str_i Gctx.empty [] i
-    (* val () = pp_e (NONE, NONE) $ export ((* (SOME 1) *)NONE, NONE) ToStringUtil.empty_ctx e *)
-    (* val () = println "" *)
-                     
-    val () = println "Started Pair Alloc ..."
-    (* val e = pa e *)
-    val e = pair_alloc e
-    val () = println "Finished Pair Alloc"
-    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
-    (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ((* SOME 1 *)NONE, NONE) ToStringUtil.empty_ctx e
-    val () = write_file ("unit-test-after-pair-alloc.tmp", e_str)
     val () = println e_str
     val () = println ""
-    val () = println "Started post-pair-allocation form checking"
-    val () = check_CPSed_expr e
-    val () = println "Finished post-pair-allocation form checking"
+    (* val () = println "Started MicroTiML typechecking #3 ..." *)
+    (* val ((e, t, i), vcs, admits) = typecheck pair_alloc_tc_flags ([], [], [](* , HeapMap.empty *)) e *)
+    (* val () = println "Finished MicroTiML typechecking #3" *)
+    (* val () = println "Type:" *)
+    (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
+    (* val () = println "Time:" *)
+    (* (* val i = simp_i i *) *)
+    (* val () = println $ ToString.str_i Gctx.empty [] i *)
+    (* (* val () = pp_e (NONE, NONE) $ export ((* (SOME 1) *)NONE, NONE) ToStringUtil.empty_ctx e *) *)
+    (* (* val () = println "" *) *)
+                     
+    (* val () = println "Started Pair Alloc ..." *)
+    (* (* val e = pa e *) *)
+    (* val e = pair_alloc e *)
+    (* val () = println "Finished Pair Alloc" *)
+    (* (* val () = pp_e $ export ToStringUtil.empty_ctx e *) *)
+    (* (* val () = println "" *) *)
+    (* val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ((* SOME 1 *)NONE, NONE) ToStringUtil.empty_ctx e *)
+    (* val () = write_file ("unit-test-after-pair-alloc.tmp", e_str) *)
+    (* val () = println e_str *)
+    (* val () = println "" *)
+    (* val () = println "Started post-pair-allocation form checking" *)
+    (* val () = check_CPSed_expr e *)
+    (* val () = println "Finished post-pair-allocation form checking" *)
     val () = println "Started MicroTiML typechecking #4 ..."
     val ((e, t, i), vcs, admits) = typecheck code_gen_tc_flags ([], [], []) e
     val () = println "Finished MicroTiML typechecking #4"
