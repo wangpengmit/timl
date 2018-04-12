@@ -76,16 +76,6 @@ datatype ('idx, 'ty) insts =
          (* only for debug/printing purpose *)
          | ISDummy of string
 
-(* small values *)
-datatype ('idx, 'ty) value =
-         VWord of 'ty word
-         | VAppT of ('idx, 'ty) value * 'ty
-         | VAppI of ('idx, 'ty) value * 'idx
-         | VPack of 'ty * 'ty * ('idx, 'ty) value
-         | VPackI of 'ty * 'idx * ('idx, 'ty) value
-         | VFold of 'ty * ('idx, 'ty) value
-         | VAscType of ('idx, 'ty) value * 'ty
-
 type 'v rctx = 'v IntBinaryMap.map
                   
 type ('idx, 'sort, 'kind, 'ty) hval = ((ibinder * 'sort outer, tbinder * 'kind) sum tele, ('ty rctx * 'ty list * 'idx) * ('idx, 'ty) insts) bind
@@ -97,17 +87,6 @@ fun WNat a = WConst $ WCNat a
 fun WiBool a = WConst $ WCiBool a
 fun WLabel a = WConst $ WCLabel a
       
-fun VConst a = VWord $ WConst a
-fun VLabel a = VWord $ WLabel a
-fun VNever a = VWord $ WNever a
-fun VBuiltin a = VWord $ WBuiltin a
-
-fun VAppIT (e, arg) =
-    case arg of
-        inl i => VAppI (e, i)
-      | inr t => VAppT (e, t)
-fun VAppITs (f, args) = foldl (swap VAppIT) f args
-                     
 infixr 5 @::
 infixr 5 @@
 infix  6 @+
@@ -132,6 +111,27 @@ val DUP3 = DUP 3
 val SWAP1 = SWAP 1
 val SWAP2 = SWAP 2
 
+(* small values *)
+datatype ('idx, 'ty) value =
+         VWord of 'ty word
+         | VAppT of ('idx, 'ty) value * 'ty
+         | VAppI of ('idx, 'ty) value * 'idx
+         | VPack of 'ty * 'ty * ('idx, 'ty) value
+         | VPackI of 'ty * 'idx * ('idx, 'ty) value
+         | VFold of 'ty * ('idx, 'ty) value
+         | VAscType of ('idx, 'ty) value * 'ty
+
+fun VConst a = VWord $ WConst a
+fun VLabel a = VWord $ WLabel a
+fun VNever a = VWord $ WNever a
+fun VBuiltin a = VWord $ WBuiltin a
+
+fun VAppIT (e, arg) =
+    case arg of
+        inl i => VAppI (e, i)
+      | inr t => VAppT (e, t)
+fun VAppITs (f, args) = foldl (swap VAppIT) f args
+                     
 fun PUSH_value v =
   case v of
       VWord w => [PUSH (32, Inner w)]
