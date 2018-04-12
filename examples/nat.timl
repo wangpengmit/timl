@@ -69,6 +69,10 @@ fun nat_max {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a max b} using 2.
       Lt => b
     | Ge => a
 
+fun bounded_minus {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a - b} =
+  ifdec a #< b then #0 : nat {a - b}
+  else a #- b                      
+
 fun nat_min {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a min b} using 2.0 =
   case lt_dec (a, b) of
       Lt => a

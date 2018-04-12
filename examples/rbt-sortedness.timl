@@ -10,7 +10,7 @@ open Nat
 (*        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1} *)
                                   
 datatype lemma1 {a b : Nat} =
-         Lemma1 {2 ^^ a <= b + 1 -> a <= ceil (log2 $(b + 1))} of lemma1 {a} {b}
+         Lemma1 {2 ** a <= b + 1 -> a <= ceil (log2 $(b + 1))} of lemma1 {a} {b}
 
 fun lemma1 {a b : Nat} () return lemma1 {a} {b} =
     @Lemma1 {a} {b} {admit}
@@ -25,12 +25,12 @@ datatype rbt 'a : {Nat(*size*)} {Bool} {Nat(*black height*)} {Nat(*min*)} {Nat(*
               {lsize rsize bh lmin lmax k rmin rmax : Nat}
               {color = false -> lcolor = true /\ rcolor = true }
               {lmin <= lmax /\ (lmax < k \/ bh = 0 /\ lcolor = true) /\ (k < rmin \/ bh = 0 /\ rcolor = true) /\ rmin <= rmax}
-              {2 ^^ (bh + b2n (not lcolor) + 1) <= 2 * (lsize + 1) /\ 2 * (lsize + 1) <= 2 ^^ (2 * bh + b2n (not lcolor) + 1)}
-              {2 ^^ (bh + b2n (not rcolor) + 1) <= 2 * (rsize + 1) /\ 2 * (rsize + 1) <= 2 ^^ (2 * bh + b2n (not rcolor) + 1)}
-         of color {color} * rbt 'a {lsize} {lcolor} {bh} {lmin} {lmax} * (nat {k} * 'a) * rbt 'a {rsize} {rcolor} {bh} {rmin} {rmax} --> rbt 'a {lsize + 1 + rsize} {color} {bh + b2n color} {ite (bh == 0 && lcolor) k lmin} {ite (bh == 0 && rcolor) k rmax}
+              {2 ** (bh + b2n (not lcolor) + 1) <= 2 * (lsize + 1) /\ 2 * (lsize + 1) <= 2 ** (2 * bh + b2n (not lcolor) + 1)}
+              {2 ** (bh + b2n (not rcolor) + 1) <= 2 * (rsize + 1) /\ 2 * (rsize + 1) <= 2 ** (2 * bh + b2n (not rcolor) + 1)}
+         of color {color} * rbt 'a {lsize} {lcolor} {bh} {lmin} {lmax} * (nat {k} * 'a) * rbt 'a {rsize} {rcolor} {bh} {rmin} {rmax} --> rbt 'a {lsize + 1 + rsize} {color} {bh + b2n color} {ite (bh =? 0 && lcolor) k lmin} {ite (bh =? 0 && rcolor) k rmax}
 
 datatype size_good {color : Bool} {size bh : Nat} =
-         SizeGood {2 ^^ (bh + b2n (not color) + 1) <= 2 * (size + 1) /\ 2 * (size + 1) <= 2 ^^ (2 * bh + b2n (not color) + 1)}
+         SizeGood {2 ** (bh + b2n (not color) + 1) <= 2 * (size + 1) /\ 2 * (size + 1) <= 2 ** (2 * bh + b2n (not color) + 1)}
          of size_good {color} {size} {bh}
                  
 fun rbt_size_good ['a] {color : Bool} {size bh kmin kmax k : Nat} (tr : rbt 'a {size} {color} {bh} {kmin} {kmax}) return size_good {color} {size} {bh} =
@@ -44,17 +44,17 @@ fun rbt_size_good ['a] {color : Bool} {size bh kmin kmax k : Nat} (tr : rbt 'a {
 datatype violation 'a : {Nat} {Nat} {Nat} {Nat} =
          ViolateLeft {lsize rsize bh lmin lmax k rmin rmax : Nat}
                      {lmin <= lmax /\ lmax < k /\ (k < rmin \/ bh = 0) /\ rmin <= rmax}
-         of rbt 'a {lsize} {false} {bh} {lmin} {lmax} * (nat {k} * 'a) * rbt 'a {rsize} {true} {bh} {rmin} {rmax} --> violation 'a {lsize + 1 + rsize} {bh} {lmin} {ite (bh == 0) k rmax}
+         of rbt 'a {lsize} {false} {bh} {lmin} {lmax} * (nat {k} * 'a) * rbt 'a {rsize} {true} {bh} {rmin} {rmax} --> violation 'a {lsize + 1 + rsize} {bh} {lmin} {ite (bh =? 0) k rmax}
        | ViolateRight {lsize rsize bh lmin lmax k rmin rmax : Nat}
                       {lmin <= lmax /\ (lmax < k \/ bh = 0) /\ k < rmin /\ rmin <= rmax}
-         of rbt 'a {lsize} {true} {bh} {lmin} {lmax} * (nat {k} * 'a) * rbt 'a {rsize} {false} {bh} {rmin} {rmax} --> violation 'a {lsize + 1 + rsize} {bh} {ite (bh == 0) k lmin} {rmax}
+         of rbt 'a {lsize} {true} {bh} {lmin} {lmax} * (nat {k} * 'a) * rbt 'a {rsize} {false} {bh} {rmin} {rmax} --> violation 'a {lsize + 1 + rsize} {bh} {ite (bh =? 0) k lmin} {rmax}
 
 fun balance_left ['a] {rcolor : Bool} {lsize rsize bh lmin lmax k rmin rmax : Nat}
                  {lmin <= lmax /\ lmax < k /\ (k < rmin \/ bh = 0 /\ rcolor = true) /\ rmin <= rmax}
                  (left : violation 'a {lsize} {bh} {lmin} {lmax})
                  (center as z : nat {k} * 'a)
                  (right as d : rbt 'a {rsize} {rcolor} {bh} {rmin} {rmax})
-                 return rbt 'a {lsize + 1 + rsize} {false} {bh + 1} {lmin} {ite (bh == 0 && rcolor) k rmax} =
+                 return rbt 'a {lsize + 1 + rsize} {false} {bh + 1} {lmin} {ite (bh =? 0 && rcolor) k rmax} =
     case left of
         ViolateLeft (Node (Red, a, x, b), y, c) =>
         let
@@ -77,7 +77,7 @@ fun balance_right ['a] {lcolor : Bool} {lsize rsize bh lmin lmax k rmin rmax : N
                   (left as a : rbt 'a {lsize} {lcolor} {bh} {lmin} {lmax})
                   (center as x : nat {k} * 'a)
                   (right : violation 'a {rsize} {bh} {rmin} {rmax})
-                  return rbt 'a {lsize + 1 + rsize} {false} {bh + 1} {ite (bh == 0 && lcolor) k lmin} {rmax} =
+                  return rbt 'a {lsize + 1 + rsize} {false} {bh + 1} {ite (bh =? 0 && lcolor) k lmin} {rmax} =
     case right of
         ViolateLeft (Node (Red, b, y, c), z, d) =>
         let
@@ -114,7 +114,7 @@ absidx T_ins : BigO (fn n => $n) (* = fn n => 6.0 * $n *) with
 fun ins ['a] {input_color : Bool} {input_size bh kmin kmax k : Nat}
         (tr : rbt 'a {input_size} {input_color} {bh} {kmin} {kmax})
         (new as (k : nat {k}, _))
-        return ins_result 'a {input_color} {input_size} {bh} {ite (bh == 0 && input_color) k (k min kmin)} {ite (bh == 0 && input_color) k (k max kmax)} using (* 6.0 * $ *)T_ins (2 * bh + b2n (not input_color)) =
+        return ins_result 'a {input_color} {input_size} {bh} {ite (bh =? 0 && input_color) k (k min kmin)} {ite (bh =? 0 && input_color) k (k max kmax)} using (* 6.0 * $ *)T_ins (2 * bh + b2n (not input_color)) =
     case tr of
         Leaf =>
         let

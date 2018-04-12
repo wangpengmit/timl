@@ -18,7 +18,7 @@ functor DynamicTable (T : sig
   val alloc ['a] : forall {size : Nat}, nat {size} * 'a -- 1.0 --> table 'a {size} {0}
   val do_insert ['a] : forall {size num : Nat} {num < size}, table 'a {size} {num} ->> 'a -- 2.0 --> table 'a {size} {num + 1}
   datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num}
-  val do_delete ['a] : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> do_delete 'a {size} {num}
+  val do_delete ['a] : forall {size num : Nat}, table 'a {size} {num} -- 2.0 --> do_delete 'a {size} {num}
   val copy ['a] : forall {size num size' num' : Nat}, table 'a {size} {num} ->> table 'a {size'} {num'} -- 4.0 * $num + 5.0 --> table 'a {size'} {num min size'}
   val num ['a] : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {num}
   val size ['a] : forall {size num : Nat}, table 'a {size} {num} -- 1.0 --> nat {size}
@@ -41,7 +41,7 @@ open Nat
 datatype some_output_and_cost_constraint 'a {size num : Nat} {acost cost : Time} =
          SomeOutputAndCostConstaint
            {size' num' : Nat}
-           {cost + 4.0 * ite (2 * num' >= size') ($(2 * num')) ($size' / 2) + 4.0 * ite (2 * num >= size) $size $num <= 4.0 * ite (2 * num >= size) ($(2 * num)) ($size / 2) + 4.0 * ite (2 * num' >= size') $size' $num' + acost}
+           {cost + 4.0 * ite (2 * num' >=? size') ($(2 * num')) ($size' / 2) + 4.0 * ite (2 * num >=? size) $size $num <= 4.0 * ite (2 * num >=? size) ($(2 * num)) ($size / 2) + 4.0 * ite (2 * num' >=? size') $size' $num' + acost}
          of table 'a {size'} {num'} --> some_output_and_cost_constraint 'a {size} {num} {acost} {cost}
 
 (* An amortized computation is a closure (or "computation") whose cost is constrainted by the input and output capas in some manner.
@@ -60,7 +60,7 @@ fun insert ['a] {size num : Nat} (x : 'a) (table : table 'a {size} {num}) =
             val num = num table
             val size = size table
           in
-            case eq_dec (num, size) return using 3.0 + ite (num == size) (4.0 * $num + 15.0) 1.0 of
+            case eq_dec (num, size) return using 3.0 + ite (num =? size) (4.0 * $num + 15.0) 1.0 of
                 Neq =>
                 SomeOutputAndCostConstaint (do_insert table x)
               | Eq =>
@@ -83,7 +83,7 @@ fun delete ['a] {size num : Nat} (table : table 'a {size} {num}) =
     in
       AmortizedComp
         (fn () return some_output_and_cost_constraint 'a {size} {num} {38.0} {} =>
-           case lt_dec (nat_mult (nat_4, num'), size) return using ite (4 * num' < size) (13.0 + 4.0 * $num') 0.0 of
+           case lt_dec (nat_mult (nat_4, num'), size) return using ite (4 * num' <? size) (13.0 + 4.0 * $num') 0.0 of
                Lt =>
                let
                  val init = any_value table'
@@ -106,7 +106,7 @@ fun insert_or_delete ['a] {size num : Nat} (is_insert : bool, x : 'a) (table : t
 datatype some_table 'a =
          SomeTable {size num : Nat} of table 'a {size} {num} --> some_table 'a
 
-fun insert_delete_seq ['a] {n size num : Nat} (xs : list (bool * 'a) {n}) (table : table 'a {size} {num}) return some_table 'a using 81.0 * $n + 4.0 * ite (2 * num >= size) ($(2 * num - size)) ($size / 2 - $num) =
+fun insert_delete_seq ['a] {n size num : Nat} (xs : list (bool * 'a) {n}) (table : table 'a {size} {num}) return some_table 'a using 81.0 * $n + 4.0 * ite (2 * num >=? size) ($(2 * num - size)) ($size / 2 - $num) =
     case xs of
         Nil => SomeTable table
       | Cons (x, xs) =>
@@ -119,7 +119,7 @@ fun insert_delete_seq ['a] {n size num : Nat} (xs : list (bool * 'a) {n}) (table
         end
           
 absidx T_insert_delete_seq_from_good_start : BigO (fn n => $n) with
-fun insert_delete_seq_from_good_start ['a] {n size num : Nat} {ite (2 * num >= size) ($(2 * num - size)) ($size / 2 - $num) <= $n} (xs : list (bool * 'a) {n}) (table : table 'a {size} {num}) return some_table 'a using T_insert_delete_seq_from_good_start n =
+fun insert_delete_seq_from_good_start ['a] {n size num : Nat} {ite (2 * num >=? size) ($(2 * num - size)) ($size / 2 - $num) <= $n} (xs : list (bool * 'a) {n}) (table : table 'a {size} {num}) return some_table 'a using T_insert_delete_seq_from_good_start n =
     insert_delete_seq xs table using 2.0 + 85.0 * $n
 end
           
@@ -158,11 +158,11 @@ fun do_insert ['a] {size num : Nat} {num < size} (t : table 'a {size} {num}) (x 
   
 datatype do_delete 'a {num size : Nat} = DoDelete {num' : Nat} {num = num' \/ num = num' + 1} of table 'a {size} {num'} --> do_delete 'a {size} {num}
                                                                                                  
-fun do_delete ['a] {size num : Nat} (t : table 'a {size} {num}) return do_delete 'a {size} {num} using 1.0 =
+fun do_delete ['a] {size num : Nat} (t : table 'a {size} {num}) return do_delete 'a {size} {num} using 2.0 =
   let
     val Table (a, num) = t
   in
-    DoDelete (Table (a, num #- #1))
+    DoDelete (Table (a, bounded_minus (num, #1)))
   end
   
 fun copy ['a] {size num size' num' : Nat} (s : table 'a {size} {num}) (t : table 'a {size'} {num'}) return table 'a {size'} {num min size'} using 4.0 * $num + 5.0 =

@@ -291,7 +291,7 @@ fun str_idx_un_op opr =
     | B2n => "b2n"
     | Neg => "not"
     | IUDiv d => sprintf "(/ $)" [str_int d]
-    | IUExp s => sprintf "(^ $)" [s]
+    | IUExp s => sprintf "(** $)" [s]
 
 fun str_idx_bin_op opr =
   case opr of
@@ -301,7 +301,7 @@ fun str_idx_bin_op opr =
     | MinI => "min"
     | IApp => "app"
     | AndI => "&&"
-    | ExpNI => "^"
+    | ExpNI => "**"
     | EqI => "=?"
     | LtI => "<?"
     | GtI => ">?"

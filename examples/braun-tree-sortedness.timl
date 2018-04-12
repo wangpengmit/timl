@@ -10,7 +10,7 @@ datatype braun_tree : {Nat(*min element*)} {Nat(*size*)} =
        | Node {size lk rk k : Nat} {(size >= 1 -> k <= lk) /\ (size >= 2 -> k <= rk)} of nat {k} * braun_tree {lk} {ceil ($size/2)} * braun_tree {rk} {floor ($size/2)} --> braun_tree {k} {size+1}
 
 absidx T_insert : BigO (fn n => log2 $n) with
-fun insert {size k x : Nat} (tr : braun_tree {k} {size}) (x : nat {x}) return braun_tree {ite (size == 0) x (x min k)} {size + 1} using T_insert size =
+fun insert {size k x : Nat} (tr : braun_tree {k} {size}) (x : nat {x}) return braun_tree {ite (size =? 0) x (x min k)} {size + 1} using T_insert size =
     case tr of
         Leaf => @Node {0} {} {} {} {} (x, Leaf, Leaf)
       | @Node {size' _ _ _ _} (y, l, r) =>
@@ -58,7 +58,7 @@ fun le_le {m : Time} {a b a' b' : Nat} (le : forall {x y : Nat}, nat {x} * nat {
       | (Gt, Gt) => NotLeLe
 
 absidx T_sift : BigO (fn n => log2 $n) with
-fun sift {size lk rk x : Nat} (x : nat {x}, l : braun_tree {lk} {ceil ($size/2)}, r : braun_tree {rk} {floor ($size/2)}) return braun_tree {ite (size == 0) x (ite (size == 1) (x min lk) (x min lk min rk))} {size+1} using T_sift size =
+fun sift {size lk rk x : Nat} (x : nat {x}, l : braun_tree {lk} {ceil ($size/2)}, r : braun_tree {rk} {floor ($size/2)}) return braun_tree {ite (size =? 0) x (ite (size =? 1) (x min lk) (x min lk min rk))} {size+1} using T_sift size =
     case (l, r) of
         (Leaf, Leaf) =>
         @Node {0} {} {} {} {} (x, Leaf, Leaf)

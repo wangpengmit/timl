@@ -18,7 +18,7 @@ fun size ['a] {cap size : Nat} {size <= cap} (heap : heap 'a {cap} {size}) retur
     case heap of
         Heap (size, _) => size
 
-fun is_empty ['a] {cap size : Nat} {size <= cap} (heap : heap 'a {cap} {size}) return ibool {size == 0} =
+fun is_empty ['a] {cap size : Nat} {size <= cap} (heap : heap 'a {cap} {size}) return ibool {size =? 0} =
     case heap of
         Heap (size, _) =>
         case cmp (size, #0) of

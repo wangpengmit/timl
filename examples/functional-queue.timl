@@ -37,7 +37,7 @@ fun do_enqueue ['a] {s1 s2 : Nat} (q : queue 'a {s1} {s2}, x : 'a) =
         Queue (l1, l2) => Queue (x :: l1, l2)
 
 (* dequeue is implemented by poping from stack 2; when stack 2 is empty, dump all elements from stack 1 to stack2, reversing order naturally *)
-fun do_dequeue ['a] {s1 s2 : Nat} (q : queue 'a {s1} {s2}) return queue 'a {ite (s2 == 0) 0 s1} {ite (s2 == 0) (s1 - 1) (s2 - 1)} using ite (s2 == 0) ($s1 + 1.0) 0.0 =
+fun do_dequeue ['a] {s1 s2 : Nat} (q : queue 'a {s1} {s2}) return queue 'a {ite (s2 =? 0) 0 s1} {ite (s2 =? 0) (s1 - 1) (s2 - 1)} using ite (s2 =? 0) ($s1 + 1.0) 0.0 =
     case q of
         Queue (l1, l2) =>
         case l2 of

@@ -3,7 +3,7 @@
 
 stdlib.pkg
                
-unit-test-basic.timl
+(* unit-test-basic.timl *)
             
 (* unit-test-bool.timl *)
 (* unit-test-array.timl *)
@@ -36,4 +36,3 @@ unit-test-basic.timl
 (* dijkstra.timl *)
 
 (* dynamic-table.timl *)
-(* dynamic-table-test.timl *)
