@@ -11,9 +11,10 @@ fun str_word_const c =
   case c of
       WCTT => "()"
     | WCInt n => str_int n
-    | WCNat n => sprintf "#$" [str_int n]
+    | WCNat n => "#" ^ str_int n
     | WCBool b => str_bool b
     | WCByte c => Char.toCString c
+    | WCiBool b => "#" ^ str_bool b
     | WCLabel l => "l_" ^ str_int l
                                 
 fun str_inst a =
@@ -46,6 +47,8 @@ fun str_inst a =
     | PRINTC => "PRINTC"
     | DUP n => "DUP" ^ str_int n
     | SWAP n => "SWAP" ^ str_int n
+    | UNPACK name => "UNPACK " ^ binder2str name
+    | UNPACKI name => "UNPACKI " ^ binder2str name
     | _ => raise Impossible "str_inst()"
 
 fun pp_w pp_t s w =
@@ -61,13 +64,14 @@ fun pp_w pp_t s w =
   in
     case w of
         WConst c =>
-        (
-          open_hbox ();
-          str "WConst";
-          space ();
-          str $ str_word_const c;
-          close_box ()
-        )
+        (* ( *)
+        (*   open_hbox (); *)
+        (*   str "WConst"; *)
+        (*   space (); *)
+        (*   str $ str_word_const c; *)
+        (*   close_box () *)
+        (* ) *)
+        str $ str_word_const c
       | WUninit t =>
         (
           open_hbox ();
@@ -124,9 +128,9 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           open_hbox ();
           str $ "PUSH" ^ str_int n;
           space ();
-          str "(";
+          (* str "("; *)
           pp_w w;
-          str ")";
+          (* str ")"; *)
           close_box ()
         )
       | VALUE_AppT t =>
@@ -149,6 +153,73 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           str ")";
           close_box ()
         )
+      | VALUE_Pack (t1, t2) =>
+        (
+          open_hbox ();
+          str $ "VALUE_Pack";
+          space ();
+          str "(";
+          pp_t t1;
+          comma ();
+          pp_t t2;
+          str ")";
+          close_box ()
+        )
+      | VALUE_PackI (t, i) =>
+        (
+          open_hbox ();
+          str $ "VALUE_PackI";
+          space ();
+          str "(";
+          pp_t t;
+          comma ();
+          str $ str_i i;
+          str ")";
+          close_box ()
+        )
+      | VALUE_Fold t =>
+        (
+          open_hbox ();
+          str $ "VALUE_Fold";
+          space ();
+          str "(";
+          pp_t t;
+          str ")";
+          close_box ()
+        )
+      | VALUE_AscType t =>
+        (
+          open_hbox ();
+          str $ "VALUE_AscType";
+          space ();
+          str "(";
+          pp_t t;
+          str ")";
+          close_box ()
+        )
+      | PACK_SUM (inj, t) =>
+        (
+          open_hbox ();
+          str $ "PACK_SUM";
+          space ();
+          str "(";
+          str $ str_inj inj;
+          comma ();
+          pp_t t;
+          str ")";
+          close_box ()
+        )
+      | ASCTIME i =>
+        (
+          open_hbox ();
+          str $ "ASCTIME";
+          space ();
+          str "(";
+          str $ str_i i;
+          str ")";
+          close_box ()
+        )
+      | _ => str $ str_inst inst
   end
 
 fun pp_insts (params as ((* pp_t,  *)pp_inst)) s insts =
@@ -231,7 +302,8 @@ fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
     close_box ();
     comma ();
     open_vbox_noindent ();
-    str "["; space ();
+    str "[";
+    (* space (); *)
     app (fn t =>
             (pp_t t;
              comma ()
@@ -272,7 +344,7 @@ fun pp_prog (pp_hval, pp_insts) s (heap, insts) =
 
 open WithPP
 
-fun pp_insts_to_fn ((* pp_t *)) s b =
+fun pp_insts_to_fn (str_i, pp_t) s b =
   let
     val pp_w = pp_w pp_t
   in

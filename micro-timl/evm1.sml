@@ -98,7 +98,7 @@ fun m @+ a = Rctx.insert' (a, m)
 fun m @! k = Rctx.find (m, k)
                         
 fun HCode' (binds, body) =
-  Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, body)
+  Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, mapSnd (fn code => JUMPDEST @:: code) body)
 
 fun PUSH1 w = PUSH (1, Inner w)
 fun PUSH1nat n = PUSH1 $ WNat n

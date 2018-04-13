@@ -673,30 +673,30 @@ fun test1 dirname =
     (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
                      
-    open TiTALExportPP
+    open EVM1ExportPP
     val () = println "Started Code Generation ..."
     val prog = cg_prog e
     val () = println "Finished Code Generation"
-    (* val prog_str = TiTALExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog *)
-    (* val () = write_file ("unit-test-after-code-gen.tmp", prog_str) *)
-    (* val () = println prog_str *)
-    (* val () = println "" *)
-    (* open TiTALTypecheck *)
-    (* val () = println "Started TiTAL typechecking ..." *)
+    val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
+    val () = write_file ("unit-test-after-code-gen.tmp", prog_str)
+    val () = println prog_str
+    val () = println ""
+    (* open EVM1Typecheck *)
+    (* val () = println "Started EVM1 typechecking ..." *)
     (* val (i, vcs, admits) = tital_typecheck prog *)
-    (* val () = println "Finished TiTAL typechecking" *)
+    (* val () = println "Finished EVM1 typechecking" *)
     (* val () = println "Time:" *)
     (* (* val i = simp_i i *) *)
     (* val () = println $ ToString.str_i Gctx.empty [] i *)
 
-    (* open TiTALEval *)
+    (* open EVM1Eval *)
     (* val (H, I) = prog *)
     (* fun get_max_k H = max_ls ~1 $ map (fst o fst) H *)
     (* val P = ((RctxUtil.fromList $ map (fn ((l, _), c) => (l, HVCode c)) H, get_max_k H), (Rctx.empty, 0), I) *)
-    (* val () = println "Started TiTAL evaluation"               *)
+    (* val () = println "Started EVM1 evaluation"               *)
     (* val w = eval P *)
     (* val () = assert_WVTT w *)
-    (* val () = println "Finished TiTAL evaluation" *)
+    (* val () = println "Finished EVM1 evaluation" *)
                      
     val () = println "ToEVM1.UnitTest passed"
   in

@@ -22,10 +22,12 @@ fun export_prog (depth_t, depth_insts, depth_heap) (H, I) =
     
 fun pp_t_to_NONE s = pp_t_to s NONE
 fun pp_insts_to_string a = EVM1PP.pp_insts_to_string_fn (
-    (* pp_t_to_NONE *)
+    str_i,
+    pp_t_to_NONE
   ) a
 fun pp_insts a = EVM1PP.pp_insts_fn (
-    (* pp_t_to_NONE *)
+    str_i,
+    pp_t_to_NONE
   ) a
 
 fun pp_prog_to_string a = EVM1PP.pp_prog_to_string_fn (
