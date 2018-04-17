@@ -297,13 +297,13 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         IBrBool' (r, VAppITs_ctx (VLabel l, itctx)) @::
         I1
       end
-    | EHalt v =>
+    | EHalt (v, t_res) =>
       let
-        val (v, t) = assert_EAscType v
-        val t = cg_t t
+        val (v, t_v) = assert_EAscType v
+        val t_v = cg_t t_v
       in
         IMov' (1, cg_v ectx v) @::
-        ISHalt t
+        ISHalt t_v
       end
     | EAscTime (e, i) => IAscTime' i @:: cg_e params e
     | EAscType (e, _) => cg_e params e
@@ -452,7 +452,7 @@ fun test1 dirname =
     (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
-    val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0)
+    val (e, _) = cps (e, TUnit) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)

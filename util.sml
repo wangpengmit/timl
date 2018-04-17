@@ -513,6 +513,8 @@ fun split_dir_file_ext filename =
 (* a replacement for ';' because ';''s precedence is too low (lower than 'if-then-else' and 'handle') *)    
 infixr 0 @@
 fun a @@ b = (a; b)
-               
+
+fun scan radix s = StringCvt.scanString (Int.scan radix) s
+                                        
 end
 

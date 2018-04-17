@@ -1416,12 +1416,13 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (ENewArrayValues (t, es), TArr (t, ConstIN (length es, dummy)), i)
         end
-      | EHalt e =>
+      | EHalt (e, t) =>
         let
+          val t = kc_against_kind itctx (t, KType)
           val (e, t_e, i_e) = tc ctx e
           val e = if !anno_EHalt then e %: t_e else e
         in
-          (EHalt e, TUnit, i_e)
+          (EHalt (e, t), t, i_e)
         end
       | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
     fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, SOME 5) (ctx_names ctx) e_input)

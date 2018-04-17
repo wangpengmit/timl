@@ -883,6 +883,7 @@ fun is_value (e : U.expr) : bool =
              EETAppT => false
            (* | EETAsc => false *)
            | EETAsc => is_value e
+           | EETHalt => false
         )
       | ET (opr, t, _) =>
         (case opr of
@@ -1264,6 +1265,13 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	         val (e, _, d) = check_mtype (ctx, e, t)
                in
 	         (EAsc (e, t), t, d)
+	       end
+             | EETHalt => 
+	       let
+                 val t = check_kind_Type gctx (skctx, t)
+	         val (e, _, d) = get_mtype (ctx, e)
+               in
+	         (EET (opr, e, t), t, d)
 	       end
           )
 	| U.ET (opr, t, r) =>

@@ -44,7 +44,7 @@ fun EAbsTimeClose ((x, name), e) = EAbsI $ close0_i_e_anno ((x, name, STime), e)
 fun ELetConstrClose ((x, name), e1, e2) = MakeELetConstr (e1, (name, dummy), close0_c_e x e2)
   
 fun Eid t = EAbs $ EBindAnno ((("x", dummy), t), EVar $ Bound 0)
-fun EHaltFun t = EAbs $ EBindAnno ((("x", dummy), t), EHalt $ EVar $ Bound 0)
+fun EHaltFun t_arg t_result = EAbs $ EBindAnno ((("x", dummy), t_arg), EHalt (EVar $ Bound 0, t_result))
 
 infix 0 %:
 fun a %: b = EAscType (a, b)
@@ -649,6 +649,16 @@ fun cps (e, t_e) (k, j_k) =
         cps (e1, t_e1) (e, i_e)
       end
     (* extensions from MicroTiML *)
+    | S.EHalt (e, t) =>
+      (* [[ halt e [_] ]](k) = [[e]](\x. halt x [unit]) *)
+      let
+        val x = fresh_evar ()
+        val c = EHalt (EV x, TUnit)
+        val t_x = cps_t t_e
+        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+      in
+        cps (e, t_e) (c, T_1)
+      end
     (* | S.ELetConstr (e1, bind) => *)
     (*   (* [[ let constr x = e1 in e2 ]](k) = [[e1]](\y. let constr x = y in [[e2]](k)) *) *)
     (*   let *)
@@ -812,7 +822,7 @@ fun check_CPSed_expr e =
         (loop e1;
          loop e2)
       end
-    | EHalt e => check_value e
+    | EHalt (e, _) => check_value e
     | EAscTime (e, _) => loop e
     | _ => raise Impossible $ "check_CPSed_expr():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
@@ -960,7 +970,7 @@ fun test1 dirname =
     val () = println ""
                      
     val () = println "Started CPS conversion ..."
-    val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0)
+    val (e, _) = cps (e, TUnit) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion ..."
     val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx $ uniquefy_e empty_ctx $ MicroTiMLPostProcess.post_process e

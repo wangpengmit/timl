@@ -90,7 +90,7 @@ datatype expr_un_op =
          | EUNat2Int
          | EUInt2Nat
          | EUPrintc
-         (* | EUPrint *)
+(* | EUPrint *)
 
 fun str_expr_const c =
   case c of
@@ -268,6 +268,7 @@ datatype expr_EI =
 datatype expr_ET =
          EETAppT
          | EETAsc
+         | EETHalt
 
 datatype expr_T =
          ETNever
@@ -345,6 +346,7 @@ fun str_expr_ET opr =
   case opr of
       EETAppT => "EETAppT"
     | EETAsc => "EETAsc"
+    | EETHalt => "EETHalt"
 
 fun str_expr_T opr =
   case opr of

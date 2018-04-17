@@ -95,6 +95,7 @@ fun is_keyword s = find (keywords, s)
 
 alpha = [A-Za-z];
 digit = [0-9];
+hexdigit = [0-9a-fA-F];
 ws = [\ \t];
 eol = (\013\010|\010|\013);
 id_init = ({alpha}|[_']);
@@ -170,8 +171,10 @@ string = [^\"];
                  (yytext, make_region (yypos, size yytext)));
  
 <INITIAL>{digit}+ => ((T.INT o flat)
-                 (foldl (fn (a,r) => ord(a)-ord(#"0")+10*r) 0 (explode yytext),
-                    make_region (yypos, size yytext)));
+                        (Option.valOf (scan StringCvt.DEC yytext), make_region (yypos, size yytext)));
+ 
+<INITIAL>"0x"{hexdigit}+ => ((T.INT o flat)
+                            (Option.valOf (scan StringCvt.HEX yytext), make_region (yypos, size yytext)));
  
 <INITIAL>{id_init}({id_init}|{digit}|&)* => ((getOpt (is_keyword yytext, fn r => (T.ID o flat) (yytext, r)))
 				  (make_region (yypos, size yytext)));

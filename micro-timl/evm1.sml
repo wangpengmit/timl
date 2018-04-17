@@ -87,6 +87,7 @@ fun WInt a = WConst $ WCInt a
 fun WNat a = WConst $ WCNat a
 fun WiBool a = WConst $ WCiBool a
 fun WLabel a = WConst $ WCLabel a
+val WTT = WConst WCTT
       
 infixr 5 @::
 infixr 5 @@

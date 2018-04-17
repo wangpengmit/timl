@@ -138,7 +138,7 @@ val br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
 val int2byte = [PUSH1nat 31, BYTE]
 val byte2int = [BYTE2INT]
 (* val printc = [PRINTC] *)
-val printc = [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0]
+val printc = [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0, PUSH1 WTT]
 
 fun concatRepeat n v = List.concat $ repeat n v
 fun TiBoolConst b =
@@ -235,7 +235,7 @@ fun compile ectx e =
         val t1 = cg_t t1
         val t2 = cg_t t2
       in
-        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 [PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign
+        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign)
       end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
@@ -455,16 +455,17 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val () = output_heap ((l, "else_branch"), hval)
       in
         compile e @@
+        [ISZERO] @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
         [JUMPI] @@
         I1
       end
-    | EHalt e =>
+    | EHalt (e, _) =>
       let
         val (e, t) = assert_EAscType e
         val t = cg_t t
       in
-        compile e @@ [PUSH1nat 32, SWAP1] @@ RETURN (* t *)
+        compile e @@ [PUSH_reg scratch, SWAP1, DUP2, MSTORE, PUSH1nat 32, SWAP1] @@ RETURN (* t *)
       end
     | EAscTime (e, i) => ASCTIME (Inner i) @:: cg_e params e
     | EAscType (e, _) => cg_e params e
@@ -487,7 +488,8 @@ fun cg_hval ectx (e, t_all) =
     (* input argument is always stored in r1 *)
     val ectx = (name, inl 0) :: ectx
     val rctx = rctx_single (0, t)
-    val I = cg_e (ref 1) (ectx, rev itbinds, rctx) e
+    val reg_counter = ref 1
+    val I = cg_e reg_counter (ectx, rev itbinds, rctx) e
     fun get_time t =
       let
         val (_, t) = collect_TForallIT t
@@ -497,7 +499,7 @@ fun cg_hval ectx (e, t_all) =
       end
     val hval = HCode' (itbinds, ((rctx, [], get_time t_all), I))
   in
-    hval
+    (hval, !reg_counter)
   end
   
 fun cg_prog e =
@@ -505,22 +507,26 @@ fun cg_prog e =
     val () = heap_ref := []
     val (binds, e) = collect_ELetRec e
     val len = length binds
-    fun on_bind ((_, bind), ectx) =
+    fun on_bind ((_, bind), (ectx, num_regs)) =
       let
         val (t, (name, e)) = unBindAnnoName bind
         val () = println $ "cg() on " ^ fst name
         (* val t = cg_t t *)
         val l = fresh_label ()
         val ectx = (name, inr l) :: ectx
-        val hval = cg_hval ectx (e, t)
+        val (hval, mr) = cg_hval ectx (e, t)
         val () = output_heap ((l, fst name), hval)
       in
-        ectx
+        (ectx, max num_regs mr)
       end
-    val ectx = foldl on_bind [] binds
-    val I = cg_e (ref 0) (ectx, [], Rctx.empty) e
+    val (ectx, num_regs) = foldl on_bind ([], 0) binds
+    val reg_counter = ref 0
+    val I = cg_e reg_counter (ectx, [], Rctx.empty) e
     val H = !heap_ref
     val H = rev H
+    val num_regs = max num_regs (!reg_counter)
+    val () = println $ "# of registers: " ^ str_int num_regs
+    val I = [PUSH_reg $ reg_addr num_regs, PUSH1nat 0, MSTORE] @@ I
   in
     (H, I)
   end
@@ -558,7 +564,8 @@ open TestUtil
 fun test1 dirname =
   let
     val () = println "ToEVM1.UnitTest started"
-    val filename = join_dir_file (dirname, "to-evm1-test.pkg")
+    val join_dir_file' = curry join_dir_file
+    val filename = join_dir_file' dirname "to-evm1-test.pkg"
     val filenames = map snd $ ParseFilename.expand_pkg (fn msg => raise Impossible msg) (true, filename)
     open Parser
     val prog = concatMap parse_file filenames
@@ -613,13 +620,13 @@ fun test1 dirname =
     (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
-    val (e, _) = cps (e, TUnit) (EHaltFun TUnit, T_0)
+    val (e, _) = cps (e, TUnit) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1, NONE) ToStringUtil.empty_ctx e
-    val () = write_file ("unit-test-after-cps.tmp", e_str)
+    val () = write_file (join_dir_file' dirname $ "unit-test-after-cps.tmp", e_str)
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
@@ -640,9 +647,9 @@ fun test1 dirname =
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1, NONE) ToStringUtil.empty_ctx e
-    val () = write_file ("unit-test-after-cc.tmp", e_str)
-    val () = println e_str
-    val () = println ""
+    val () = write_file (join_dir_file' dirname $ "unit-test-after-cc.tmp", e_str)
+    (* val () = println e_str *)
+    (* val () = println "" *)
     (* val () = println "Started MicroTiML typechecking #3 ..." *)
     (* val ((e, t, i), vcs, admits) = typecheck pair_alloc_tc_flags ([], [], [](* , HeapMap.empty *)) e *)
     (* val () = println "Finished MicroTiML typechecking #3" *)
@@ -661,7 +668,7 @@ fun test1 dirname =
     (* (* val () = pp_e $ export ToStringUtil.empty_ctx e *) *)
     (* (* val () = println "" *) *)
     (* val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export ((* SOME 1 *)NONE, NONE) ToStringUtil.empty_ctx e *)
-    (* val () = write_file ("unit-test-after-pair-alloc.tmp", e_str) *)
+    (* val () = write_file (join_dir_file' dirname $ "unit-test-after-pair-alloc.tmp", e_str) *)
     (* val () = println e_str *)
     (* val () = println "" *)
     (* val () = println "Started post-pair-allocation form checking" *)
@@ -681,15 +688,15 @@ fun test1 dirname =
     val prog = cg_prog e
     val () = println "Finished Code Generation"
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
-    val () = write_file ("unit-test-after-code-gen.tmp", prog_str)
-    val () = println prog_str
-    val () = println ""
+    val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
+    (* val () = println prog_str *)
+    (* val () = println "" *)
     open EVM1Assemble
-    val () = println "EVM Bytecode:"
     val prog_bytes = ass2str prog
-    val () = write_file ("evm-bytecode.tmp", prog_bytes)
-    val () = println prog_bytes
-    val () = println ""
+    val () = write_file (join_dir_file' dirname $ "evm-bytecode.tmp", prog_bytes)
+    (* val () = println "EVM Bytecode:" *)
+    (* val () = println prog_bytes *)
+    (* val () = println "" *)
     (* open EVM1Typecheck *)
     (* val () = println "Started EVM1 typechecking ..." *)
     (* val (i, vcs, admits) = tital_typecheck prog *)

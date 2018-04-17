@@ -137,6 +137,7 @@ fun on_e (e : S.expr) =
       (case opr of
            EETAsc => EAscType (on_e e, on_mt t)
          | EETAppT => EAppT (on_e e, on_mt t)
+         | EETHalt => EHalt (on_e e, on_mt t)
       )
     | S.ET (opr, t, r) =>
       (case opr of

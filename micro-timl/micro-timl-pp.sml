@@ -1074,13 +1074,15 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | EHalt e =>
+      | EHalt (e, t) =>
         (
           open_hbox ();
           str "EHalt";
           space ();
           str "(";
           pp_e e;
+          comma ();
+          pp_t t;
           str ")";
           close_box ()
         )
