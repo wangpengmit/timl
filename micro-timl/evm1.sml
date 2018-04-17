@@ -52,7 +52,8 @@ datatype ('idx, 'ty) inst =
          | PUSH of int * 'ty word inner
          | DUP of int
          | SWAP of int
-         (* extensions *)
+         | LOG of int
+         (* extensions (noops) *)
          | VALUE_AppT of 'ty inner
          | VALUE_AppI of 'idx inner
          | VALUE_Pack of 'ty inner * 'ty inner
@@ -110,6 +111,7 @@ val DUP2 = DUP 2
 val DUP3 = DUP 3
 val SWAP1 = SWAP 1
 val SWAP2 = SWAP 2
+val LOG0 = LOG 0
 
 (* small values *)
 datatype ('idx, 'ty) value =

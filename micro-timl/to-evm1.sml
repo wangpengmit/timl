@@ -124,7 +124,8 @@ fun VAppITs_ctx (e, itctx) =
     VAppITs (e, itargs)
   end
 
-fun reg_addr r = 32 * (r + 1)
+val scratch = 32
+fun reg_addr r = 32 * (r + 2)
 fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD]
 fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE]
 val array_ptr = [PUSH1nat 32, MUL, ADD]
@@ -136,6 +137,8 @@ val br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
 (* val int2byte = [] (* noop, relying on type discipline *) *)
 val int2byte = [PUSH1nat 31, BYTE]
 val byte2int = [BYTE2INT]
+(* val printc = [PRINTC] *)
+val printc = [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0]
 
 fun concatRepeat n v = List.concat $ repeat n v
 fun TiBoolConst b =
@@ -183,7 +186,7 @@ fun impl_expr_un_op opr =
     | EUInt2Nat => [INT2NAT, VALUE_Fold $ Inner $ TSomeNat ()]
     | EUArrayLen => [PUSH1nat 32, SWAP1, SUB, MLOAD]
     | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD, MLOAD]
-    | EUPrintc => [PRINTC]
+    | EUPrintc => printc
     (* | EUPrint => [PRINT] *)
                         
 fun impl_nat_expr_bin_op opr =
@@ -680,6 +683,12 @@ fun test1 dirname =
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
     val () = write_file ("unit-test-after-code-gen.tmp", prog_str)
     val () = println prog_str
+    val () = println ""
+    open EVM1Assemble
+    val () = println "EVM Bytecode:"
+    val prog_bytes = ass2str prog
+    val () = write_file ("evm-bytecode.tmp", prog_bytes)
+    val () = println prog_bytes
     val () = println ""
     (* open EVM1Typecheck *)
     (* val () = println "Started EVM1 typechecking ..." *)

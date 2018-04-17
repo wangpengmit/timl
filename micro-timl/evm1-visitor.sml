@@ -11,6 +11,7 @@ type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_vtable =
        visit_insts : 'this -> 'env -> ('idx, 'ty) insts -> ('idx2, 'ty2) insts,
        visit_idx : 'this -> 'env -> 'idx -> 'idx2,
        visit_ty : 'this -> 'env -> 'ty -> 'ty2,
+       visit_label : 'this -> 'env -> label -> label,
        extend_i : 'this -> 'env -> iname -> 'env * iname,
        extend_t : 'this -> 'env -> tname -> 'env * tname
      }
@@ -45,10 +46,22 @@ fun override_visit_insts (record : ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_vi
     visit_insts = new,
     visit_idx = #visit_idx record,
     visit_ty = #visit_ty record,
+    visit_label = #visit_label record,
     extend_i = #extend_i record,
     extend_t = #extend_t record
   }
     
+fun override_visit_label (record : ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_vtable) new =
+  {
+    visit_word = #visit_word record,
+    visit_inst = #visit_inst record,
+    visit_insts = #visit_insts record,
+    visit_idx = #visit_idx record,
+    visit_ty = #visit_ty record,
+    visit_label = new,
+    extend_i = #extend_i record,
+    extend_t = #extend_t record
+  }
     
 (***************** the default visitor  **********************)    
 
@@ -65,9 +78,13 @@ fun default_evm1_visitor_vtable
     fun visit_word this env data =
       let
         val vtable = cast this
+        fun visit_word_const c =
+          case c of
+              WCLabel l => WCLabel $ #visit_label vtable this env l
+            | _ => c
       in
         case data of
-            WConst data => WConst data
+            WConst data => WConst $ visit_word_const data
           | WUninit t => WUninit $ #visit_ty vtable this env t
           | WBuiltin (name, t) => WBuiltin (name, #visit_ty vtable this env t)
           | WNever t => WNever $ #visit_ty vtable this env t
@@ -125,6 +142,7 @@ fun default_evm1_visitor_vtable
           | JUMPDEST => JUMPDEST
           | DUP a => DUP a
           | SWAP a => SWAP a
+          | LOG a => LOG a
           | UNFOLD => UNFOLD
           | NAT2INT => NAT2INT
           | INT2NAT => INT2NAT
@@ -148,6 +166,7 @@ fun default_evm1_visitor_vtable
       visit_insts = visit_insts,
       visit_idx = visit_idx,
       visit_ty = visit_ty,
+      visit_label = visit_noop,
       extend_i = extend_i,
       extend_t = extend_t
     }
@@ -166,6 +185,9 @@ fun visit_hval (extend_i, extend_t, visit_idx, visit_sort, visit_kind, visit_ty,
                               (visit_list visit_ty)
                               visit_idx) visit_insts) env h
     
+fun visit_prog (visit_label, visit_hval, visit_insts) env (H, I) =
+  (visit_list (visit_pair (visit_pair visit_label return2) visit_hval) env H, visit_insts env I)
+
 (*********** the "export" visitor: convertnig de Bruijn indices to nameful terms ***************)    
 
 fun export_evm1_visitor_vtable cast (omitted, visit_idx, visit_ty) =

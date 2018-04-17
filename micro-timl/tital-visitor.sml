@@ -388,7 +388,7 @@ fun visit_hval (extend_i, extend_t, visit_idx, visit_sort, visit_kind, visit_ty,
                 (visit_pair (visit_binder extend_i) (visit_outer $ visit_sort))
                 (visit_pair (visit_binder extend_t) visit_kind))
     (visit_pair (visit_pair (visit_map Rctx.map visit_ty) visit_idx) visit_insts) env h
-    
+
 (*********** the "export" visitor: convertnig de Bruijn indices to nameful terms ***************)    
 
 fun export_tital_visitor_vtable cast (omitted, visit_idx, visit_ty) =

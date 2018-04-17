@@ -47,6 +47,7 @@ fun str_inst a =
     | PRINTC => "PRINTC"
     | DUP n => "DUP" ^ str_int n
     | SWAP n => "SWAP" ^ str_int n
+    | LOG n => "LOG" ^ str_int n
     | UNPACK name => "UNPACK " ^ binder2str name
     | UNPACKI name => "UNPACKI " ^ binder2str name
     | _ => raise Impossible "str_inst()"
@@ -332,13 +333,13 @@ fun pp_prog (pp_hval, pp_insts) s (heap, insts) =
     fun close_box () = PP.closeBox s
   in
     open_vbox_noindent ();
+    pp_insts insts;
     app (fn ((l, name), h) =>
             (str $ sprintf "$ <$>" [str_int l, name];
              str ":"; space ();
              pp_hval h;
              space ()
         )) heap;
-    pp_insts insts;
     close_box ()
   end
 
