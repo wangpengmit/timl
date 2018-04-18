@@ -27,11 +27,6 @@ fun printls {len : Nat} (ls : list _ {len}) = List.app print_printable ls
 val s = ""
           
 val a = 1
-(* val () = __&halt "a" *)
-(* val a = int2str a *)
-(* val () = __&halt a *)
-(* val () = __&halt (int2str a) *)
-                                                     
 val a = ()
           
 val x = 1 + 2
@@ -41,6 +36,8 @@ val z = x + y + x
 val () = print "z=(1+2)+((1+2)+1)+(1+2)="
 val () = print_int <| z
 val () = println ""
+
+val () = assert (z = 10, "z=(1+2)+((1+2)+1)+(1+2)=10")
               
 val p = (1, ())
           
@@ -59,7 +56,9 @@ val a = f 2
 fun f x y = x + y
 
 val a = f 1 2
-val () = printls [S "a=1+2=", I a, Ln]
+val () = printls [S "a = f 1 2 = 1+2 = ", I a, Ln]
+
+val () = assert (a = 3, "a = f 1 2 = 1+2 = 3")                 
 
 fun foo {i : Nat} {j | j > i} () =
     let
@@ -85,6 +84,9 @@ fun twice f x = f (f x)
 
 val n = if 1 > 2 then 1 else 2
 val () = printls [S "n=(if 1 > 2 then 1 else 2)=", I n, Ln]
+
+val () = assert ((if 1 > 2 then 1 else 0) = 0, "(if 1 > 2 then 1 else 0) = 0")
+val () = assert ((ifdec #1 #< #2 then 1 else 0) = 1, "ifdec #1 #< #2 then 1 else 0) = 1")
                                                         
 fun fact_tail {n : Nat} (n : nat {n}, acc) (* return using 3.0 * $n *) =
   ifdec n #< #1 then acc
@@ -92,10 +94,14 @@ fun fact_tail {n : Nat} (n : nat {n}, acc) (* return using 3.0 * $n *) =
                  
 val () = printls [S "fact_tail (4, 1) = ", I <| fact_tail (#4, 1), Ln]
 
+val () = assert (fact_tail (#4, 1) = 24, "fact_tail (#4, 1) = 24")
+
 fun fact {n : Nat} (n : nat {n}) (* return using 3.0 * $n *) =
   ifdec n #< #1 then 1
   else nat2int n * fact (n #- #1) using 4.0 * $n
                  
 val () = printls [S "fact 4 = ", I <| fact #4, Ln]
+
+val () = assert (fact #4 = 24, "fact #4 = 24")
 
 end
