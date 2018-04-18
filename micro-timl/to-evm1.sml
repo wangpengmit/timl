@@ -124,8 +124,10 @@ fun VAppITs_ctx (e, itctx) =
     VAppITs (e, itargs)
   end
 
-val scratch = 32
-fun reg_addr r = 32 * (r + 2)
+fun reg_addr r = 32 * (r + 1)
+(* use r0 as scratch space *)
+(* val scratch = 32 *)
+val scratch = reg_addr 0
 fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD]
 fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE]
 val array_ptr = [PUSH1nat 32, MUL, ADD]
@@ -496,9 +498,9 @@ fun cg_hval ectx (e, t_all) =
     val (t, (name, e)) = assert_EAbs e
     val t = cg_t t
     (* input argument is always stored in r1 *)
-    val ectx = (name, inl 0) :: ectx
-    val rctx = rctx_single (0, t)
-    val reg_counter = ref 1
+    val ectx = (name, inl 1) :: ectx
+    val rctx = rctx_single (1, t)
+    val reg_counter = ref 2
     val I = cg_e reg_counter (ectx, rev itbinds, rctx) e
     fun get_time t =
       let
@@ -530,7 +532,7 @@ fun cg_prog e =
         (ectx, max num_regs mr)
       end
     val (ectx, num_regs) = foldl on_bind ([], 0) binds
-    val reg_counter = ref 0
+    val reg_counter = ref 1
     val I = cg_e reg_counter (ectx, [], Rctx.empty) e
     val H = !heap_ref
     val H = rev H
