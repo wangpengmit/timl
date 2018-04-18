@@ -140,17 +140,52 @@ fun is_reg_addr num_regs n =
   else NONE
          
 fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
+  let
+    fun mul_div name f time =
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t =
+            case (t0, t1) of
+                (TConst TCInt, TConst TCInt) => TInt
+              | (TNat i0, TNat i1) => TNat $ f (i0, i1)
+              | _ => raise Impossible $ sprintf "$: can't operate on operands of types $ and $" [name, str_t t0, str_t t1]
+      in
+        ((itctx, rctx, t :: sctx), time)
+      end
+  in
   case inst of
       ADD =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val t =
-            case t0 of
-                TConst TCInt => (assert_TInt t1; TInt)
-              | TNat i0 => TNat $ assert_TNat t1 %+ i0
+            case (t0, t1) of
+                (TConst TCInt, TConst TCInt) => TInt
+              | (TNat i0, TNat i1) => TNat $ i1 %+ i0
+              | (TNat i, TTuplePtr (ts, offset)) => TTuplePtr (ts, offset %+ i)
+              | (TTuplePtr (ts, offset), TNat i) => TTuplePtr (ts, offset %+ i)
+              | (TNat i, TArrayPtr (t, len, offset)) => TArrayPtr (t, len, offset %+ i)
+              | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %+ i)
+              | _ => raise Impossible $ sprintf "ADD: can't add operands of types $ and $" [str_t t0, str_t t1]
       in
         ((itctx, rctx, t :: sctx), T_ADD)
       end
+    | SUB =>
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        fun a %%- b = (write_prop (a %>= b); a %- b)
+        val t =
+            case (t0, t1) of
+                (TConst TCInt, TConst TCInt) => TInt
+              | (TNat i0, TNat i1) => TNat $ i0 %%- i1
+              | (TTuplePtr (ts, offset), TNat i) => TTuplePtr (ts, offset %%- i)
+              | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %%- i)
+              | _ => raise Impossible $ sprintf "SUB: can't subtract operands of types $ and $" [str_t t0, str_t t1]
+      in
+        ((itctx, rctx, t :: sctx), T_SUB)
+      end
+    | MUL => mul_div "MUL" op%* T_MUL
+    | DIV => mul_div "DIV" op%/ T_DIV
+    | SDIV => mul_div "SDIV" op%/ T_SDIV
     | MLOAD => 
       let
         val (t0, sctx) = assert_cons sctx
@@ -158,23 +193,36 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
         val t =
             case t0 of
                 TNat i0 =>
+                (case simp_i i0 of
+                    IConst (ICNat n, _) =>
+                    (case is_reg_addr num_regs n of
+                         SOME n =>
+                         (case rctx @! n of
+                              SOME t => t
+                            | NONE => raise Impossible $ sprintf "MLOAD: reg$'s type is unknown" [str_int n])
+                       | NONE => def ())
+                  | _ => def ())
+              | TTuplePtr (ts, offset) =>
+                (case simp_i offset of
+                     IConst (ICNat n, _) =>
+                     (case is_tuple_offset (length ts) n of
+                          SOME n => List.nth (ts, n)
+                        | NONE => raise Impossible $ sprintf "MLOAD: bad offset in type $" [str_t t0])
+                   | _ => raise Impossible $ sprintf "MLOAD: unknown offset in type $" [str_t t0])
+              | TArrayPtr (t, len, offset) =>
                 let
+                  fun read () = (write_prop (offset %mod N32 %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); t)
                 in
-                  case i0 of
-                      IConst (ICNat n, _) =>
-                      (case is_reg_addr num_regs n of
-                           SOME n =>
-                           (case rctx @! n of
-                                SOME t => t
-                              | NONE => raise Impossible $ sprintf "MLOAD: reg$'s type is unknown" [str_int n])
-                         | NONE => def ())
-                    | _ => def ()
+                  case simp_i offset of
+                     IConst (ICNat n, _) =>
+                     if n = 0 then TNat len
+                     else read ()
+                   | _ => read ()
                 end
-              | _ => def ()
       in
         ((itctx, rctx, t :: sctx), T_MLOAD)
       end
-    | MLOAD => 
+    | MSTORE => 
       let
         val (t0, t1, sctx) = assert_cons sctx
         val def () = raise Impossible $ sprintf "MSTORE: can't write to address of type $" [str_t t0]
@@ -183,17 +231,20 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
                 TNat i0 =>
                 let
                 in
-                  case i0 of
+                  case simp_i i0 of
                       IConst (ICNat n, _) =>
                       (case is_reg_addr num_regs n of
                            SOME n => rctx @+ (n, t1)
                          | NONE => def ())
                     | _ => def ()
                 end
+              | TArrayPtr (t, len, offset) =>
+                (is_eq_ty ictx (t1, t); write_prop (offset %mod N32 %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); rctx)
               | _ => def ()
       in
         ((itctx, rctx, sctx), T_STORE)
       end
+    | PUSH (n, w) => ((itctx, rctx, tc_w ctx (unInner w) :: sctx), T_PUSH)
       
 fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
   let
