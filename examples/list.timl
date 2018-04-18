@@ -58,6 +58,9 @@ fun rev_append {n m : Nat} (l : list _ {n}, acc : list _ {m}) return list _ {n +
       | hd :: tl => rev_append (tl, hd :: acc)
 
 fun rev {n : Nat} (xs : list _ {n}) return list _ {n} using 1.0 + $n = rev_append (xs, [])
+
+(* val a = rev [1, 2] *)
+(* val () = __&halt a *)
                                                                                   
 (* another version with Big-O complexity *)
 absidx T_rev_append : BigO (fn n => $n) (* = fn n => 2.0 * $n *) with

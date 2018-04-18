@@ -37,6 +37,10 @@ fun print {len : Nat} (s : string {len}) =
     ()
   end
 
+(* val a = printc #"a" *)
+(* val a = print "abc" *)
+(* val () = __&halt a *)
+    
 fun int2char i = int2byte (i + 48)
                           
 fun nat2byte {i : Nat} (i : nat {i}) = int2char <| nat2int i
@@ -57,6 +61,9 @@ fun nat2bytes {d : Nat} {i : Nat | 10 ** d <= i /\ i < 10 ** (d+1) \/ i = 0 /\ d
   else int2char (nat2int i mod 10) :: (@nat2bytes {d-1} {_} (i #/ #10)) : list byte {d+1} using 5.0 + 8.0 * $d
   end
 
+(* val a = @nat2bytes {1} {_} #10 *)
+(* val () = __&halt a *)
+          
 (*   10**77 < 2**256 < 10**78   *)
 datatype lemma2 {n : Nat} =
          Lemma2 {n < 2 ** 256 -> floor (log10 $n) < 78} {10 ** floor (log10 $n) <= n /\ n < 10 * floor (log10 $n)} of lemma2 {n}

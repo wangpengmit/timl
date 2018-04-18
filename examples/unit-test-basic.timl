@@ -2,11 +2,6 @@ structure CCTestBasic = struct
 
 open String
 
-(* fun fst a = __&fst a *)
-(* fun snd a = __&snd a *)
-(* fun not a = __&not a *)
-(* val true = __&true *)
-(* val false = __&false *)
 val str_int = int2str
 fun println s = print s; print "\n"
 fun print_int i return using 1810.0 =
@@ -32,20 +27,20 @@ fun printls {len : Nat} (ls : list _ {len}) = List.app print_printable ls
 val s = ""
           
 val a = 1
+(* val () = __&halt "a" *)
+(* val a = int2str a *)
+(* val () = __&halt a *)
+(* val () = __&halt (int2str a) *)
+                                                     
 val a = ()
           
 val x = 1 + 2
 val y = x + 1
 val z = x + y + x
 
-(* fun println s = let val () = print s in print "\n" end *)
-
-(* (* val () = print "z=" *) *)
-(* (* val () = println (int2str z) *) *)
 val () = print "z=(1+2)+((1+2)+1)+(1+2)="
 val () = print_int <| z
 val () = println ""
-(* (* val () = println $ str_int z *) *)
               
 val p = (1, ())
           

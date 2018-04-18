@@ -97,6 +97,7 @@ datatype exp_const =
          ECInt of int
          | ECNat of int
          | ECString of string
+         | ECChar of Char.char
 
 datatype expr_tri_op =
          ETIte

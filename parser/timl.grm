@@ -98,6 +98,7 @@ open Ast
     | DCOLON
     | SHARP
     | STRING of string
+    | CHAR of Char.char
     | STR_CONCAT
     | SEMI_COLON
     | NEVER
@@ -320,6 +321,7 @@ aexp : decorated_id (Var decorated_id)
      | SHARP INT (Const (ECNat INT, (SHARPleft, INTright)))
      | INT (Const (ECInt INT, (INTleft, INTright)))
      | STRING (Const (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
+     | CHAR (Const (ECChar CHAR, (CHARleft, CHARright)))
      | LSQ exp_comma_star RSQ (EList (exp_comma_star, (LSQleft, RSQright)))
      | TILDE aexp (EUnOp (EUPrim EUPIntNeg, aexp, (TILDEleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))

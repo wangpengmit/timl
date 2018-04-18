@@ -60,9 +60,9 @@ push2 n*32
 add
 mload
 
-br_sum_to expr inr_branch_label ==
+br_sum_to expr inl_branch_label ==
 compile(expr)
-push32 inr_branch_label // [code, l]
+push32 inl_branch_label // [code, l]
 {// br_sum
 dup2 // [l, code, l]
 //unpack_sum "c"
@@ -77,8 +77,10 @@ jumpi_sum
 
 inl [t_other] expr ==
 compile(expr)
-{// inl
-{// malloc_tuple [ibool{False}, t_expr]
+{// inl [t_other]
+push1 #true
+{// inj [t_other] // [inj, v]
+{// malloc_tuple [ibool{true}, t_expr]
 push1 0
 mload
 dup1
@@ -86,18 +88,31 @@ push1 64
 add
 push1 0
 mstore
-}
+} // [pair, inj, v]
 {// inl_assign [t_other]
-push1 false
+swap1 // [inj, pair, v]
 dup2
-mstore // m[m[0]] = #false
+mstore // m[m[0]] = #true // [pair, v]
 swap1
 dup2
 push1 32
 add
-mstore // m[m[0]+32] = expr
+mstore // m[m[0]+32] = expr // [pair]
 pack_inl [t_other]
 }
+}
+}
+
+e1 #< e2 ==
+compile(e1)
+compile(e2)
+swap1 // [v1, v2]
+lt // [b]
+{// inj_sumbool
+push1 tt // [tt, b]
+pack [?]
+swap1 // [b, tt]
+inj
 }
 
 new_string s ==
@@ -293,11 +308,12 @@ mload
 write e1 e2 e3 ==
 compile(e1)
 compile(e2)
-compile(e3)
-swap2
-swap1
-array_ptr 
+compile(e3) // [v3, v2, v1]
+swap2 // [v1, v2, v3]
+swap1 // [v2, v1, v3]
+array_ptr // [ptr, v3]
 mstore
+push1 tt
 
 array_len e ==
 compile(e)

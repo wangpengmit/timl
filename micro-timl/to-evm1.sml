@@ -139,7 +139,24 @@ val int2byte = [PUSH1nat 31, BYTE]
 val byte2int = [BYTE2INT]
 (* val printc = [PRINTC] *)
 val printc = [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0, PUSH1 WTT]
+fun impl_inj t_tuple inj t_other =
+  malloc_tuple t_tuple @
+  [SWAP1, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE, PACK_SUM (inj, Inner t_other)]
 
+fun impl_nat_cmp opr =
+  let
+    val cmp =
+        case opr of
+            NCLt => [GT] (* a<b <-> b>a *)
+          | NCGt => [LT]
+          | NCLe => [LT, ISZERO] (* a<=b <-> ~(a>b) <-> ~(b<a) *)
+          | NCGe => [GT, ISZERO]
+          | NCEq => [EQ]
+          | NCNEq => [EQ, ISZERO]
+  in
+    cmp @ [ISZERO, PUSH1 WTT, SWAP1] @ impl_inj [TUnit, TUnit] InjInl TUnit
+  end
+      
 fun concatRepeat n v = List.concat $ repeat n v
 fun TiBoolConst b =
   TiBool $ IConst (ICBool b, dummy)
@@ -196,15 +213,6 @@ fun impl_nat_expr_bin_op opr =
     | EBNDiv => [SWAP1, DIV]
     | EBNBoundedMinus => [SWAP1, SUB]
 
-fun impl_nat_cmp opr =
-  case opr of
-     NCLt => [SWAP1, LT]
-   | NCGt => [SWAP1, GT]
-   | NCLe => [GT, ISZERO]
-   | NCGe => [LT, ISZERO]
-   | NCEq => [EQ]
-   | NCNEq => [EQ, ISZERO]
-      
 fun compile ectx e =
   let
     val compile = compile ectx
@@ -244,7 +252,9 @@ fun compile ectx e =
         val t_other = cg_t t_other
         val b = choose_inj (false, true) inj
       in
-        compile e @ malloc_tuple [TiBoolConst b, t_e] @ [PUSH1 $ WiBool b, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE, PACK_SUM (inj, Inner t_other)]
+        compile e @
+        [PUSH1 $ WiBool b] @
+        impl_inj [TiBoolConst b, t_e] inj t_other
       end
     | ENewArrayValues (t, es) =>
       let
@@ -268,7 +278,7 @@ fun compile ectx e =
       compile e3 @
       [SWAP2, SWAP1] @
       array_ptr @
-      [MSTORE]
+      [MSTORE, PUSH1 WTT]
     | EUnOp (EUUnfold, e) =>
       compile e @ [UNFOLD]
     | EUnOp (EUTiML opr, e) =>

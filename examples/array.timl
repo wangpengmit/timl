@@ -32,6 +32,13 @@ fun fromList ['a] {len : Nat} (l : list 'a {len}) return array 'a {len} using 8.
         arr
       end
 
+(* val a : array int {_} = empty_array () *)
+(* val a = array (#10, 1) *)
+(* val _ = __&sub (a, #5) *)
+(* val () = __&update (a, #5, 3) *)
+(* val a = fromList [1, 2] *)
+(* val () = __&halt a *)
+        
 (* todo: shouldn't use List.tabulate which incurs extra space usage *)
 fun tabulate ['a] {len : Nat} {m : Time} (n : nat {len}, f : nat_less_than {len} -- m --> 'a) return array 'a {len} using (m + $12) * $len + $4 =
   fromList <| List.tabulate (n, f)

@@ -116,6 +116,7 @@
 - [ ] If a primitive shouldn't be redefined (especially base type names because type names appear in feedback messages), it should be made a keyword in timl.lex.
 - [ ] Propogate return clauses through [ifdec] and [if]; let those time specs mean entire time including the matchee.
 - [ ] Have sprintf.
+- [ ] Check no-UVar after typechecking.
 
 # To-do for MicroTiML
 

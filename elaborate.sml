@@ -344,6 +344,7 @@ local
             (case c of
                 S.ECInt n => EConstInt (n, r)
 	      | S.ECNat n => EConstNat (n, r)
+	      | S.ECChar n => EConstByte (n, r)
 	      | S.ECString s =>
                 let
                   fun unescape s =

@@ -174,12 +174,14 @@ string = [^\"];
                         (Option.valOf (scan StringCvt.DEC yytext), make_region (yypos, size yytext)));
  
 <INITIAL>"0x"{hexdigit}+ => ((T.INT o flat)
-                            (Option.valOf (scan StringCvt.HEX yytext), make_region (yypos, size yytext)));
- 
+                               (Option.valOf (scan StringCvt.HEX yytext), make_region (yypos, size yytext)));
+
 <INITIAL>{id_init}({id_init}|{digit}|&)* => ((getOpt (is_keyword yytext, fn r => (T.ID o flat) (yytext, r)))
 				  (make_region (yypos, size yytext)));
 <INITIAL>"(*" => (inc_ref comment_level; YYBEGIN COMMENT; continue());
 <INITIAL>\"{string}*\" => ((T.STRING o flat) (yytext, make_region (yypos, size yytext)));
+<INITIAL>"#"\"{string}\" => ((T.CHAR o flat) (String.sub (yytext, 2), make_region (yypos, size yytext)));
+ 
 <INITIAL>. => ((reporter o flat) (sprintf "Bad character: $" [yytext], make_region (yypos, size yytext)); (T.BOGUS o flat) (yytext, make_region (yypos, size yytext)));
 
 <COMMENT>"(*" => (inc_ref comment_level; continue());

@@ -32,5 +32,8 @@ datatype option 'a =
 
 datatype le {a b : Nat} =
          LE {a <= b} of le {a} {b}
-                   
+
+(* val a = int2nat 10 *)
+(* val () = __&halt a *)
+                
 end
