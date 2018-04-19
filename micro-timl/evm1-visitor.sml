@@ -117,7 +117,7 @@ fun default_evm1_visitor_vtable
           | VALUE_AscType t => VALUE_AscType $ visit_inner (#visit_ty vtable this) env t
           | UNPACK name => UNPACK $ visit_tbinder this env name
           | UNPACKI name => UNPACKI $ visit_ibinder this env name
-          | PACK_SUM (inj, t) => PACK_SUM (inj, visit_inner (#visit_ty vtable this) env t)
+          (* | PACK_SUM (inj, t) => PACK_SUM (inj, visit_inner (#visit_ty vtable this) env t) *)
           | ASCTIME i => ASCTIME $ visit_inner (#visit_idx vtable this) env i
           | ADD => ADD
           | MUL => MUL
@@ -147,7 +147,7 @@ fun default_evm1_visitor_vtable
           | NAT2INT => NAT2INT
           | INT2NAT => INT2NAT
           | BYTE2INT => BYTE2INT
-          | PRINTC => PRINTC
+          (* | PRINTC => PRINTC *)
       end
     fun visit_insts this env data =
       let

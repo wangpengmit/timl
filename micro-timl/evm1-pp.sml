@@ -198,18 +198,18 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           str ")";
           close_box ()
         )
-      | PACK_SUM (inj, t) =>
-        (
-          open_hbox ();
-          str $ "PACK_SUM";
-          space ();
-          str "(";
-          str $ str_inj inj;
-          comma ();
-          pp_t t;
-          str ")";
-          close_box ()
-        )
+      (* | PACK_SUM (inj, t) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str $ "PACK_SUM"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     str $ str_inj inj; *)
+      (*     comma (); *)
+      (*     pp_t t; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | ASCTIME i =>
         (
           open_hbox ();

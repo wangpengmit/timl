@@ -45,6 +45,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool)
          (* used by compiler/code-gen *)
          | TArrowTAL of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx
+         | TArrowEVM of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * ('var, 'bsort, 'idx, 'sort) ty list * 'idx
          | TiBool of 'idx
          | TPreArray of ('var, 'bsort, 'idx, 'sort) ty * 'idx * 'idx
 

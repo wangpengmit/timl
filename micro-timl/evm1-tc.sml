@@ -29,125 +29,65 @@ infix  9 @!
 val T0 = T0 dummy
 val T1 = T1 dummy
 
-fun add_sorting_full new (hctx, (ictx, tctx), rctx) = (hctx, (new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx)
-fun add_kinding_full new (hctx, (ictx, tctx), rctx) = (hctx, (ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx)
-fun add_r p (hctx, itctx, rctx) = (hctx, itctx, rctx @+ p)
+fun kc_against_KType ctx t = kc_against_kind ctx (t, KType)
+                                             
+fun add_sorting_full new ((ictx, tctx), rctx) = ((new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx)
+fun add_kinding_full new ((ictx, tctx), rctx) = ((ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx)
+fun add_r p (itctx, rctx) = (itctx, rctx @+ p)
 
-fun get_word_const_type c =
+fun get_word_const_type hctx c =
   case c of
       WCTT => TUnit
     | WCNat n => TNat $ INat n
     | WCInt _ => TInt
     | WCBool _ => TBool
     | WCByte _ => TByte
-
-fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
-  case w of
-      WLabel l =>
+    | WCLabel l =>
       (case hctx @! l of
            SOME t => t
          | NONE => raise Impossible $ "unbound label: " ^ str_int l
       )
-    | WConst c => get_word_const_type c
+
+fun tc_w hctx (ctx as (itctx as (ictx, tctx))) w =
+  case w of
+      WConst c => get_word_const_type hctx c
     | WUninit t => kc_against_kind itctx (t, KType)
     | WBuiltin (name, t) => kc_against_kind itctx (t, KType)
     | WNever t => kc_against_kind itctx (t, KType)
-
-fun tc_v (ctx as (hctx, itctx as (ictx, tctx), rctx)) v =
-  case v of
-      VReg r =>
-      (case rctx @! r of
-           SOME t => t
-         | NONE => raise Impossible $ "unbound reg: " ^ str_int r
-      )
-    | VWord w => tc_w (hctx, itctx) w
-    | VAppT (v, t) =>
-      let
-        val t_v = tc_v ctx v
-        val t_v = whnf itctx t_v
-        val ((_, k), t2) = assert_TForall t_v
-        val t = kc_against_kind itctx (t, k)
-      in
-        subst0_t_t t t2
-      end
-    | VAppI (v, i) =>
-      let
-        val t_v = tc_v ctx v
-        val t_v = whnf itctx t_v
-        val ((_, s), t2) = assert_TForallI t_v
-        val s = sc_against_sort ictx (i, s)
-      in
-        subst0_i_t i t2
-      end
-    | VPack (t_pack, t, v) =>
-      let
-        val t_pack = kc_against_kind itctx (t_pack, KType)
-        val t_pack = whnf itctx t_pack
-        val ((_, k), t') = assert_TExists t_pack
-        val t = kc_against_kind itctx (t, k)
-        val t_v = subst0_t_t t t'
-        val () = tc_v_against_ty ctx (v, t_v)
-      in
-        t_pack
-      end
-    | VPackI (t_pack, i, v) =>
-      let
-        val t_pack = kc_against_kind itctx (t_pack, KType)
-        val t_pack = whnf itctx t_pack
-        val ((_, s), t') = assert_TExistsI t_pack
-        val i = sc_against_sort ictx (i, s)
-        val t_v = subst0_i_t i t'
-        val () = tc_v_against_ty ctx (v, t_v)
-      in
-        t_pack
-      end
-    | VFold (t_fold, v) =>
-      let
-        val t_fold = kc_against_kind itctx (t_fold, KType)
-        val t_fold = whnf itctx t_fold
-        val (t, args) = collect_TAppIT t_fold
-        val ((_, k), t1) = assert_TRec t
-        val t = TAppITs (subst0_t_t t t1) args
-        val () = tc_v_against_ty ctx (v, t) 
-      in
-        t_fold
-      end
-    | VAscType (v, t2) =>
-      let
-        val t1 = tc_v ctx v
-        val t2 = kc_against_kind itctx (t2, KType)
-        val () = is_eq_ty itctx (t1, t2)
-      in
-        t2
-      end
-
-and tc_v_against_ty (ctx as (hctx, itctx as (ictx, tctx), rctx)) (v, t) =
-    let
-      val t' = tc_v ctx v
-      val () = is_eq_ty (ictx, tctx) (t', t)
-    in
-      ()
-    end
 
 fun is_reg_addr num_regs n =
   if n mod 32 = 0 then
     let
       val n = n div 32
     in
-      if 1 <= n andalso n <= num_regs then SOME $ n-1
+      (* r0 (n=1) is for scratch space of builtin macros and can't be explicitly accessed as a register *)
+      if (* 1 *)2 <= n andalso n <= num_regs then SOME $ n-1
       else NONE
     end
   else NONE
          
 fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
   let
-    fun mul_div name f time =
+    fun arith int_result nat_result name f time =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val t =
             case (t0, t1) of
-                (TConst TCInt, TConst TCInt) => TInt
-              | (TNat i0, TNat i1) => TNat $ f (i0, i1)
+                (TConst TCInt, TConst TCInt) => int_result
+              | (TNat i0, TNat i1) => nat_result $ f (i0, i1)
+              | _ => raise Impossible $ sprintf "$: can't operate on operands of types $ and $" [name, str_t t0, str_t t1]
+      in
+        ((itctx, rctx, t :: sctx), time)
+      end
+    fun mul_div a = arith TInt TNat a
+    fun cmp a = arith TBool TiBool a
+    fun and_or name f time =
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t =
+            case (t0, t1) of
+                (TConst TCBool, TConst TCBool) => TBool
+              | (TiBool i0, TiBool i1) => TiBool $ f (i0, i1)
               | _ => raise Impossible $ sprintf "$: can't operate on operands of types $ and $" [name, str_t t0, str_t t1]
       in
         ((itctx, rctx, t :: sctx), time)
@@ -186,6 +126,32 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
     | MUL => mul_div "MUL" op%* T_MUL
     | DIV => mul_div "DIV" op%/ T_DIV
     | SDIV => mul_div "SDIV" op%/ T_SDIV
+    | MOD => mul_div "MOD" op%mod T_MOD
+    | LT => cmp "LT" op%<? T_LT
+    | GT => cmp "GT" op%>? T_GT
+    | LE => cmp "LE" op%<=? T_LE
+    | GE => cmp "GE" op%>=? T_GE
+    | EQ => cmp "EQ" op%=? T0
+    | ISZERO =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val t =
+            case t0 of
+                TConst TCBool => TBool
+              | TConst TCInt => TBool
+              | TiBool i0 => TiBool $ INeg i0
+              | _ => raise Impossible $ sprintf "ISZERO: can't operate on operand of type $" [str_t t0]
+      in
+        ((itctx, rctx, t :: sctx), time)
+      end
+    | AND => cmp "AND" op%/\? T0
+    | OR => cmp "OR" op%\/? T0
+    | POP =>
+      let
+        val (t0, sctx) = assert_cons sctx
+      in
+        ((itctx, rctx, sctx), time)
+      end
     | MLOAD => 
       let
         val (t0, sctx) = assert_cons sctx
@@ -244,269 +210,161 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       in
         ((itctx, rctx, sctx), T_STORE)
       end
-    | PUSH (n, w) => ((itctx, rctx, tc_w ctx (unInner w) :: sctx), T_PUSH)
+    | JUMPDEST => (ctx, T0)
+    | PUSH (n, w) => (assert_b (1 <= n andalso n <= 32); ((itctx, rctx, tc_w ctx (unInner w) :: sctx), T_PUSH))
+    | DUP n => 
+      let
+        val () = assert_b (1 <= n andalso n <= 16)
+        val () = assert_b (length sctx >= n)
+      in
+        ((itctx, rctx, List.nth (sctx, n-1) :: sctx), T0)
+      end
+    | SWAP n => 
+      let
+        val () = assert_b (1 <= n andalso n <= 16)
+        val () = assert_b (length sctx >= n+1)
+        fun swap n ls =
+          let
+            val ls1 = take n ls
+            val ls2 = drop n ls
+            val (a1, ls1) = assert_cons ls1
+            val (a2, ls2) = assert_cons ls2
+          in
+            a2 :: ls1 @ (a1 :: ls2)
+          end
+      in
+        ((itctx, rctx, swap n sctx), T0)
+      end
+    | VALUE_AppT t =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val t0 = whnf itctx t0
+        val ((_, k), t2) = assert_TForall t0
+        val t = kc_agaisnt_kind itctx (unInner t, k)
+        val t = subst0_t_t t t2
+      in
+        ((itctx, rctx, t :: sctx), T0)
+      end
+    | VALUE_Pack (t_pack, t) =>
+      let
+        val t_pack = kc_against_kind itctx (unInner t_pack, KType)
+        val t_pack = whnf itctx t_pack
+        val ((_, k), t') = assert_TExists t_pack
+        val t = kc_against_kind itctx (unInner t, k)
+        val t_v = subst0_t_t t t'
+        val (t0, sctx) = assert_cons sctx
+        val () = is_eq_ty itctx (t0, t_v)
+      in
+        ((itctx, rctx, t_pack :: sctx), T0)
+      end
+    | VALUE_Fold t_fold =>
+      let
+        val t_fold = kc_against_kind itctx (unInner t_fold, KType)
+        val t_fold = whnf itctx t_fold
+        val (t, args) = collect_TAppIT t_fold
+        val ((_, k), t1) = assert_TRec t
+        val t = TAppITs (subst0_t_t t t1) args
+        val (t0, sctx) = assert_cons sctx
+        val () = is_eq_ty itctx (t0, t)
+      in
+        ((itctx, rctx, t_fold :: sctx), T0)
+      end
+    | VALUE_AscType t =>
+      let
+        val t = kc_against_kind itctx (unInner t, KType)
+        val (t0, sctx) = assert_cons sctx
+        val () = is_eq_ty itctx (t0, t)
+      in
+        ((itctx, rctx, t :: sctx), T0)
+      end
+    | UNPACK name =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val t0 = whnf itctx t0
+        val ((_, k), t) = assert_TExists t0
+      in
+        (add_stack t $ add_kinding_full (binder2str name, k) (itctx, rctx, sctx), T0)
+      end
+    | UNFOLD =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val t0 = whnf itctx t0
+        val (t, args) = collect_TAppIT t0
+        val ((_, k), t1) = assert_TRec t
+        val t = TAppITs (subst0_t_t t t1) args
+      in
+        ((itctx, rctx, t :: sctx), T0)
+      end
+    | NAT2INT =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val _ = assert_TNat t0
+      in
+        ((itctx, rctx, TInt :: sctx), T0)
+      end
+    | INT2NAT =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val _ = assert_TInt t0
+      in
+        ((itctx, rctx, TSomeNat () :: sctx), T0)
+      end
+    | BYTE2INT =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val _ = assert_TByte t0
+      in
+        ((itctx, rctx, TInt :: sctx), T0)
+      end
+    (* | PRINTC => *)
+    (*   let *)
+    (*     val (t0, sctx) = assert_cons sctx *)
+    (*     val _ = assert_TByte t0 *)
+    (*   in *)
+    (*     ((itctx, rctx, TUnit :: sctx), T0) *)
+    (*   end *)
+    | _ => raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, NONE) (itctx_names itctx) insts)
+  end
       
 fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
   let
     fun main () =
   case insts of
-      ISHalt t =>
+      JUMP v =>
       let
-        val t = kc_against_kind itctx (t, KType)
-        val () = tc_v_against_ty ctx (VReg 1, t)
-      in
-        T1
-      end
-    | ISJmp v =>
-      let
-        val t = tc_v ctx v
-        val t = whnf itctx t
-        val (rctx', i) = assert_TArrowTAL t
+        val (t0, sctx) = assert_cons sctx
+        val t0 = whnf itctx t0
+        val (rctx', sctx', i) = assert_TArrowEVM t0
         val () = is_sub_rctx itctx (rctx, rctx')
+        val () = is_eq_tys itctx (sctx, sctx')
       in
-        i %+ T1
+        T_JUMP %+ i
       end
+    (* | ISHalt t => *)
+    (*   let *)
+    (*     val t = kc_against_kind itctx (t, KType) *)
+    (*     val () = tc_v_against_ty ctx (VReg 1, t) *)
+    (*   in *)
+    (*     T1 *)
+    (*   end *)
     | ISDummy _ => T0
     | ISCons bind =>
       let
         val (inst, I) = unBind bind
       in
         case inst of
-            IUnOp (IUBrSum, r, v) =>
+            JUMPI =>
             let
-              val t = tc_v ctx $ VReg r
-              val t_v = tc_v ctx $ unInner v
-              val t = whnf itctx t
-              val (t1, t2) = assert_TSum t
-              val t_v = whnf itctx t_v
-              val (rctx', i2) = assert_TArrowTAL t_v
-              val i1 = tc_insts (add_r (r, t1) ctx) I
-              val () = is_sub_rctx itctx (rctx @+ (r, t2), rctx')
-            in
-              T1 %+ IMax (i1, i2)
-            end
-          | IUnOp (IUBrBool, r, v) =>
-            let
-              val () = tc_v_against_ty ctx (VReg r, TBool)
-              val t_v = tc_v ctx $ unInner v
-              val t_v = whnf itctx t_v
-              val (rctx', i2) = assert_TArrowTAL t_v
-              val i1 = tc_insts ctx I
+              val (t0, t1, sctx) = assert_cons2 sctx
+              val () = assert_TBool t1
+              val t0 = whnf itctx t0
+              val (rctx', sctx', i2) = assert_TArrowEVM t0
               val () = is_sub_rctx itctx (rctx, rctx')
+              val () = is_eq_tys itctx (sctx, sctx')
+              val i1 = tc_insts ctx I
             in
-              T1 %+ IMax (i1, i2)
+              T_JUMPI %+ IMax (i1, i2)
             end
-          | IUnOp (IUMov, rd, v) =>
-            let
-              val t = tc_v ctx $ unInner v
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IUnOp (IUUnfold, rd, v) =>
-            let
-              val t_v = tc_v ctx $ unInner v
-              val t_v = whnf itctx t_v
-              val (t, args) = collect_TAppIT t_v
-              val ((_, k), t1) = assert_TRec t
-              val t = TAppITs (subst0_t_t t t1) args
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IUnOp (IUPrintc, rd, v) =>
-            let
-              val () = tc_v_against_ty ctx (unInner v, TByte)
-              val i = tc_insts (add_r (rd, TUnit) ctx) I
-            in
-              i %+ T1
-            end
-          (* | IUnOp (IUPrint, rd, v) => *)
-          (*   let *)
-          (*     val () = tc_v_against_ty ctx (unInner v, TString) *)
-          (*     val i = tc_insts (add_r (rd, TUnit) ctx) I *)
-          (*   in *)
-          (*     i %+ T1 *)
-          (*   end *)
-          | IUnOp (IUArrayLen, rd, v) =>
-            let
-              val t1 = tc_v ctx $ unInner v
-              val (_, i1) = assert_TArr t1
-              val t = TNat i1
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IUnOp (IUNat2Int, rd, v) =>
-            let
-              val t1 = tc_v ctx $ unInner v
-              val i1 = assert_TNat t1
-              val i = tc_insts (add_r (rd, TInt) ctx) I
-            in
-              i %+ T1
-            end
-          | IUnOp (IUInt2Nat, rd, v) =>
-            let
-              val t1 = tc_v ctx $ unInner v
-              val () = assert_TInt t1
-              val i = tc_insts (add_r (rd, TSomeNat ()) ctx) I
-            in
-              i %+ T1
-            end
-          | IUnOp (IUPrim opr, rd, v) =>
-            let
-              val () = tc_v_against_ty ctx (unInner v, get_prim_expr_un_op_arg_ty opr)
-              val i = tc_insts (add_r (rd, get_prim_expr_un_op_res_ty opr) ctx) I
-            in
-              i %+ T1
-            end
-          | IBinOp (IBPrim opr, rd, rs, v) =>
-            let
-              val t1 = get_prim_expr_bin_op_arg1_ty opr
-              val t2 = get_prim_expr_bin_op_arg2_ty opr
-              val () = tc_v_against_ty ctx (VReg rs, t1)
-              val () = tc_v_against_ty ctx (unInner v, t2)
-              val t = get_prim_expr_bin_op_res_ty opr
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IBinOp (IBNat opr, rd, rs, v) =>
-            let
-              val t1 = tc_v ctx $ VReg rs
-              val i1 = assert_TNat t1
-              val t2 = tc_v ctx $ unInner v
-              val i2 = assert_TNat t2
-              val () = if opr = EBNBoundedMinus then check_prop ictx (i2 %<= i1) else ()
-              val t = TNat $ interp_nat_expr_bin_op opr (i1, Simp.simp_i i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IBinOp (IBNatCmp opr, rd, rs, v) =>
-            let
-              val t1 = tc_v ctx $ VReg rs
-              val i1 = assert_TNat t1
-              val t2 = tc_v ctx $ unInner v
-              val i2 = assert_TNat t2
-              val (p, not_p) = interp_nat_cmp dummy opr
-              val t = TSumbool (Subset_from_prop dummy $ p (i1, i2), Subset_from_prop dummy $ not_p (i1, i2))
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IBinOp (IBNew, rd, rs, v) =>
-            let
-              val t1 = tc_v ctx $ VReg rs
-              val i1 = assert_TNat t1
-              val t2 = tc_v ctx $ unInner v
-              val t = TArr (t2, i1)
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | INewArrayValues (rd, t, vs) =>
-            let
-              val t = kc_against_kind itctx (unInner t, KType)
-              val () = app (fn v => tc_v_against_ty ctx (unInner v, t)) vs
-              val t = TArr (t, ConstIN (length vs, dummy))
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IBinOp (IBRead, rd, rs, v) =>
-            let
-              val t1 = tc_v ctx $ VReg rs
-              val (t, i1) = assert_TArr t1
-              val t2 = tc_v ctx $ unInner v
-              val i2 = assert_TNat t2
-              val () = check_prop ictx (i2 %< i1)
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IBinOp (IBWrite, rd, rs, v) =>
-            let
-              val t1 = tc_v ctx $ VReg rd
-              val (t1, i1) = assert_TArr t1
-              val t2 = tc_v ctx $ VReg rs
-              val i2 = assert_TNat t2
-              val () = check_prop ictx (i2 %< i1)
-              val () = tc_v_against_ty ctx (unInner v, t1)
-              val t = TUnit
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IMallocPair (rd, (v1, v2)) =>
-            let
-              val t1 = tc_v ctx $ unInner v1
-              val t2 = tc_v ctx $ unInner v2
-              val t = TProdEx ((t1, false), (t2, false))
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | ILd (rd, (rs, proj)) =>
-            let
-              val t_rs = tc_v ctx $ VReg rs
-              val t_rs = whnf itctx t_rs
-              val pair = assert_TProdEx t_rs
-              val (t, b) = choose pair proj
-              val () = assert_b "tc()/ILd" $ b
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | ISt ((rd, proj), rs) =>
-            let
-              val t_rd = tc_v ctx $ VReg rd
-              val t_rd = whnf itctx t_rd
-              val ((t1, b1), (t2, b2)) = assert_TProdEx t_rd
-              val t_rs = choose (t1, t2) proj
-              val () = tc_v_against_ty ctx (VReg rs, t_rs)
-              val (b1, b2) = choose_update (b1, b2) proj
-              val t = TProdEx ((t1, b1), (t2, b2))
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          | IUnpack (name, rd, v) =>
-            let
-              val t_v = tc_v ctx $ unOuter v
-              val t_v = whnf itctx t_v
-              val ((_, k), t) = assert_TExists t_v
-              val i = tc_insts (add_r (rd, t) $ add_kinding_full (binder2str name, k) ctx) I
-            in
-              i %+ T1
-            end
-          | IUnpackI (name, rd, v) =>
-            let
-              val t_v = tc_v ctx $ unOuter v
-              val t_v = whnf itctx t_v
-              val ((_, s), t) = assert_TExistsI t_v
-              val name = binder2str name
-              val i = tc_insts (add_r (rd, t) $ add_sorting_full (name, s) ctx) I
-              val i = forget01_i_i i
-                       handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (name :: map fst ictx) i))
-            in
-              i %+ T1
-            end
-          | IInj (rd, inj, v, t_other) =>
-            let
-              val t_other = kc_against_kind itctx (unInner t_other, KType)
-              val t = tc_v ctx $ unInner v
-              val t = TSum $ choose_pair_inj (t, t_other) inj
-              val i = tc_insts (add_r (rd, t) ctx) I
-            in
-              i %+ T1
-            end
-          (* | IString (rd, s) => *)
-          (*   let *)
-          (*     val i = tc_insts (add_r (rd, TString) ctx) I *)
-          (*   in *)
-          (*     i %+ T1 *)
-          (*   end *)
           | IAscTime i =>
             let
               val i = sc_against_sort ictx (unInner i, STime)
@@ -515,8 +373,15 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               i
             end
+          | _ =>
+            let
+              val (ctx, i1) = tc_inst params ctx inst 
+              val i2 = tc_insts ctx I
+            in
+              i1 %+ i2
+            end
       end
-    fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (SOME 2, SOME 5) (itctx_names itctx) insts)
+    fun extra_msg () = "\nwhen typechecking\n" ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (SOME 2, SOME 5) (itctx_names itctx) insts)
     val ret = main ()
               handle
               Impossible m => raise Impossible (m ^ extra_msg ())
@@ -528,10 +393,10 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
     ret
   end
 
-fun tc_hval hctx h =
+fun tc_hval params (hctx, num_regs) h =
   let
     val () = println "tc_hval() started"
-    val (itbinds, ((rctx, i), insts)) = unBind h
+    val (itbinds, ((rctx, sctx, i), insts)) = unBind h
     val itbinds = unTeles itbinds
     val () = println "before getting itctx"
     val itctx as (ictx, tctx) =
@@ -542,7 +407,7 @@ fun tc_hval hctx h =
                 | inr (name, k) => (ictx, (binder2str name, k) :: tctx)
           ) ([], []) itbinds
     val () = println "before checking rctx"
-    val itctxn = itctx_names itctx
+    (* val itctxn = itctx_names itctx *)
     val rctx = Rctx.mapi
                  (fn (r, t) =>
                      let
@@ -552,10 +417,12 @@ fun tc_hval hctx h =
                      in
                        ret
                      end) rctx
+    val () = println "before checking sctx"
+    val sctx = map (kc_against_KType itctx) sctx
     val () = println "before checking i"
     val i = sc_against_sort ictx (i, STime)
     val () = println "before checking insts"
-    val i' = tc_insts (hctx, itctx, rctx) insts
+    val i' = tc_insts params (itctx, rctx, sctx) insts
     val () = println "after checking insts"
     val () = check_prop ictx (i' %<= i)
     val () = println "tc_hval() finished"
@@ -563,28 +430,28 @@ fun tc_hval hctx h =
     ()
   end
 
-fun tc_prog (H, I) =
+fun tc_prog num_regs (H, I) =
   let
     fun get_hval_type h =
       let
-        val (itbinds, ((rctx, i), _)) = unBind h
+        val (itbinds, ((rctx, sctx, i), _)) = unBind h
         val itbinds = unTeles itbinds
         val itbinds = map (map_inl_inr (mapPair' unBinderName unOuter) (mapFst unBinderName)) itbinds
-        val t = TForallITs (itbinds, TArrowTAL (rctx, i))
+        val t = TForallITs (itbinds, TArrowEVM (rctx, sctx, i))
       in
         t
       end
     fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
     val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval hctx h)) H
-    val i = tc_insts (hctx, ([], []), Rctx.empty) I
+    val i = tc_insts (hctx, num_regs) (([], []), Rctx.empty, []) I
   in
     i
   end
     
-fun tital_typecheck P =
+fun evm1_typecheck num_regs P =
   let
-    val ret = runWriter (fn () => tc_prog P) ()
+    val ret = runWriter (fn () => tc_prog num_regs P) ()
   in
     ret
   end

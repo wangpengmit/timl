@@ -61,7 +61,7 @@ fun cg_ty_visitor_vtable cast () =
         val cg_t = #visit_ty (cast this) this env
         val t1 = cg_t t1
       in
-        TArrowTAL (rctx_single (0, t1), i)
+        TArrowEVM (rctx_single (1, t1), [], i)
       end
     val vtable =
         default_ty_visitor_vtable
@@ -143,7 +143,9 @@ val byte2int = [BYTE2INT]
 val printc = [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0, PUSH1 WTT]
 fun impl_inj t_tuple inj t_other =
   malloc_tuple t_tuple @
-  [SWAP1, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE, PACK_SUM (inj, Inner t_other)]
+  [SWAP1, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE(* , PACK_SUM (inj, Inner t_other) *)]
+fun halt t =
+  [PUSH_reg scratch, SWAP1, DUP2, MSTORE, PUSH1nat 32, SWAP1] @@ RETURN (* t *)
 
 fun impl_nat_cmp opr =
   let
@@ -477,7 +479,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val (e, t) = assert_EAscType e
         val t = cg_t t
       in
-        compile e @@ [PUSH_reg scratch, SWAP1, DUP2, MSTORE, PUSH1nat 32, SWAP1] @@ RETURN (* t *)
+        compile e @@ halt t
       end
     | EAscTime (e, i) => ASCTIME (Inner i) @:: cg_e params e
     | EAscType (e, _) => cg_e params e
@@ -537,10 +539,9 @@ fun cg_prog e =
     val H = !heap_ref
     val H = rev H
     val num_regs = max num_regs (!reg_counter)
-    val () = println $ "# of registers: " ^ str_int num_regs
     val I = [PUSH_reg $ reg_addr num_regs, PUSH1nat 0, MSTORE] @@ I
   in
-    (H, I)
+    ((H, I), num_regs)
   end
 
 val code_gen_tc_flags =
@@ -697,35 +698,27 @@ fun test1 dirname =
                      
     open EVM1ExportPP
     val () = println "Started Code Generation ..."
-    val prog = cg_prog e
+    val (prog, num_regs) = cg_prog e
     val () = println "Finished Code Generation"
+    val () = println $ "# of registers: " ^ str_int num_regs
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
     (* val () = println prog_str *)
     (* val () = println "" *)
+    open EVM1Typecheck
+    val () = println "Started EVM1 typechecking ..."
+    val (i, vcs, admits) = evm1_typecheck num_regs prog
+    val () = println "Finished EVM1 typechecking"
+    val () = println "Time:"
+    (* val i = simp_i i *)
+    val () = println $ ToString.str_i Gctx.empty [] i
     open EVM1Assemble
     val prog_bytes = ass2str prog
     val () = write_file (join_dir_file' dirname $ "evm-bytecode.tmp", prog_bytes)
     (* val () = println "EVM Bytecode:" *)
     (* val () = println prog_bytes *)
     (* val () = println "" *)
-    (* open EVM1Typecheck *)
-    (* val () = println "Started EVM1 typechecking ..." *)
-    (* val (i, vcs, admits) = tital_typecheck prog *)
-    (* val () = println "Finished EVM1 typechecking" *)
-    (* val () = println "Time:" *)
-    (* (* val i = simp_i i *) *)
-    (* val () = println $ ToString.str_i Gctx.empty [] i *)
 
-    (* open EVM1Eval *)
-    (* val (H, I) = prog *)
-    (* fun get_max_k H = max_ls ~1 $ map (fst o fst) H *)
-    (* val P = ((RctxUtil.fromList $ map (fn ((l, _), c) => (l, HVCode c)) H, get_max_k H), (Rctx.empty, 0), I) *)
-    (* val () = println "Started EVM1 evaluation"               *)
-    (* val w = eval P *)
-    (* val () = assert_WVTT w *)
-    (* val () = println "Finished EVM1 evaluation" *)
-                     
     val () = println "ToEVM1.UnitTest passed"
   in
     ((* t, e *))

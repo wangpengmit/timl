@@ -66,8 +66,8 @@ datatype ('idx, 'ty) inst =
          | NAT2INT
          | INT2NAT
          | BYTE2INT
-         | PRINTC
-         | PACK_SUM of injector * 'ty inner
+         (* | PRINTC *)
+         (* | PACK_SUM of injector * 'ty inner *)
          | ASCTIME of 'idx inner
 
 datatype ('idx, 'ty) insts =
