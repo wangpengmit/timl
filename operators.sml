@@ -25,11 +25,13 @@ val Log10 = Log "10"
 datatype idx_bin_op =
 	 AddI
 	 | MultI
+         | ModI
 	 | MaxI
 	 | MinI
          | IApp 
          | EqI
          | AndI
+         | OrI
          | ExpNI
          | LtI
          | GtI

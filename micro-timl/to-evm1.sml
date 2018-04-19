@@ -55,14 +55,6 @@ fun close0_t_insts a = close_t_insts 0 a
 
 fun cg_ty_visitor_vtable cast () =
   let
-    fun visit_TArrow this env (data as (t1, i, t2)) =
-      let
-        val () = assert_TUnit "cg_t(): result type of TArrow must be TUnit" t2
-        val cg_t = #visit_ty (cast this) this env
-        val t1 = cg_t t1
-      in
-        TArrowEVM (rctx_single (1, t1), [], i)
-      end
     val vtable =
         default_ty_visitor_vtable
           cast
@@ -72,7 +64,27 @@ fun cg_ty_visitor_vtable cast () =
           visit_noop
           visit_noop
           visit_noop
+    fun visit_TArrow this env (data as (t1, i, t2)) =
+      let
+        val () = assert_TUnit "cg_t(): result type of TArrow must be TUnit" t2
+        val cg_t = #visit_ty (cast this) this env
+        val t1 = cg_t t1
+      in
+        TArrowEVM (rctx_single (1, t1), [], i)
+      end
     val vtable = override_visit_TArrow vtable visit_TArrow
+    fun visit_TBinOp this env (data as (opr, t1, t2)) =
+      case opr of
+          TBProd =>
+          let
+            val pa_t = #visit_ty (cast this) this env
+            val t1 = pa_t t1
+            val t2 = pa_t t2
+          in
+            TTupleTr ([t1, t2], INat 0)
+          end
+        | _ => #visit_TBinOp vtable this env data (* call super *)
+    val vtable = override_visit_TBinOp vtable visit_TBinOp
   in
     vtable
   end
@@ -132,9 +144,10 @@ fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD]
 fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE]
 val array_ptr = [PUSH1nat 32, MUL, ADD]
 fun malloc_tuple ts = [PUSH1nat 0, MLOAD, DUP1, PUSH_tuple_offset $ 32 * (length ts), ADD, PUSH1 $WNat 0, MSTORE]
-fun malloc_array t = [PUSH1nat 0, MLOAD, DUP2, DUP2, MSTORE, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
+fun malloc_array t = [PUSH1nat 0, MLOAD, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
 val tuple_assign = [DUP2, MSTORE]
-val array_assign = [DUP3, DUP3, DUP3, ADD, MSTORE]
+val array_init_len = [DUP2, PUSH1nat 32, SWAP1, SUB, MSTORE]
+val array_init_assign = [DUP3, DUP3, DUP3, ADD, MSTORE]
 val br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
 (* val int2byte = [] (* noop, relying on type discipline *) *)
 val int2byte = [PUSH1nat 31, BYTE]
@@ -247,7 +260,7 @@ fun compile ectx e =
         val t1 = cg_t t1
         val t2 = cg_t t2
       in
-        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign)
+        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign @ [MARK_PreTuple2TuplePtr])
       end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
@@ -344,6 +357,8 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
               val pre_loop_code =
                   [SWAP1, DUP1] @@
                   malloc_array t @@
+                  [DUP2] @@
+                  malloc_init_len @@
                   [SWAP1, PUSH1nat 32, MUL] @@
                   PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len])) @@
                   JUMP
@@ -362,12 +377,12 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                         [DUP1, ISZERO] @@
                         PUSH_value (VAppITs_ctx (VLabel post_loop_label, itctx)) @@
                         [JUMPI, PUSH1nat 32, SWAP1, SUB] @@
-                        array_assign @@
+                        array_init_assign @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
                         JUMP
                     fun IToReal i = UnOpI (ToReal, i, dummy)
                     fun close0_i_block x ((rctx, ts, i), I) = ((Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
-                    val block = ((rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
+                    val block = ((rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i, true), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
                     val block = close0_i_block i block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -376,11 +391,11 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
               val post_loop_block =
                   let
                     val post_loop_code =
-                        [POP, SWAP1, POP] @@
+                        [POP, SWAP1, POP, MARK_PreArray2ArrayPtr] @@
                         set_reg r @@
                         cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len))) e
                   in
-                    HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0), t], T1 %+ i_e), post_loop_code))
+                    HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0, true), t], T1 %+ i_e), post_loop_code))
                   end
               val () = output_heap ((post_loop_label, "new_array_post_loop"), post_loop_block)
             in

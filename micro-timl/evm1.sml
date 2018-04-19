@@ -69,6 +69,7 @@ datatype ('idx, 'ty) inst =
          (* | PRINTC *)
          (* | PACK_SUM of injector * 'ty inner *)
          | ASCTIME of 'idx inner
+         | MARK_PreArray2ArrayPtr
 
 datatype ('idx, 'ty) insts =
          ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind

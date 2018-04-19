@@ -237,9 +237,6 @@ dup1 // [len, len, v]
 {// malloc_array t_e2 // [len]
 push1 0 
 mload // [m[0], len]
-dup2 // [len, m[0], len]
-dup2  // [m[0], len, m[0], len]
-mstore // m[m[0]] = len // [m[0], len]
 push1 32
 add // [m[0]+32, len]
 dup1 // [m[0]+32, m[0]+32, len]
@@ -249,6 +246,14 @@ mul
 add // [m[0]+32+len*32, m[0]+32]
 push1 0
 mstore // m[0] = m[0] + 32 + len * 32 // [m[0]+32]
+} // [m[0]+32, len, v]
+dup2 // [len, m[0]+32, len, v]
+{ // array_init_len // [len, m[0]+32]
+dup2  // [m[0]+32, len, m[0]+32]
+push1 32
+swap1
+sub // [m[0], len, m[0]+32]
+mstore // m[m[0]] = len // [m[0]+32]
 } // [m[0]+32, len, v]
 swap1 // [len, m[0]+32, v]
 push1 32
@@ -262,7 +267,7 @@ jumpi // [n, m[0]+32, v]
 push1 32
 swap1
 sub // [n-32, m[0]+32, v]
-{// array_assign 
+{// array_init_assign 
 dup3 // [v, n-32, m[0]+32, v]
 dup3 // [m[0]+32, v, n-32, m[0]+32, v]
 dup3 // [n-32, m[0]+32, v, n-32, m[0]+32, v]
@@ -277,6 +282,7 @@ pop // pop 0 // [m[0]+32, v]
 swap1
 pop // pop v // [m[0]+32]
 // now arr is top
+PreArray2ArrayPtr
 
 new_empty_array [t] ==
 push1 0

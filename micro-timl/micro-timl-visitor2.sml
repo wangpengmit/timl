@@ -249,6 +249,7 @@ fun default_ty_visitor2_vtable
             end
           | _ => error_k (KArrowT data) other
       end
+    fun visit_eq msg a a' = (assert_b msg (a = a'); a)
     fun visit2_ty this env data other =
       let
         val vtable = cast this
@@ -274,11 +275,11 @@ fun default_ty_visitor2_vtable
                  TiBool i' =>
                  TiBool $ #visit2_idx vtable this env i i'
                | _ => error (TiBool i) other)
-          | TPreArray (t, i1, i2) =>
+          | TPreArray (t, i1, i2, b) =>
             (case other of
-                 TPreArray (t', i1', i2') =>
-                 TPreArray (#visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2')
-               | _ => error (TPreArray (t, i1, i2)) other)
+                 TPreArray (t', i1', i2', b') =>
+                 TPreArray (#visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2', visit_eq "visit_TPreArray/b=b'" b b')
+               | _ => error (TPreArray (t, i1, i2, b)) other)
       end
     fun visit2_TVar this env data other =
       let

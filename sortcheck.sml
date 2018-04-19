@@ -355,6 +355,7 @@ and get_bsort gctx (ctx, i) =
           | U.IAbs (bs1, Bind ((name, r1), i), r) =>
             let
               val bs1 = is_wf_bsort bs1
+              (* todo: check monotonicity of argument variable in function body *)
               val (i, bs) = open_close add_sorting (name, Basic (bs1, r1)) ctx (fn ctx => get_bsort (ctx, i))
             in
               (IAbs (bs1, Bind ((name, r1), i), r), BSArrow (bs1, bs))

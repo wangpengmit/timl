@@ -322,13 +322,13 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TArr (t, i), KType)
       end
-    | TPreArray (t, len, i) =>
+    | TPreArray (t, len, i, b) =>
       let
         val t = kc_against_kind ctx (t, KType)
         val len = sc_against_sort ictx (len, SNat)
         val i = sc_against_sort ictx (i, SNat)
       in
-        (TPreArray (t, len, i), KType)
+        (TPreArray (t, len, i, b), KType)
       end
     | TProdEx ((t1, b1), (t2, b2)) =>
       let

@@ -23,6 +23,7 @@ fun N0 r = ConstIN (0, r)
 fun N1 r = ConstIN (1, r)
 fun DivI (i, (n, r)) = UnOpI (IUDiv n, i, r)
 fun ExpI (i, (s, r)) = UnOpI (IUExp s, i, r)
+fun IMod (a, b) = BinOpI (ModI, a, b)
 fun TrueI r = IConst (ICBool true, r)
 fun FalseI r = IConst (ICBool false, r)
 fun TTI r = IConst (ICTT, r)
@@ -38,13 +39,20 @@ infix 9 %@
 infix 8 %^
 infix 7 %*
 infix 6 %+ 
-infix 4 %<=
 infix 4 %<
-infix 4 %>=
 infix 4 %>
+infix 4 %<=
+infix 4 %>=
 infix 4 %=
+infix 4 %<?
+infix 4 %>?
+infix 4 %<=?
+infix 4 %>=?
+infix 4 %=?
 infixr 3 /\
 infixr 2 \/
+infixr 3 /\?
+infixr 2 \/?
 infixr 1 -->
 infix 1 <->
 
@@ -52,13 +60,20 @@ fun a %@ b = BinOpI (IApp, a, b)
 fun a %^ b = BinOpI (ExpNI, a, b)
 fun a %* b = BinOpI (MultI, a, b)
 fun a %+ b = BinOpI (AddI, a, b)
-fun a %<= b = BinPred (LeP, a, b)
 fun a %< b = BinPred (LtP, a, b)
-fun a %>= b = BinPred (GeP, a, b)
 fun a %> b = BinPred (GtP, a, b)
+fun a %<= b = BinPred (LeP, a, b)
+fun a %>= b = BinPred (GeP, a, b)
 fun a %= b = PEq (a, b)
+fun a %<? b = BinOpI (LtI, a, b)
+fun a %>? b = BinOpI (GtI, a, b)
+fun a %<=? b = BinOpI (LeI, a, b)
+fun a %>=? b = BinOpI (GeI, a, b)
+fun a %=? b = BinOpI (EqI, a, b)
 fun a /\ b = BinConn (And, a, b)
 fun a \/ b = BinConn (Or, a, b)
+fun a /\? b = BinOpI (AndI, a, b)
+fun a \/? b = BinOpI (OrI, a, b)
 fun a --> b = BinConn (Imply, a, b)
 fun a <-> b = BinConn (Iff, a, b)
                       
