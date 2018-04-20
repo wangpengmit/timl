@@ -7,9 +7,9 @@ unit-test-basic1.timl
 (* array.timl *)
 (* string.timl *)
 
-stdlib.pkg
+(* stdlib.pkg *)
                
-unit-test-basic.timl
+(* unit-test-basic.timl *)
             
 (* unit-test-bool.timl *)
 (* unit-test-array.timl *)

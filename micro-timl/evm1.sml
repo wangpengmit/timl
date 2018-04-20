@@ -71,6 +71,9 @@ datatype ('idx, 'ty) inst =
          | ASCTIME of 'idx inner
          | MARK_PreArray2ArrayPtr
          | MARK_PreTuple2TuplePtr
+         | MACRO_init_free_ptr of int
+         | MACRO_malloc_tuple of 'ty list inner
+         | MACRO_printc
 
 datatype ('idx, 'ty) insts =
          ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind
@@ -78,6 +81,7 @@ datatype ('idx, 'ty) insts =
          | RETURN
          (* only for debug/printing purpose *)
          | ISDummy of string
+         | MACRO_halt of 'ty
 
 type 'v rctx = 'v IntBinaryMap.map
                   

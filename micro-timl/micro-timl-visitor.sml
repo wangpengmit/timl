@@ -465,6 +465,42 @@ fun override_visit_TQuan (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        extend_t = #extend_t record
   }
 
+fun override_visit_TArr (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable) new : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable =
+  {
+       visit_kind = #visit_kind record,
+       visit_KType = #visit_KType record,
+       visit_KArrow = #visit_KArrow record,
+       visit_KArrowT = #visit_KArrowT record,
+       visit_ty = #visit_ty record,
+       visit_TVar = #visit_TVar record,
+       visit_TConst = #visit_TConst record,
+       visit_TBinOp = #visit_TBinOp record,
+       visit_TArrow = #visit_TArrow record,
+       visit_TAbsI = #visit_TAbsI record,
+       visit_TAppI = #visit_TAppI record,
+       visit_TQuan = #visit_TQuan record,
+       visit_TQuanI = #visit_TQuanI record,
+       visit_TRec = #visit_TRec record,
+       visit_TNat = #visit_TNat record,
+       visit_TArr = new,
+       visit_TAbsT = #visit_TAbsT record,
+       visit_TAppT = #visit_TAppT record,
+       visit_TProdEx = #visit_TProdEx record,
+       visit_TArrowTAL = #visit_TArrowTAL record,
+       visit_var = #visit_var record,
+       visit_bsort = #visit_bsort record,
+       visit_idx = #visit_idx record,
+       visit_sort = #visit_sort record,
+       visit_ty_const = #visit_ty_const record,
+       visit_ty_bin_op = #visit_ty_bin_op record,
+       visit_quan = #visit_quan record,
+       visit_ibind_anno_bsort = #visit_ibind_anno_bsort record,
+       visit_ibind_anno_sort = #visit_ibind_anno_sort record,
+       visit_tbind_anno = #visit_tbind_anno record,
+       extend_i = #extend_i record,
+       extend_t = #extend_t record
+  }
+
 (***************** the default visitor  **********************)    
 
 open VisitorUtil

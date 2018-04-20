@@ -44,12 +44,15 @@ fun str_inst a =
     | NAT2INT => "NAT2INT"
     | INT2NAT => "INT2NAT"
     | BYTE2INT => "BYTE2INT"
-    | PRINTC => "PRINTC"
+    (* | PRINTC => "PRINTC" *)
+    | MARK_PreArray2ArrayPtr => "MARK_PreArray2ArrayPtr"
+    | MARK_PreTuple2TuplePtr => "MARK_PreTuple2TuplePtr"
     | DUP n => "DUP" ^ str_int n
     | SWAP n => "SWAP" ^ str_int n
     | LOG n => "LOG" ^ str_int n
     | UNPACK name => "UNPACK " ^ binder2str name
     | UNPACKI name => "UNPACKI " ^ binder2str name
+    | MACRO_init_free_ptr n => "MACRO_init_free_ptr " ^ str_int n
     | _ => raise Impossible "str_inst()"
 
 fun pp_w pp_t s w =
@@ -220,13 +223,23 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           str ")";
           close_box ()
         )
+      | MACRO_malloc_tuple ts =>
+        (
+          open_hbox ();
+          str $ "MACRO_malloc_tuple";
+          space ();
+          str "(";
+          app (fn t => (pp_t $ Inner t; comma ())) $ unInner ts;
+          str ")";
+          close_box ()
+        )
       | _ => str $ str_inst inst
   end
 
-fun pp_insts (params as ((* pp_t,  *)pp_inst)) s insts =
+fun pp_insts (params as (pp_t, pp_inst)) s insts =
   let
     val pp_insts = pp_insts params s
-    (* val pp_t = pp_t s *)
+    val pp_t = pp_t s
     val pp_inst = pp_inst s
     fun space () = PP.space s 1
     fun str v = PP.string s v
@@ -252,6 +265,16 @@ fun pp_insts (params as ((* pp_t,  *)pp_inst)) s insts =
       | JUMP => str "JUMP"
       | RETURN => str "RETURN"
       | ISDummy s => str s
+      | MACRO_halt t =>
+        (
+          open_hbox ();
+          str $ "MACRO_halt";
+          space ();
+          str "(";
+          pp_t t;
+          str ")";
+          close_box ()
+        )
   end
 
 fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
@@ -359,7 +382,7 @@ fun pp_insts_to_fn (str_i, pp_t) s b =
   let
     val pp_w = pp_w pp_t
   in
-    withPP ("", 80, s) (fn s => pp_insts ((* pp_t,  *)pp_inst (str_i, pp_t, pp_w)) s b)
+    withPP ("", 80, s) (fn s => pp_insts (pp_t, pp_inst (str_i, pp_t, pp_w)) s b)
   end
 fun pp_insts_fn params = pp_insts_to_fn params TextIO.stdOut
 fun pp_insts_to_string_fn params b =
@@ -368,7 +391,7 @@ fun pp_insts_to_string_fn params b =
 fun pp_prog_to_fn (str_i, str_s, str_k, pp_t) s b =
   let
     val pp_w = pp_w pp_t
-    val pp_insts = pp_insts ((* pp_t,  *)pp_inst (str_i, pp_t, pp_w))
+    val pp_insts = pp_insts (pp_t, pp_inst (str_i, pp_t, pp_w))
   in
     withPP ("", 80, s) (fn s => pp_prog (pp_hval (str_i, str_s, str_k, pp_t, pp_insts), pp_insts) s b)
   end

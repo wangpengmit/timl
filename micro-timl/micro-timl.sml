@@ -47,7 +47,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TArrowTAL of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx
          | TArrowEVM of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * ('var, 'bsort, 'idx, 'sort) ty list * 'idx
          | TiBool of 'idx
-         | TPreTuple of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*lowest inited pos*)
+         | TPreTuple of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * 'idx(*lowest inited pos*)
          | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*)
          | TPreArray of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*lowest inited pos*) * bool(*is length inited?*)
          | TArrayPtr of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*offset*)

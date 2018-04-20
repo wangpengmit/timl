@@ -1,6 +1,6 @@
 structure CCTestBasic1 = struct
 
-(* val () = __&printc #"a" *)
+val () = __&printc #"a"
 
 (* val a = 1 *)
 (* val a = () *)
@@ -53,6 +53,6 @@ structure CCTestBasic1 = struct
                  
 (* val a = fact #4 *)
                  
-(* val () = __&halt a *)
+(* val () = __&halt y *)
               
 end

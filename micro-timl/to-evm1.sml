@@ -76,14 +76,22 @@ fun cg_ty_visitor_vtable cast () =
       case opr of
           TBProd =>
           let
-            val pa_t = #visit_ty (cast this) this env
-            val t1 = pa_t t1
-            val t2 = pa_t t2
+            val cg_t = #visit_ty (cast this) this env
+            val t1 = cg_t t1
+            val t2 = cg_t t2
           in
             TTuplePtr ([t1, t2], INat 0)
           end
         | _ => #visit_TBinOp vtable this env data (* call super *)
     val vtable = override_visit_TBinOp vtable visit_TBinOp
+    fun visit_TArr this env (data as (t, i)) =
+      let
+        val cg_t = #visit_ty (cast this) this env
+        val t = cg_t t
+      in
+        TArrayPtr (t, i, INat 32)
+      end
+    val vtable = override_visit_TArr vtable visit_TArr
   in
     vtable
   end
@@ -142,22 +150,59 @@ val scratch = reg_addr 0
 fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD]
 fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE]
 val array_ptr = [PUSH1nat 32, MUL, ADD]
-fun malloc_tuple ts = [PUSH1nat 0, MLOAD, DUP1, PUSH_tuple_offset $ 32 * (length ts), ADD, PUSH1 $WNat 0, MSTORE]
-fun malloc_array t = [PUSH1nat 0, MLOAD, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
-val tuple_assign = [DUP2, MSTORE]
-val array_init_len = [DUP2, PUSH1nat 32, SWAP1, SUB, MSTORE]
-val array_init_assign = [DUP3, DUP3, DUP3, ADD, MSTORE]
-val br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
-(* val int2byte = [] (* noop, relying on type discipline *) *)
-val int2byte = [PUSH1nat 31, BYTE]
 val byte2int = [BYTE2INT]
-(* val printc = [PRINTC] *)
-val printc = [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0, PUSH1 WTT]
-fun impl_inj t_tuple inj t_other =
-  malloc_tuple t_tuple @
-  [SWAP1, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE(* , PACK_SUM (inj, Inner t_other) *)]
-fun halt t =
-  [PUSH_reg scratch, SWAP1, DUP2, MSTORE, PUSH1nat 32, SWAP1] @@ RETURN (* t *)
+                  
+fun init_free_ptr num_regs = [MACRO_init_free_ptr num_regs]
+fun malloc_tuple ts = [MACRO_malloc_tuple $ Inner ts]
+val tuple_assign = [MACRO_tuple_assign]
+val printc = [MACRO_printc]
+fun malloc_array t = [MACRO_malloc_array t]
+val array_init_assign = [MACRO_array_init_assign]
+val array_init_len = [MACRO_array_init_len]
+fun halt t = MACRO_halt t
+(* val int2byte = [] (* noop, relying on type discipline *) *)
+val int2byte = [MACRO_int2byte]
+fun make_inj t_other = [MACRO_make_inj $ Inner t_other]
+                 
+val br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
+
+fun inline_macro_inst inst =
+  case inst of
+      MACRO_init_free_ptr num_regs => [PUSH_reg $ reg_addr num_regs, PUSH1nat 0, MSTORE]
+    | MACRO_malloc_tuple ts => [PUSH1nat 0, MLOAD, DUP1, PUSH_tuple_offset $ 32 * (length $ unInner ts), ADD, PUSH1 $WNat 0, MSTORE]
+    | MACRO_tuple_assign => [DUP2, MSTORE]
+    | MACRO_printc => [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0, PUSH1 WTT]
+    | MACRO_malloc_array t => [PUSH1nat 0, MLOAD, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
+    | MACRO_array_init_assign => [DUP3, DUP3, DUP3, ADD, MSTORE]
+    | MACRO_array_init_len => [DUP2, PUSH1nat 32, SWAP1, SUB, MSTORE]
+    | MACRO_int2byte => [PUSH1nat 31, BYTE]
+    | MACRO_inj t_other =>
+      inline_macro_inst (MACRO_malloc_tuple [TUnit, TUnit](*only length matters operationally*)) @
+      [SWAP1, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE(* , PACK_SUM (inj, Inner t_other) *)]
+    | MACRO_br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
+    | _ => [inst]
+
+fun inline_macro_insts insts =
+  case insts of
+      ISCons bind =>
+      let
+        val (inst, I) = unBind bind
+      in
+        inline_macro_inst inst @@ inline_macro_insts I
+      end
+    | MACRO_halt t => [PUSH_reg scratch, SWAP1, DUP2, MSTORE, PUSH1nat 32, SWAP1] @@ RETURN (* t *)
+    | _ => insts
+                                                                     
+fun inline_macro_hval code =
+  let
+    val (binds, (spec, I)) = unBind code
+    val I = inline_macro_insts I
+  in
+    Bind (binds, (spec, I))
+  end
+
+fun inline_macro_prog (H, I) =
+  (map (mapSnd inline_macro_hval) H, inline_macro_insts I)
 
 fun impl_nat_cmp opr =
   let
@@ -170,7 +215,7 @@ fun impl_nat_cmp opr =
           | NCEq => [EQ]
           | NCNEq => [EQ, ISZERO]
   in
-    cmp @ [ISZERO, PUSH1 WTT, SWAP1] @ impl_inj [TUnit, TUnit] InjInl TUnit
+    cmp @ [ISZERO, PUSH1 WTT, SWAP1] @ make_inj [TUnit, TUnit] InjInl TUnit
   end
       
 fun concatRepeat n v = List.concat $ repeat n v
@@ -270,7 +315,7 @@ fun compile ectx e =
       in
         compile e @
         [PUSH1 $ WiBool b] @
-        impl_inj [TiBoolConst b, t_e] inj t_other
+        make_inj [TiBoolConst b, t_e] inj t_other
       end
     | ENewArrayValues (t, es) =>
       let
@@ -553,7 +598,7 @@ fun cg_prog e =
     val H = !heap_ref
     val H = rev H
     val num_regs = max num_regs (!reg_counter)
-    val I = [PUSH_reg $ reg_addr num_regs, PUSH1nat 0, MSTORE] @@ I
+    val I = init_free_ptr num_regs @@ I
   in
     ((H, I), num_regs)
   end
@@ -726,6 +771,11 @@ fun test1 dirname =
     val () = println "Time:"
     (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
+    val prog = inline_macro_prog prog
+    val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
+    val () = write_file (join_dir_file' dirname $ "unit-test-after-inline-macro.tmp", prog_str)
+    (* val () = println prog_str *)
+    (* val () = println "" *)
     open EVM1Assemble
     val prog_bytes = ass2str prog
     val () = write_file (join_dir_file' dirname $ "evm-bytecode.tmp", prog_bytes)

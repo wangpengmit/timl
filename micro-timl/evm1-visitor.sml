@@ -119,6 +119,8 @@ fun default_evm1_visitor_vtable
           | UNPACKI name => UNPACKI $ visit_ibinder this env name
           (* | PACK_SUM (inj, t) => PACK_SUM (inj, visit_inner (#visit_ty vtable this) env t) *)
           | ASCTIME i => ASCTIME $ visit_inner (#visit_idx vtable this) env i
+          | MACRO_init_free_ptr n => MACRO_init_free_ptr n
+          | MACRO_malloc_tuple ts => MACRO_malloc_tuple $ visit_inner (visit_list $ #visit_ty vtable this) env ts
           | ADD => ADD
           | MUL => MUL
           | SUB => SUB
@@ -148,6 +150,8 @@ fun default_evm1_visitor_vtable
           | INT2NAT => INT2NAT
           | BYTE2INT => BYTE2INT
           (* | PRINTC => PRINTC *)
+          | MARK_PreArray2ArrayPtr => MARK_PreArray2ArrayPtr
+          | MARK_PreTuple2TuplePtr => MARK_PreTuple2TuplePtr
       end
     fun visit_insts this env data =
       let
@@ -158,6 +162,7 @@ fun default_evm1_visitor_vtable
           | JUMP => JUMP
           | RETURN => RETURN
           | ISDummy a => ISDummy a
+          | MACRO_halt t => MACRO_halt $ #visit_ty vtable this env t
       end
   in
     {

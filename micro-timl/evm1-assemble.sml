@@ -34,6 +34,8 @@ fun hex nBytes i =
     s
   end
 
+fun macro name = raise Impossible $ "Can't assemble instruction " ^ name
+                     
 fun enc inst =
   case inst of
       ADD => "01"
@@ -61,7 +63,23 @@ fun enc inst =
     | DUP n => hex 1 $ 0x80+n-1
     | SWAP n => hex 1 $ 0x90+n-1
     | LOG n => hex 1 $ 0xa0+n
-    | _ => ""
+    | VALUE_AppT _ => ""
+    | VALUE_AppI _ => ""
+    | VALUE_Pack _ => ""
+    | VALUE_PackI _ => ""
+    | VALUE_Fold _ => ""
+    | VALUE_AscType _ => ""
+    | UNPACK _ => ""
+    | UNPACKI _ => ""
+    | UNFOLD => ""
+    | NAT2INT => ""
+    | INT2NAT => ""
+    | BYTE2INT => ""
+    | ASCTIME _ => ""
+    | MARK_PreArray2ArrayPtr => ""
+    | MARK_PreTuple2TuplePtr => ""
+    | MACRO_init_free_ptr _ => macro "MACRO_init_free_ptr"
+    | MACRO_malloc_tuple _ => macro "MACRO_malloc_tuple"
 
 fun enc_insts out insts =
   case insts of
@@ -74,6 +92,7 @@ fun enc_insts out insts =
     | JUMP => out "56"
     | RETURN => out "f3"
     | ISDummy _ => out ""
+    | MACRO_halt _ => macro "MACRO_halt"
 
 fun size_inst inst =
   case inst of
@@ -115,6 +134,7 @@ fun size_insts insts =
     | JUMP => 1
     | RETURN => 1
     | ISDummy _ => 0
+    | _ => 0
 
 (***************** the "relabel" visitor  **********************)    
 
