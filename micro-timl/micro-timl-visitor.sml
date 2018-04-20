@@ -527,8 +527,12 @@ fun default_ty_visitor_vtable
           | TAppT data => #visit_TAppT vtable this env data
           | TProdEx data => #visit_TProdEx vtable this env data
           | TArrowTAL data => #visit_TArrowTAL vtable this env data
+          | TArrowEVM (rctx, ts, i) => TArrowEVM (Rctx.map (#visit_ty vtable this env) rctx, visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i)
           | TiBool idx => TiBool $ #visit_idx vtable this env idx
-          | TPreArray (t, i1, i2) => TPreArray (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
+          | TPreArray (t, i1, i2, b) => TPreArray (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2, b)
+          | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
+          | TPreTuple (ts, i) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i)
+          | TTuplePtr (ts, i) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i)
       end
     fun visit_TVar this env data =
       let
@@ -1003,7 +1007,7 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        visit_EMallocPair : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EPairAssign : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EProjProtected : 'this -> 'env -> projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
-       visit_EHalt : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       visit_EHalt : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_var : 'this -> 'env -> 'var -> 'var2,
        visit_cvar : 'this -> 'env -> 'var -> 'var2,
        visit_idx : 'this -> 'env -> 'idx -> 'idx2,
@@ -2351,12 +2355,13 @@ fun default_expr_visitor_vtable
       in
         EProjProtected (proj, e)
       end
-    fun visit_EHalt this env e =
+    fun visit_EHalt this env (e, t) =
       let
         val vtable = cast this
         val e = #visit_expr vtable this env e
+        val t = #visit_ty vtable this env t
       in
-        EHalt e
+        EHalt (e, t)
       end
   in
     {

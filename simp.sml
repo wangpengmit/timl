@@ -195,6 +195,17 @@ local
                   mark $ FalseI $ r ()
                 else
                   def ()
+              | OrI =>
+                if eq_i i1 (FalseI dummy) then
+                  mark i2
+                else if eq_i i2 (FalseI dummy) then
+                  mark i1
+                else if eq_i i1 (TrueI dummy) then
+                  mark $ TrueI $ r ()
+                else if eq_i i2 (TrueI dummy) then
+                  mark $ TrueI $ r ()
+                else
+                  def ()
               | ExpNI =>
                 let
                   val r = r ()
@@ -221,6 +232,7 @@ local
                           | NONE => def ()
                       end
                 end
+              | ModI => def ()
               | LtI => def ()
               | GtI => def ()
               | LeI => def ()

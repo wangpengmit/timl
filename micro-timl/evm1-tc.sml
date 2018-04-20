@@ -55,15 +55,11 @@ val T1 = T1 dummy
 val N0 = INat 0
 val N1 = INat 1
 
-fun kc_against_KType ctx t = kc_against_kind ctx (t, KType)
-                                             
 fun add_sorting_full new ((ictx, tctx), rctx, sctx) = ((new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx, map shift01_i_t sctx)
 fun add_kinding_full new ((ictx, tctx), rctx, sctx) = ((ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx, map shift01_t_t sctx)
 fun add_r p (itctx, rctx, sctx) = (itctx, rctx @+ p, sctx)
 fun add_stack t (itctx, rctx, sctx) = (itctx, rctx, t :: sctx)
 
-fun is_eq_tys ctx a = ListPair.appEq (is_eq_ty ctx) a handle ListPair.UnequalLengths => raise Impossible "is_eq_tys()/unequal-lengths"
-              
 fun get_word_const_type hctx c =
   case c of
       WCTT => TUnit

@@ -330,6 +330,28 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TPreArray (t, len, i, b), KType)
       end
+    | TArrayPtr (t, len, i) =>
+      let
+        val t = kc_against_kind ctx (t, KType)
+        val len = sc_against_sort ictx (len, SNat)
+        val i = sc_against_sort ictx (i, SNat)
+      in
+        (TArrayPtr (t, len, i), KType)
+      end
+    | TTuplePtr (ts, i) =>
+      let
+        val ts = map (kc_against_KType ctx) ts
+        val i = sc_against_sort ictx (i, SNat)
+      in
+        (TTuplePtr (ts, i), KType)
+      end
+    | TPreTuple (ts, i) =>
+      let
+        val ts = map (kc_against_KType ctx) ts
+        val i = sc_against_sort ictx (i, SNat)
+      in
+        (TPreTuple (ts, i), KType)
+      end
     | TProdEx ((t1, b1), (t2, b2)) =>
       let
         val t1 = kc_against_kind ctx (t1, KType)
@@ -343,6 +365,14 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
         val i = sc_against_sort ictx (i, STime)
       in
         (TArrowTAL (ts, i), KType)
+      end
+    | TArrowEVM (rctx, ts, i) =>
+      let
+        val rctx = Rctx.map (fn t => kc_against_kind ctx (t, KType)) rctx
+        val ts = map (kc_against_KType ctx) ts
+        val i = sc_against_sort ictx (i, STime)
+      in
+        (TArrowEVM (rctx, ts, i), KType)
       end
     fun extra_msg () = "\nwhen kindchecking: " ^ ((* substr 0 300 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t (SOME 5) (itctx_names ctx) t_input)
     val ret = main ()
@@ -364,6 +394,8 @@ and kc_against_kind ctx (t, k) =
     t
   end
 
+and kc_against_KType ctx t = kc_against_kind ctx (t, KType)
+                                             
 (* (***************** the "subst_i_t" visitor  **********************)     *)
 
 (* fun subst_i_ty_visitor_vtable cast ((subst_i_i, subst_i_s), d, x, v) : ('this, int, 'var, 'bsort, 'idx, 'sort, 'var, 'bsort, 'idx2, 'sort2) ty_visitor_vtable = *)
@@ -409,6 +441,8 @@ fun assert_sub_map err eq (m, m') =
                   | NONE => raise err ()
             ) m
 
+fun is_eq_list msg f a = ListPair.appEq f a handle ListPair.UnequalLengths => raise Impossible msg
+                                                                                              
 fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
     let
       val t = whnf ctx t
@@ -470,9 +504,41 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
             ()
           end
         | (TNat i, TNat i') => is_eq_idx ictx (i, i')
+        | (TiBool i, TiBool i') => is_eq_idx ictx (i, i')
         | (TArr (t, i), TArr (t', i')) =>
           let
             val () = is_eq_ty ctx (t, t')
+            val () = is_eq_idx ictx (i, i')
+          in
+            ()
+          end
+        | (TArrayPtr (t, i, i2), TArrayPtr (t', i', i2')) =>
+          let
+            val () = is_eq_ty ctx (t, t')
+            val () = is_eq_idx ictx (i, i')
+            val () = is_eq_idx ictx (i2, i2')
+          in
+            ()
+          end
+        | (TPreArray (t, i, i2, b), TPreArray (t', i', i2', b')) =>
+          let
+            val () = is_eq_ty ctx (t, t')
+            val () = is_eq_idx ictx (i, i')
+            val () = is_eq_idx ictx (i2, i2')
+            val () = assert_b (b = b')
+          in
+            ()
+          end
+        | (TTuplePtr (ts, i), TTuplePtr (ts', i')) =>
+          let
+            val () = is_eq_tys ctx (ts, ts')
+            val () = is_eq_idx ictx (i, i')
+          in
+            ()
+          end
+        | (TPreTuple (ts, i), TPreTuple (ts', i')) =>
+          let
+            val () = is_eq_tys ctx (ts, ts')
             val () = is_eq_idx ictx (i, i')
           in
             ()
@@ -526,6 +592,15 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           in
             ()
           end
+        | (TArrowEVM (rctx, ts, i), TArrowEVM (rctx', ts', i')) =>
+          let
+            val () = assert_b $ Rctx.numItems rctx = Rctx.numItems rctx'
+            val () = is_sub_rctx ctx (rctx, rctx')
+            val () = is_eq_tys ctx (ts, ts')
+            val () = is_eq_idx ictx (i, i')
+          in
+            ()
+          end
         | _ => raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
                      [
                        ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t,
@@ -536,6 +611,8 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
 and is_sub_rctx ctx (rctx, rctx_abs) =
   assert_sub_map (fn () => Impossible "is_sub_rctx()") (fn (t_abs, t) => is_eq_ty ctx (t, t_abs)) (rctx_abs, rctx)
   
+and is_eq_tys ctx a = is_eq_list "is_eq_tys()/unequal-lengths" (is_eq_ty ctx) a
+
 fun forget_i_t a = shift_i_t_fn (forget_i_i, forget_i_s) a
 fun forget_t_t a = shift_t_t_fn forget_var a
                                

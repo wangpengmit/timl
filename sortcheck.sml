@@ -60,6 +60,7 @@ fun idx_un_op_type opr =
 fun idx_bin_op_type opr =
   case opr of
       AndI => (BoolSort, BoolSort, BoolSort)
+    | OrI => (BoolSort, BoolSort, BoolSort)
     | ExpNI => (Nat, Nat, Nat)
     | MaxI => raise Impossible "idx_bin_op_type ()"
     | MinI => raise Impossible "idx_bin_op_type ()"
@@ -71,6 +72,7 @@ fun idx_bin_op_type opr =
     | GeI => raise Impossible "idx_bin_op_type ()"
     | AddI => raise Impossible "idx_bin_op_type ()"
     | MultI => raise Impossible "idx_bin_op_type ()"
+    | ModI => raise Impossible "idx_bin_op_type ()"
     | BoundedMinusI => raise Impossible "idx_bin_op_type ()"
     | MinusI => raise Impossible "idx_bin_op_type()/MinusI"
 
@@ -326,6 +328,7 @@ and get_bsort gctx (ctx, i) =
                 | BoundedMinusI => overloaded [Nat, Time] NONE
                 | MinusI => overloaded [Nat, Time] NONE
                 | MultI => overloaded [Nat, Time] NONE
+                | ModI => overloaded [Nat] NONE
                 | MaxI => overloaded [Nat, Time] NONE
                 | MinI => overloaded [Nat, Time] NONE
                 | EqI => overloaded [Nat, BoolSort, UnitSort] (SOME BoolSort)

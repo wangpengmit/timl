@@ -19,8 +19,10 @@ fun print_idx_bin_op opr =
         AddI => "+"
       | BoundedMinusI => "-"
       | MultI => "*"
+      | ModI => "mod"
       | EqI => "="
       | AndI => "and"
+      | OrI => "or"
       | ExpNI => "exp_i_i"
       (* | ExpNI => "^" *)
       | LtI => "<"

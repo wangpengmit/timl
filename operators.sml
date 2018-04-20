@@ -300,10 +300,12 @@ fun str_idx_bin_op opr =
   case opr of
       AddI => "+"
     | MultI => " *"
+    | ModI => "mod"
     | MaxI => "max"
     | MinI => "min"
     | IApp => "app"
     | AndI => "&&"
+    | OrI => "||"
     | ExpNI => "**"
     | EqI => "=?"
     | LtI => "<?"

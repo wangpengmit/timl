@@ -270,6 +270,25 @@ fun default_ty_visitor2_vtable
           | TAppT data => #visit2_TAppT vtable this env data other
           | TProdEx data => #visit2_TProdEx vtable this env data other
           | TArrowTAL data => #visit2_TArrowTAL vtable this env data other
+          | TArrowEVM (data as (rctx, ts, i)) =>
+            (case other of
+                 TArrowEVM (rctx', ts', i') =>
+                 let
+                   val () = if Rctx.numItems rctx = Rctx.numItems rctx' then ()
+                            else error (TArrowEVM data) other
+                   val rctx = Rctx.unionWith (fn (inl (inl t), inl (inr t')) => inr $ #visit2_ty vtable this env t t'
+                                             | _ => raise Impossible "visit2_TArrowEVM") (Rctx.map (inl o inl) rctx, Rctx.map (inl o inr) rctx')
+                   (* if size changes after union, there must be some mismatched keys *)
+                   val () = if Rctx.numItems rctx = Rctx.numItems rctx' then ()
+                            else error (TArrowEVM data) other
+                   val rctx = Rctx.map (fn inr t => t
+                                       | _ => error (TArrowEVM data) other) rctx
+                   val ts = visit2_list (#visit2_ty vtable this) env ts ts'
+                   val i = #visit2_idx vtable this env i i'
+                 in
+                   TArrowEVM (rctx, ts, i)
+                 end
+               | _ => error (TArrowEVM data) other)
           | TiBool i =>
             (case other of
                  TiBool i' =>
@@ -280,6 +299,21 @@ fun default_ty_visitor2_vtable
                  TPreArray (t', i1', i2', b') =>
                  TPreArray (#visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2', visit_eq "visit_TPreArray/b=b'" b b')
                | _ => error (TPreArray (t, i1, i2, b)) other)
+          | TArrayPtr (t, i1, i2) =>
+            (case other of
+                 TArrayPtr (t', i1', i2') =>
+                 TArrayPtr (#visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2')
+               | _ => error (TArrayPtr (t, i1, i2)) other)
+          | TTuplePtr (ts, i) =>
+            (case other of
+                 TTuplePtr (ts', i') =>
+                 TTuplePtr (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i')
+               | _ => error (TTuplePtr (ts, i)) other)
+          | TPreTuple (ts, i) =>
+            (case other of
+                 TPreTuple (ts', i') =>
+                 TPreTuple (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i')
+               | _ => error (TPreTuple (ts, i)) other)
       end
     fun visit2_TVar this env data other =
       let

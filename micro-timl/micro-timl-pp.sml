@@ -240,7 +240,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
       | TPreArray (t, i1, i2, b) =>
         (
           open_hbox ();
-          str "TArr";
+          str "TPreArray";
           space ();
           str "(";
           pp_t t;
@@ -250,6 +250,42 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str $ str_i i2;
           comma ();
           str $ str_bool b;
+          str ")";
+          close_box ()
+        )
+      | TArrayPtr (t, i1, i2) =>
+        (
+          open_hbox ();
+          str "TArrayPtr";
+          space ();
+          str "(";
+          pp_t t;
+          comma ();
+          str $ str_i i1;
+          comma ();
+          str $ str_i i2;
+          str ")";
+          close_box ()
+        )
+      | TTuplePtr (ts, i) =>
+        (
+          open_hbox ();
+          str "TTuplePtr";
+          space ();
+          str "(";
+          app (fn t => (pp_t t; comma ())) ts;
+          str $ str_i i;
+          str ")";
+          close_box ()
+        )
+      | TPreTuple (ts, i) =>
+        (
+          open_hbox ();
+          str "TPreTuple";
+          space ();
+          str "(";
+          app (fn t => (pp_t t; comma ())) ts;
+          str $ str_i i;
           str ")";
           close_box ()
         )
@@ -300,7 +336,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
       | TArrowTAL (ts, i) =>
         (
           open_hbox ();
-          str "TArrow";
+          str "TArrowTAL";
           space ();
           str "(";
           Rctx.appi
@@ -309,6 +345,29 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
                  str ":"; space ();
                  pp_t t;
                  comma ())) ts;
+          str $ str_i i;
+          str ")";
+          close_box ()
+        )
+      | TArrowEVM (rctx, ts, i) =>
+        (
+          open_hbox ();
+          str "TArrowEVM";
+          space ();
+          str "(";
+          str "{";
+          Rctx.appi
+            (fn (r, t) =>
+                (str ("r" ^ str_int r);
+                 str ":"; space ();
+                 pp_t t;
+                 comma ())) rctx;
+          str "}";
+          comma ();
+          str "[";
+          app (fn t => (pp_t t; comma ())) ts;
+          str "]";
+          comma ();
           str $ str_i i;
           str ")";
           close_box ()
