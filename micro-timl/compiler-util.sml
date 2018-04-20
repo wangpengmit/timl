@@ -64,6 +64,14 @@ fun assert_TInt t =
   case t of
       TConst TCInt => ()
     | _ => raise assert_fail "assert_TInt"
+fun assert_TByte t =
+  case t of
+      TConst TCByte => ()
+    | _ => raise assert_fail "assert_TByte"
+fun assert_TBool t =
+  case t of
+      TConst TCBool => ()
+    | _ => raise assert_fail "assert_TBool"
 fun assert_TProdEx t =
   case t of
       TProdEx a => a
@@ -72,6 +80,10 @@ fun assert_TArrowTAL t =
   case t of
       TArrowTAL a => a
     | _ => raise assert_fail "assert_TArrowTAL"
+fun assert_TArrowEVM t =
+  case t of
+      TArrowEVM a => a
+    | _ => raise assert_fail "assert_TArrowEVM"
 fun assert_TArr t =
   case t of
       TArr a => a

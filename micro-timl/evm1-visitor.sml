@@ -226,6 +226,13 @@ fun export_evm1_visitor_vtable cast (omitted, visit_idx, visit_ty) =
 
 fun new_export_evm1_visitor params = new_evm1_visitor export_evm1_visitor_vtable params
                                                         
+fun export_inst_fn params ctx e =
+  let
+    val visitor as (EVM1Visitor vtable) = new_export_evm1_visitor params
+  in
+    #visit_inst vtable visitor (env2ctx (NONE, ctx)) e
+  end
+
 fun export_insts_fn params depth ctx e =
   let
     val visitor as (EVM1Visitor vtable) = new_export_evm1_visitor params

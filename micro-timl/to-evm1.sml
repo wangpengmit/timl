@@ -2,6 +2,7 @@
 
 structure ToEVM1 = struct
 
+open EVM1Util
 open Expr
 open CompilerUtil
 open EVM1Visitor
@@ -13,6 +14,7 @@ infix 9 %@
 infix 8 %^
 infix 7 %*
 infix 6 %+ 
+infix 6 %-
 infix 4 %<=
 infix 4 %<
 infix 4 %>=
@@ -23,9 +25,6 @@ infixr 2 \/
 infixr 1 -->
 infix 1 <->
 
-infix 6 %-
-fun a %- b = BinOpI (BoundedMinusI, a, b)
-        
 fun collect_ELetRec e =
   case e of
       ELet (e1, bind) =>
@@ -81,7 +80,7 @@ fun cg_ty_visitor_vtable cast () =
             val t1 = pa_t t1
             val t2 = pa_t t2
           in
-            TTupleTr ([t1, t2], INat 0)
+            TTuplePtr ([t1, t2], INat 0)
           end
         | _ => #visit_TBinOp vtable this env data (* call super *)
     val vtable = override_visit_TBinOp vtable visit_TBinOp
@@ -358,7 +357,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                   [SWAP1, DUP1] @@
                   malloc_array t @@
                   [DUP2] @@
-                  malloc_init_len @@
+                  array_init_len @@
                   [SWAP1, PUSH1nat 32, MUL] @@
                   PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len])) @@
                   JUMP

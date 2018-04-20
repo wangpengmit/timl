@@ -217,6 +217,7 @@ micro-timl/evm1-pp.sml
 micro-timl/evm1-export-pp.sml
 micro-timl/evm1-pp.sml
 micro-timl/evm-costs.sml
+micro-timl/evm1-util.sml
 micro-timl/evm1-tc.sml
 micro-timl/evm1-assemble.sml
 micro-timl/to-evm1.sml

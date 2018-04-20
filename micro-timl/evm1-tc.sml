@@ -3,6 +3,7 @@
 structure EVM1Typecheck = struct
 
 open Simp
+open EVM1Util
 open EVMCosts
 open MicroTiMLTypecheck
 open CompilerUtil
@@ -15,6 +16,7 @@ infix 8 %^
 infix 7 %*
 infix 7 %/
 infix 6 %+ 
+infix 6 %-
 infix 4 %<
 infix 4 %>
 infix 4 %<=
@@ -34,8 +36,6 @@ infixr 1 -->
 infix 1 <->
 
 infix 6 %%-
-infix 6 %-
-fun a %- b = BinOpI (BoundedMinusI, a, b)
 
 fun a %/ b =
   case simp_i b of
@@ -50,22 +50,20 @@ infixr 5 @@
 infix  6 @+
 infix  9 @!
 
-fun INat c = ConstIN (c, dummy)
-fun ITime c = ConstIT (c, dummy)
-val N = INat
-val T = ITime
 val T0 = T0 dummy
 val T1 = T1 dummy
 val N0 = INat 0
 val N1 = INat 1
-val N32 = INat 32
 
 fun kc_against_KType ctx t = kc_against_kind ctx (t, KType)
                                              
-fun add_sorting_full new ((ictx, tctx), rctx) = ((new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx)
-fun add_kinding_full new ((ictx, tctx), rctx) = ((ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx)
-fun add_r p (itctx, rctx) = (itctx, rctx @+ p)
+fun add_sorting_full new ((ictx, tctx), rctx, sctx) = ((new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx, map shift01_i_t sctx)
+fun add_kinding_full new ((ictx, tctx), rctx, sctx) = ((ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx, map shift01_t_t sctx)
+fun add_r p (itctx, rctx, sctx) = (itctx, rctx @+ p, sctx)
+fun add_stack t (itctx, rctx, sctx) = (itctx, rctx, t :: sctx)
 
+fun is_eq_tys ctx a = ListPair.appEq (is_eq_ty ctx) a handle ListPair.UnequalLengths => raise Impossible "is_eq_tys()/unequal-lengths"
+              
 fun get_word_const_type hctx c =
   case c of
       WCTT => TUnit
@@ -85,7 +83,6 @@ fun tc_w hctx (ctx as (itctx as (ictx, tctx))) w =
     | WUninit t => kc_against_kind itctx (t, KType)
     | WBuiltin (name, t) => kc_against_kind itctx (t, KType)
     | WNever t => kc_against_kind itctx (t, KType)
-
 
 fun is_mult32 n =
   if n mod 32 = 0 then SOME $ n div 32
@@ -366,14 +363,15 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
     (*   in *)
     (*     ((itctx, rctx, TUnit :: sctx), T0) *)
     (*   end *)
-    | _ => raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, NONE) (itctx_names itctx) insts)
+    | _ => raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctx_names itctx) inst)
   end
       
-fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
+fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, sctx)) insts =
   let
+    val tc_insts = tc_insts params
     fun main () =
   case insts of
-      JUMP v =>
+      JUMP =>
       let
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
@@ -408,7 +406,7 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               T_JUMPI %+ IMax (i1, i2)
             end
-          | IAscTime i =>
+          | ASCTIME i =>
             let
               val i = sc_against_sort ictx (unInner i, STime)
               val i' = tc_insts ctx I
@@ -436,7 +434,7 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
     ret
   end
 
-fun tc_hval params (hctx, num_regs) h =
+fun tc_hval (params as (hctx, num_regs)) h =
   let
     val () = println "tc_hval() started"
     val (itbinds, ((rctx, sctx, i), insts)) = unBind h
@@ -486,7 +484,7 @@ fun tc_prog num_regs (H, I) =
       end
     fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
-    val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval hctx h)) H
+    val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval (hctx, num_regs) h)) H
     val i = tc_insts (hctx, num_regs) (([], []), Rctx.empty, []) I
   in
     i

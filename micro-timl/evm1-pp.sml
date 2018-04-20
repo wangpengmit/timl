@@ -345,6 +345,16 @@ fun pp_prog (pp_hval, pp_insts) s (heap, insts) =
 
 open WithPP
 
+fun pp_inst_to_fn (str_i, pp_t) s b =
+  let
+    val pp_w = pp_w pp_t
+  in
+    withPP ("", 80, s) (fn s => pp_inst (str_i, pp_t, pp_w) s b)
+  end
+fun pp_inst_fn params = pp_inst_to_fn params TextIO.stdOut
+fun pp_inst_to_string_fn params b =
+  pp_to_string "pp_inst_to_string.tmp" (fn os => pp_inst_to_fn params os b)
+    
 fun pp_insts_to_fn (str_i, pp_t) s b =
   let
     val pp_w = pp_w pp_t
