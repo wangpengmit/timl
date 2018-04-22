@@ -67,4 +67,7 @@ fun TSomeNat_packed2 () = TExistsI $ IBindAnno ((("n", dummy), MakeSubset ("n", 
 fun TSomeNat () = TRec $ TBindAnno ((("some_nat", dummy), KType), TSomeNat_packed2 ())
 end
            
+val Itrue = TrueI dummy
+val Ifalse = FalseI dummy
+                 
 end

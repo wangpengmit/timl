@@ -523,6 +523,14 @@ fun cc e =
         in
           ECaseClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
         end
+      | EIfi (e, bind1, bind2) =>
+        let
+          val e = cc e
+          val (x1, name1, e1) = unBindSimpOpen_e bind1
+          val (x2, name2, e2) = unBindSimpOpen_e bind2
+        in
+          EIfiClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
+        end
       | ETriOp (ETIte, e, e1, e2) =>
         ETriOp (ETIte, cc e, cc e1, cc e2)
       | EPack (tp, t, e) => EPack (cc_t tp, cc_t t, cc e)

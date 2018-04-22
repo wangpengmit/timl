@@ -167,6 +167,7 @@ fun anf_decls_expr_visitor_vtable cast output =
             | EUnpackI _ => false
             | ERec bind => false
             | ECase _ => false
+            | EIfi _ => false
             | ETriOp (ETIte, _, _, _) => false
             | EConst c => false
               (* (case c of *)
@@ -267,6 +268,24 @@ fun anf_decls_expr_visitor_vtable cast output =
       in
         ECase (e, bind1, bind2)
       end
+    fun visit_EIfi this env (e, bind1, bind2) =
+      let
+        fun on_bind bind =
+          let
+            val (name_x, e) = unBindSimpName bind
+            val x = fresh_evar ()
+            val e = open0_e_e x e
+            val e = anf e
+            val bind = EBind (name_x, close0_e_e x e)
+          in
+            bind
+          end
+        val e = #visit_expr (cast this) this "xc" e
+        val bind1 = on_bind bind1         
+        val bind2 = on_bind bind2        
+      in
+        EIfi (e, bind1, bind2)
+      end
     fun visit_ETriOp this env (data as (opr, e, e1, e2)) =
       case opr of
           ETIte =>
@@ -298,6 +317,7 @@ fun anf_decls_expr_visitor_vtable cast output =
     val vtable = override_visit_EUnpackI vtable visit_EUnpackI
     val vtable = override_visit_ERec vtable visit_ERec
     val vtable = override_visit_ECase vtable visit_ECase
+    val vtable = override_visit_EIfi vtable visit_EIfi
     val vtable = override_visit_ETriOp vtable visit_ETriOp
     val vtable = override_visit_EAscTime vtable visit_EAscTime
     val vtable = override_visit_EAppI vtable visit_EAppI

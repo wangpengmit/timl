@@ -336,28 +336,28 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
     | NAT2INT =>
       let
         val (t0, sctx) = assert_cons sctx
-        val _ = assert_TNat t0
+        val _ = assert_TNat $ whnf itctx t0
       in
         ((itctx, rctx, TInt :: sctx), T0)
       end
     | INT2NAT =>
       let
         val (t0, sctx) = assert_cons sctx
-        val _ = assert_TInt t0
+        val _ = assert_TInt $ whnf itctx t0
       in
         ((itctx, rctx, TSomeNat () :: sctx), T0)
       end
     | BYTE2INT =>
       let
         val (t0, sctx) = assert_cons sctx
-        val _ = assert_TByte t0
+        val _ = assert_TByte $ whnf itctx t0
       in
         ((itctx, rctx, TInt :: sctx), T0)
       end
     | MACRO_int2byte =>
       let
         val (t0, sctx) = assert_cons sctx
-        val _ = assert_TInt t0
+        val _ = assert_TInt $ whnf itctx t0
       in
         ((itctx, rctx, TByte :: sctx), T0)
       end
@@ -366,15 +366,15 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       let
         val t = kc_against_kind itctx (unInner t, KType)
         val (t0, sctx) = assert_cons sctx
-        val len = assert_TNat t0
+        val len = assert_TNat $ whnf itctx t0
       in
         ((itctx, rctx, TPreArray (t, len, len, false) :: sctx), T0)
       end
     | MACRO_array_init_assign =>
       let
         val (t0, t1, t2, sctx) = assert_cons3 sctx
-        val offset = assert_TNat t0
-        val (t, len, lowest_inited, len_inited) = assert_TPreArray t1
+        val offset = assert_TNat $ whnf itctx t0
+        val (t, len, lowest_inited, len_inited) = assert_TPreArray $ whnf itctx t1
         val () = is_eq_ty itctx (t2, t)
         val () = write_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 = lowest_inited)
       in
@@ -383,8 +383,8 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
     | MACRO_array_init_len =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
-        val len' = assert_TNat t0
-        val (t, len, lowest_inited, _) = assert_TPreArray t1
+        val len' = assert_TNat $ whnf itctx t0
+        val (t, len, lowest_inited, _) = assert_TPreArray $ whnf itctx t1
         val () = write_prop (len' %= len)
       in
         ((itctx, rctx, TPreArray (t, len, lowest_inited, true) :: sctx), T0)
@@ -392,7 +392,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
     | MARK_PreArray2ArrayPtr =>
       let
         val (t0, sctx) = assert_cons sctx
-        val (t, len, lowest_inited, len_inited) = assert_TPreArray t0
+        val (t, len, lowest_inited, len_inited) = assert_TPreArray $ whnf itctx t0
         val () = assert_b (len_inited = true)
         val () = write_prop (lowest_inited %= N0)
       in
@@ -407,7 +407,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
     | MACRO_tuple_assign =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
-        val (ts, offset, lowest_inited) = assert_TPreTuple t1
+        val (ts, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t1
         val () = write_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 = lowest_inited)
         val n = assert_INat lowest_inited
         val () = is_eq_ty itctx (t0, List.nth (ts, n-1))
@@ -417,7 +417,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
     | MARK_PreTuple2TuplePtr =>
       let
         val (t0, sctx) = assert_cons sctx
-        val (t, offset, lowest_inited) = assert_TPreTuple t0
+        val (t, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t0
         val () = write_prop (lowest_inited %= N0)
       in
         ((itctx, rctx, TTuplePtr (t, offset) :: sctx), T0)
@@ -426,7 +426,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       let
         val t_other = kc_against_kind itctx (unInner t_other, KType)
         val (t0, t1, sctx) = assert_cons2 sctx
-        val b = assert_IBool $ assert_TiBool t0
+        val b = assert_IBool $ assert_TiBool $ whnf itctx t0
         val inj = if b then InjInr else InjInl
         val ts = choose_pair_inj (t1, t_other) inj
       in
@@ -473,7 +473,7 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
             JUMPI =>
             let
               val (t0, t1, sctx) = assert_cons2 sctx
-              val () = assert_TBool t1
+              val () = assert_TBool $ whnf itctx t1
               val t0 = whnf itctx t0
               val (rctx', sctx', i2) = assert_TArrowEVM t0
               val () = is_sub_rctx itctx (rctx, rctx')
@@ -482,32 +482,33 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
             in
               T_JUMPI %+ IMax (i1, i2)
             end
-          | MACRO_br_sum =>
+          | JUMPI_i =>
             let
-              val (t0, t1, sctx) = assert_cons2 sctx
-              val () = assert_nil sctx
-              val (tl, tr) = assert_TSum t1
+              val (t0, t1, t2, sctx) = assert_cons3 sctx
+              val i = assert_TiBool $ whnf itctx t1
+              val () = assert_TUnit $ whnf itctx t2
               val t0 = whnf itctx t0
               val (rctx', sctx', i2) = assert_TArrowEVM t0
               val () = is_sub_rctx itctx (rctx, rctx')
-              val () = is_eq_tys itctx ([TTuplePtr (TBool, tr)], sctx')
+              val make_exists = make_exists "__p"
+              val t1 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
+              val t2 = make_exists (Subset_from_prop dummy $ i %= Itrue)
+              val () = is_eq_tys itctx (t1 :: sctx, sctx')
+              val i1 = tc_insts (add_stack t2 ctx) I
+            in
+              T0 %+ IMax (i1, i2)
+            end
+          | MACRO_br_sum =>
+            let
+              val (t0, t1, sctx) = assert_cons2 sctx
+              val (tl, tr) = assert_TSum $ whnf itctx t1
+              val t0 = whnf itctx t0
+              val (rctx', sctx', i2) = assert_TArrowEVM t0
+              val () = is_sub_rctx itctx (rctx, rctx')
+              val () = is_eq_tys itctx (TTuplePtr (TBool, tr) :: sctx, sctx')
               val i1 = tc_insts (add_stack (TTuplePtr (TBool, tl)) ctx) I
             in
-              IMax (i1, i2)
-            end
-              
-            IUnOp (IUBrSum, r, v) =>
-            let
-              val t = tc_v ctx $ VReg r
-              val t_v = tc_v ctx $ unInner v
-              val t = whnf itctx t
-              val (t1, t2) = assert_TSum t
-              val t_v = whnf itctx t_v
-              val (rctx', i2) = assert_TArrowTAL t_v
-              val i1 = tc_insts (add_r (r, t1) ctx) I
-              val () = is_sub_rctx itctx (rctx @+ (r, t2), rctx')
-            in
-              T1 %+ IMax (i1, i2)
+              T0 %+ IMax (i1, i2)
             end
           | ASCTIME i =>
             let

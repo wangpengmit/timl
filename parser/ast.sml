@@ -117,6 +117,7 @@ datatype exp =
          | EUnOp of expr_un_op * exp * region
          | BinOp of expr_bin_op * exp * exp * region
          | ETriOp of expr_tri_op * exp * exp * exp * region
+         | EIfi of exp * exp * exp * region
          | ENever of region
          | EStrConcat of exp * exp * region
 

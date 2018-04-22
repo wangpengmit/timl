@@ -205,13 +205,21 @@ fun collect_EAppI e =
     | _ => (e, [])
 fun EAppIs (f, args) = foldl (swap EAppI) f args
                              
+fun make_exists name s = TExistsI $ IBindAnno (((name, dummy), s), TUnit)
+                             
 fun TSumbool (s1, s2) =
   let
-    val name = ("__p", dummy)
-    fun make_exists s = TExistsI $ IBindAnno ((name, s1), TUnit)
+    val name = "__p"
   in
-    TSum (make_exists s1, make_exists s2)
+    TSum (make_exists name s1, make_exists name s2)
   end
                   
+fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
+                             
+fun assert_TiBool t =
+  case t of
+      TiBool a => a
+    | _ => raise assert_fail $ "assert_TiBool"
+
 end
                                  

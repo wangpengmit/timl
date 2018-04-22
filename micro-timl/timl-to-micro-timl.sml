@@ -153,10 +153,23 @@ fun on_e (e : S.expr) =
             val e = on_e e
             val e = EUnpackI (EV 0, IBind (iname, EBind (("__u", r), shift_e_e 0 2 e)))
           in
-            EBind (("__p", r), e)
+            EBind (("__ex", r), e)
           end
       in
         ECase (on_e e, on_bind bind1, on_bind bind2)
+      end
+    | S.EIfi (e, bind1, bind2, r) =>
+      let
+        fun on_bind bind =
+          let
+            val (iname, e) = unBindSimpName bind
+            val e = on_e e
+            val e = EUnpackI (EV 0, IBind (iname, EBind (("__u", r), shift_e_e 0 2 e)))
+          in
+            EBind (("__ex", r), e)
+          end
+      in
+        EIfi (on_e e, on_bind bind1, on_bind bind2)
       end
     | S.ECase (e, return, rules, r) =>
       let

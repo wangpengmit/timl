@@ -567,7 +567,7 @@ fun default_ty_visitor_vtable
           | TiBool idx => TiBool $ #visit_idx vtable this env idx
           | TPreArray (t, i1, i2, b) => TPreArray (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2, b)
           | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
-          | TPreTuple (ts, i) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i)
+          | TPreTuple (ts, i, i2) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, #visit_idx vtable this env i2)
           | TTuplePtr (ts, i) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i)
       end
     fun visit_TVar this env data =

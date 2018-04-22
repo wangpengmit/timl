@@ -168,6 +168,22 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
             in
               T1 %+ IMax (i1, i2)
             end
+          | IUnOp (IUBrI, r, v) =>
+            let
+              val t = tc_v ctx $ VReg r
+              val t_v = tc_v ctx $ unInner v
+              val t = whnf itctx t
+              val i = assert_TiBool t
+              val make_exists = make_exists "__p"
+              val t1 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
+              val t2 = make_exists (Subset_from_prop dummy $ i %= Itrue)
+              val t_v = whnf itctx t_v
+              val (rctx', i2) = assert_TArrowTAL t_v
+              val i1 = tc_insts (add_r (r, t1) ctx) I
+              val () = is_sub_rctx itctx (rctx @+ (r, t2), rctx')
+            in
+              T1 %+ IMax (i1, i2)
+            end
           | IUnOp (IUBrBool, r, v) =>
             let
               val () = tc_v_against_ty ctx (VReg r, TBool)
@@ -272,8 +288,7 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val i1 = assert_TNat t1
               val t2 = tc_v ctx $ unInner v
               val i2 = assert_TNat t2
-              val (p, not_p) = interp_nat_cmp dummy opr
-              val t = TSumbool (Subset_from_prop dummy $ p (i1, i2), Subset_from_prop dummy $ not_p (i1, i2))
+              val t = TSumbool (interp_nat_cmp dummy opr, dummy)
               val i = tc_insts (add_r (rd, t) ctx) I
             in
               i %+ T1

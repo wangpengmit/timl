@@ -200,15 +200,15 @@ fun interp_nat_expr_bin_op opr (i1, i2) err =
          
 fun interp_nat_cmp r opr =
   let
-    fun neq (a, b) = Not (a %= b, r)
+    fun neq (a, b) = UnOpI (Neg, a %=? b, r)
   in
   case opr of
-      NCLt => (op%<, op%>=)
-    | NCGt => (op%>, op%<=)
-    | NCLe => (op%<=, op%>)
-    | NCGe => (op%>=, op%<)
-    | NCEq => (op%=, neq)
-    | NCNEq => (neq, op%=)
+      NCLt => op%<?
+    | NCGt => op%>?
+    | NCLe => op%<=?
+    | NCGe => op%>=?
+    | NCEq => op%=?
+    | NCNEq => neq
   end
     
 end

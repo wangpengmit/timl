@@ -345,12 +345,13 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TTuplePtr (ts, i), KType)
       end
-    | TPreTuple (ts, i) =>
+    | TPreTuple (ts, i, i2) =>
       let
         val ts = map (kc_against_KType ctx) ts
         val i = sc_against_sort ictx (i, SNat)
+        val i2 = sc_against_sort ictx (i2, SNat)
       in
-        (TPreTuple (ts, i), KType)
+        (TPreTuple (ts, i, i2), KType)
       end
     | TProdEx ((t1, b1), (t2, b2)) =>
       let
@@ -536,10 +537,11 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           in
             ()
           end
-        | (TPreTuple (ts, i), TPreTuple (ts', i')) =>
+        | (TPreTuple (ts, i, i2), TPreTuple (ts', i', i2')) =>
           let
             val () = is_eq_tys ctx (ts, ts')
             val () = is_eq_idx ictx (i, i')
+            val () = is_eq_idx ictx (i2, i2')
           in
             ()
           end
@@ -1073,8 +1075,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
                        TNat i => i
                      | _ => raise MTCError "ENatAdd 2"
           val (e1, e2) = if !anno_ENatCmp then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val (p, not_p) = interp_nat_cmp dummy opr
-          val t = TSumbool (Subset_from_prop dummy $ p (i1, i2), Subset_from_prop dummy $ not_p (i1, i2))
+          val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
         in
           (EBinOp (EBNatCmp opr, e1, e2), t, j1 %+ j2)
         end
@@ -1124,6 +1125,22 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
           val e2 = if !anno_EIte_e2_time then e2 |> i2 else e2
         in
           (ETriOp (ETIte, e, e1, e2), t, i %+ IMax (i1, i2))
+        end
+      | EIfi data =>
+        let
+          val (e, (name1, e1), (name2, e2)) = unECase data
+          val (e, t_e, j) = tc ctx e
+          val i = assert_TiBool $ whnf itctx t_e
+          val make_exists = make_exists "__p"
+          val t1 = make_exists (Subset_from_prop dummy $ i %= Itrue)
+          val t2 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
+          val (e1, t1, i1) = tc (add_typing_full (fst name1, t1) ctx) e1
+          val (e2, t2, i2) = tc (add_typing_full (fst name2, t2) ctx) e2
+          val e2 = if !anno_ECase_e2_time then e2 |> i2 else e2
+          val () = is_eq_ty itctx (t1, t2)
+          val e = if !anno_ECase then e %: t_e else e
+        in
+          (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %+ IMax (i1, i2))
         end
       | EAbs data =>
         let

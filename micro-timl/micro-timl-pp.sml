@@ -278,7 +278,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
-      | TPreTuple (ts, i) =>
+      | TPreTuple (ts, i, i2) =>
         (
           open_hbox ();
           str "TPreTuple";
@@ -286,6 +286,8 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str "(";
           app (fn t => (pp_t t; comma ())) ts;
           str $ str_i i;
+          comma ();
+          str $ str_i i2;
           str ")";
           close_box ()
         )

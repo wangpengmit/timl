@@ -25,6 +25,7 @@ type 'mtype datatype_def = (name(*for datatype self-reference*) * (unit, name, I
 datatype mtype = 
 	 Arrow of mtype * idx * mtype
          | TyNat of idx * region
+         | TiBool of idx * region
          | TyArray of mtype * idx
 	 | BaseType of base_type * region
          | Unit of region

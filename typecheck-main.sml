@@ -1188,9 +1188,8 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val i2 = fresh_i gctx sctx (Base Time) r
                  val (e1, _, d1) = check_mtype (ctx, e1, TyNat (i1, r))
                  val (e2, _, d2) = check_mtype (ctx, e2, TyNat (i2, r))
-                 val (p, not_p) = interp_nat_cmp r opr
                in
-                 (EBinOp (EBNatCmp opr, e1, e2), TSumbool (Subset_from_prop r $ p (i1, i2), Subset_from_prop r $ not_p (i1, i2)), d1 %+ d2)
+                 (EBinOp (EBNatCmp opr, e1, e2), TiBool (interp_nat_cmp r opr (i1, i2), r), d1 %+ d2)
                end
           )
 	| U.ETriOp (ETWrite, e1, e2, e3) =>
@@ -1471,6 +1470,26 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
             val () = unify_mt r gctx (sctx, kctx) (t2, t1)
           in
             (ECaseSumbool (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %+ smart_max j1 j2)
+          end
+        | U.EIfi (e, bind1, bind2, r) =>
+          let
+            val i = fresh_i gctx sctx (Base BoolSort) r
+            val (e, t_e, j_e) = check_mtype (ctx, e, TiBool (i, r))
+            val (iname1, e1) = unBindSimpName bind1
+            val (iname2, e2) = unBindSimpName bind2
+            val s1 = Subset_from_prop r $ i %= TrueI r
+            val s2 = Subset_from_prop r $ i %= FalseI r
+            val (e1, t1, j1) = open_close add_sorting_skct (fst iname1, s1) ctx (fn ctx => get_mtype (ctx, e1))
+            val ctxd = ctx_from_sorting (fst iname1, s1)
+            val ctx' = add_sorting_skct (fst iname1, s1) ctx
+            val (t1, j1) = forget_or_check_return r gctx ctx' ctxd (t1, j1) (NONE, NONE)
+            val (e2, t2, j2) = open_close add_sorting_skct (fst iname2, s2) ctx (fn ctx => get_mtype (ctx, e2))
+            val ctxd = ctx_from_sorting (fst iname2, s2)
+            val ctx' = add_sorting_skct (fst iname2, s2) ctx
+            val (t2, j2) = forget_or_check_return r gctx ctx' ctxd (t2, j2) (NONE, NONE)
+            val () = unify_mt r gctx (sctx, kctx) (t2, t1)
+          in
+            (EIfi (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %+ smart_max j1 j2)
           end
     fun extra_msg () = ["when typechecking"] @ indent [US.str_e gctxn ctxn e_all]
     val (e, t, d) = main ()

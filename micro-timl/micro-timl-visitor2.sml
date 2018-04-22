@@ -309,11 +309,11 @@ fun default_ty_visitor2_vtable
                  TTuplePtr (ts', i') =>
                  TTuplePtr (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i')
                | _ => error (TTuplePtr (ts, i)) other)
-          | TPreTuple (ts, i) =>
+          | TPreTuple (ts, i, i2) =>
             (case other of
-                 TPreTuple (ts', i') =>
-                 TPreTuple (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i')
-               | _ => error (TPreTuple (ts, i)) other)
+                 TPreTuple (ts', i', i2') =>
+                 TPreTuple (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i', #visit2_idx vtable this env i2 i2')
+               | _ => error (TPreTuple (ts, i, i2)) other)
       end
     fun visit2_TVar this env data other =
       let

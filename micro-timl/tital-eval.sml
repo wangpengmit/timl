@@ -295,6 +295,17 @@ fun step (H, R, I) =
                   InjInl => (H, R @+ (r, w), I')
                 | InjInr => (H, R @+ (r, w), get_code (H, R) $ unInner v)
             end
+          | IUnOp (IUBrI, r, v) =>
+            let
+              val b = assert_WViBool $ R @!! r
+              val make_exists = make_exists "__p"
+              val t = make_exists (Subset_from_prop dummy $ IBool b %= IBool b)
+              val w = WVPackI (t, IBool b, WVTT)
+            in
+              case inj of
+                  InjInl => (H, R @+ (r, w), I')
+                | InjInr => (H, R @+ (r, w), get_code (H, R) $ unInner v)
+            end
           | IUnOp (IUBrBool, r, v) =>
             if assert_WVBool $ R @!! r then
               (H, R, I')
@@ -365,11 +376,8 @@ fun step (H, R, I) =
                   | NCGe => op>=
                   | NCEq => op=
                   | NCNEq => op<>
-              val (p, not_p) = interp_nat_cmp dummy opr
-              val (inj, p) = if eval_nat_cmp opr (n1, n2)
-                             then (InjInl, p)
-                             else (InjInr, not_p)
-              val t = TExistsI $ IBindAnno ((("__p", dummy), TypecheckUtil.Subset_from_prop dummy $ p  (i1, i2)), TUnit)
+              val b = eval_nat_cmp opr (n1, n2)
+              val t = TiBool $ IBool b
               val l = fresh_label H
               val hv = HVInj (inj, WVPackI (t, TTI dummy, WVTT))
             in

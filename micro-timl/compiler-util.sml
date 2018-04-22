@@ -13,8 +13,6 @@ fun close0_i_e_anno a = close0_anno IBindAnno close0_i_e a
 fun close0_t_e_anno a = close0_anno TBindAnno close0_t_e a
 fun close0_e_e_anno a = close0_anno EBindAnno close0_e_e a
 
-fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
-                             
 fun assert_TArrow t =
   case t of
       TArrow a => a
@@ -137,6 +135,9 @@ fun EUnpackIClose (e1, (a, name_a), (x, name_x), e2) =
              
 fun ECaseClose (e, ((x1, name1), e1), ((x2, name2), e2)) =
     ECase (e, EBind ((name1, dummy), close0_e_e x1 e1), EBind ((name2, dummy), close0_e_e x2 e2))
+          
+fun EIfiClose (e, ((x1, name1), e1), ((x2, name2), e2)) =
+    EIfi (e, EBind ((name1, dummy), close0_e_e x1 e1), EBind ((name2, dummy), close0_e_e x2 e2))
           
 fun EAppIT (e, arg) =
     case arg of

@@ -45,6 +45,7 @@ datatype expr =
 	 | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option
 	 | ECase of expr * return * (ptrn, expr) bind list * region
          | ECaseSumbool of expr * expr ibind * expr ibind * region
+         | EIfi of expr * expr ibind * expr ibind * region
 	 | ELet of return * (decl tele, expr) bind * region
 
      and decl =

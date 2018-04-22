@@ -577,6 +577,29 @@ fun cps (e, t_e) (k, j_k) =
       in
         cps (e, t_e) (c, i_c)
       end
+    | S.EIfi (e, bind1, bind2) =>
+      (* [[ ifi e (x.e1) (x.e2) ]](k) = [[e]](\y. ifi y (x. [[e1]](k)) (x. [[e2]](k))) *)
+      let
+        val (name_x_1, e1) = unBindSimp2 bind1
+        val (name_x_2, e2) = unBindSimp2 bind2
+        val x = fresh_evar ()
+        val e1 = open0_e_e x e1
+        val e2 = open0_e_e x e2
+        val t_res = t_e
+        val (e, t_e) = assert_EAscType e
+        val t_res = cps_t t_res
+        val x_k = fresh_evar ()
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
+        val y = fresh_evar ()
+        val c = EIfiClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
+        val c = ELetClose ((x_k, "k", k), c)
+        val t_y = cps_t t_e
+        val c = EAbs $ close0_e_e_anno ((y, "y", t_y), c)
+        val i_c = IMax (i_e1, i_e2)
+      in
+        cps (e, t_e) (c, i_c)
+      end
     | S.ETriOp (ETIte, e, e1, e2) =>
       (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
       let
@@ -808,6 +831,15 @@ fun check_CPSed_expr e =
       (check_value e1;
        check_value e2)
     | ECase (e, bind1, bind2) =>
+      let
+        val () = check_value e
+        val (_, e1) = unBind bind1
+        val (_, e2) = unBind bind2
+      in
+        (loop e1;
+         loop e2)
+      end
+    | EIfi (e, bind1, bind2) =>
       let
         val () = check_value e
         val (_, e1) = unBind bind1

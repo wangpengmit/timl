@@ -48,6 +48,7 @@ datatype ('idx, 'ty) inst =
          (* | SLOAD *)
          (* | SSTORE *)
          | JUMPI
+         | JUMPI_i
          | JUMPDEST
          | PUSH of int * 'ty word inner
          | DUP of int

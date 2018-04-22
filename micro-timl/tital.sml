@@ -13,6 +13,7 @@ datatype word_const =
          | WCNat of nat
          | WCInt of int
          | WCBool of bool
+         | WCiBool of bool
          | WCByte of Char.char
 
 (* atomic word values *)
@@ -37,6 +38,7 @@ datatype ('idx, 'ty) value =
 datatype inst_un_op =
          IUMov
          | IUBrSum
+         | IUBrI
          | IUBrBool
          | IUUnfold
          | IUPrim of prim_expr_un_op

@@ -281,6 +281,31 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         IBrSum' (r, VAppITs_ctx (VLabel l, itctx)) @::
         I1
       end
+    | EIfi (v, bind1, bind2) =>
+      let
+        val (v, t) = assert_EAscType v
+        val t = cg_t t
+        val i = assert_TiBool t
+        val make_exists = make_exists "__p"
+        val t1 = make_exists (Subset_from_prop dummy $ i %= Itrue)
+        val t2 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
+        val (name1, e1) = unBindSimpName bind1
+        val (name2, e2) = unBindSimpName bind2
+        val (e2, i_e2) = assert_EAscTime e2
+        val r = fresh_reg ()
+        val v = cg_v ectx v
+        val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1)) e1
+        val rctx2 = rctx @+ (r, t2)
+        val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx2) e2
+        val itbinds = rev itctx
+        val hval = HCode' (itbinds, ((rctx2, i_e2), I2))
+        val l = fresh_label ()
+        val () = output_heap ((l, "ifi_else_branch"), hval)
+      in
+        IMov' (r, v) @::
+        IBrI' (r, VAppITs_ctx (VLabel l, itctx)) @::
+        I1
+      end
     | ETriOp (ETIte, v, e1, e2) =>
       let
         val (e2, i_e2) = assert_EAscTime e2

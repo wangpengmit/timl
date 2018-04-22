@@ -163,8 +163,8 @@ fun halt t = MACRO_halt t
 (* val int2byte = [] (* noop, relying on type discipline *) *)
 val int2byte = [MACRO_int2byte]
 fun make_inj t_other = [MACRO_make_inj $ Inner t_other]
+val br_sum = [MACRO_br_sum]
                  
-val br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
 
 fun inline_macro_inst inst =
   case inst of
@@ -510,6 +510,32 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val hval = HCode' (itbinds, ((rctx, [TProd (TiBoolConst true, t2)](*the stack spec*), i_e2), branch_prelude @@ I2))
         val l = fresh_label ()
         val () = output_heap ((l, "inr_branch"), hval)
+      in
+        compile e @@
+        PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
+        br_sum @@
+        branch_prelude @@
+        I1
+      end
+    | EIfi (e, bind1, bind2) =>
+      let
+        val (e, t) = assert_EAscType e
+        val t = cg_t t
+        val i = assert_TiBool t
+        val make_exists = make_exists "__p"
+        val t1 = make_exists (Subset_from_prop dummy $ i %= Itrue)
+        val t2 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
+        val (name1, e1) = unBindSimpName bind1
+        val (name2, e2) = unBindSimpName bind2
+        val (e2, i_e2) = assert_EAscTime e2
+        val r = fresh_reg ()
+        val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1)) e1
+        val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2)) e2
+        val branch_prelude = set_reg r
+        val itbinds = rev itctx
+        val hval = HCode' (itbinds, ((rctx, [t2], i_e2), branch_prelude @@ I2))
+        val l = fresh_label ()
+        val () = output_heap ((l, "ifi_else_branch"), hval)
       in
         compile e @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
