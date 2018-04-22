@@ -11,6 +11,7 @@ fun simp_mt t =
   case t of
       Arrow (t1, d, t2) => Arrow (simp_mt t1, simp_i d, simp_mt t2)
     | TyNat (i, r) => TyNat (simp_i i, r)
+    | TiBool (i, r) => TiBool (simp_i i, r)
     | TyArray (t, i) => TyArray (simp_mt t, simp_i i)
     | Unit r => Unit r
     | Prod (t1, t2) => Prod (simp_mt t1, simp_mt t2)

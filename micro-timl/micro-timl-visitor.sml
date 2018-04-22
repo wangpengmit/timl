@@ -2054,6 +2054,17 @@ fun default_expr_visitor_vtable
       visit_ty
     : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind, 'ty2) expr_visitor_vtable =
   let
+    fun visit_ibinder this = visit_binder (#extend_i (cast this) this)
+    fun visit_tbinder this = visit_binder (#extend_t (cast this) this)
+    fun visit_ebinder this = visit_binder (#extend_e (cast this) this)
+    fun visit_ibind this = visit_bind_simp (#extend_i (cast this) this)
+    fun visit_tbind this = visit_bind_simp (#extend_t (cast this) this)
+    fun visit_cbind this = visit_bind_simp (#extend_c (cast this) this)
+    fun visit_ebind this = visit_bind_simp (#extend_e (cast this) this)
+    fun visit_ibind_anno this = visit_bind_anno (#extend_i (cast this) this)
+    fun visit_tbind_anno this = visit_bind_anno (#extend_t (cast this) this)
+    fun visit_cbind_anno this = visit_bind_anno (#extend_c (cast this) this)
+    fun visit_ebind_anno this = visit_bind_anno (#extend_e (cast this) this)
     fun visit_expr this env data =
       let
         val vtable = cast this
@@ -2096,6 +2107,10 @@ fun default_expr_visitor_vtable
           | EProjProtected data => #visit_EProjProtected vtable this env data
           | EHalt data => #visit_EHalt vtable this env data
           | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_list (#visit_expr vtable this) env es)
+          | EIfi (e, e1, e2) => EIfi
+                                   (#visit_expr vtable this env e,
+                                    visit_ebind this (#visit_expr vtable this) env e1,
+                                    visit_ebind this (#visit_expr vtable this) env e2)
       end
     fun visit_EVar this env data =
       let
@@ -2150,17 +2165,6 @@ fun default_expr_visitor_vtable
       in
         ETriOp (opr, e1, e2, e3)
       end
-    fun visit_ibinder this = visit_binder (#extend_i (cast this) this)
-    fun visit_tbinder this = visit_binder (#extend_t (cast this) this)
-    fun visit_ebinder this = visit_binder (#extend_e (cast this) this)
-    fun visit_ibind this = visit_bind_simp (#extend_i (cast this) this)
-    fun visit_tbind this = visit_bind_simp (#extend_t (cast this) this)
-    fun visit_cbind this = visit_bind_simp (#extend_c (cast this) this)
-    fun visit_ebind this = visit_bind_simp (#extend_e (cast this) this)
-    fun visit_ibind_anno this = visit_bind_anno (#extend_i (cast this) this)
-    fun visit_tbind_anno this = visit_bind_anno (#extend_t (cast this) this)
-    fun visit_cbind_anno this = visit_bind_anno (#extend_c (cast this) this)
-    fun visit_ebind_anno this = visit_bind_anno (#extend_e (cast this) this)
     fun visit_ECase this env data =
       let
         val vtable = cast this

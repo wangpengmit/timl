@@ -195,6 +195,7 @@ fun forget_i_mt x n b =
         case b of
 	    Arrow (t1, d, t2) => Arrow (f x n t1, on_i_i x n d, f x n t2)
           | TyNat (i, r) => TyNat (on_i_i x n i, r)
+          | TiBool (i, r) => TiBool (on_i_i x n i, r)
           | TyArray (t, i) => TyArray (f x n t, on_i_i x n i)
           | Unit r => Unit r
 	  | Prod (t1, t2) => Prod (f x n t1, f x n t2)

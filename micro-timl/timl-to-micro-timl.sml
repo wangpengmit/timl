@@ -54,6 +54,7 @@ fun on_mt (t : S.mtype) =
   case t of
       S.Arrow (t1, i, t2) => TArrow (on_mt t1, i, on_mt t2)
     | S.TyNat (i, _) => TNat i
+    | S.TiBool (i, _) => TiBool i
     | S.TyArray (t, i) => TArr (on_mt t, i)
     | S.Unit _ => TUnit
     | S.Prod (t1, t2) => TProd (on_mt t1, on_mt t2)

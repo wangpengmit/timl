@@ -135,6 +135,8 @@ fun default_expr_visitor_vtable
       visit_ptrn_constr_tag
     : ('this, 'env) expr_visitor_vtable =
   let
+    fun visit_ibind this = visit_bind_simp (#extend_i (cast this) this)
+    fun visit_ibind_anno this = visit_bind_anno (#extend_i (cast this) this)
     fun visit_expr this env data =
       let
         val vtable = cast this
@@ -155,6 +157,10 @@ fun default_expr_visitor_vtable
 	  | ECase data => #visit_ECase vtable this env data
 	  | ELet data => #visit_ELet vtable this env data
 	  | ECaseSumbool data => #visit_ECaseSumbool vtable this env data
+	  | EIfi (e, bind1, bind2, r) => T.ECaseSumbool
+                                           (#visit_expr vtable this env e,
+                                            visit_ibind this (#visit_expr vtable this) env bind1,
+                                            visit_ibind this (#visit_expr vtable this) env bind2, r)
       end
     fun visit_EVar this env data =
       let
@@ -329,8 +335,6 @@ fun default_expr_visitor_vtable
       in
         T.EAbs data
       end
-    fun visit_ibind this = visit_bind_simp (#extend_i (cast this) this)
-    fun visit_ibind_anno this = visit_bind_anno (#extend_i (cast this) this)
     fun visit_EAbsI this env data =
       let
         val vtable = cast this

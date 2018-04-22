@@ -250,6 +250,8 @@ fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_vi
             in
               if SE.eq_var (x, (ID ("nat", dummy))) andalso length ts = 0 andalso length is = 1 then
                 TyNat (hd is, S.get_region_mt t)
+              else if SE.eq_var (x, (ID ("ibool", dummy))) andalso length ts = 0 andalso length is = 1 then
+                TiBool (hd is, S.get_region_mt t)
               else if SE.eq_var (x, (ID ("array", dummy))) andalso length ts = 1 andalso length is = 1 then
                 TyArray (hd ts, hd is)
               else

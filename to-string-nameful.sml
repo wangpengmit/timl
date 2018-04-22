@@ -224,6 +224,7 @@ fun strn_mt t =
         else
           sprintf "($ -- $ --> $)" [strn_mt t1, strn_i d, strn_mt t2]
       | TyNat (i, _) => sprintf "(nat $)" [strn_i i]
+      | TiBool (i, _) => sprintf "(ibool $)" [strn_i i]
       | TyArray (t, i) => sprintf "(array $ $)" [strn_mt t, strn_i i]
       | Unit _ => "unit"
       | Prod (t1, t2) => sprintf "($ * $)" [strn_mt t1, strn_mt t2]
@@ -398,6 +399,13 @@ fun strn_e e =
         val (name2, e2) = unBindSimpName bind2
       in
         sprintf "(case_sumbool $ (left $ => $) (right $ => $))" [strn_e e, fst name1, strn_e e1, fst name2, strn_e e2]
+      end
+    | EIfi (e, bind1, bind2, _) =>
+      let
+        val (name1, e1) = unBindSimpName bind1
+        val (name2, e2) = unBindSimpName bind2
+      in
+        sprintf "(ifi $ (itrue $ => $) (ifalse $ => $))" [strn_e e, fst name1, strn_e e1, fst name2, strn_e e2]
       end
 
 and strn_decl decl =

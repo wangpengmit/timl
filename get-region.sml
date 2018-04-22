@@ -71,6 +71,7 @@ fun get_region_mt t =
   case t of
       Arrow (t1, d, t2) => combine_region (get_region_mt t1) (get_region_mt t2)
     | TyNat (_, r) => r
+    | TiBool (_, r) => r
     | TyArray (t, i) => combine_region (get_region_mt t) (get_region_i i)
     | Unit r => r
     | Prod (t1, t2) => combine_region (get_region_mt t1) (get_region_mt t2)
@@ -137,6 +138,7 @@ fun get_region_e e =
     | EAbsI (_, r) => r
     | EAppConstr ((x, _), _, _, e, _) => combine_region (get_region_cvar x) (get_region_e e)
     | ECase (_, _, _, r) => r
+    | EIfi (_, _, _, r) => r
     | ECaseSumbool (_, _, _, r) => r
     | ELet (_, _, r) => r
                                               

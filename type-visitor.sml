@@ -307,6 +307,7 @@ fun default_type_visitor_vtable
         case data of
 	    Arrow data => #visit_Arrow vtable this env data
           | TyNat data => #visit_TyNat vtable this env data
+          | TiBool (i, r) => T.TiBool (#visit_idx vtable this env i, r)
           | TyArray data => #visit_TyArray vtable this env data
 	  | BaseType data => #visit_BaseType vtable this env data
           | Unit data => #visit_Unit vtable this env data

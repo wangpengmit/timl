@@ -19,13 +19,14 @@ fun byte2int a = __&byte2int a
 (* a datatype version of boolean that is suitable for pattern-matching *)
 datatype Bool = True | False
 
-fun b2B b = if b then True else False                      
-                      
 (* indexed boolean *)
-datatype ibool : {Bool} =
-         itrue of ibool {true}
-         | ifalse of ibool {false}
+datatype iBool : {Bool} =
+         ITrue of iBool {true}
+         | IFalse of iBool {false}
 
+fun b2B b = if b then True else False                      
+fun ib2iB {i : Bool} (b : ibool {i}) return iBool {i} = ifdec b then ITrue else IFalse                      
+                      
 datatype option 'a =
          NONE
          | SOME of 'a --> option 'a

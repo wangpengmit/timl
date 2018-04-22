@@ -169,6 +169,9 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
         | U.TyNat (i, r) =>
 	  (TyNat (check_bsort gctx (sctx, i, Base Nat), r),
            HType)
+        | U.TiBool (i, r) =>
+	  (TiBool (check_bsort gctx (sctx, i, Base Nat), r),
+           HType)
         | U.Unit r => (Unit r, HType)
 	| U.Prod (c1, c2) => 
 	  (Prod (check_higher_kind_Type (ctx, c1),
@@ -897,6 +900,7 @@ fun is_value (e : U.expr) : bool =
       | EAppConstr (_, _, _, e, _) => is_value e
       | ECase _ => false
       | ECaseSumbool _ => false
+      | EIfi _ => false
   end
 
 fun get_expr_const_type (c, r) =

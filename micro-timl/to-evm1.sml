@@ -534,8 +534,9 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val () = output_heap ((l, "ifi_else_branch"), hval)
       in
         compile e @@
+        [PUSH1 WTT, SWAP1] @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
-        br_sum @@
+        [JUMPI] @@
         branch_prelude @@
         I1
       end

@@ -424,7 +424,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       in
         ((itctx, rctx, TTuplePtr (t, offset) :: sctx), T0)
       end
-    | MARK_inj t_other =>
+    | MACRO_inj t_other =>
       let
         val t_other = kc_against_kind itctx (unInner t_other, KType)
         val (t0, t1, sctx) = assert_cons2 sctx
@@ -475,30 +475,34 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
             JUMPI =>
             let
               val (t0, t1, sctx) = assert_cons2 sctx
-              val () = assert_TBool $ whnf itctx t1
-              val t0 = whnf itctx t0
-              val (rctx', sctx', i2) = assert_TArrowEVM t0
-              val () = is_sub_rctx itctx (rctx, rctx')
-              val () = is_eq_tys itctx (sctx, sctx')
-              val i1 = tc_insts ctx I
             in
-              T_JUMPI %+ IMax (i1, i2)
-            end
-          | JUMPI_i =>
-            let
-              val (t0, t1, t2, sctx) = assert_cons3 sctx
-              val i = assert_TiBool $ whnf itctx t1
-              val () = assert_TUnit "tc()/JUMP_I" $ whnf itctx t2
-              val t0 = whnf itctx t0
-              val (rctx', sctx', i2) = assert_TArrowEVM t0
-              val () = is_sub_rctx itctx (rctx, rctx')
-              val make_exists = make_exists "__p"
-              val t1 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
-              val t2 = make_exists (Subset_from_prop dummy $ i %= Itrue)
-              val () = is_eq_tys itctx (t1 :: sctx, sctx')
-              val i1 = tc_insts (add_stack t2 ctx) I
-            in
-              T0 %+ IMax (i1, i2)
+              case whnf itctx t1 of
+                  TConst TCBool =>
+                  let
+                    val () = assert_TBool $ whnf itctx t1
+                    val t0 = whnf itctx t0
+                    val (rctx', sctx', i2) = assert_TArrowEVM t0
+                    val () = is_sub_rctx itctx (rctx, rctx')
+                    val () = is_eq_tys itctx (sctx, sctx')
+                    val i1 = tc_insts ctx I
+                  in
+                    T_JUMPI %+ IMax (i1, i2)
+                  end
+                | TiBool i =>
+                  let
+                    val (t2, sctx) = assert_cons sctx
+                    val () = assert_TUnit "tc()/JUMP_I" $ whnf itctx t2
+                    val t0 = whnf itctx t0
+                    val (rctx', sctx', i2) = assert_TArrowEVM t0
+                    val () = is_sub_rctx itctx (rctx, rctx')
+                    val make_exists = make_exists "__p"
+                    val t1 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
+                    val t2 = make_exists (Subset_from_prop dummy $ i %= Itrue)
+                    val () = is_eq_tys itctx (t1 :: sctx, sctx')
+                    val i1 = tc_insts (add_stack t2 ctx) I
+                  in
+                    T0 %+ IMax (i1, i2)
+                  end
             end
           | MACRO_br_sum =>
             let

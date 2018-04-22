@@ -142,6 +142,11 @@ fun eq_mt t t' =
              TyNat (i', _) => eq_i i i'
            | _ => false
         )
+      | TiBool (i, r) =>
+        (case t' of
+             TiBool (i', _) => eq_i i i'
+           | _ => false
+        )
       | TyArray (t, i) =>
         (case t' of
              TyArray (t', i') => eq_mt t t' andalso eq_i i i'

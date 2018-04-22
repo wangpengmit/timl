@@ -48,7 +48,7 @@ datatype ('idx, 'ty) inst =
          (* | SLOAD *)
          (* | SSTORE *)
          | JUMPI
-         | JUMPI_i
+         (* | JUMPI_i *)
          | JUMPDEST
          | PUSH of int * 'ty word inner
          | DUP of int
@@ -72,7 +72,7 @@ datatype ('idx, 'ty) inst =
          | ASCTIME of 'idx inner
          | MARK_PreArray2ArrayPtr
          | MARK_PreTuple2TuplePtr
-         | MARK_inj of 'ty inner
+         (* | MARK_inj of 'ty inner *)
          | MACRO_init_free_ptr of int
          | MACRO_tuple_malloc of 'ty list inner
          | MACRO_tuple_assign

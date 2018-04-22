@@ -11,14 +11,16 @@ fun str_word_const c =
   case c of
       WCTT => "()"
     | WCInt n => str_int n
-    | WCNat n => sprintf "#$" [str_int n]
+    | WCNat n => "#" ^ str_int n
     | WCBool b => str_bool b
+    | WCiBool b => "#" ^ str_bool b
     | WCByte c => Char.toCString c
                                 
 fun str_inst_un_op opr =
   case opr of
       IUMov => "mov"
     | IUBrSum => "br_sum"
+    | IUBrI => "br_i"
     | IUBrBool => "br_bool"
     | IUUnfold => "unfold"
     | IUPrim opr => str_prim_expr_un_op opr

@@ -51,6 +51,7 @@ fun str_raw_mt (t : mtype) : string =
   case t of
       Arrow (t1, i, t2) => sprintf "Arrow ($, $, $)" [str_raw_mt t1, str_raw_i i, str_raw_mt t2]
     | TyNat (i, _) => sprintf "TyNat ($))" [str_raw_i i]
+    | TiBool (i, _) => sprintf "TiBool ($))" [str_raw_i i]
     | TyArray (t, i) => sprintf "TyArray ($, $)" [str_raw_mt t, str_raw_i i]
     | Unit _ => "Unit"
     | Prod (t1, t2) => sprintf "Prod ($, $)" [str_raw_mt t1, str_raw_mt t2]
@@ -107,6 +108,7 @@ fun str_raw_e e =
     | EAbsI _ => "EAbsI (...)"
     | ECase _ => "ECase (...)"
     | ECaseSumbool _ => "ECaseSumbool (...)"
+    | EIfi _ => "EIfi (...)"
     | ELet _ => "ELet (...)"
 
 end

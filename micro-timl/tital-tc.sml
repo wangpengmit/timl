@@ -39,6 +39,7 @@ fun get_word_const_type c =
     | WCNat n => TNat $ INat n
     | WCInt _ => TInt
     | WCBool _ => TBool
+    | WCiBool n => TiBool $ IBool n
     | WCByte _ => TByte
 
 fun tc_w (ctx as (hctx, itctx as (ictx, tctx))) w =
