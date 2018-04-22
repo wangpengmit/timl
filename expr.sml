@@ -126,3 +126,11 @@ structure VC = VCFn (structure Idx = Expr
                      val simp_p = Simp.simp_p
                     )
                     
+structure UVarExprUtil = struct
+
+open BaseSorts
+open Subst
+       
+fun Subset_from_prop r p = Subset ((Base UnitSort, r), Bind.Bind (("__u", r), shift_i_p p), r)
+                                  
+end

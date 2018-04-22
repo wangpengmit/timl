@@ -13,11 +13,18 @@ fun close0_i_e_anno a = close0_anno IBindAnno close0_i_e a
 fun close0_t_e_anno a = close0_anno TBindAnno close0_t_e a
 fun close0_e_e_anno a = close0_anno EBindAnno close0_e_e a
 
+fun assert_INat a =
+  case a of
+      IConst (ICNat a, _) => a
+    | _ => raise assert_fail "assert_INat"
+fun assert_IBool a =
+  case a of
+      IConst (ICBool a, _) => a
+    | _ => raise assert_fail "assert_IBool"
 fun assert_TArrow t =
   case t of
       TArrow a => a
     | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-                 
 fun assert_TProd t =
   case t of
       TBinOp (TBProd, t1, t2) => (t1, t2)
@@ -74,6 +81,10 @@ fun assert_TProdEx t =
   case t of
       TProdEx a => a
     | _ => raise assert_fail $ "assert_TProdEx; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TPreTuple t =
+  case t of
+      TPreTuple a => a
+    | _ => raise assert_fail $ "assert_TPreTuple; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TArrowTAL t =
   case t of
       TArrowTAL a => a
@@ -86,6 +97,10 @@ fun assert_TArr t =
   case t of
       TArr a => a
     | _ => raise assert_fail $ "assert_TArr; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TPreArray t =
+  case t of
+      TPreArray a => a
+    | _ => raise assert_fail $ "assert_TPreArray; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TNat t =
   case t of
       TNat a => a

@@ -6,6 +6,7 @@ open Region
 open Pervasive
 open Expr
 open Simp
+open UVarExprUtil
 open Subst
 open Bind
 open Package

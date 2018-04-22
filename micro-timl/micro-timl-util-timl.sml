@@ -70,4 +70,8 @@ end
 val Itrue = TrueI dummy
 val Ifalse = FalseI dummy
                  
+fun INat c = ConstIN (c, dummy)
+fun ITime c = ConstIT (c, dummy)
+fun IBool c = IConst (ICBool c, dummy)
+                     
 end

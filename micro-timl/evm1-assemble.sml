@@ -79,7 +79,7 @@ fun enc inst =
     | MARK_PreArray2ArrayPtr => ""
     | MARK_PreTuple2TuplePtr => ""
     | MACRO_init_free_ptr _ => macro "MACRO_init_free_ptr"
-    | MACRO_malloc_tuple _ => macro "MACRO_malloc_tuple"
+    | MACRO_tuple_malloc _ => macro "MACRO_tuple_malloc"
 
 fun enc_insts out insts =
   case insts of

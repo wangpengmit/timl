@@ -476,6 +476,11 @@ fun assert_cons2 ls =
         x1 :: x2 :: xs => (x1, x2, xs)
       | _ => raise Impossible "assert_cons2 fails"
                             
+fun assert_cons3 ls =
+    case ls of
+        x1 :: x2 :: x3 :: xs => (x1, x2, x3, xs)
+      | _ => raise Impossible "assert_cons3 fails"
+                            
 fun find_unique ls name =
   if not (mem op= name ls) then
     name

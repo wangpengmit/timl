@@ -2029,6 +2029,16 @@ fun override_visit_ETriOp (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty,
     extend_e = #extend_e record
   }
 
+fun override_visit_EIfi vtable new =
+  let
+    fun visit_expr this env data =
+      case data of
+          EIfi data => new this env data
+        | _ => #visit_expr vtable this env data (* call super *)
+  in
+    override_visit_expr vtable visit_expr
+  end
+    
 (***************** the default visitor  **********************)    
 
 fun default_expr_visitor_vtable

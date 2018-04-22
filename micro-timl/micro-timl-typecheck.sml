@@ -1,6 +1,7 @@
 structure MicroTiMLTypecheck = struct
 
 open UVar
+open UVarExprUtil
 open TypecheckUtil
 open FreshUVar
 open Expr

@@ -2,11 +2,14 @@
 
 structure CodeGen = struct
 
+open UVarExprUtil
 open CompilerUtil
 open TiTAL
 
 infixr 0 $
          
+infix 4 %=
+        
 fun collect_ELetRec e =
   case e of
       ELet (e1, bind) =>

@@ -2,6 +2,7 @@
 
 structure TiTALEval = struct
 
+open UVarExprUtil
 open Expr
 open MicroTiMLUtilTiML
 open MicroTiMLUtil
@@ -193,6 +194,12 @@ fun assert_WVBool t =
       WVConst (WCBool a) => a
     | _ => raise assert_fail "assert_WVBool"
 
+fun WViBool n = WVConst $ WCiBool n
+fun assert_WViBool t =
+  case t of
+      WVConst (WCiBool a) => a
+    | _ => raise assert_fail "assert_WViBool"
+
 fun assert_HVCode t =
   case t of
       HVCode a => a
@@ -300,11 +307,11 @@ fun step (H, R, I) =
               val b = assert_WViBool $ R @!! r
               val make_exists = make_exists "__p"
               val t = make_exists (Subset_from_prop dummy $ IBool b %= IBool b)
-              val w = WVPackI (t, IBool b, WVTT)
+              (* val t = TUnit (* type doesn't matter, so just a placeholder *) *)
+              val w = WVPackI (t, TTI dummy, WVTT)
             in
-              case inj of
-                  InjInl => (H, R @+ (r, w), I')
-                | InjInr => (H, R @+ (r, w), get_code (H, R) $ unInner v)
+              if b then (H, R @+ (r, w), I')
+              else (H, R @+ (r, w), get_code (H, R) $ unInner v)
             end
           | IUnOp (IUBrBool, r, v) =>
             if assert_WVBool $ R @!! r then
@@ -365,7 +372,6 @@ fun step (H, R, I) =
             let
               val n1 = assert_WVNat $ R @!! rs
               val n2 = assert_WVNat $ R @^ unInner v
-              fun INat n = ConstIN (n, dummy)
               val i1 = INat n1
               val i2 = INat n2
               fun eval_nat_cmp opr =
@@ -377,11 +383,8 @@ fun step (H, R, I) =
                   | NCEq => op=
                   | NCNEq => op<>
               val b = eval_nat_cmp opr (n1, n2)
-              val t = TiBool $ IBool b
-              val l = fresh_label H
-              val hv = HVInj (inj, WVPackI (t, TTI dummy, WVTT))
             in
-              (H @+ (l, hv), R @+ (rd, WVLabel l), I')
+              (H, R @+ (rd, WViBool b), I')
             end
           | IMallocPair (rd, (v1, v2)) =>
             let

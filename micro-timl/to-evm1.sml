@@ -3,6 +3,7 @@
 structure ToEVM1 = struct
 
 open EVM1Util
+open UVarExprUtil
 open Expr
 open CompilerUtil
 open EVM1Visitor
@@ -153,33 +154,33 @@ val array_ptr = [PUSH1nat 32, MUL, ADD]
 val byte2int = [BYTE2INT]
                   
 fun init_free_ptr num_regs = [MACRO_init_free_ptr num_regs]
-fun malloc_tuple ts = [MACRO_malloc_tuple $ Inner ts]
+fun tuple_malloc ts = [MACRO_tuple_malloc $ Inner ts]
 val tuple_assign = [MACRO_tuple_assign]
 val printc = [MACRO_printc]
-fun malloc_array t = [MACRO_malloc_array t]
+fun array_malloc t = [MACRO_array_malloc $ Inner t]
 val array_init_assign = [MACRO_array_init_assign]
 val array_init_len = [MACRO_array_init_len]
-fun halt t = MACRO_halt t
 (* val int2byte = [] (* noop, relying on type discipline *) *)
 val int2byte = [MACRO_int2byte]
-fun make_inj t_other = [MACRO_make_inj $ Inner t_other]
+fun make_inj t_other = [MACRO_inj $ Inner t_other]
 val br_sum = [MACRO_br_sum]
+fun halt t = MACRO_halt t
                  
 
 fun inline_macro_inst inst =
   case inst of
       MACRO_init_free_ptr num_regs => [PUSH_reg $ reg_addr num_regs, PUSH1nat 0, MSTORE]
-    | MACRO_malloc_tuple ts => [PUSH1nat 0, MLOAD, DUP1, PUSH_tuple_offset $ 32 * (length $ unInner ts), ADD, PUSH1 $WNat 0, MSTORE]
+    | MACRO_tuple_malloc ts => [PUSH1nat 0, MLOAD, DUP1, PUSH_tuple_offset $ 32 * (length $ unInner ts), ADD, PUSH1 $WNat 0, MSTORE]
     | MACRO_tuple_assign => [DUP2, MSTORE]
     | MACRO_printc => [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0, PUSH1 WTT]
-    | MACRO_malloc_array t => [PUSH1nat 0, MLOAD, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
+    | MACRO_array_malloc t => [PUSH1nat 0, MLOAD, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
     | MACRO_array_init_assign => [DUP3, DUP3, DUP3, ADD, MSTORE]
     | MACRO_array_init_len => [DUP2, PUSH1nat 32, SWAP1, SUB, MSTORE]
     | MACRO_int2byte => [PUSH1nat 31, BYTE]
     | MACRO_inj t_other =>
-      inline_macro_inst (MACRO_malloc_tuple [TUnit, TUnit](*only length matters operationally*)) @
+      inline_macro_inst (MACRO_tuple_malloc $ Inner [TUnit, TUnit](*only length matters operationally*)) @
       [SWAP1, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE(* , PACK_SUM (inj, Inner t_other) *)]
-    | MACRO_br_sum = [DUP2, MLOAD, SWAP1, JUMPI]
+    | MACRO_br_sum => [DUP2, MLOAD, SWAP1, JUMPI]
     | _ => [inst]
 
 fun inline_macro_insts insts =
@@ -205,18 +206,13 @@ fun inline_macro_prog (H, I) =
   (map (mapSnd inline_macro_hval) H, inline_macro_insts I)
 
 fun impl_nat_cmp opr =
-  let
-    val cmp =
-        case opr of
-            NCLt => [GT] (* a<b <-> b>a *)
-          | NCGt => [LT]
-          | NCLe => [LT, ISZERO] (* a<=b <-> ~(a>b) <-> ~(b<a) *)
-          | NCGe => [GT, ISZERO]
-          | NCEq => [EQ]
-          | NCNEq => [EQ, ISZERO]
-  in
-    cmp @ [ISZERO, PUSH1 WTT, SWAP1] @ make_inj [TUnit, TUnit] InjInl TUnit
-  end
+  case opr of
+      NCLt => [GT] (* a<b <-> b>a *)
+    | NCGt => [LT]
+    | NCLe => [LT, ISZERO] (* a<=b <-> ~(a>b) <-> ~(b<a) *)
+    | NCGe => [GT, ISZERO]
+    | NCEq => [EQ]
+    | NCNEq => [EQ, ISZERO]
       
 fun concatRepeat n v = List.concat $ repeat n v
 fun TiBoolConst b =
@@ -304,7 +300,7 @@ fun compile ectx e =
         val t1 = cg_t t1
         val t2 = cg_t t2
       in
-        compile e1 @ compile e2 @ malloc_tuple [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign @ [MARK_PreTuple2TuplePtr])
+        compile e1 @ compile e2 @ tuple_malloc [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign @ [MARK_PreTuple2TuplePtr])
       end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
@@ -315,7 +311,7 @@ fun compile ectx e =
       in
         compile e @
         [PUSH1 $ WiBool b] @
-        make_inj [TiBoolConst b, t_e] inj t_other
+        make_inj t_other
       end
     | ENewArrayValues (t, es) =>
       let
@@ -323,7 +319,7 @@ fun compile ectx e =
         val n = length es
       in
         [PUSH_tuple_offset n] @
-        malloc_array t @
+        array_malloc t @
         [DUP1] @
         concatMap (fn e => compile e @ [DUP2, MSTORE, PUSH1nat 32, ADD]) es @
         [POP]
@@ -400,7 +396,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
               val loop_label = fresh_label ()
               val pre_loop_code =
                   [SWAP1, DUP1] @@
-                  malloc_array t @@
+                  array_malloc t @@
                   [DUP2] @@
                   array_init_len @@
                   [SWAP1, PUSH1nat 32, MUL] @@

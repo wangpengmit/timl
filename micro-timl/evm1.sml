@@ -72,9 +72,17 @@ datatype ('idx, 'ty) inst =
          | ASCTIME of 'idx inner
          | MARK_PreArray2ArrayPtr
          | MARK_PreTuple2TuplePtr
+         | MARK_inj of 'ty inner
          | MACRO_init_free_ptr of int
-         | MACRO_malloc_tuple of 'ty list inner
+         | MACRO_tuple_malloc of 'ty list inner
+         | MACRO_tuple_assign
          | MACRO_printc
+         | MACRO_array_malloc of 'ty inner
+         | MACRO_array_init_assign
+         | MACRO_array_init_len
+         | MACRO_int2byte
+         | MACRO_inj of 'ty inner
+         | MACRO_br_sum
 
 datatype ('idx, 'ty) insts =
          ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind

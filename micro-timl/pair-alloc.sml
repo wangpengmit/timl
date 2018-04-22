@@ -192,6 +192,7 @@ fun anf_decls_expr_visitor_vtable cast output =
         else
           e
       end
+    val vtable = override_visit_expr vtable visit_expr
     fun visit_ELet this env (data as (e1, bind)) =
       let
         val loop = #visit_expr (cast this) this
@@ -317,11 +318,10 @@ fun anf_decls_expr_visitor_vtable cast output =
     val vtable = override_visit_EUnpackI vtable visit_EUnpackI
     val vtable = override_visit_ERec vtable visit_ERec
     val vtable = override_visit_ECase vtable visit_ECase
-    val vtable = override_visit_EIfi vtable visit_EIfi
     val vtable = override_visit_ETriOp vtable visit_ETriOp
+    val vtable = override_visit_EIfi vtable visit_EIfi
     val vtable = override_visit_EAscTime vtable visit_EAscTime
     val vtable = override_visit_EAppI vtable visit_EAppI
-    val vtable = override_visit_expr vtable visit_expr
   in
     vtable
   end

@@ -288,7 +288,7 @@ fun tc_insts (ctx as (hctx, itctx as (ictx, tctx), rctx)) insts =
               val i1 = assert_TNat t1
               val t2 = tc_v ctx $ unInner v
               val i2 = assert_TNat t2
-              val t = TSumbool (interp_nat_cmp dummy opr, dummy)
+              val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
               val i = tc_insts (add_r (rd, t) ctx) I
             in
               i %+ T1

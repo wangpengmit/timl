@@ -223,10 +223,10 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           str ")";
           close_box ()
         )
-      | MACRO_malloc_tuple ts =>
+      | MACRO_tuple_malloc ts =>
         (
           open_hbox ();
-          str $ "MACRO_malloc_tuple";
+          str $ "MACRO_tuple_malloc";
           space ();
           str "(";
           app (fn t => (pp_t $ Inner t; comma ())) $ unInner ts;

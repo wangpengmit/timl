@@ -120,7 +120,7 @@ fun default_evm1_visitor_vtable
           (* | PACK_SUM (inj, t) => PACK_SUM (inj, visit_inner (#visit_ty vtable this) env t) *)
           | ASCTIME i => ASCTIME $ visit_inner (#visit_idx vtable this) env i
           | MACRO_init_free_ptr n => MACRO_init_free_ptr n
-          | MACRO_malloc_tuple ts => MACRO_malloc_tuple $ visit_inner (visit_list $ #visit_ty vtable this) env ts
+          | MACRO_tuple_malloc ts => MACRO_tuple_malloc $ visit_inner (visit_list $ #visit_ty vtable this) env ts
           | ADD => ADD
           | MUL => MUL
           | SUB => SUB

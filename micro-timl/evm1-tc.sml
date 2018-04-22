@@ -55,6 +55,8 @@ val T1 = T1 dummy
 val N0 = INat 0
 val N1 = INat 1
 
+fun TProd (a, b) = TTuplePtr ([a, b], N0)
+
 fun add_sorting_full new ((ictx, tctx), rctx, sctx) = ((new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx, map shift01_i_t sctx)
 fun add_kinding_full new ((ictx, tctx), rctx, sctx) = ((ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx, map shift01_t_t sctx)
 fun add_r p (itctx, rctx, sctx) = (itctx, rctx @+ p, sctx)
@@ -148,7 +150,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
     | SUB =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
-        fun a %%- b = (write_prop (a %>= b); a %- b)
+        fun a %%- b = (check_prop ictx (a %>= b); a %- b)
         val t =
             case (t0, t1) of
                 (TConst (TCTiML Int), TConst (TCTiML Int)) => TInt
@@ -213,7 +215,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
                    | _ => raise Impossible $ sprintf "MLOAD: unknown offset in type ($)" [str_t t0])
               | TArrayPtr (t, len, offset) =>
                 let
-                  fun read () = (write_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); t)
+                  fun read () = (check_prop ictx (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); t)
                 in
                   case simp_i offset of
                      IConst (ICNat n, _) =>
@@ -242,7 +244,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
                     | _ => def ()
                 end
               | TArrayPtr (t, len, offset) =>
-                (is_eq_ty itctx (t1, t); write_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); rctx)
+                (is_eq_ty itctx (t1, t); check_prop ictx (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); rctx)
               | _ => def ()
       in
         ((itctx, rctx, sctx), T_MSTORE)
@@ -362,7 +364,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
         ((itctx, rctx, TByte :: sctx), T0)
       end
     | MACRO_init_free_ptr _ => (ctx, T0)
-    | MACRO_malloc_array t =>
+    | MACRO_array_malloc t =>
       let
         val t = kc_against_kind itctx (unInner t, KType)
         val (t0, sctx) = assert_cons sctx
@@ -376,7 +378,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
         val offset = assert_TNat $ whnf itctx t0
         val (t, len, lowest_inited, len_inited) = assert_TPreArray $ whnf itctx t1
         val () = is_eq_ty itctx (t2, t)
-        val () = write_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 = lowest_inited)
+        val () = check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest_inited)
       in
         ((itctx, rctx, TNat len :: TPreArray (t, len, lowest_inited %- N1, len_inited) :: t2 :: sctx), T0)
       end
@@ -385,7 +387,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
         val (t0, t1, sctx) = assert_cons2 sctx
         val len' = assert_TNat $ whnf itctx t0
         val (t, len, lowest_inited, _) = assert_TPreArray $ whnf itctx t1
-        val () = write_prop (len' %= len)
+        val () = check_prop ictx (len' %= len)
       in
         ((itctx, rctx, TPreArray (t, len, lowest_inited, true) :: sctx), T0)
       end
@@ -393,12 +395,12 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       let
         val (t0, sctx) = assert_cons sctx
         val (t, len, lowest_inited, len_inited) = assert_TPreArray $ whnf itctx t0
-        val () = assert_b (len_inited = true)
-        val () = write_prop (lowest_inited %= N0)
+        val () = assert_b "len_inited = true" (len_inited = true)
+        val () = check_prop ictx (lowest_inited %= N0)
       in
         ((itctx, rctx, TArrayPtr (t, len, N32) :: sctx), T0)
       end
-    | MACRO_malloc_tuple ts =>
+    | MACRO_tuple_malloc ts =>
       let
         val ts = map (kc_against_KType itctx) $ unInner ts
       in
@@ -408,17 +410,17 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val (ts, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t1
-        val () = write_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 = lowest_inited)
+        val () = check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest_inited)
         val n = assert_INat lowest_inited
         val () = is_eq_ty itctx (t0, List.nth (ts, n-1))
       in
-        ((itctx, rctx, TPreArray (ts, offset, lowest_inited %- N1) :: sctx), T0)
+        ((itctx, rctx, TPreTuple (ts, offset, lowest_inited %- N1) :: sctx), T0)
       end
     | MARK_PreTuple2TuplePtr =>
       let
         val (t0, sctx) = assert_cons sctx
         val (t, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t0
-        val () = write_prop (lowest_inited %= N0)
+        val () = check_prop ictx (lowest_inited %= N0)
       in
         ((itctx, rctx, TTuplePtr (t, offset) :: sctx), T0)
       end
@@ -486,7 +488,7 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
             let
               val (t0, t1, t2, sctx) = assert_cons3 sctx
               val i = assert_TiBool $ whnf itctx t1
-              val () = assert_TUnit $ whnf itctx t2
+              val () = assert_TUnit "tc()/JUMP_I" $ whnf itctx t2
               val t0 = whnf itctx t0
               val (rctx', sctx', i2) = assert_TArrowEVM t0
               val () = is_sub_rctx itctx (rctx, rctx')
@@ -505,8 +507,8 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
               val t0 = whnf itctx t0
               val (rctx', sctx', i2) = assert_TArrowEVM t0
               val () = is_sub_rctx itctx (rctx, rctx')
-              val () = is_eq_tys itctx (TTuplePtr (TBool, tr) :: sctx, sctx')
-              val i1 = tc_insts (add_stack (TTuplePtr (TBool, tl)) ctx) I
+              val () = is_eq_tys itctx (TProd (TBool, tr) :: sctx, sctx')
+              val i1 = tc_insts (add_stack (TProd (TBool, tl)) ctx) I
             in
               T0 %+ IMax (i1, i2)
             end
