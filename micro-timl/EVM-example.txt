@@ -146,10 +146,13 @@ push1 32
 mul // n = len*32, arr = m[0]+32 // [len*32(i.e. n), m[0]+32(i.e. arr), v]
 loop: // [n, m[0]+32, v]
 jumpdest
-dup1 // [n, n, m[0]+32, v]
+push1 ()
+dup2 // [n, (), n, m[0]+32, v]
 iszero // n<=0 ?
 push32 loop_exit
-jumpi // [n, m[0]+32, v]
+jumpi // [ex, n, m[0]+32, v]
+unpackI "__n_neq0"
+pop
 push1 32
 swap1
 sub // [n-32, m[0]+32, v]
@@ -162,11 +165,13 @@ mstore // m[arr+(n-32)] = v // [n-32, m[0]+32, v]
 }
 push32 loop
 jump
-loop_exit: // [n(=0), m[0]+32, v]
+loop_exit: // [ex, n(=0), m[0]+32, v]
 jumpdest
-pop // pop 0 // [m[0]+32, v]
+unpackI "__n_eq0"
+pop
+pop // [m[0]+32, v]
 swap1
-pop // pop v // [m[0]+32]
+pop // [m[0]+32]
 // now arr is top
 PreArray2ArrayPtr
 

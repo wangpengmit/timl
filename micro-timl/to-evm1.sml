@@ -21,6 +21,7 @@ infix 4 %<
 infix 4 %>=
 infix 4 %>
 infix 4 %=
+infix 4 %=?
 infixr 3 /\
 infixr 2 \/
 infixr 1 -->
@@ -53,6 +54,16 @@ fun close_t_insts a = shift_t_insts_fn close_t_t a
 fun close0_i_insts a = close_i_insts 0 a
 fun close0_t_insts a = close_t_insts 0 a
 
+fun close0_i_block x ((rctx, ts, i), I) = ((Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
+                                            
+fun shift_i_insts a = shift_i_insts_fn (shiftx_i_i, shiftx_i_s, shift_i_t) a
+fun shift_t_insts a = shift_t_insts_fn shift_t_t a
+
+fun shift01_i_insts a = shift_i_insts 0 1 a
+fun shift01_t_insts a = shift_t_insts 0 1 a
+
+fun shift01_i_block ((rctx, ts, i), I) = ((Rctx.map shift01_i_t rctx, map shift01_i_t ts, shift_i_i i), shift01_i_insts I)
+                                            
 fun TProd (a, b) = TTuplePtr ([a, b], INat 0)
 
 fun reg_addr r = 32 * (r + 1)
@@ -139,6 +150,7 @@ fun TV n = TVar (ID (n, dummy), [])
 fun FIV x = VarI (make_Free_i x, [])
 val T0 = T0 dummy
 val T1 = T1 dummy
+val N0 = N0 dummy
 val N1 = N1 dummy
                 
 fun VAppITs_ctx (e, itctx) =
@@ -420,31 +432,39 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
               val loop_block =
                   let
                     fun MakeSubset (name, s, p) = Subset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
+                    fun IToReal i = UnOpI (ToReal, i, dummy)
                     val s = MakeSubset ("i", BSNat, IV 0 %<= shift01_i_i len)
                     val i = fresh_ivar ()
                     val loop_code =
-                        [DUP1, ISZERO] @@
-                        PUSH_value (VAppITs_ctx (VLabel post_loop_label, itctx)) @@
-                        [JUMPI, PUSH1nat 32, SWAP1, SUB] @@
+                        [PUSH1 WTT, DUP2, ISZERO] @@
+                        PUSH_value (VAppITs (VAppITs_ctx (VLabel post_loop_label, itctx), [inl $ FIV i])) @@
+                        [JUMPI, UNPACKI $ IBinder ("__n_neq0", dummy)] @@
+                        (shift01_i_insts $
+                        [POP, PUSH1nat 32, SWAP1, SUB] @@
                         array_init_assign @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
-                        JUMP
-                    fun IToReal i = UnOpI (ToReal, i, dummy)
-                    fun close0_i_block x ((rctx, ts, i), I) = ((Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
+                        JUMP)
                     val block = ((rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
-                    val block = close0_i_block i block
+                    val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
                   end
               val () = output_heap ((loop_label, "new_array_loop"), loop_block)
               val post_loop_block =
                   let
+                    val s = SNat
+                    val i = fresh_ivar ()
                     val post_loop_code =
-                        [POP, SWAP1, POP, MARK_PreArray2ArrayPtr] @@
+                        [UNPACKI $ IBinder ("__n_eq0", dummy)] @@
+                        (shift01_i_insts $
+                        [POP, POP, SWAP1, POP, MARK_PreArray2ArrayPtr] @@
                         set_reg r @@
-                        cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len))) e
+                        cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len))) e)
+                    val t_ex = make_exists "__p" $ Subset_from_prop dummy $ (FIV i %* N32 %=? N0) %= Itrue
+                    val block = ((rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], T1 %+ i_e), post_loop_code)
+                    val block = close0_i_block i $ shift01_i_block block
                   in
-                    HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0, (true, false)), t], T1 %+ i_e), post_loop_code))
+                    HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
                   end
               val () = output_heap ((post_loop_label, "new_array_post_loop"), post_loop_block)
             in

@@ -64,7 +64,7 @@ fun assert_TRec t =
 fun assert_TUnit msg t =
   case t of
       TConst TCUnit => ()
-    | _ => raise assert_fail msg
+    | _ => raise assert_fail $ "assert_TUnit failed: " ^ msg
 fun assert_TInt t =
   case t of
       TConst TCInt => ()

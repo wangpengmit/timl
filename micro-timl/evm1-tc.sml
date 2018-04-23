@@ -123,7 +123,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val t =
-            case (t0, t1) of
+            case (whnf itctx t0, whnf itctx t1) of
                 (TConst (TCTiML Bool), TConst (TCTiML Bool)) => TBool
               | (TiBool i0, TiBool i1) => TiBool $ f (i0, i1)
               | _ => raise Impossible $ sprintf "$: can't operate on operands of types ($) and ($)" [name, str_t t0, str_t t1]
@@ -180,13 +180,14 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
             case t0 of
                 TConst (TCTiML Bool) => TBool
               | TConst (TCTiML Int) => TBool
-              | TiBool i0 => TiBool $ INeg i0
+              | TiBool i => TiBool $ INeg i
+              | TNat i => TiBool $ i %=? N0
               | _ => raise Impossible $ sprintf "ISZERO: can't operate on operand of type ($)" [str_t t0]
       in
         ((itctx, rctx, t :: sctx), T0)
       end
-    | AND => cmp "AND" op/\? T0
-    | OR => cmp "OR" op\/? T0
+    | AND => and_or "AND" op/\? T0
+    | OR => and_or "OR" op\/? T0
     | POP =>
       let
         val (t0, sctx) = assert_cons sctx
