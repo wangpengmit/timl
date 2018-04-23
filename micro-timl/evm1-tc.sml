@@ -404,41 +404,50 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
         ((itctx, rctx, TByte :: sctx), T0)
       end
     | MACRO_init_free_ptr _ => (ctx, T0)
-    | MACRO_array_malloc t =>
+    | MACRO_array_malloc (t, is_upward) =>
       let
         val t = kc_against_kind itctx (unInner t, KType)
         val (t0, sctx) = assert_cons sctx
         val len = assert_TNat $ whnf itctx t0
+        val lowest = if is_upward then N0 else len
       in
-        ((itctx, rctx, TPreArray (t, len, len, false) :: sctx), T0)
+        ((itctx, rctx, TPreArray (t, len, lowest, (false, is_upward)) :: sctx), T0)
       end
     | MACRO_array_init_assign =>
       let
         val (t0, t1, t2, sctx) = assert_cons3 sctx
         val offset = assert_TNat $ whnf itctx t0
-        val (t, len, lowest_inited, len_inited) = assert_TPreArray $ whnf itctx t1
+        val (t, len, lowest, (len_inited, is_upward)) = assert_TPreArray $ whnf itctx t1
         val () = is_eq_ty itctx (t2, t)
-        val () = check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest_inited)
       in
-        ((itctx, rctx, TNat len :: TPreArray (t, len, lowest_inited %- N1, len_inited) :: t2 :: sctx), T0)
+        if is_upward then
+          (check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %= lowest);
+           ((itctx, rctx, TNat len :: TPreArray (t, len, lowest %+ N1, (len_inited, is_upward)) :: t2 :: sctx), T0))
+        else
+          (check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest);
+           ((itctx, rctx, TNat len :: TPreArray (t, len, lowest %- N1, (len_inited, is_upward)) :: t2 :: sctx), T0))
       end
     | MACRO_array_init_len =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val len' = assert_TNat $ whnf itctx t0
-        val (t, len, lowest_inited, _) = assert_TPreArray $ whnf itctx t1
+        val (t, len, lowest_inited, (_, dir)) = assert_TPreArray $ whnf itctx t1
         val () = check_prop ictx (len' %= len)
       in
-        ((itctx, rctx, TPreArray (t, len, lowest_inited, true) :: sctx), T0)
+        ((itctx, rctx, TPreArray (t, len, lowest_inited, (true, dir)) :: sctx), T0)
       end
     | MARK_PreArray2ArrayPtr =>
       let
         val (t0, sctx) = assert_cons sctx
-        val (t, len, lowest_inited, len_inited) = assert_TPreArray $ whnf itctx t0
+        val (t, len, lowest, (len_inited, is_upward)) = assert_TPreArray $ whnf itctx t0
         val () = assert_b "len_inited = true" (len_inited = true)
-        val () = check_prop ictx (lowest_inited %= N0)
       in
-        ((itctx, rctx, TArrayPtr (t, len, N32) :: sctx), T0)
+        if is_upward then
+          (check_prop ictx (lowest %= len);
+           ((itctx, rctx, TArrayPtr (t, len, N32) :: sctx), T0))
+        else
+          (check_prop ictx (lowest %= N0);
+           ((itctx, rctx, TArrayPtr (t, len, N32) :: sctx), T0))
       end
     | MACRO_tuple_malloc ts =>
       let
@@ -482,6 +491,19 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
     val tc_insts = tc_insts params
     fun itctxn () = itctx_names itctx
     val str_t = fn t => ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctxn ()) t
+    fun is_eq_stack itctx (sctx, sctx') =
+      let
+        fun itctxn () = itctx_names itctx
+        val str_t = fn t => ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctxn ()) t
+        fun str_ts ts = surround "[" "]" $ join ",\n" $ map (trim o str_t) ts
+        fun extra_msg () = sprintf "\nwhen comparing stack \n$\nagainst stack \n$\n" [str_ts sctx, str_ts sctx']
+      in
+        is_eq_tys itctx (sctx, sctx')
+        handle Impossible msg => raise Impossible $ msg ^ extra_msg ()
+             | MUnifyError (r, m) => raise MTCError $ "Unification error:\n" ^ join_lines m ^ extra_msg ()
+             | MTCError m => raise MTCError $ m ^ extra_msg ()
+      end
+                                                
     fun main () =
   case insts of
       JUMP =>
@@ -490,7 +512,7 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
         val t0 = whnf itctx t0
         val (rctx', sctx', i) = assert_TArrowEVM t0
         val () = is_sub_rctx itctx (rctx, rctx')
-        val () = is_eq_tys itctx (sctx, sctx')
+        val () = is_eq_stack itctx (sctx, sctx')
       in
         T_JUMP %+ i
       end
@@ -504,7 +526,7 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
     | MACRO_halt t =>
       let
         val t = kc_against_KType itctx t
-        val () = is_eq_tys itctx (sctx, [t])
+        val () = is_eq_stack itctx (sctx, [t])
       in
         T0
       end
@@ -525,8 +547,8 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
                     val t0 = whnf itctx t0
                     val (rctx', sctx', i2) = assert_TArrowEVM t0
                     val () = is_sub_rctx itctx (rctx, rctx')
-                    val () = is_eq_tys itctx (sctx, sctx')
-                    val i1 = tc_insts ctx I
+                    val () = is_eq_stack itctx (sctx, sctx')
+                    val i1 = tc_insts (itctx, rctx, sctx) I
                   in
                     T_JUMPI %+ IMax (i1, i2)
                   end
@@ -540,8 +562,8 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
                     val make_exists = make_exists "__p"
                     val t1 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
                     val t2 = make_exists (Subset_from_prop dummy $ i %= Itrue)
-                    val () = is_eq_tys itctx (t1 :: sctx, sctx')
-                    val i1 = tc_insts (add_stack t2 ctx) I
+                    val () = is_eq_stack itctx (t1 :: sctx, sctx')
+                    val i1 = tc_insts (itctx, rctx, t2 :: sctx) I
                   in
                     T0 %+ IMax (i1, i2)
                   end
@@ -554,8 +576,8 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
               val t0 = whnf itctx t0
               val (rctx', sctx', i2) = assert_TArrowEVM t0
               val () = is_sub_rctx itctx (rctx, rctx')
-              val () = is_eq_tys itctx (TProd (TBool, tr) :: sctx, sctx')
-              val i1 = tc_insts (add_stack (TProd (TBool, tl)) ctx) I
+              val () = is_eq_stack itctx (TProd (TiBoolConst true, tr) :: sctx, sctx')
+              val i1 = tc_insts (itctx, rctx, TProd (TiBoolConst false, tl) :: sctx) I
             in
               T0 %+ IMax (i1, i2)
             end

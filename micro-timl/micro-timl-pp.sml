@@ -237,7 +237,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
-      | TPreArray (t, i1, i2, b) =>
+      | TPreArray (t, i1, i2, (b, b2)) =>
         (
           open_hbox ();
           str "TPreArray";
@@ -250,6 +250,8 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str $ str_i i2;
           comma ();
           str $ str_bool b;
+          comma ();
+          str $ str_bool b2;
           str ")";
           close_box ()
         )

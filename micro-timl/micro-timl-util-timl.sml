@@ -74,4 +74,6 @@ fun INat c = ConstIN (c, dummy)
 fun ITime c = ConstIT (c, dummy)
 fun IBool c = IConst (ICBool c, dummy)
                      
+fun TiBoolConst b = TiBool $ IBool b
+                           
 end

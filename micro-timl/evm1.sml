@@ -77,7 +77,7 @@ datatype ('idx, 'ty) inst =
          | MACRO_tuple_malloc of 'ty list inner
          | MACRO_tuple_assign
          | MACRO_printc
-         | MACRO_array_malloc of 'ty inner
+         | MACRO_array_malloc of 'ty inner * bool(* is init direction upward *)
          | MACRO_array_init_assign
          | MACRO_array_init_len
          | MACRO_int2byte

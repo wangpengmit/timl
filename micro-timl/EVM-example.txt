@@ -176,13 +176,17 @@ dup1    // [len, len]
 malloc_array // [arr+32, len]
 swap1 // [len, arr+32]
 array_init_len // [arr+32]
-dup1
-for i = 0 to n-1 {
-compile(e_i)
-dup2
-mstore
+push1 0 // [0, arr+32]
+for i = 0 to n-1 { // [32*i, arr+32]
+compile(e_i) // [v, 32*i, arr+32]
+swap2
+swap1 // [32*i, arr+32, v]
+array_init_assign  // [32*i, arr+32, v]
+swap2
+pop // [arr+32, 32*i]
+swap1 // [32*i, arr+32]
 push1 32
-add
+add // [32*(i+1), arr+32]
 }
 pop
 PreArray2ArrayPtr

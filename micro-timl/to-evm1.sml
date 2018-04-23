@@ -53,6 +53,8 @@ fun close_t_insts a = shift_t_insts_fn close_t_t a
 fun close0_i_insts a = close_i_insts 0 a
 fun close0_t_insts a = close_t_insts 0 a
 
+fun TProd (a, b) = TTuplePtr ([a, b], INat 0)
+
 fun reg_addr r = 32 * (r + 1)
 (* use r0 as scratch space *)
 (* val scratch = 32 *)
@@ -164,7 +166,7 @@ fun init_free_ptr num_regs = [MACRO_init_free_ptr num_regs]
 fun tuple_malloc ts = [MACRO_tuple_malloc $ Inner ts]
 val tuple_assign = [MACRO_tuple_assign]
 val printc = [MACRO_printc]
-fun array_malloc t = [MACRO_array_malloc $ Inner t]
+fun array_malloc t b = [MACRO_array_malloc (Inner t, b)]
 val array_init_assign = [MACRO_array_init_assign]
 val array_init_len = [MACRO_array_init_len]
 (* val int2byte = [] (* noop, relying on type discipline *) *)
@@ -180,7 +182,7 @@ fun inline_macro_inst inst =
     | MACRO_tuple_malloc ts => [PUSH1nat 0, MLOAD, DUP1, PUSH_tuple_offset $ 32 * (length $ unInner ts), ADD, PUSH1 $WNat 0, MSTORE]
     | MACRO_tuple_assign => [DUP2, MSTORE]
     | MACRO_printc => [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0, PUSH1 WTT]
-    | MACRO_array_malloc t => [PUSH1nat 0, MLOAD, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
+    | MACRO_array_malloc (t, b) => [PUSH1nat 0, MLOAD, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
     | MACRO_array_init_assign => [DUP3, DUP3, DUP3, ADD, MSTORE]
     | MACRO_array_init_len => [DUP2, PUSH1nat 32, SWAP1, SUB, MSTORE]
     | MACRO_int2byte => [PUSH1nat 31, BYTE]
@@ -222,8 +224,6 @@ fun impl_nat_cmp opr =
     | NCNEq => [EQ, ISZERO]
       
 fun concatRepeat n v = List.concat $ repeat n v
-fun TiBoolConst b =
-  TiBool $ IConst (ICBool b, dummy)
                
 fun cg_c c =
   case c of
@@ -326,11 +326,11 @@ fun compile ectx e =
         val n = length es
       in
         [PUSH_array_offset n, DUP1] @
-        array_malloc t @
+        array_malloc t true @
         [SWAP1] @
         array_init_len @
-        [DUP1] @
-        concatMap (fn e => compile e @ [DUP2, MSTORE, PUSH1nat 32, ADD]) es @
+        [PUSH1nat 0] @
+        concatMap (fn e => compile e @ [SWAP2, SWAP1] @ array_init_assign @ [SWAP2, POP, SWAP1, PUSH1nat 32, ADD]) es @
         [POP, MARK_PreArray2ArrayPtr]
       end
     | EBinOp (EBRead, e1, e2) =>
@@ -405,7 +405,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
               val loop_label = fresh_label ()
               val pre_loop_code =
                   [SWAP1, DUP1] @@
-                  array_malloc t @@
+                  array_malloc t false @@
                   [DUP2] @@
                   array_init_len @@
                   [SWAP1, PUSH1nat 32, MUL] @@
@@ -431,7 +431,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                         JUMP
                     fun IToReal i = UnOpI (ToReal, i, dummy)
                     fun close0_i_block x ((rctx, ts, i), I) = ((Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
-                    val block = ((rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i, true), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
+                    val block = ((rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
                     val block = close0_i_block i block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -444,7 +444,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                         set_reg r @@
                         cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len))) e
                   in
-                    HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0, true), t], T1 %+ i_e), post_loop_code))
+                    HCode' (rev itctx, ((rctx, [TNat T0, TPreArray (t, len, T0, (true, false)), t], T1 %+ i_e), post_loop_code))
                   end
               val () = output_heap ((post_loop_label, "new_array_post_loop"), post_loop_block)
             in

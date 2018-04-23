@@ -253,7 +253,7 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           str ")";
           close_box ()
         )
-      | MACRO_array_malloc t =>
+      | MACRO_array_malloc (t, b) =>
         (
           open_hbox ();
           str $ "MACRO_array_malloc";
@@ -261,6 +261,7 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           str "(";
           pp_t t;
           comma ();
+          str $ str_bool b;
           str ")";
           close_box ()
         )
@@ -356,18 +357,14 @@ fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
     close_box ();
     space ();
     open_vbox_noindent ();
-    open_hbox ();
     str "{";
     Rctx.appi (fn (r, t) =>
               (str $ str_reg r;
-               str ":"; space ();
-               pp_t t;
+               str ": "; pp_t t;
                comma ()
               )) rctx;
     str "}";
-    close_box ();
     comma ();
-    open_vbox_noindent ();
     str "[";
     (* space (); *)
     app (fn t =>
@@ -375,7 +372,6 @@ fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
              comma ()
         )) ts;
     str "]";
-    close_box ();
     comma ();
     str $ str_i i;
     comma ();
