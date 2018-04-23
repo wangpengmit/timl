@@ -57,7 +57,7 @@ fun strn_i i =
     | UnOpI (opr, i, _) =>
       (case opr of
            IUDiv n => sprintf "($ / $)" [strn_i i, str_int n]
-         | IUExp s => sprintf "($ ^ $)" [strn_i i, s]
+         (* | IUExp s => sprintf "($ ^ $)" [strn_i i, s] *)
          | _ => sprintf "($ $)" [str_idx_un_op opr, strn_i i]
       )
     | BinOpI (opr, i1, i2) =>

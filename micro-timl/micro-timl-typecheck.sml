@@ -285,7 +285,9 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
     | TQuanI (q, data) =>
       let
         val (s, (name, t)) = unTQuanI data
+        (* val  () = println "before is_wf_sort" *)
         val s = is_wf_sort ictx s
+        (* val  () = println "after is_wf_sort" *)
         val t = kc_against_kind (add_sorting_it (fst name, s) ctx) (t, KType)
       in
         (TQuanI (q, IBindAnno ((name, s), t)), KType)
@@ -376,7 +378,7 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TArrowEVM (rctx, ts, i), KType)
       end
-    fun extra_msg () = "\nwhen kindchecking: " ^ ((* substr 0 300 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t (SOME 5) (itctx_names ctx) t_input)
+    fun extra_msg () = "\nwhen kindchecking: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t_input)
     val ret = main ()
               handle
               Impossible m => raise Impossible (m ^ extra_msg ())

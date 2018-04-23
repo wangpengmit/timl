@@ -451,10 +451,11 @@ fun by_master_theorem uvar (hs, p) =
             let
               val int_add = op+
               open Real
+              fun ExpI (a, b) = BinOpI (ExpNI, a, b)
               val log_b_a = Math.ln (fromInt a) / Math.ln (fromInt b)
               val T =
                   if fromInt c < log_b_a then
-                    ExpI (n, (toString log_b_a, dummy))
+                    ExpI (n, ConstIT (log_b_a, dummy))
                   else if fromInt c == log_b_a then
                     class2term (c, int_add (k, 1)) n
                   else if fromInt c > log_b_a then
@@ -480,7 +481,7 @@ fun by_master_theorem uvar (hs, p) =
                     UnOpI (opr, i, _) =>
                     (case opr of
                          IUDiv b => [b]
-                       | IUExp _ => []
+                       (* | IUExp _ => [] *)
                        | _ => infer_b_i i
                     )
                   | _ => []

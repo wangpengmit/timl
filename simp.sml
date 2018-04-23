@@ -257,7 +257,7 @@ local
           in
             case opr of
                 IUDiv n => DivI (passi i, (n, r))
-              | IUExp s => ExpI (passi i, (s, r))
+              (* | IUExp s => ExpI (passi i, (s, r)) *)
               | ToReal =>
                 (case i of
                      BinOpI (AddI, i1, i2) =>

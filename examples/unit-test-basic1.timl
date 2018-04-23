@@ -1,50 +1,50 @@
 structure CCTestBasic1 = struct
 
-val () = __&printc #"a"
+(* val () = __&printc #"a" *)
 
-val a = 1
-val a = ()
-val a = ""
+(* val a = 1 *)
+(* val a = () *)
+(* val a = "" *)
           
-val x = 1 + 2
-val y = x + 1
+(* val x = 1 + 2 *)
+(* val y = x + 1 *)
 
-fun f x = x + 1
-val a = f 253
-val a = f 0xdd
+(* fun f x = x + 1 *)
+(* val a = f 253 *)
+(* val a = f 0xdd *)
           
-fun f x y = x + y
-val a = f 1 2
+(* fun f x y = x + y *)
+(* val a = f 1 2 *)
           
-val foo = fn arg => arg + 1
-val a = foo 0xe1
+(* val foo = fn arg => arg + 1 *)
+(* val a = foo 0xe1 *)
 
-val p = (0xe1, 0xe2)
-val a = __&fst p
-val a = __&snd p
+(* val p = (0xe1, 0xe2) *)
+(* val a = __&fst p *)
+(* val a = __&snd p *)
           
-fun twice f x = f (f x)
-fun f x = x + 1
-val a = twice f 0xdd
+(* fun twice f x = f (f x) *)
+(* fun f x = x + 1 *)
+(* val a = twice f 0xdd *)
                   
-datatype t = Fst | Snd
+(* datatype t = Fst | Snd *)
 
-val a = case Fst of Fst => 1 | Snd => 2
+(* val a = case Fst of Fst => 1 | Snd => 2 *)
 
-val a = if 1 > 2 then 1 else 2
+(* val a = if 1 > 2 then 1 else 2 *)
 
-val a = ifdec #1 #>= #2 then 1 else 2
+(* val a = ifdec #1 #>= #2 then 1 else 2 *)
 
-val a = #3 #+ #1
-val a = #3 #- #1
-val a = #3 #* #2
-val a = #5 #/ #2
+(* val a = #3 #+ #1 *)
+(* val a = #3 #- #1 *)
+(* val a = #3 #* #2 *)
+(* val a = #5 #/ #2 *)
                                
-fun fact_tail {n : Nat} (n : nat {n}, acc) =
-  ifdec n #< #1 then acc
-  else fact_tail (n #- #1, __&nat2int n *acc) using 4.0 * $n
+(* fun fact_tail {n : Nat} (n : nat {n}, acc) = *)
+(*   ifdec n #< #1 then acc *)
+(*   else fact_tail (n #- #1, __&nat2int n *acc) using 4.0 * $n *)
                  
-val a = fact_tail (#4, 1)
+(* val a = fact_tail (#4, 1) *)
                   
 fun fact {n : Nat} (n : nat {n}) =
   ifdec n #< #1 then 1

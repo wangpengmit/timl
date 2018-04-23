@@ -170,13 +170,12 @@ pop // pop v // [m[0]+32]
 // now arr is top
 PreArray2ArrayPtr
 
-new_empty_array [t] ==
-push1 0
-malloc_array t
-
 new_array_values (e_1, ..., e_n) ==
-push2 n
-malloc_array
+push2 n // [len]
+dup1    // [len, len]
+malloc_array // [arr+32, len]
+swap1 // [len, arr+32]
+array_init_len // [arr+32]
 dup1
 for i = 0 to n-1 {
 compile(e_i)
@@ -186,6 +185,11 @@ push1 32
 add
 }
 pop
+PreArray2ArrayPtr
+
+new_empty_array [t] ==
+push1 0
+malloc_array t
 
 read e1 e2 ==
 compile(e1)

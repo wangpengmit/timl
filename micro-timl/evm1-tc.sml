@@ -576,14 +576,14 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
             end
       end
     | _ => raise Impossible $ "unknown case in tc_insts(): " ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, NONE) (itctx_names itctx) insts)
-    fun extra_msg () = "\nwhen typechecking\n" ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (SOME 2, SOME 5) (itctx_names itctx) insts)
+    fun extra_msg () = "\nwhen typechecking\n" ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, SOME 5) (itctx_names itctx) insts)
     val ret = main ()
               handle
               Impossible m => raise Impossible (m ^ extra_msg ())
               | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
-              (* | ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ()) *)
-              (* | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ()) *)
-              (* | MTCError m => raise MTCError (m ^ extra_msg ()) *)
+              | ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
+              | MSCError (r, m) => raise MTCError ("Sortcheck error:\n" ^ join_lines m ^ extra_msg ())
+              | MTCError m => raise MTCError (m ^ extra_msg ())
   in
     ret
   end

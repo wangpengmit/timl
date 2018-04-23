@@ -151,6 +151,10 @@ fun VAppITs_ctx (e, itctx) =
     VAppITs (e, itargs)
   end
 
+fun PUSH_tuple_offset n = PUSH (2, Inner $ WNat n)
+fun PUSH_array_offset n = PUSH (32, Inner $ WNat n)
+fun PUSH_reg n = PUSH (2, Inner $ WNat n)
+    
 fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD]
 fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE]
 val array_ptr = [PUSH1nat 32, MUL, ADD]
@@ -260,7 +264,7 @@ fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
     | EUNat2Int => [NAT2INT]
-    | EUInt2Nat => [INT2NAT, VALUE_Fold $ Inner $ TSomeNat ()]
+    | EUInt2Nat => [INT2NAT]
     | EUArrayLen => [PUSH1nat 32, SWAP1, SUB, MLOAD]
     | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD, MLOAD]
     | EUPrintc => printc
@@ -321,11 +325,13 @@ fun compile ectx e =
         val t = cg_t t
         val n = length es
       in
-        [PUSH_tuple_offset n] @
+        [PUSH_array_offset n, DUP1] @
         array_malloc t @
+        [SWAP1] @
+        array_init_len @
         [DUP1] @
         concatMap (fn e => compile e @ [DUP2, MSTORE, PUSH1nat 32, ADD]) es @
-        [POP]
+        [POP, MARK_PreArray2ArrayPtr]
       end
     | EBinOp (EBRead, e1, e2) =>
       compile e1 @
@@ -537,7 +543,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val () = output_heap ((l, "ifi_else_branch"), hval)
       in
         compile e @@
-        [PUSH1 WTT, SWAP1] @@
+        [ISZERO, PUSH1 WTT, SWAP1] @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
         [JUMPI] @@
         branch_prelude @@

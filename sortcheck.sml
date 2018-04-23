@@ -46,36 +46,6 @@ open Util
 infixr 0 $
 infixr 0 !!
          
-fun idx_un_op_type opr =
-  case opr of
-      ToReal => (Nat, Time)
-    | Log _ => (Time, Time)
-    | Ceil => (Time, Nat)
-    | Floor => (Time, Nat)
-    | B2n => (BoolSort, Nat)
-    | Neg => (BoolSort, BoolSort)
-    | IUDiv _ => raise Impossible "idx_un_op_type ()"
-    | IUExp _ => raise Impossible "idx_un_op_type ()"
-
-fun idx_bin_op_type opr =
-  case opr of
-      AndI => (BoolSort, BoolSort, BoolSort)
-    | OrI => (BoolSort, BoolSort, BoolSort)
-    | ExpNI => (Nat, Nat, Nat)
-    | MaxI => raise Impossible "idx_bin_op_type ()"
-    | MinI => raise Impossible "idx_bin_op_type ()"
-    | IApp => raise Impossible "idx_bin_op_type ()"
-    | EqI => raise Impossible "idx_bin_op_type ()"
-    | LtI => raise Impossible "idx_bin_op_type ()"
-    | GtI => raise Impossible "idx_bin_op_type ()"
-    | LeI => raise Impossible "idx_bin_op_type ()"
-    | GeI => raise Impossible "idx_bin_op_type ()"
-    | AddI => raise Impossible "idx_bin_op_type ()"
-    | MultI => raise Impossible "idx_bin_op_type ()"
-    | ModI => raise Impossible "idx_bin_op_type ()"
-    | BoundedMinusI => raise Impossible "idx_bin_op_type ()"
-    | MinusI => raise Impossible "idx_bin_op_type()/MinusI"
-
 fun sort_mismatch gctx ctx i expect have =  "Sort mismatch for " ^ str_i gctx ctx i ^ ": expect " ^ expect ^ " have " ^ str_s gctx ctx have
 
 fun is_wf_bsort (bs : U.bsort) : bsort =
@@ -266,31 +236,43 @@ and get_bsort gctx (ctx, i) =
                  (AdmitI r, Base UnitSort)
             )
           | U.UnOpI (opr, i, r) =>
-            (case opr of
-                 IUDiv n =>
-                 let 
-                   val i = check_bsort (ctx, i, Base Time)
-	           val () = if n > 0 then ()
-	                    else raise Error (r, ["Can only divide by positive integer"])
-                 in
-                   (DivI (i, (n, r)), Base Time)
-                 end
-               | IUExp n =>
-                 let 
-                   val i = check_bsort (ctx, i, Base Time)
-                 in
-                   (ExpI (i, (n, r)), Base Time)
-                 end
-               | _ =>
-                 let
-                   val (atype, rettype) = idx_un_op_type opr
-                 in
-                   (UnOpI (opr,
-                           check_bsort (ctx, i, Base atype),
-                           r),
-                    Base rettype)
-                 end
-            )
+            let
+              fun idx_un_op_type opr =
+                case opr of
+                    ToReal => (Nat, Time)
+                  | Log _ => (Time, Time)
+                  | Ceil => (Time, Nat)
+                  | Floor => (Time, Nat)
+                  | B2n => (BoolSort, Nat)
+                  | Neg => (BoolSort, BoolSort)
+                  | IUDiv _ => raise Impossible "idx_un_op_type ()"
+                                     (* | IUExp _ => raise Impossible "idx_un_op_type ()" *)
+            in
+              case opr of
+                  IUDiv n =>
+                  let 
+                    val i = check_bsort (ctx, i, Base Time)
+	            val () = if n > 0 then ()
+	                     else raise Error (r, ["Can only divide by positive integer"])
+                  in
+                    (DivI (i, (n, r)), Base Time)
+                  end
+                (* | IUExp n => *)
+                (*   let  *)
+                (*     val i = check_bsort (ctx, i, Base Time) *)
+                (*   in *)
+                (*     (ExpI (i, (n, r)), Base Time) *)
+                (*   end *)
+                | _ =>
+                  let
+                    val (atype, rettype) = idx_un_op_type opr
+                  in
+                    (UnOpI (opr,
+                            check_bsort (ctx, i, Base atype),
+                            r),
+                     Base rettype)
+                  end
+            end
 	  | U.BinOpI (opr, i1, i2) =>
             let
               (* overloaded binary operations *)
@@ -313,6 +295,24 @@ and get_bsort gctx (ctx, i) =
                 in
                   (BinOpI (opr, i1, i2), rettype)
                 end
+              fun idx_bin_op_type opr =
+                case opr of
+                    AndI => (BoolSort, BoolSort, BoolSort)
+                  | OrI => (BoolSort, BoolSort, BoolSort)
+                  | ExpNI => raise Impossible "idx_bin_op_type ()"
+                  | MaxI => raise Impossible "idx_bin_op_type ()"
+                  | MinI => raise Impossible "idx_bin_op_type ()"
+                  | IApp => raise Impossible "idx_bin_op_type ()"
+                  | EqI => raise Impossible "idx_bin_op_type ()"
+                  | LtI => raise Impossible "idx_bin_op_type ()"
+                  | GtI => raise Impossible "idx_bin_op_type ()"
+                  | LeI => raise Impossible "idx_bin_op_type ()"
+                  | GeI => raise Impossible "idx_bin_op_type ()"
+                  | AddI => raise Impossible "idx_bin_op_type ()"
+                  | MultI => raise Impossible "idx_bin_op_type ()"
+                  | ModI => raise Impossible "idx_bin_op_type ()"
+                  | BoundedMinusI => raise Impossible "idx_bin_op_type ()"
+                  | MinusI => raise Impossible "idx_bin_op_type()/MinusI"
             in
               case opr of
                   IApp =>
@@ -326,6 +326,7 @@ and get_bsort gctx (ctx, i) =
                   end
                 | AddI => overloaded [Nat, Time] NONE
                 | BoundedMinusI => overloaded [Nat, Time] NONE
+                | ExpNI => overloaded [Nat, Time] NONE
                 | MinusI => overloaded [Nat, Time] NONE
                 | MultI => overloaded [Nat, Time] NONE
                 | ModI => overloaded [Nat] NONE

@@ -62,7 +62,7 @@ fun print_i ctx i =
          | B2n => sprintf "(b2i $)" [print_i ctx i]
          | Neg => sprintf "(not $)" [print_i ctx i]
          | IUDiv n => sprintf "(/ $ $)" [print_i ctx i, str_int n]
-         | IUExp s => sprintf "(^ $ $)" [print_i ctx i, s]
+         (* | IUExp s => sprintf "(^ $ $)" [print_i ctx i, s] *)
       )
     | BinOpI (opr, i1, i2) => 
       (case opr of

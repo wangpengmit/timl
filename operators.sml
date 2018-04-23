@@ -17,7 +17,7 @@ datatype idx_un_op =
          | Neg
          | IUDiv of int
          | Log of string
-         | IUExp of string
+         (* | IUExp of string *)
 
 val Log2 = Log "2"
 val Log10 = Log "10"
@@ -294,7 +294,7 @@ fun str_idx_un_op opr =
     | B2n => "b2n"
     | Neg => "not"
     | IUDiv d => sprintf "(/ $)" [str_int d]
-    | IUExp s => sprintf "(** $)" [s]
+    (* | IUExp s => sprintf "( ** $)" [s] *)
 
 fun str_idx_bin_op opr =
   case opr of

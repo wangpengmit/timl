@@ -23,7 +23,7 @@ infixr 1 -->
 infix 1 <->
 
 infix 8 %**
-fun a %** b = ExpI (a, b)
+fun a %** b = BinOpI (ExpNI, a, b)
                    
 val unTAbsT = unBindAnnoName
                 
@@ -62,8 +62,8 @@ fun MakeSubset (name, s, p) = Subset ((s, dummy), Bind.Bind ((name, dummy), p), 
 local
   fun IV n = VarI (ID (n, dummy), [])
 in
-fun TSomeNat_packed () = TExistsI $ IBindAnno ((("__VC", dummy), MakeSubset ("__VC", BSUnit, True dummy)), TNat $ IV 0)
-fun TSomeNat_packed2 () = TExistsI $ IBindAnno ((("n", dummy), MakeSubset ("n", BSNat, IV 0 %< ConstIN (2, dummy) %** ("256", dummy))), TSomeNat_packed ())
+fun TSomeNat_packed () = TExistsI $ IBindAnno ((("__VC", dummy), MakeSubset ("__VC", BSUnit, True dummy)), TNat $ IV 1)
+fun TSomeNat_packed2 () = TExistsI $ IBindAnno ((("n", dummy), MakeSubset ("n", BSNat, IV 0 %< ConstIN (2, dummy) %** ConstIN (256, dummy))), TSomeNat_packed ())
 fun TSomeNat () = TRec $ TBindAnno ((("some_nat", dummy), KType), TSomeNat_packed2 ())
 end
            
