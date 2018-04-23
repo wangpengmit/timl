@@ -104,8 +104,8 @@ fun is_tuple_offset num_fields n =
          
 fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
   let
-    val itctxn = itctx_names itctx
-    val str_t = fn t => ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE itctxn t
+    fun itctxn () = itctx_names itctx
+    val str_t = fn t => ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctxn ()) t
     fun arith int_result nat_result name f time =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
@@ -141,6 +141,8 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
               | (TNat i0, TNat i1) => TNat $ i1 %+ i0
               | (TNat i, TTuplePtr (ts, offset)) => TTuplePtr (ts, offset %+ i)
               | (TTuplePtr (ts, offset), TNat i) => TTuplePtr (ts, offset %+ i)
+              | (TNat i, TPreTuple (ts, offset, inited)) => TPreTuple (ts, offset %+ i, inited)
+              | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset %+ i, inited)
               | (TNat i, TArrayPtr (t, len, offset)) => TArrayPtr (t, len, offset %+ i)
               | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %+ i)
               | _ => raise Impossible $ sprintf "ADD: can't add operands of types ($) and ($)" [str_t t0, str_t t1]
@@ -156,6 +158,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
                 (TConst (TCTiML Int), TConst (TCTiML Int)) => TInt
               | (TNat i0, TNat i1) => TNat $ i0 %%- i1
               | (TTuplePtr (ts, offset), TNat i) => TTuplePtr (ts, offset %%- i)
+              | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset %%- i, inited)
               | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %%- i)
               | _ => raise Impossible $ sprintf "SUB: can't subtract operands of types ($) and ($)" [str_t t0, str_t t1]
       in
@@ -356,6 +359,13 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       in
         ((itctx, rctx, TInt :: sctx), T0)
       end
+    | MACRO_printc =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val _ = assert_TByte $ whnf itctx t0
+      in
+        ((itctx, rctx, TUnit :: sctx), T0)
+      end
     | MACRO_int2byte =>
       let
         val (t0, sctx) = assert_cons sctx
@@ -411,7 +421,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
         val (t0, t1, sctx) = assert_cons2 sctx
         val (ts, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t1
         val () = check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest_inited)
-        val n = assert_INat lowest_inited
+        val n = assert_INat $ simp_i lowest_inited
         val () = is_eq_ty itctx (t0, List.nth (ts, n-1))
       in
         ((itctx, rctx, TPreTuple (ts, offset, lowest_inited %- N1) :: sctx), T0)
@@ -428,7 +438,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       let
         val t_other = kc_against_kind itctx (unInner t_other, KType)
         val (t0, t1, sctx) = assert_cons2 sctx
-        val b = assert_IBool $ assert_TiBool $ whnf itctx t0
+        val b = assert_IBool $ simp_i $ assert_TiBool $ whnf itctx t0
         val inj = if b then InjInr else InjInl
         val ts = choose_pair_inj (t1, t_other) inj
       in
@@ -440,6 +450,8 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
 fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, sctx)) insts =
   let
     val tc_insts = tc_insts params
+    fun itctxn () = itctx_names itctx
+    val str_t = fn t => ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctxn ()) t
     fun main () =
   case insts of
       JUMP =>
@@ -503,6 +515,7 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
                   in
                     T0 %+ IMax (i1, i2)
                   end
+                | t1 => raise Impossible $ "tc()/JUMPI wrong type of t1: " ^ str_t t1
             end
           | MACRO_br_sum =>
             let

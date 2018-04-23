@@ -132,7 +132,7 @@ datatype exp =
          | Open of id
 
 fun EIte (e1, e2, e3, r) = ETriOp (ETIte, e1, e2, e3, r)
-fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r)
+(* fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r) *)
 fun App (e1, e2, r) = BinOp (EBApp, e1, e2, r)
 fun short_id id = ((NONE, id), false)
 fun PShortVar (x, r) = ConstrP (short_id (x, r), [], NONE, r)

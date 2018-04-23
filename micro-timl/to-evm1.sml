@@ -300,7 +300,7 @@ fun compile ectx e =
         val t1 = cg_t t1
         val t2 = cg_t t2
       in
-        compile e1 @ compile e2 @ tuple_malloc [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign @ [MARK_PreTuple2TuplePtr])
+        compile e1 @ compile e2 @ tuple_malloc [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign) @ [MARK_PreTuple2TuplePtr]
       end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
@@ -787,6 +787,17 @@ fun test1 dirname =
     val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
     (* val () = println prog_str *)
     (* val () = println "" *)
+    val inlined_prog = inline_macro_prog prog
+    val inlined_prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) inlined_prog
+    val () = write_file (join_dir_file' dirname $ "unit-test-after-inline-macro.tmp", inlined_prog_str)
+    (* val () = println inlined_prog_str *)
+    (* val () = println "" *)
+    open EVM1Assemble
+    val prog_bytes = ass2str inlined_prog
+    val () = write_file (join_dir_file' dirname $ "evm-bytecode.tmp", prog_bytes)
+    (* val () = println "EVM Bytecode:" *)
+    (* val () = println prog_bytes *)
+    (* val () = println "" *)
     open EVM1Typecheck
     val () = println "Started EVM1 typechecking ..."
     val (i, vcs, admits) = evm1_typecheck num_regs prog
@@ -794,17 +805,6 @@ fun test1 dirname =
     val () = println "Time:"
     (* val i = simp_i i *)
     val () = println $ ToString.str_i Gctx.empty [] i
-    val prog = inline_macro_prog prog
-    val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
-    val () = write_file (join_dir_file' dirname $ "unit-test-after-inline-macro.tmp", prog_str)
-    (* val () = println prog_str *)
-    (* val () = println "" *)
-    open EVM1Assemble
-    val prog_bytes = ass2str prog
-    val () = write_file (join_dir_file' dirname $ "evm-bytecode.tmp", prog_bytes)
-    (* val () = println "EVM Bytecode:" *)
-    (* val () = println prog_bytes *)
-    (* val () = println "" *)
 
     val () = println "ToEVM1.UnitTest passed"
   in

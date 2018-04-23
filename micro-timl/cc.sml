@@ -425,6 +425,7 @@ fun cc_t t =
         TAbsI $ close0_i_t_anno ((a, fst name, s), t)
       end
     | TNat _ => t
+    | TiBool _ => t
     | TAppT (t, t') => TAppT (cc_t t, cc_t t')
     | TAppI (t, i) => TAppI (cc_t t, i)
     | TArr (t, i) => TArr (cc_t t, i)

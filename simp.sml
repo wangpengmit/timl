@@ -237,7 +237,11 @@ local
               | GtI => def ()
               | LeI => def ()
               | GeI => def ()
-              | BoundedMinusI => def ()
+              | BoundedMinusI =>
+                (case (i1, i2) of
+                     (IConst (ICNat n1, _), IConst (ICNat n2, _)) =>
+                     mark $ ConstIN (bounded_minus n1 n2, r ())
+                   | _ => def ())
               | MinusI => raise Impossible "simp_p()/MinusI"
           end
         | Ite (i, i1, i2, r) =>

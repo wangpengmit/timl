@@ -183,6 +183,7 @@ fun cps_t t =
     | TVar _ => t
     | TConst _ => t
     | TNat _ => t
+    | TiBool _ => t
     | TBinOp (opr, t1, t2) => TBinOp (opr, cps_t t1, cps_t t2)
     | TArr (t, i) => TArr (cps_t t, i)
     | TQuan (Exists ex, bind) => 

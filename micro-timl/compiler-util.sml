@@ -16,7 +16,7 @@ fun close0_e_e_anno a = close0_anno EBindAnno close0_e_e a
 fun assert_INat a =
   case a of
       IConst (ICNat a, _) => a
-    | _ => raise assert_fail "assert_INat"
+    | _ => raise assert_fail $ "assert_INat; got: " ^ (ExportPP.str_i $ ExportPP.export_i [] a)
 fun assert_IBool a =
   case a of
       IConst (ICBool a, _) => a

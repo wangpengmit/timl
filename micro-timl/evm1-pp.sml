@@ -18,6 +18,9 @@ fun str_word_const c =
     | WCLabel l => "l_" ^ str_int l
                                 
 fun str_inst a =
+  let
+    fun err () = raise Impossible "str_inst()"
+  in
   case a of
       ADD => "ADD"
     | MUL => "MUL"
@@ -53,7 +56,24 @@ fun str_inst a =
     | UNPACK name => "UNPACK " ^ binder2str name
     | UNPACKI name => "UNPACKI " ^ binder2str name
     | MACRO_init_free_ptr n => "MACRO_init_free_ptr " ^ str_int n
-    | _ => raise Impossible "str_inst()"
+    | MACRO_tuple_assign => "MACRO_tuple_assign"
+    | MACRO_printc => "MACRO_printc"
+    | MACRO_array_init_assign => "MACRO_array_init_assign"
+    | MACRO_array_init_len => "MACRO_array_init_len"
+    | MACRO_int2byte => "MACRO_int2byte"
+    | MACRO_br_sum => "MACRO_br_sum"
+    | PUSH (n, w) => err ()
+    | VALUE_AppT t => err ()
+    | VALUE_AppI i => err ()
+    | VALUE_Pack (t1, t2) => err ()
+    | VALUE_PackI (t, i) => err ()
+    | VALUE_Fold t => err ()
+    | VALUE_AscType t => err ()
+    | ASCTIME i => err ()
+    | MACRO_tuple_malloc ts => err ()
+    | MACRO_array_malloc t => err ()
+    | MACRO_inj t => err ()
+  end
 
 fun pp_w pp_t s w =
   let
@@ -230,6 +250,28 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           space ();
           str "(";
           app (fn t => (pp_t $ Inner t; comma ())) $ unInner ts;
+          str ")";
+          close_box ()
+        )
+      | MACRO_array_malloc t =>
+        (
+          open_hbox ();
+          str $ "MACRO_array_malloc";
+          space ();
+          str "(";
+          pp_t t;
+          comma ();
+          str ")";
+          close_box ()
+        )
+      | MACRO_inj t =>
+        (
+          open_hbox ();
+          str $ "MACRO_inj";
+          space ();
+          str "(";
+          pp_t t;
+          comma ();
           str ")";
           close_box ()
         )

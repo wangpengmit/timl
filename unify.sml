@@ -384,6 +384,8 @@ fun unify_mt r gctx ctx (t, t') =
           )
         | (TyNat (i, _), TyNat (i', _)) =>
           unify_i r gctxn sctxn (i, i')
+        | (TiBool (i, _), TiBool (i', _)) =>
+          unify_i r gctxn sctxn (i, i')
         | (Prod (t1, t2), Prod (t1', t2')) =>
           (unify_mt ctx (t1, t1');
            unify_mt ctx (t2, t2'))

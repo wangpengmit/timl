@@ -526,5 +526,7 @@ fun a @@ b = (a; b)
 
 fun scan radix s = StringCvt.scanString (Int.scan radix) s
                                         
+fun bounded_minus a b = max 0 $ a - b
+
 end
 
