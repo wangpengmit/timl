@@ -288,6 +288,16 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       in
         ((itctx, rctx, t :: sctx), T0)
       end
+    | VALUE_AppI i =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val t0 = whnf itctx t0
+        val ((_, s), t2) = assert_TForallI t0
+        val i = sc_against_sort ictx (unInner i, s)
+        val t = subst0_i_t i t2
+      in
+        ((itctx, rctx, t :: sctx), T0)
+      end
     | VALUE_Pack (t_pack, t) =>
       let
         val t_pack = kc_against_kind itctx (unInner t_pack, KType)
@@ -295,6 +305,18 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
         val ((_, k), t') = assert_TExists t_pack
         val t = kc_against_kind itctx (unInner t, k)
         val t_v = subst0_t_t t t'
+        val (t0, sctx) = assert_cons sctx
+        val () = is_eq_ty itctx (t0, t_v)
+      in
+        ((itctx, rctx, t_pack :: sctx), T0)
+      end
+    | VALUE_PackI (t_pack, i) =>
+      let
+        val t_pack = kc_against_kind itctx (unInner t_pack, KType)
+        val t_pack = whnf itctx t_pack
+        val ((_, s), t') = assert_TExistsI t_pack
+        val i = sc_against_sort ictx (unInner i, s)
+        val t_v = subst0_i_t i t'
         val (t0, sctx) = assert_cons sctx
         val () = is_eq_ty itctx (t0, t_v)
       in
@@ -327,6 +349,14 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
         val ((_, k), t) = assert_TExists t0
       in
         (add_stack t $ add_kinding_full (binder2str name, k) (itctx, rctx, sctx), T0)
+      end
+    | UNPACKI name =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val t0 = whnf itctx t0
+        val ((_, s), t) = assert_TExistsI t0
+      in
+        (add_stack t $ add_sorting_full (binder2str name, s) (itctx, rctx, sctx), T0)
       end
     | UNFOLD =>
       let

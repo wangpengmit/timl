@@ -25,8 +25,12 @@ datatype iBool : {Bool} =
          | IFalse of iBool {false}
 
 fun b2B b = if b then True else False                      
-fun ib2iB {i : Bool} (b : ibool {i}) return iBool {i} = ifdec b then ITrue else IFalse                      
-                      
+fun ib2iB {i : Bool} (b : ibool {i}) return iBool {i} =
+  ifdec b then
+    ITrue : iBool {i}
+  else
+    IFalse : iBool {i}
+    
 datatype option 'a =
          NONE
          | SOME of 'a --> option 'a

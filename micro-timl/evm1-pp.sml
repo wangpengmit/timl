@@ -399,6 +399,7 @@ fun pp_prog (pp_hval, pp_insts) s (heap, insts) =
   in
     open_vbox_noindent ();
     pp_insts insts;
+    space ();
     app (fn ((l, name), h) =>
             (str $ sprintf "$ <$>" [str_int l, name];
              str ":"; space ();

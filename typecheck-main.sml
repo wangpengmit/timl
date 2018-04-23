@@ -170,7 +170,7 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
 	  (TyNat (check_bsort gctx (sctx, i, Base Nat), r),
            HType)
         | U.TiBool (i, r) =>
-	  (TiBool (check_bsort gctx (sctx, i, Base Nat), r),
+	  (TiBool (check_bsort gctx (sctx, i, Base BoolSort), r),
            HType)
         | U.Unit r => (Unit r, HType)
 	| U.Prod (c1, c2) => 

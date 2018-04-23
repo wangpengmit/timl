@@ -53,6 +53,13 @@ fun close_t_insts a = shift_t_insts_fn close_t_t a
 fun close0_i_insts a = close_i_insts 0 a
 fun close0_t_insts a = close_t_insts 0 a
 
+fun reg_addr r = 32 * (r + 1)
+(* use r0 as scratch space *)
+(* val scratch = 32 *)
+val scratch = reg_addr 0
+val FIRST_GENERAL_REG = 1
+val ARG_REG = FIRST_GENERAL_REG
+               
 fun cg_ty_visitor_vtable cast () =
   let
     val vtable =
@@ -70,7 +77,7 @@ fun cg_ty_visitor_vtable cast () =
         val cg_t = #visit_ty (cast this) this env
         val t1 = cg_t t1
       in
-        TArrowEVM (rctx_single (1, t1), [], i)
+        TArrowEVM (rctx_single (ARG_REG, t1), [], i)
       end
     val vtable = override_visit_TArrow vtable visit_TArrow
     fun visit_TBinOp this env (data as (opr, t1, t2)) =
@@ -144,10 +151,6 @@ fun VAppITs_ctx (e, itctx) =
     VAppITs (e, itargs)
   end
 
-fun reg_addr r = 32 * (r + 1)
-(* use r0 as scratch space *)
-(* val scratch = 32 *)
-val scratch = reg_addr 0
 fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD]
 fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE]
 val array_ptr = [PUSH1nat 32, MUL, ADD]
@@ -389,7 +392,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         case e1 of
             EBinOp (EBNew, e1, e2) =>
             let
-              val (t, len) = assert_TArr t
+              val (t, len, _) = assert_TArrayPtr t
               val (name, e) = unBindSimpName bind
               val (e, i_e) = assert_EAscTime e
               val post_loop_label = fresh_label ()
@@ -489,7 +492,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
     (*     i @:: I *)
     (*   end *)
     | EBinOp (EBApp, e1, e2) =>
-      compile e1 @@ compile e2 @@ set_reg 0 @@ JUMP
+      compile e1 @@ compile e2 @@ set_reg ARG_REG @@ JUMP
     | ECase (e, bind1, bind2) =>
       let
         val (e, t) = assert_EAscType e
@@ -581,10 +584,10 @@ fun cg_hval ectx (e, t_all) =
     val (itbinds, e) = collect_EAbsIT e
     val (t, (name, e)) = assert_EAbs e
     val t = cg_t t
-    (* input argument is always stored in r1 *)
-    val ectx = (name, inl 1) :: ectx
-    val rctx = rctx_single (1, t)
-    val reg_counter = ref 2
+    (* input argument is always stored in ARG_REG *)
+    val ectx = (name, inl ARG_REG) :: ectx
+    val rctx = rctx_single (ARG_REG, t)
+    val reg_counter = ref $ ARG_REG+1
     val I = cg_e reg_counter (ectx, rev itbinds, rctx) e
     fun get_time t =
       let
@@ -616,7 +619,7 @@ fun cg_prog e =
         (ectx, max num_regs mr)
       end
     val (ectx, num_regs) = foldl on_bind ([], 0) binds
-    val reg_counter = ref 1
+    val reg_counter = ref FIRST_GENERAL_REG
     val I = cg_e reg_counter (ectx, [], Rctx.empty) e
     val H = !heap_ref
     val H = rev H

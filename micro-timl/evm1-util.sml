@@ -9,5 +9,5 @@ fun a %- b = BinOpI (BoundedMinusI, a, b)
 val N = INat
 val T = ITime
 val N32 = INat 32
-               
+
 end
