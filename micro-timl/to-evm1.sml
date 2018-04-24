@@ -70,7 +70,7 @@ fun reg_addr r = 32 * (r + 1)
 (* use r0 as scratch space *)
 (* val scratch = 32 *)
 val scratch = reg_addr 0
-val FIRST_GENERAL_REG = 1
+val FIRST_GENERAL_REG = 2
 val ARG_REG = FIRST_GENERAL_REG
                
 fun cg_ty_visitor_vtable cast () =
@@ -202,6 +202,8 @@ fun inline_macro_inst inst =
       inline_macro_inst (MACRO_tuple_malloc $ Inner [TUnit, TUnit](*only length matters operationally*)) @
       [SWAP1, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE(* , PACK_SUM (inj, Inner t_other) *)]
     | MACRO_br_sum => [DUP2, MLOAD, SWAP1, JUMPI]
+    | MACRO_map_ptr => [PUSH_reg $ scratch, MSTORE, PUSH_reg $ scratch+32, MSTORE, PUSH1nat 64, PUSH_reg $ scratch, SHA3]
+    | MACRO_vector_ptr => [PUSH_reg $ scratch, MSTORE, PUSH1nat 32, PUSH_reg $ scratch, SHA3, ADD]
     | _ => [inst]
 
 fun inline_macro_insts insts =
@@ -370,6 +372,14 @@ fun compile ectx e =
       compile e1 @ 
       compile e2 @
       impl_nat_cmp opr
+    | EBinOp (EBMapGet, e1, e2) =>
+      compile e1 @ 
+      compile e2 @
+      [MACRO_map_ptr, SLOAD]
+    | EBinOp (EBVectorGet, e1, e2) =>
+      compile e1 @ 
+      compile e2 @
+      [SWAP1, MACRO_vector_ptr, SLOAD]
     | _ => raise Impossible $ "compile() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
 

@@ -484,6 +484,23 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
       in
         ((itctx, rctx, TSum ts :: sctx), T0)
       end
+    | MACRO_map_ptr =>
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t = assert_TMap t1
+        val () = assert_TInt t0
+      in
+        ((itctx, rctx, t :: sctx), T0)
+      end
+    | MACRO_vector_ptr =>
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val (t, len) = assert_TVector t0
+        val i = assert_TNat t1
+        val () = check_prop ictx (i %< len)
+      in
+        ((itctx, rctx, t :: sctx), T0)
+      end
     | _ => raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctx_names itctx) inst)
   end
       
