@@ -301,6 +301,10 @@ local
                   EConst (ECBool true, r)
                 else if x = "__&false" andalso eia = false then
                   EConst (ECBool false, r)
+                else if x = "__&itrue" andalso eia = false then
+                  EConst (ECiBool true, r)
+                else if x = "__&ifalse" andalso eia = false then
+                  EConst (ECiBool false, r)
                 (* else if x = "never" andalso eia = false then *)
                 (*   ENever (elab_mt (S.VarT (NONE, ("_", r))), r) *)
                 else if x = "__&empty_array" andalso eia = false then

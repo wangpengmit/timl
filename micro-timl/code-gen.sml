@@ -89,6 +89,7 @@ fun cg_c c =
     | ECNat n => WCNat n
     | ECInt n => WCInt n
     | ECBool n => WCBool n
+    | ECiBool n => WCiBool n
     | ECByte c => WCByte c
     (* | ECString s => raise Impossible $ "cg_c() on ECString" *)
                                 

@@ -68,6 +68,7 @@ datatype expr_const =
          | ECNat of nat
          | ECInt of int
          | ECBool of bool
+         | ECiBool of bool
          | ECByte of Char.char
          (* | ECString of string *)
 
@@ -99,6 +100,7 @@ fun str_expr_const c =
       ECTT => "()"
     | ECInt n => str_int n
     | ECNat n => sprintf "#$" [str_int n]
+    | ECiBool b => sprintf "#$" [str_bool b]
     | ECBool b => str_bool b
     | ECByte c => Char.toCString c
     (* | ECString s => surround "\"" "\"" s *)

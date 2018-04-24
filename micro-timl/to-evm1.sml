@@ -243,6 +243,7 @@ fun cg_c c =
     | ECNat n => WCNat n
     | ECInt n => WCInt n
     | ECBool n => WCBool n
+    | ECiBool n => WCiBool n
     | ECByte c => WCByte c
     (* | ECString s => raise Impossible $ "cg_c() on ECString" *)
                                 
@@ -734,9 +735,9 @@ fun test1 dirname =
     val () = println "Type:"
     open ExportPP
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
-    val () = println "Time:"
+    (* val () = println "Time:" *)
     (* val i = simp_i i *)
-    val () = println $ ToString.str_i Gctx.empty [] i
+    (* val () = println $ ToString.str_i Gctx.empty [] i *)
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
@@ -758,9 +759,9 @@ fun test1 dirname =
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
-    val () = println "Time:"
+    (* val () = println "Time:" *)
     (* val i = simp_i i *)
-    val () = println $ ToString.str_i Gctx.empty [] i
+    (* val () = println $ ToString.str_i Gctx.empty [] i *)
     (* val () = pp_e (NONE, NONE) $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
                      
@@ -803,9 +804,9 @@ fun test1 dirname =
     val () = println "Finished MicroTiML typechecking #4"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
-    val () = println "Time:"
+    (* val () = println "Time:" *)
     (* val i = simp_i i *)
-    val () = println $ ToString.str_i Gctx.empty [] i
+    (* val () = println $ ToString.str_i Gctx.empty [] i *)
                      
     open EVM1ExportPP
     val () = println "Started Code Generation ..."
@@ -831,9 +832,9 @@ fun test1 dirname =
     val () = println "Started EVM1 typechecking ..."
     val (i, vcs, admits) = evm1_typecheck num_regs prog
     val () = println "Finished EVM1 typechecking"
-    val () = println "Time:"
+    (* val () = println "Time:" *)
     (* val i = simp_i i *)
-    val () = println $ ToString.str_i Gctx.empty [] i
+    (* val () = println $ ToString.str_i Gctx.empty [] i *)
 
     val () = println "ToEVM1.UnitTest passed"
   in

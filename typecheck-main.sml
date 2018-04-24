@@ -910,6 +910,7 @@ fun get_expr_const_type (c, r) =
 	TyNat (ConstIN (n, r), r)
       else
 	raise Error (r, ["Natural number constant must be non-negative"])
+    | ECiBool b => TiBool (IConst (ICBool b, r), r)
     | ECTT => 
       Unit r
     | ECInt n => 

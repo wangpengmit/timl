@@ -55,6 +55,6 @@ fun fact {n : Nat} (n : nat {n}) =
                  
 val a = fact #4
                  
-val () = __&halt a
+(* val () = __&halt a *)
               
 end

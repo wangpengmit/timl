@@ -653,6 +653,7 @@ fun get_expr_const_type c =
   case c of
       ECTT => TUnit
     | ECNat n => TNat $ INat n
+    | ECiBool b => TiBool $ IBool b
     | ECInt _ => TInt
     | ECBool _ => TBool
     | ECByte _ => TByte
