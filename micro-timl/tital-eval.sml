@@ -81,8 +81,6 @@ datatype ('idx, 'sort, 'kind, 'ty) heapv =
          | HVArray of ('idx, 'ty) wordv list
          | HVString of string
 
-fun assert_SOME a = case a of SOME v => v | NONE => raise Impossible "assert_SOME()"
-
 fun must_find (m, _) k = assert_SOME $ Rctx.find (m, k)
                                        
 infix  9 @!!

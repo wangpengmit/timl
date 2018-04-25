@@ -1,3 +1,5 @@
+structure IMap = IntBinaryMap
+                   
 signature TYPE = sig
 
   type bsort
@@ -18,9 +20,11 @@ signature TYPE = sig
 
   type 'mtype datatype_def = (name(*for datatype self-reference*) * (unit, name, bsort list * 'mtype constr_decl list) Bind.tbinds) Bind.tbind
 
+  type state = idx IMap.map
+
   (* monotypes *)
   datatype mtype = 
-	   Arrow of mtype * idx * mtype
+	   Arrow of (mtype * state) * (idx (* * idx *)) * (mtype * state)
            | TyNat of idx * region
            | TiBool of idx * region
            | TyArray of mtype * idx

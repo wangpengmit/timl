@@ -991,7 +991,7 @@ fun get_prim_expr_bin_op_res_ty opr =
     | EBPBoolOr => Bool
     (* | EBPStrConcat => String *)
 
-fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, tctx : tcontext), e_all : U.expr) : expr * mtype * idx =
+fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, tctx : tcontext, st : state), e_all : U.expr) : expr * (mtype * state) * (idx (* * idx *)) =
   let
     val get_mtype = get_mtype gctx
     val check_mtype = check_mtype gctx

@@ -57,10 +57,10 @@ val N1 = INat 1
 
 fun TProd (a, b) = TTuplePtr ([a, b], N0)
 
-fun add_sorting_full new ((ictx, tctx), rctx, sctx) = ((new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx, map shift01_i_t sctx)
-fun add_kinding_full new ((ictx, tctx), rctx, sctx) = ((ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx, map shift01_t_t sctx)
-fun add_r p (itctx, rctx, sctx) = (itctx, rctx @+ p, sctx)
-fun add_stack t (itctx, rctx, sctx) = (itctx, rctx, t :: sctx)
+fun add_sorting_full new ((ictx, tctx), rctx, sctx, st) = ((new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx, map shift01_i_t sctx, Rctx.map (* lazy_ *)shift01_i_i st)
+fun add_kinding_full new ((ictx, tctx), rctx, sctx, st) = ((ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx, map shift01_t_t sctx, Rctx.map (* lazy_ *)shift01_i_i st)
+fun add_r p (itctx, rctx, sctx, st) = (itctx, rctx @+ p, sctx, st)
+fun add_stack t (itctx, rctx, sctx, st) = (itctx, rctx, t :: sctx, st)
 
 fun get_word_const_type hctx c =
   case c of
@@ -101,8 +101,25 @@ fun is_tuple_offset num_fields n =
       if 0 <= n andalso n < num_fields then SOME n
       else NONE
     | NONE => NONE
-         
-fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
+
+(* fun TCell t = TTuplePtr ([t], N0) *)
+fun assert_TCell t =
+  let
+    fun err () = raise Impossible "assert_TCell"
+  in
+    case t of
+        TTuplePtr (ts, offset) =>
+        (case simp_i offset of
+             IConst (ICNat n, _) =>
+             (* todo: [ts] may contain embeded structs, so offset calculation may be more involved than this *)
+             (case List.nth ts n of
+                  SOME t => t
+                | NONE => err ())
+           | _ => err ())
+      | _ => err ()
+  end
+    
+fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) inst =
   let
     fun itctxn () = itctx_names itctx
     val str_t = fn t => ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctxn ()) t
@@ -487,24 +504,110 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx)) inst =
     | MACRO_map_ptr =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
-        val t = assert_TMap t1
+        val t = 
+            case t1 of
+                TNat i =>
+                let
+                  val t = assert_inl $ must_find st_types $ assert_INat $ simp_i i
+                in
+                  t
+                end
+              | _ => assert_TMap $ assert_TCell $ TNat2MapCell t1
         val () = assert_TInt t0
       in
-        ((itctx, rctx, t :: sctx), T0)
+        ((itctx, rctx, (* TCell  *)t :: sctx), T0)
       end
     | MACRO_vector_ptr =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
-        val (t, len) = assert_TVector t0
-        val i = assert_TNat t1
-        val () = check_prop ictx (i %< len)
+        val vec = assert_INat $ simp_i $ assert_TNat t0
+        val offset = assert_TNat t1
+      in
+        ((itctx, rctx, TVectorPtr (vec, offset) :: sctx), T0)
+      end
+    | MACRO_vector_push_back =>
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val vec = assert_INat $ simp_i $ assert_TNat t1
+        val len = st @!! vec
+        val t = assert_inr $ st_types @!! vec
+        val () = is_eq_ty ictx (t0, t)
+      in
+        ((itctx, rctx, sctx, st @+ (vec, len %+ N1)), T0)
+      end
+    | SLOAD => 
+      let
+        val (t0, sctx) = assert_cons sctx
+        fun def () = raise Impossible $ sprintf "SLOAD: can't read from address of type ($)" [str_t t0]
+        val t =
+            case t0 of
+                TVectorPtr (vec, offset) =>
+                let
+                  val len = st @!! vec
+                  val t = assert_inr $ st_types @!! vec
+                  val () = check_prop ictx (offset %< len)
+                in
+                  t
+                end
+              | TNat i =>
+                let
+                  val vec = assert_INat $ simp_i i
+                  val len = st @!! vec
+                  val _ = assert_inr $ st_types @!! vec
+                in
+                  TNat len
+                end
+              | TTuplePtr _ =>
+                let
+                  val t = assert_TCell t0
+                  val () = assert_wordsize_type t
+                in
+                  t
+                end
+              | _ => def ()
       in
         ((itctx, rctx, t :: sctx), T0)
+      end
+    | SSTORE => 
+      let
+        val (t0, t1, sctx) = assert_cons sctx
+        fun def () = raise Impossible $ sprintf "SSTORE: can't read from address of type ($)" [str_t t0]
+        val (t, st) =
+            case t0 of
+                TVectorPtr (vec, offset) =>
+                let
+                  val len = st @!! vec
+                  val t = assert_inr $ st_types @!! vec
+                  val () = check_prop ictx (offset %< len)
+                  val () = is_eq_ty itctx (t1, t)
+                in
+                  (t, st)
+                end
+              | TNat i =>
+                let
+                  val vec = assert_INat $ simp_i i
+                  val _ = assert_inr $ st_types @!! vec
+                  val new = assert_TNat t1
+                  val () = check_prop ictx (new %= N0)
+                in
+                  (TNat len, st @+ (vec, N0))
+                end
+              | TTuplePtr _ =>
+                let
+                  val t = assert_TCell t0
+                  val () = assert_wordsize_type t
+                  val () = is_eq_ty itctx (t1, t)
+                in
+                  (t, st)
+                end
+              | _ => def ()
+      in
+        ((itctx, rctx, sctx, st), T0)
       end
     | _ => raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctx_names itctx) inst)
   end
       
-fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, sctx)) insts =
+fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) insts =
   let
     val tc_insts = tc_insts params
     fun itctxn () = itctx_names itctx
@@ -609,8 +712,8 @@ fun tc_insts (params as (hctx, num_regs)) (ctx as (itctx as (ictx, tctx), rctx, 
             end
           | _ =>
             let
-              val (ctx, i1) = tc_inst params ctx inst 
-              val i2 = tc_insts ctx I
+              val (ctx_st, i1) = tc_inst params ctx inst 
+              val i2 = tc_insts ctx_st I
             in
               i1 %+ i2
             end

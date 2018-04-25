@@ -249,19 +249,20 @@ swap2
 swap1
 map_ptr reg_i reg_(i+1)
 sstore
+push1 ()
 
 vector_get r e1 e2 ==
 compile(e1)
 compile(e2)
 swap1
-{// vector_ptr r
+{// vector_ptr r // [vec, offset]
 push2 r*32
 mstore
 push1 32
 push32 r*32
 sha3
 add
-}
+} // [sha3(vec)+offset]
 sload
 
 vector_set r e1 e2 e3 ==
@@ -271,12 +272,13 @@ compile(e3)
 swap2
 vector_ptr r
 sstore
+push1 ()
 
 vector_push_back r vector_label e2
-compile(e2)
-{// inc length
 push32 vector_label
-swap1 // [v, l]
+compile(e2)
+{// vector_push_back // [v, l]
+{// inc_length
 dup2 // [l, v, l]
 dup1 // [l, l, v, l]
 sload // [len, l, v, l]
@@ -291,11 +293,41 @@ swap1 // [v, len, l]
 swap2 // [l, len, v]
 vector_ptr r // [sha3(l)+len), v]
 store // s[sha3(l)+len] = v // []
+}
+push1 ()
+
+(*
+vector_push_back vector_label e2
+push32 vector_label
+dup1 // [l, l]
+{// inc_length // [l]
+dup1 // [l, l]
+sload // [len, l]
+swap1
+dup2 // [len, l, len]
+push1 1
+add
+swap1 // [l, len+1, len]
+sstore // s[l] = s[l]+1 // [len]
+} // [len, l]
+swap1 // [l, len]
+vector_ptr // [sha3(l)+len]
+compile(e2) // [v, sha3(l)+len]
+swap1
+store // s[sha3(l)+len] = v // []
+push1 ()
+*)
+
+vector_clear e
+compile e
+push1 0
+swap1
+sstore
 push1 ()
 
 vector_len e ==
-compile(e1)
-mload
+compile(e)
+sload
 
 Calling convention 1:
 

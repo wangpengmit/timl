@@ -204,6 +204,7 @@ fun inline_macro_inst inst =
     | MACRO_br_sum => [DUP2, MLOAD, SWAP1, JUMPI]
     | MACRO_map_ptr => [PUSH_reg $ scratch, MSTORE, PUSH_reg $ scratch+32, MSTORE, PUSH1nat 64, PUSH_reg $ scratch, SHA3]
     | MACRO_vector_ptr => [PUSH_reg $ scratch, MSTORE, PUSH1nat 32, PUSH_reg $ scratch, SHA3, ADD]
+    | MACRO_vector_push_back => [DUP2, DUP1, SLOAD, SWAP1, DUP2, PUSH1nat 1, ADD, SWAP1, SSTORE, SWAP1, SWAP2] @ inline_macro_inst MACRO_vector_ptr @ [STORE]
     | _ => [inst]
 
 fun inline_macro_insts insts =
@@ -376,10 +377,30 @@ fun compile ectx e =
       compile e1 @ 
       compile e2 @
       [MACRO_map_ptr, SLOAD]
+    | ETriOp (ETMapSet, e1, e2, e3) =>
+      compile e1 @ 
+      compile e2 @
+      compile e3 @
+      [SWAP2, SWAP1, MACRO_map_ptr, SSTORE, PUSH1 WTT]
     | EBinOp (EBVectorGet, e1, e2) =>
       compile e1 @ 
       compile e2 @
       [SWAP1, MACRO_vector_ptr, SLOAD]
+    | ETriOp (ETVectorSet, e1, e2, e3) =>
+      compile e1 @ 
+      compile e2 @
+      compile e3 @
+      [SWAP2, MACRO_vector_ptr, SSTORE, PUSH1 WTT]
+    | EBinOp (EBVectorPushBack, e1, e2) =>
+      compile e1 @
+      compile e2 @
+      [MACRO_vector_push_back, PUSH1 WTT]
+    | EUnOp (EUVectorClear, e) =>
+      compile e @
+      [PUSH1nat 0, SWAP1, SSTORE, PUSH1 WTT]
+    | EUnOp (EUVectorLength, e) =>
+      compile e @
+      [SLOAD]
     | _ => raise Impossible $ "compile() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
 

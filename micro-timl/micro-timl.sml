@@ -25,13 +25,14 @@ datatype ty_bin_op =
          | TBSum
 
 structure Rctx = IntBinaryMap
+structure IMap = IntBinaryMap
                    
 (* type *)
 datatype ('var, 'bsort, 'idx, 'sort) ty =
          TVar of 'var * 'bsort kind list
          | TConst of ty_const
          | TBinOp of ty_bin_op * ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
-         | TArrow of ('var, 'bsort, 'idx, 'sort) ty * 'idx * ('var, 'bsort, 'idx, 'sort) ty
+         | TArrow of (('var, 'bsort, 'idx, 'sort) ty * 'idx IMap.map) * ('idx (* * 'idx *)) * (('var, 'bsort, 'idx, 'sort) ty * 'idx IMap.map)
          | TAbsI of ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno
          | TAppI of ('var, 'bsort, 'idx, 'sort) ty * 'idx
          | TQuan of unit Operators.quan * ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
@@ -45,7 +46,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool)
          (* used by compiler/code-gen *)
          | TArrowTAL of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx
-         | TArrowEVM of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * ('var, 'bsort, 'idx, 'sort) ty list * 'idx
+         | TArrowEVM of ('var, 'bsort, 'idx, 'sort) ty Rctx.map (*register typing*) * ('var, 'bsort, 'idx, 'sort) ty list (*stack typing*) * 'idx IMap.map(*pre-state*) * 'idx
          | TiBool of 'idx
          | TPreTuple of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * 'idx(*lowest inited pos*)
          | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*)
