@@ -512,7 +512,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
                 in
                   t
                 end
-              | _ => assert_TMap $ assert_TCell $ TNat2MapCell t1
+              | _ => assert_TMap $ assert_TCell t1
         val () = assert_TInt t0
       in
         ((itctx, rctx, (* TCell  *)t :: sctx), T0)

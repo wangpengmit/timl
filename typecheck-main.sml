@@ -991,7 +991,7 @@ fun get_prim_expr_bin_op_res_ty opr =
     | EBPBoolOr => Bool
     (* | EBPStrConcat => String *)
 
-fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, tctx : tcontext, st : state), e_all : U.expr) : expr * (mtype * state) * (idx (* * idx *)) =
+fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : state, cctx : ccontext, tctx : tcontext), e_all : U.expr) : expr * (state * mtype) * (idx (* * idx *)) =
   let
     val get_mtype = get_mtype gctx
     val check_mtype = check_mtype gctx
@@ -1197,7 +1197,91 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                in
                  (EBinOp (EBNatCmp opr, e1, e2), TiBool (interp_nat_cmp r opr (i1, i2), r), d1 %+ d2)
                end
+             | EBMapGet =>
+               let
+                 val r = U.get_region_e e_all
+                 val (e1, t1, j1) = get_mtype (ctx, e1)
+                 val x = case whnf_mt true gctx kctx t1 of
+                              TState x => x
+                            | t1 => raise Error (get_region_e e1, "map_get(e1, e2): type of e1 is wrong:" ::
+                                                    indent ["expect: state_field _",
+                                                            "got: " ^ str_mt gctxn skctxn t1])
+                 val t = st_types @!! x
+                 val t = case t of
+                             inl t => t
+                           | _ => raise Error (r, [sprintf "type of $ should be map, not vector" [str_st_key x]])
+                 val (e2, _, j2) = check_mtype (ctx, e2, TInt r)
+               in
+                 (EBinOp (opr, e1, e2), t, j1 %+ j2, st)
+               end
+             | EBVectorGet =>
+               let
+                 val r = U.get_region_e e_all
+                 val (e1, t1, j1) = get_mtype (ctx, e1)
+                 val x = case whnf_mt true gctx kctx t1 of
+                              TState x => x
+                            | t1 => raise Error (get_region_e e1, "vector_get(e1, e2): type of e1 is wrong:" ::
+                                                    indent ["expect: state_field _",
+                                                            "got: " ^ str_mt gctxn skctxn t1])
+                 val t = st_types @!! x
+                 val t = case t of
+                             inr t => t
+                           | _ => raise Error (r, [sprintf "type of $ should be vector, not map" [str_st_key x]])
+                 val len = case st @! x of
+                               SOME a => a
+                             | _ => raise Error (r, [sprintf "vector_get: state field $ must be in state spec" [str_st_key x]])
+                 val i = fresh_i gctx sctx (Base Nat) r
+                 val (e2, _, j2) = check_mtype (ctx, e2, TyNat (i, r))
+                 val () = write_lt (i, len, r)
+               in
+                 (EBinOp (opr, e1, e2), t, j1 %+ j2, st)
+               end
+             | EBVectorPushBack =>
+               let
+                 val r = U.get_region_e e_all
+                 val (e1, t1, j1) = get_mtype (ctx, e1)
+                 val x = case whnf_mt true gctx kctx t1 of
+                              TState x => x
+                            | t1 => raise Error (get_region_e e1, "push_back(e1, e2): type of e1 is wrong:" ::
+                                                    indent ["expect: state_field _",
+                                                            "got: " ^ str_mt gctxn skctxn t1])
+                 val t = st_types @!! x
+                 val t = case t of
+                             inr t => t
+                           | _ => raise Error (r, [sprintf "type of $ should be vector, not map" [str_st_key x]])
+                 val len = case st @! x of
+                               SOME a => a
+                             | _ => raise Error (r, [sprintf "push_back: state field $ must be in state spec" [str_st_key x]])
+                 val (e2, _, j2) = check_mtype (ctx, e2, t)
+               in
+                 (EBinOp (opr, e1, e2), TUnit r, j1 %+ j2, st @+ (x, len %+ T1 r))
+               end
           )
+        | U.EState x => (EState x, TState x, T0 r, st)
+        | U.ETriOp (ETVectorSet, e1, e2, e3) =>
+          let
+            val r = U.get_region_e e_all
+            val (e1, t1, j1) = get_mtype (ctx, e1)
+            val x = case whnf_mt true gctx kctx t1 of
+                        TState x => x
+                      | t1 => raise Error (get_region_e e1, "vector_set(e1, e2, e3): type of e1 is wrong:" ::
+                                                            indent ["expect: state_field _",
+                                                                    "got: " ^ str_mt gctxn skctxn t1])
+            val t = st_types @!! x
+            val t = case t of
+                        inr t => t
+                      | _ => raise Error (r, [sprintf "type of $ should be vector, not map" [str_st_key x]])
+            val len = case st @! x of
+                          SOME a => a
+                        | _ => raise Error (r, [sprintf "vector_set: state field $ must be in state spec" [str_st_key x]])
+                                     
+            val i = fresh_i gctx sctx (Base Nat) r
+            val (e2, _, j2) = check_mtype (ctx, e2, TyNat (i, r))
+            val () = write_lt (i, len, r)
+            val (e3, _, j3) = check_mtype (ctx, e3, t)
+          in
+            (ETriOp (ETVectorSet, e1, e2, e3), TUnit r, j1 %+ j2 %+ j3, st)
+          end
 	| U.ETriOp (ETWrite, e1, e2, e3) =>
           let
             val r = U.get_region_e e_all
