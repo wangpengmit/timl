@@ -990,14 +990,37 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
       | EBinOp (EBApp, e1, e2) =>
         let
           val (e1, t_e1, i1) = tc ctx e1
+          fun check_condition st pre_st =
+            app (fn k => check_prop $ st @!! k %= pre_st @!! k) $ domain pre_st
           val t_e1 = whnf itctx t_e1
-          val (t1, i, t2) = case t_e1 of
-                                TArrow data => data
-                              | _ => raise MTCError "EApp"
+          val (((t1, pre_st), i, (t2, post_st)), st) =
+              case t_e1 of
+                  TArrow (data as (t1, pre_st), i, (t2, post_st)) =>
+                  let
+                    val () = is_same_domain st pre_st
+                    val () = check_condition st pre_st
+                    val st = post_st
+                  in
+                    (data, st)
+                  end
+                | TQuanI (Forall, bind) =>
+                  let
+                    val ((_, s), t) = unBindAnno bind
+                    val () = is_eq_sort ictx (s, SState)
+                    val ((pre_st, _), _, _) = assert_TArrow t
+                    val () = check_submap pre_st st
+                    val t = subst0_i_t (IState $ st @@- pre_st)t
+                    val data as ((t1, pre_st), i, (t2, post_st)) = assert_TArrow t
+                    val () = check_condition st pre_st
+                    val st = st @@+ post_st
+                  in
+                    (data, st)
+                  end
+                | _ => raise MTCError "EApp"
           val (e2, i2) = tc_against_ty ctx (e2, t1)
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
         in
-          (EApp (e1, e2), t2, i1 %+ i2 %+ T1 %+ i)
+          (EApp (e1, e2), t2, i1 %+ i2 %+ T1 %+ i, st)
         end
       | EBinOp (EBPair, e1, e2) =>
         let
@@ -1146,15 +1169,15 @@ fun tc (ctx as (ictx, tctx, ectx : econtext)) e_input =
         in
           (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %+ IMax (i1, i2))
         end
-      | EAbs data =>
+      | EAbs (pre_st, bind) =>
         let
-          val (t1 : mtiml_ty, (name, e)) = unEAbs data
+          val pre_st = is_wf_state ictx pre_st
+          val (t1 : mtiml_ty, (name, e)) = unEAbs bind
           val t1 = kc_against_kind itctx (t1, KType)
-          val (e, t2, i) = tc (add_typing_full (fst name, t1) ctx) e
+          val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
           val e = if !anno_EAbs then e %: t2 |> i else e
-          val e = MakeEAbs (name, t1, e)
         in
-          (e, TArrow (t1, i, t2), T0)
+          (MakeEAbs (name, post_st, t1, e), TArrow ((t1, pre_st), i, (t2, post_st)), T0, st)
         end
       | ERec data =>
         let

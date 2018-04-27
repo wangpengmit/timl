@@ -9,6 +9,7 @@ signature EXPR_PARAMS = sig
   type ptrn_constr_tag
   type ty
   type kind
+  type state
 end
 
 functor ExprFn (Params : EXPR_PARAMS) = struct

@@ -373,15 +373,17 @@ fun compile ectx e =
       compile e1 @ 
       compile e2 @
       impl_nat_cmp opr
-    | EBinOp (EBMapGet, e1, e2) =>
+    | EBinOp (EBMapPtr, e1, e2) =>
       compile e1 @ 
       compile e2 @
-      [MACRO_map_ptr, SLOAD]
-    | ETriOp (ETMapSet, e1, e2, e3) =>
+      [MACRO_map_ptr]
+    | EUnOp (EUStorageGet, e) =>
+      compile e @ 
+      [SLOAD]
+    | EBinOp (ETStorageSet, e1, e2) =>
       compile e1 @ 
       compile e2 @
-      compile e3 @
-      [SWAP2, SWAP1, MACRO_map_ptr, SSTORE, PUSH1 WTT]
+      [SWAP1, SSTORE, PUSH1 WTT]
     | EBinOp (EBVectorGet, e1, e2) =>
       compile e1 @ 
       compile e2 @

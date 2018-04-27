@@ -25,14 +25,13 @@ datatype ty_bin_op =
          | TBSum
 
 structure Rctx = IntBinaryMap
-structure IMap = IntBinaryMap
                    
 (* type *)
 datatype ('var, 'bsort, 'idx, 'sort) ty =
          TVar of 'var * 'bsort kind list
          | TConst of ty_const
          | TBinOp of ty_bin_op * ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
-         | TArrow of ('idx IMap.map * ('var, 'bsort, 'idx, 'sort) ty) * ('idx (* * 'idx *)) * ('idx IMap.map * ('var, 'bsort, 'idx, 'sort) ty)
+         | TArrow of (('var, 'bsort, 'idx, 'sort) ty * 'idx) * ('idx (* * 'idx *)) * (('var, 'bsort, 'idx, 'sort) ty * 'idx)
          | TAbsI of ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno
          | TAppI of ('var, 'bsort, 'idx, 'sort) ty * 'idx
          | TQuan of unit Operators.quan * ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
@@ -76,7 +75,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EBinOp of expr_bin_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | ETriOp of expr_tri_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | ECase of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
-         | EAbs of ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno
+         | EAbs of 'idx * ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno
          | ERec of ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno
          | EAbsT of ('kind, ('var, 'idx, 'sort, 'kind, 'ty) expr) tbind_anno
          | EAppT of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty

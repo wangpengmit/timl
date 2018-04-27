@@ -222,7 +222,7 @@ fun on_e (e : S.expr) =
     (*   in *)
     (*     EAbs $ BindAnno ((name, t), e) *)
     (*   end *)
-    | S.EAbs bind =>
+    | S.EAbs (st, bind) =>
       (* delegate to ECase *)
       let
         val (pn, e) = unBind bind
@@ -233,7 +233,7 @@ fun on_e (e : S.expr) =
         val e = SMakeECase (SEV 0, [shift_e_rule (pn, e)])
         val e = on_e e
       in
-        EAbs $ BindAnno ((name, t), e)
+        EAbs (IState st, BindAnno ((name, t), e))
       end
     | S.EAbsI (bind, _) =>
       let

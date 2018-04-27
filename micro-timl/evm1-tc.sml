@@ -112,7 +112,7 @@ fun assert_TCell t =
         (case simp_i offset of
              IConst (ICNat n, _) =>
              (* todo: [ts] may contain embeded structs, so offset calculation may be more involved than this *)
-             (case List.nth ts n of
+             (case nth_error ts n of
                   SOME t => t
                 | NONE => err ())
            | _ => err ())

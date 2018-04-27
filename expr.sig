@@ -10,6 +10,7 @@ signature EXPR = sig
   type ptrn_constr_tag
   type ty
   type kind
+  type state
          
   type ptrn = (cvar * ptrn_constr_tag, mtype) Pattern.ptrn
                                               
@@ -31,7 +32,7 @@ signature EXPR = sig
            | EET of Operators.expr_ET * expr * mtype
            | ET of Operators.expr_T * mtype * Region.region
            | ENewArrayValues of mtype * expr list * Region.region
-	   | EAbs of (ptrn, expr) Unbound.bind
+	   | EAbs of state * (ptrn, expr) Unbound.bind
 	   | EAbsI of (sort, expr) Binders.ibind_anno * Region.region
 	   | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option
 	   | ECase of expr * return * (ptrn, expr) Unbound.bind list * Region.region
@@ -61,8 +62,10 @@ signature EXPR = sig
            | SpecIdx of name * sort
            | SpecType of name * kind
            | SpecTypeDef of name * mtype
-                                     
-  type sgn = spec list * Region.region
+
+  type state_decls = (string * (mtype, mtype) sum) list
+                                            
+  type sgn = state_decls * spec list * Region.region
   (* datatype sgn = *)
   (*          SigComponents of spec list * Region.region *)
   (*          | SigVar of id *)
@@ -74,7 +77,7 @@ signature EXPR = sig
   (* | Include of sgn *)
 
   datatype mod =
-           ModComponents of (* mod_comp *)decl list * Region.region
+           ModComponents of state_decls * decl list * Region.region
            (* | ModProjectible of mod_id *)
            | ModSeal of mod * sgn
            | ModTransparentAsc of mod * sgn

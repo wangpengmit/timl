@@ -991,6 +991,22 @@ fun get_prim_expr_bin_op_res_ty opr =
     | EBPBoolOr => Bool
     (* | EBPStrConcat => String *)
 
+fun assert_TCell got r t =
+  let
+    val (ts, offset) =
+        case t of
+            TTuplePtr a => a
+          | _ => raise Error (r, ["type mismatch:" ::
+                                  indent ["expect: tuple_ptr _",
+                                          "got: " ^ got ()]])
+    val t =
+        case nth_error ts offset of
+            SOME a => a
+          | _ => Error (r, ["tuple offset out of bound in type " ^ got ()])
+  in
+    t
+  end
+    
 fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : state, cctx : ccontext, tctx : tcontext), e_all : U.expr) : expr * (state * mtype) * (idx (* * idx *)) =
   let
     val get_mtype = get_mtype gctx
@@ -1128,6 +1144,15 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
                in
                  (EUnOp (opr, e, r), MtVar $ QID $ qid_add_r r SOME_NAT_ID, d)
                end
+             | EUStorageGet =>
+               let
+                 val r = U.get_region_e e_all
+                 val (e, t, j) = check_mtype (ctx, e)
+                 val t = whnf_mt true gctx kctx t
+                 val t = assert_TCell (fn () => str_mt gctxn skctxn t) r t
+               in
+                 (EUnOp (opr, e, r), t, j)
+               end
           )
 	| U.EBinOp (opr, e1, e2) =>
           (case opr of
@@ -1140,14 +1165,26 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
 	       end
 	     | EBApp =>
 	       let
-                 val (e2, t2, d2) = get_mtype (ctx, e2)
-                 val r = U.get_region_e e1
-                 val d = fresh_i gctx sctx (Base Time) r
-                 val t = fresh_mt gctx (sctx, kctx) r
-                 val (e1, _, d1) = check_mtype (ctx, e1, Arrow (t2, d, t))
-                 val ret = (EApp (e1, e2), t, d1 %+ d2 %+ T1 dummy %+ d) 
+                 val r1 = get_region_e e1
+                 val (e1, t1, d1) = get_mtype (ctx, e1)
+                 val ((t2, pre_st), d, (t, post_st)) =
+                     case whnf_mt true gctx kctx t1 of
+                         Arrow a => a
+                       | t1 => raise Error (r1, ["type mismatch:" ::
+                                               indent ["expect: _ -- _ --> _",
+                                                       "got: " ^ str_mt gctxn skctxn t1]])
+                 val (e2, _, d2) = check_mtype (ctx, e2, t2)
+                 fun check_submap pre_st st =
+                   let
+                     val pre_st_minus_st = pre_st @@- st
+                   in
+                     if size pre_st_minus_st = 0 then ()
+                     else raise Error (r1, ["these state fields are required by the function by missing in current state:", str_ls str_st_key $ domain pre_st_minus_st])
+                   end
+                 val () = app (fn k => write_prop (st @!! k %= pre_st @!! k, r1)) $ domain pre_st
+                 val st = st @@+ post_st
                in
-                 ret
+                 (EApp (e1, e2), t, d1 %+ d2 %+ T1 r1 %+ d, st) 
 	       end
 	     | EBNew =>
                let
@@ -1197,7 +1234,7 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
                in
                  (EBinOp (EBNatCmp opr, e1, e2), TiBool (interp_nat_cmp r opr (i1, i2), r), d1 %+ d2)
                end
-             | EBMapGet =>
+             | EBMapPtr =>
                let
                  val r = U.get_region_e e_all
                  val (e1, t1, j1) = get_mtype (ctx, e1)
@@ -1255,6 +1292,16 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
                  val (e2, _, j2) = check_mtype (ctx, e2, t)
                in
                  (EBinOp (opr, e1, e2), TUnit r, j1 %+ j2, st @+ (x, len %+ T1 r))
+               end
+             | EBStorageSet =>
+               let
+                 val r = U.get_region_e e_all
+                 val (e1, t1, j1) = check_mtype (ctx, e1)
+                 val t1 = whnf_mt true gctx kctx t1
+                 val t = assert_TCell (fn () => str_mt gctxn skctxn t1) (get_region_e e1) t1
+                 val (e2, _, j2) = check_mtype (ctx, e2, t)
+               in
+                 (EBinOp (opr, e1, e2), TUnit r, j1 %+ j2, st)
                end
           )
         | U.EState x => (EState x, TState x, T0 r, st)
@@ -1390,8 +1437,9 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
           in
             (ENewArrayValues (t, es, r), TyArray (t, ConstIN (length es, r)), d)
           end
-	| U.EAbs bind => 
+	| U.EAbs (pre_st, bind) => 
 	  let
+            val pre_st = is_wf_state gctx sctx pre_st
             val (pn, e) = Unbound.unBind bind
             val r = U.get_region_pn pn
             val t = fresh_mt gctx (sctx, kctx) r
@@ -1399,13 +1447,14 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
             val (pn, cover, ctxd, nps (* number of premises *)) = match_ptrn gctx (skcctx, pn, t)
 	    val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
             val ctx = add_ctx ctxd ctx
-	    val (e, t1, d) = get_mtype (ctx, e)
+	    val (e, t1, d, post_st) = get_mtype (ctx, e, shift_ctx_st ctxd pre_st)
 	    val t1 = forget_ctx_mt (get_region_e e) gctx ctx ctxd t1 
             val d = forget_ctx_d (get_region_e e) gctx ctx ctxd d
+            val post_st = forget_ctx_st (get_region_e e) gctx ctx ctxd post_st
             val () = close_n nps
             val () = close_ctx ctxd
           in
-	    (EAbs $ Unbound.Bind (AnnoP (pn, Outer t), e), Arrow (t, d, t1), T0 dummy)
+	    (EAbs (pre_st, Unbound.Bind (AnnoP (pn, Outer t), e)), Arrow ((t, pre_st), d, (t1, post_st)), T0 dummy, st)
 	  end
 	| U.ELet (return, bind, r) => 
 	  let
@@ -2136,7 +2185,7 @@ fun is_sub_sig r gctx ctx ctx' =
     ()
   end
     
-fun is_wf_sig gctx (specs, r) =
+fun is_wf_sig gctx (state_decls, specs, r) =
   let
     fun is_wf_spec (ctx as (sctx, kctx, _, _)) spec =
       case spec of
@@ -2199,13 +2248,14 @@ fun is_wf_sig gctx (specs, r) =
 
 fun get_sig gctx m =
   case m of
-      U.ModComponents (decls, r) =>
+      U.ModComponents (state_decls, decls, r) =>
       let
-        val (decls, ctxd, nps, ds, _) = check_decls gctx (empty_ctx, decls)
+        val (state_decls, st_types) = check_state_decls state_decls 
+        val (decls, ctxd, nps, ds, _) = check_decls gctx st_types (empty_ctx, decls)
         val () = close_n nps
         val () = close_ctx ctxd
       in
-        (ModComponents (decls, r), ctxd)
+        (ModComponents (state_decls, decls, r), (st_types, ctxd))
       end
     | U.ModSeal (m, sgn) =>
       let

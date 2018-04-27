@@ -24,7 +24,7 @@ signature TYPE = sig
 
   (* monotypes *)
   datatype mtype = 
-	   Arrow of (state * mtype) * (idx (* * idx *)) * (state * mtype)
+	   Arrow of (mtype * state) * (idx (* * idx *)) * (mtype * state)
            | TyNat of idx * region
            | TiBool of idx * region
            | TyArray of mtype * idx
