@@ -103,19 +103,16 @@ fun is_tuple_offset num_fields n =
     | NONE => NONE
 
 (* fun TCell t = TTuplePtr ([t], N0) *)
-fun assert_TCell t =
+fun assert_TCell (ts, offset) =
   let
     fun err () = raise Impossible "assert_TCell"
   in
-    case t of
-        TTuplePtr (ts, offset) =>
-        (case simp_i offset of
-             IConst (ICNat n, _) =>
-             (* todo: [ts] may contain embeded structs, so offset calculation may be more involved than this *)
-             (case nth_error ts n of
-                  SOME t => t
-                | NONE => err ())
-           | _ => err ())
+    case simp_i offset of
+        IConst (ICNat n, _) =>
+        (* todo: [ts] may contain embeded structs, so offset calculation may be more involved than this *)
+        (case nth_error ts n of
+             SOME t => t
+           | NONE => err ())
       | _ => err ()
   end
     
@@ -508,14 +505,14 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
             case t1 of
                 TNat i =>
                 let
-                  val t = assert_inl $ must_find st_types $ assert_INat $ simp_i i
+                  val t = assert_TMap $ must_find st_types $ assert_INat $ simp_i i
                 in
                   t
                 end
-              | _ => assert_TMap $ assert_TCell t1
+              | _ => assert_TMap t1
         val () = assert_TInt t0
       in
-        ((itctx, rctx, (* TCell  *)t :: sctx), T0)
+        ((itctx, rctx, t :: sctx), T0)
       end
     | MACRO_vector_ptr =>
       let
@@ -530,7 +527,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
         val (t0, t1, sctx) = assert_cons2 sctx
         val vec = assert_INat $ simp_i $ assert_TNat t1
         val len = st @!! vec
-        val t = assert_inr $ st_types @!! vec
+        val t = assert_TVector $ st_types @!! vec
         val () = is_eq_ty ictx (t0, t)
       in
         ((itctx, rctx, sctx, st @+ (vec, len %+ N1)), T0)
@@ -544,7 +541,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
                 TVectorPtr (vec, offset) =>
                 let
                   val len = st @!! vec
-                  val t = assert_inr $ st_types @!! vec
+                  val t = assert_TVector $ st_types @!! vec
                   val () = check_prop ictx (offset %< len)
                 in
                   t
@@ -553,13 +550,13 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
                 let
                   val vec = assert_INat $ simp_i i
                   val len = st @!! vec
-                  val _ = assert_inr $ st_types @!! vec
+                  val _ = assert_TVector $ st_types @!! vec
                 in
                   TNat len
                 end
-              | TTuplePtr _ =>
+              | TTuplePtr data =>
                 let
-                  val t = assert_TCell t0
+                  val t = assert_TCell data
                   val () = assert_wordsize_type t
                 in
                   t
@@ -577,7 +574,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
                 TVectorPtr (vec, offset) =>
                 let
                   val len = st @!! vec
-                  val t = assert_inr $ st_types @!! vec
+                  val t = assert_TVector $ st_types @!! vec
                   val () = check_prop ictx (offset %< len)
                   val () = is_eq_ty itctx (t1, t)
                 in
@@ -586,15 +583,15 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
               | TNat i =>
                 let
                   val vec = assert_INat $ simp_i i
-                  val _ = assert_inr $ st_types @!! vec
+                  val _ = assert_TVector $ st_types @!! vec
                   val new = assert_TNat t1
                   val () = check_prop ictx (new %= N0)
                 in
                   (TNat len, st @+ (vec, N0))
                 end
-              | TTuplePtr _ =>
+              | TTuplePtr data =>
                 let
-                  val t = assert_TCell t0
+                  val t = assert_TCell data
                   val () = assert_wordsize_type t
                   val () = is_eq_ty itctx (t1, t)
                 in

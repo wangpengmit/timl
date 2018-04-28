@@ -99,6 +99,8 @@ fun check_sorts gctx (ctx, is : U.idx list, sorts, r) : idx list =
   (check_length r (is, sorts);
    ListPair.map (fn (i, s) => check_sort gctx (ctx, i, s)) (is, sorts))
 
+fun is_wf_state gctx ctx m = StMap.map (fn i => check_sort gctx (ctx, i, SNat $ get_region_i i)) m
+
 fun is_wf_kind (k : U.kind) = mapSnd (map is_wf_bsort) k
 
 (* k => Type *)
@@ -157,10 +159,10 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
     (* val () = print (sprintf "Kinding $\n" [U.str_mt gctxn ctxn c]) *)
     fun main () =
       case c of
-	  U.Arrow (c1, d, c2) => 
-	  (Arrow (check_higher_kind_Type (ctx, c1),
+	  U.Arrow ((c1, st1), d, (c2, st2)) => 
+	  (Arrow ((check_higher_kind_Type (ctx, c1), is_wf_state gctx sctx st1),
 	          check_bsort gctx (sctx, d, Base Time),
-	          check_higher_kind_Type (ctx, c2)),
+	          (check_higher_kind_Type (ctx, c2), is_wf_state gctx sctx st2)),
            HType)
         | U.TyArray (t, i) =>
 	  (TyArray (check_higher_kind_Type (ctx, t),
@@ -1007,7 +1009,7 @@ fun assert_TCell got r t =
     t
   end
     
-fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : state, cctx : ccontext, tctx : tcontext), e_all : U.expr) : expr * (state * mtype) * (idx (* * idx *)) =
+fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, st : state, cctx : ccontext, tctx : tcontext), e_all : U.expr) : expr * (state * mtype) * (idx (* * idx *)) =
   let
     val get_mtype = get_mtype gctx
     val check_mtype = check_mtype gctx
@@ -1017,6 +1019,7 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
     val check_decls = check_decls gctx
     val check_rule = check_rule gctx
     val check_rules = check_rules gctx
+    val st_types = !st_types_ref
     val skctx = (sctx, kctx)
     val gctxn = gctx_names gctx
     val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names ctx
@@ -1238,15 +1241,17 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
                let
                  val r = U.get_region_e e_all
                  val (e1, t1, j1) = get_mtype (ctx, e1)
-                 val x = case whnf_mt true gctx kctx t1 of
-                              TState x => x
-                            | t1 => raise Error (get_region_e e1, "map_get(e1, e2): type of e1 is wrong:" ::
-                                                    indent ["expect: state_field _",
-                                                            "got: " ^ str_mt gctxn skctxn t1])
-                 val t = st_types @!! x
-                 val t = case t of
-                             inl t => t
-                           | _ => raise Error (r, [sprintf "type of $ should be map, not vector" [str_st_key x]])
+                 val t1 = whnf_mt true gctx kctx t1
+                 fun err () =
+                     raise Error (get_region_e e1, "map_get(e1, e2): type of e1 is wrong:" ::
+                                                   indent ["expect: state_field _",
+                                                           "got: " ^ str_mt gctxn skctxn t1])
+                 val t = case t1 of
+                             TState x =>
+                             (case st_types @!! x of
+                                  TMap a => a
+                                | _ => raise Error (r, [sprintf "type of $ should be map, not vector" [str_st_key x]]))
+                           | _ => assert_TMap err $ assert_TCell err t1
                  val (e2, _, j2) = check_mtype (ctx, e2, TInt r)
                in
                  (EBinOp (opr, e1, e2), t, j1 %+ j2, st)
@@ -1262,7 +1267,7 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
                                                             "got: " ^ str_mt gctxn skctxn t1])
                  val t = st_types @!! x
                  val t = case t of
-                             inr t => t
+                             TVector t => t
                            | _ => raise Error (r, [sprintf "type of $ should be vector, not map" [str_st_key x]])
                  val len = case st @! x of
                                SOME a => a
@@ -1284,7 +1289,7 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
                                                             "got: " ^ str_mt gctxn skctxn t1])
                  val t = st_types @!! x
                  val t = case t of
-                             inr t => t
+                             TVector t => t
                            | _ => raise Error (r, [sprintf "type of $ should be vector, not map" [str_st_key x]])
                  val len = case st @! x of
                                SOME a => a
@@ -1316,12 +1321,11 @@ fun get_mtype gctx st_types (ctx as (sctx : scontext, kctx : kcontext, st : stat
                                                                     "got: " ^ str_mt gctxn skctxn t1])
             val t = st_types @!! x
             val t = case t of
-                        inr t => t
+                        TVector t => t
                       | _ => raise Error (r, [sprintf "type of $ should be vector, not map" [str_st_key x]])
             val len = case st @! x of
                           SOME a => a
                         | _ => raise Error (r, [sprintf "vector_set: state field $ must be in state spec" [str_st_key x]])
-                                     
             val i = fresh_i gctx sctx (Base Nat) r
             val (e2, _, j2) = check_mtype (ctx, e2, TyNat (i, r))
             val () = write_lt (i, len, r)
@@ -2185,7 +2189,7 @@ fun is_sub_sig r gctx ctx ctx' =
     ()
   end
     
-fun is_wf_sig gctx (state_decls, specs, r) =
+fun is_wf_sig gctx (specs, r) =
   let
     fun is_wf_spec (ctx as (sctx, kctx, _, _)) spec =
       case spec of
@@ -2248,14 +2252,13 @@ fun is_wf_sig gctx (state_decls, specs, r) =
 
 fun get_sig gctx m =
   case m of
-      U.ModComponents (state_decls, decls, r) =>
+      U.ModComponents (decls, r) =>
       let
-        val (state_decls, st_types) = check_state_decls state_decls 
         val (decls, ctxd, nps, ds, _) = check_decls gctx st_types (empty_ctx, decls)
         val () = close_n nps
         val () = close_ctx ctxd
       in
-        (ModComponents (state_decls, decls, r), (st_types, ctxd))
+        (ModComponents (state_decls, decls, r), ctxd)
       end
     | U.ModSeal (m, sgn) =>
       let
@@ -2274,6 +2277,16 @@ fun get_sig gctx m =
         (ModTransparentAsc (m, sgn), sg')
       end
 
+fun is_wf_map_value t =
+    case t of
+        TMap t => is_wf_map_value t
+      | TTuplePtr (ts, offset) => all ts are words
+                                      
+fun is_wf_state_ty t =
+      case t of
+          TMap t => is_wf_map_value t
+        | TVector t => t is word
+        
 fun check_top_bind gctx (name, bind) =
   let
     val gctxd = 
@@ -2309,6 +2322,14 @@ fun check_top_bind gctx (name, bind) =
               val formal_arg = link_sig (snd m) gctx m formal_arg
             in
               (TopFunctorApp (f, m), [(name, Sig body), (formal_arg_name, Sig formal_arg)])
+            end
+          | U.TBState (name, (is_map, t)) =>
+            let
+              val t = check_kind_Type Gctx.empty (empty_ctx, te)
+              val () = is_wf_state_st (is_map, t)
+              val () = add_ref st_types_ref (name, (is_map, t))
+            in
+              TBState (name, (is_map, t))
             end
     (* val () = println $ sprintf "Typechecked program:" [] *)
     (* val () = app println $ map fst gctxd *)
@@ -2358,7 +2379,7 @@ fun get_dependency_graph gctx = Gctx.map (SU.to_set o collect_mod_sgntr) gctx
 structure TopoSort = TopoSortFn (structure M = Gctx
                                  structure S = S
                                 )
-                                
+
 fun check_prog gctx (binds : U.prog) =
     let
       (* val () = println "Begin check_prog()" *)
