@@ -9,7 +9,6 @@ signature EXPR_PARAMS = sig
   type ptrn_constr_tag
   type ty
   type kind
-  type state
 end
 
 functor ExprFn (Params : EXPR_PARAMS) = struct
@@ -34,6 +33,7 @@ type scoping_ctx = ibinder list * tbinder list * cbinder list * ebinder list
 datatype expr =
 	 EVar of var * bool(*explicit index arguments (EIA)*)
          | EConst of expr_const * region
+         | EState of string
          | EUnOp of expr_un_op * expr * region
          | EBinOp of expr_bin_op * expr * expr
 	 | ETriOp of expr_tri_op * expr * expr * expr
@@ -41,7 +41,7 @@ datatype expr =
          | EET of expr_ET * expr * mtype
          | ET of expr_T * mtype * region
          | ENewArrayValues of mtype * expr list * region
-	 | EAbs of (ptrn, expr) bind
+	 | EAbs of idx StMap.map * (ptrn, expr) bind
 	 | EAbsI of (sort, expr) ibind_anno * region
 	 | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option
 	 | ECase of expr * return * (ptrn, expr) bind list * region
@@ -96,6 +96,7 @@ datatype top_bind =
          (* | TopModSpec of name * sgn *)
          | TopFunctorBind of (name * sgn) (* list *) * mod
          | TopFunctorApp of mod_id * mod_id (* list *)
+         | TBState of string * (bool * mtype)
 
 type prog = (name * top_bind) list
 

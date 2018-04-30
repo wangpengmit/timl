@@ -74,7 +74,7 @@ fun collect_EAppT e =
     | _ => (e, [])
 
 fun MakeAnnoP (pn, t) = AnnoP (pn, Outer t)
-fun MakeEAbs (pn, e) = EAbs $ Binders.Bind (pn, e)
+fun MakeEAbs (st, pn, e) = EAbs (st, Binders.Bind (pn, e))
 fun MakeEAbsI (name, s, e, r) = EAbsI (IBindAnno ((name, s), e), r)
 fun MakeDIdxDef (name, s, i) = DIdxDef (IBinder name, Outer s, Outer i)
 fun MakeDVal (ename, tnames, e, r) = DVal (EBinder ename, Outer $ Unbound.Bind (map TBinder tnames, e), Outer r)

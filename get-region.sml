@@ -69,7 +69,7 @@ infixr 0 $
          
 fun get_region_mt t = 
   case t of
-      Arrow (t1, d, t2) => combine_region (get_region_mt t1) (get_region_mt t2)
+      Arrow ((_, t1), d, (_, t2)) => combine_region (get_region_mt t1) (get_region_mt t2)
     | TyNat (_, r) => r
     | TiBool (_, r) => r
     | TyArray (t, i) => combine_region (get_region_mt t) (get_region_i i)
@@ -134,7 +134,7 @@ fun get_region_e e =
     | EET (_, e, t) => combine_region (get_region_e e) (get_region_mt t)
     | ET (_, _, r) => r
     | ENewArrayValues (_, _, r) => r
-    | EAbs bind => get_region_bind get_region_pn get_region_e bind
+    | EAbs (_, bind) => get_region_bind get_region_pn get_region_e bind
     | EAbsI (_, r) => r
     | EAppConstr ((x, _), _, _, e, _) => combine_region (get_region_cvar x) (get_region_e e)
     | ECase (_, _, _, r) => r

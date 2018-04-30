@@ -110,7 +110,7 @@ fun constr_type (VarT : int LongId.long_id -> mtype) shiftx_long_id ((family, tb
     val (ns, (t, is)) = unfold_binds ibinds
     val ts = map (fn x => VarT (ID (x, dummy))) $ rev $ range $ length tnames
     val t2 = AppV (shiftx_long_id 0 (length tnames) family, ts, is, dummy)
-    val t = Arrow (t, T0 dummy, t2)
+    val t = PureArrow (t, T0 dummy, t2)
     val t = foldr (fn ((name, s), t) => UniI (s, Bind (name, t), dummy)) t ns
     val t = Mono t
     val t = foldr (fn (name, t) => Uni (Bind (name, t), dummy)) t tnames

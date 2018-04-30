@@ -10,7 +10,6 @@ signature EXPR = sig
   type ptrn_constr_tag
   type ty
   type kind
-  type state
          
   type ptrn = (cvar * ptrn_constr_tag, mtype) Pattern.ptrn
                                               
@@ -25,6 +24,7 @@ signature EXPR = sig
   datatype expr =
 	   EVar of var * bool(*explicit index arguments (EIA)*)
            | EConst of Operators.expr_const * Region.region
+           | EState of string
            | EUnOp of Operators.expr_un_op * expr * Region.region
            | EBinOp of Operators.expr_bin_op * expr * expr
 	   | ETriOp of Operators.expr_tri_op * expr * expr * expr
@@ -32,7 +32,7 @@ signature EXPR = sig
            | EET of Operators.expr_ET * expr * mtype
            | ET of Operators.expr_T * mtype * Region.region
            | ENewArrayValues of mtype * expr list * Region.region
-	   | EAbs of state * (ptrn, expr) Unbound.bind
+	   | EAbs of idx StMap.map * (ptrn, expr) Unbound.bind
 	   | EAbsI of (sort, expr) Binders.ibind_anno * Region.region
 	   | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option
 	   | ECase of expr * return * (ptrn, expr) Unbound.bind list * Region.region
@@ -63,9 +63,7 @@ signature EXPR = sig
            | SpecType of name * kind
            | SpecTypeDef of name * mtype
 
-  type state_decls = (string * (mtype, mtype) sum) list
-                                            
-  type sgn = state_decls * spec list * Region.region
+  type sgn = spec list * Region.region
   (* datatype sgn = *)
   (*          SigComponents of spec list * Region.region *)
   (*          | SigVar of id *)
@@ -77,7 +75,7 @@ signature EXPR = sig
   (* | Include of sgn *)
 
   datatype mod =
-           ModComponents of state_decls * decl list * Region.region
+           ModComponents of decl list * Region.region
            (* | ModProjectible of mod_id *)
            | ModSeal of mod * sgn
            | ModTransparentAsc of mod * sgn

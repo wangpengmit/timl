@@ -1,4 +1,5 @@
-structure IMap = IntBinaryMap
+structure StMap = StringBinaryMap
+structure StMapU = MapUtilFn (StMap)
                    
 signature TYPE = sig
 
@@ -20,11 +21,9 @@ signature TYPE = sig
 
   type 'mtype datatype_def = (name(*for datatype self-reference*) * (unit, name, bsort list * 'mtype constr_decl list) Bind.tbinds) Bind.tbind
 
-  type state = idx IMap.map
-
   (* monotypes *)
   datatype mtype = 
-	   Arrow of (mtype * state) * (idx (* * idx *)) * (mtype * state)
+	   Arrow of (idx StMap.map * mtype) * (idx (* * idx *)) * (idx StMap.map * mtype)
            | TyNat of idx * region
            | TiBool of idx * region
            | TyArray of mtype * idx
@@ -40,6 +39,9 @@ signature TYPE = sig
            | UVar of (bsort, kind, mtype) uvar_mt * region
            | TDatatype of mtype datatype_def * region
            | TSumbool of sort * sort
+           | TMap of mtype
+           | TState of string
+           | TTuplePtr of mtype list * int
 
   datatype ty = 
 	   Mono of mtype

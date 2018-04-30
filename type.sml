@@ -23,7 +23,7 @@ type 'mtype datatype_def = (name(*for datatype self-reference*) * (unit, name, I
 
 (* monotypes *)
 datatype mtype = 
-	 Arrow of mtype * idx * mtype
+	 Arrow of (idx StMap.map * mtype) * (idx (* * idx *)) * (idx StMap.map * mtype)
          | TyNat of idx * region
          | TiBool of idx * region
          | TyArray of mtype * idx
@@ -39,6 +39,9 @@ datatype mtype =
          | UVar of (bsort, kind, mtype) uvar_mt * region
          | TDatatype of mtype datatype_def * region
          | TSumbool of sort * sort
+         | TMap of mtype
+         | TState of string
+         | TTuplePtr of mtype list * int
 
 datatype ty = 
 	 Mono of mtype

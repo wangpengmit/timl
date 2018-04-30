@@ -42,6 +42,8 @@ open BaseTypes
 open Bind
 
 infixr 0 $
+infix  9 @!!
+fun m @!! k = StMapU.must_find m k
        
 fun eq_option eq (a, a') =
   case (a, a') of
@@ -129,12 +131,14 @@ fun eq_ls eq (ls1, ls2) = length ls1 = length ls2 andalso List.all eq $ zip (ls1
                                                               
 fun eq_k ((n, sorts) : kind) (n', sorts') =
   n = n' andalso eq_ls (uncurry eq_bs) (sorts, sorts')
+
+fun eq_state st st' = StMapU.is_same_domain st st' andalso List.all (fn (k, v) => eq_i v $ st' @!! k) $ StMap.listItemsi st
   
 fun eq_mt t t' = 
     case t of
-	Arrow (t1, i, t2) =>
+	Arrow ((st1, t1), i, (st2, t2)) =>
         (case t' of
-	     Arrow (t1', i', t2') => eq_mt t1 t1' andalso eq_i i i' andalso eq_mt t2 t2'
+	     Arrow ((st1', t1'), i', (st2', t2')) => eq_state st1 st1' andalso eq_mt t1 t1' andalso eq_i i i' andalso eq_state st2 st2' andalso eq_mt t2 t2'
            | _ => false
         )
       | TyNat (i, r) =>

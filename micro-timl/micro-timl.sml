@@ -31,7 +31,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          TVar of 'var * 'bsort kind list
          | TConst of ty_const
          | TBinOp of ty_bin_op * ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
-         | TArrow of (('var, 'bsort, 'idx, 'sort) ty * 'idx) * ('idx (* * 'idx *)) * (('var, 'bsort, 'idx, 'sort) ty * 'idx)
+         | TArrow of ('idx * ('var, 'bsort, 'idx, 'sort) ty) * ('idx (* * 'idx *)) * ('idx * ('var, 'bsort, 'idx, 'sort) ty)
          | TAbsI of ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno
          | TAppI of ('var, 'bsort, 'idx, 'sort) ty * 'idx
          | TQuan of unit Operators.quan * ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno

@@ -203,14 +203,14 @@ micro-timl/micro-timl-locally-nameless.sml
 micro-timl/compiler-util.sml
 micro-timl/cps.sml
 micro-timl/cc.sml
-micro-timl/pair-alloc.sml
-micro-timl/tital.sml
-micro-timl/tital-visitor.sml
-micro-timl/tital-pp.sml
-micro-timl/tital-export-pp.sml
-micro-timl/tital-tc.sml
-micro-timl/tital-eval.sml
-micro-timl/code-gen.sml
+# micro-timl/pair-alloc.sml
+# micro-timl/tital.sml
+# micro-timl/tital-visitor.sml
+# micro-timl/tital-pp.sml
+# micro-timl/tital-export-pp.sml
+# micro-timl/tital-tc.sml
+# micro-timl/tital-eval.sml
+# micro-timl/code-gen.sml
 micro-timl/evm1.sml
 micro-timl/evm1-visitor.sml
 micro-timl/evm1-pp.sml

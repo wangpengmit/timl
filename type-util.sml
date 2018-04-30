@@ -94,6 +94,7 @@ fun get_constr_names t =
 fun Uni_Many (names, t, r) = foldr (fn (name, t) => (Uni (Bind (name, t), r))) t names
 
 fun MakeUniI (s, name, t, r) = UniI (s, Bind.Bind (name, t), r)
-                                   
-end
 
+fun PureArrow (t1, i, t2) = Arrow ((StMap.empty, t1), i, (StMap.empty, t2))
+                         
+end

@@ -9,7 +9,7 @@ open SimpUtil
          
 fun simp_mt t =
   case t of
-      Arrow (t1, d, t2) => Arrow (simp_mt t1, simp_i d, simp_mt t2)
+      Arrow ((st1, t1), d, (st2, t2)) => Arrow ((StMap.map simp_i st1, simp_mt t1), simp_i d, (StMap.map simp_i st2, simp_mt t2))
     | TyNat (i, r) => TyNat (simp_i i, r)
     | TiBool (i, r) => TiBool (simp_i i, r)
     | TyArray (t, i) => TyArray (simp_mt t, simp_i i)
