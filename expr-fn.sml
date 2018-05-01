@@ -26,7 +26,7 @@ type return = mtype option * idx option
                                  
 datatype stbind =
          SortingST of ibinder * sort outer
-         | TypingST of ptrn
+         | TypingST of idx StMap.map inner * ptrn
 
 type scoping_ctx = ibinder list * tbinder list * cbinder list * ebinder list
      

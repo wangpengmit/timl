@@ -1660,25 +1660,28 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
         | U.EIfi (e, bind1, bind2, r) =>
           let
             val i = fresh_i gctx sctx (Base BoolSort) r
-            val (e, j_e) = check_mtype (ctx, e, TiBool (i, r))
+            val (e, j_e, st) = check_mtype (ctx, st) (e, TiBool (i, r))
             val (iname1, e1) = unBindSimpName bind1
             val (iname2, e2) = unBindSimpName bind2
             val s1 = Subset_from_prop r $ i %= TrueI r
             val s2 = Subset_from_prop r $ i %= FalseI r
-            val (e1, t1, j1) = open_close add_sorting_skct (fst iname1, s1) ctx (fn ctx => get_mtype (ctx, e1))
+            val (e1, t1, j1, st1) = open_close add_sorting_skcts (fst iname1, s1) (ctx, st) (fn ctx_st => get_mtype ctx_st e1)
             val ctxd = ctx_from_sorting (fst iname1, s1)
-            val ctx' = add_sorting_skct (fst iname1, s1) ctx
-            val (t1, j1) = forget_or_check_return r gctx ctx' ctxd (t1, j1) (NONE, NONE)
-            val (e2, t2, j2) = open_close add_sorting_skct (fst iname2, s2) ctx (fn ctx => get_mtype (ctx, e2))
+            val skctx' = add_sorting_sk (fst iname1, s1) (#1 ctx, #2 ctx)
+            val (t1, j1) = forget_or_check_return r gctx skctx' ctxd (t1, j1) (NONE, NONE)
+            val st1 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st1
+            val (e2, t2, j2, st2) = open_close add_sorting_skcts (fst iname2, s2) (ctx, st) (fn ctx_st => get_mtype ctx_st e2)
             val ctxd = ctx_from_sorting (fst iname2, s2)
-            val ctx' = add_sorting_skct (fst iname2, s2) ctx
-            val (t2, j2) = forget_or_check_return r gctx ctx' ctxd (t2, j2) (NONE, NONE)
+            val skctx' = add_sorting_sk (fst iname2, s2) (#1 ctx, #2 ctx)
+            val (t2, j2) = forget_or_check_return r gctx skctx' ctxd (t2, j2) (NONE, NONE)
+            val st2 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st2
             val () = unify_mt r gctx (sctx, kctx) (t2, t1)
+            val () = unify_state r gctx sctx (st2, st1)
           in
-            (EIfi (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %+ smart_max j1 j2)
+            (EIfi (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %+ smart_max j1 j2, st1)
           end
     fun extra_msg () = ["when typechecking"] @ indent [US.str_e gctxn ctxn e_all]
-    val (e, t, d) = main ()
+    val (e, t, d, st) = main ()
     handle
     Error (r, msg) => raise Error (r, msg @ extra_msg ())
     | Impossible msg => raise Impossible $ join_lines $ msg :: extra_msg ()
@@ -1690,7 +1693,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     (* val () = print (sprintf "  type: $ [for $]\n  time: $\n" [str_mt gctxn skctxn t, str_e gctxn ctxn e, str_i gctxn sctxn d]) *)
     (* val () = print (sprintf "  type: $\n" [str_mt gctxn skctxn t]) *)
   in
-    (e, t, d)
+    (e, t, d, st)
   end
 
 and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
@@ -1736,7 +1739,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val (tnames, e) = Unbound.unBind bind
               val tnames = map unBinderName tnames
               val is_value = is_value e
-              val (e, t, d) = get_mtype (add_kindings_skct (zip ((rev o map fst) tnames, repeat (length tnames) Type)) ctx, e)
+              val (e, t, d, st) = get_mtype (add_kindings_skct (zip ((rev o map fst) tnames, repeat (length tnames) Type)) ctx, st) e
               fun ty2mtype t = snd $ collect_Uni t
             in
               if is_value then 
@@ -1749,22 +1752,23 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                   val poly_t = Uni_Many (tnames, poly_t, r)
                   val tnames = tnames @ rev free_uvar_names
                 in
-                  (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, ty2mtype poly_t)), Outer r), ctx_from_typing (name, poly_t), 0, [d])
+                  (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, ty2mtype poly_t)), Outer r), ctx_from_typing (name, poly_t), 0, [d], st)
                 end
               else if length tnames = 0 then
-                (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, t)), Outer r), ctx_from_typing (name, Mono t), 0, [d])
+                (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, t)), Outer r), ctx_from_typing (name, Mono t), 0, [d], st)
               else
                 raise Error (r, ["explicit type variable cannot be generalized because of value restriction"])
             end
           | U.DValPtrn (pn, Outer e, Outer r) =>
             let 
               val skcctx = (sctx, kctx, cctx) 
-              val (e, t, d) = get_mtype (ctx, e)
+              val (e, t, d, st) = get_mtype (ctx, st) e
               val (pn, cover, ctxd, nps) = match_ptrn gctx (skcctx, pn, t)
               val d = shift_ctx_i ctxd d
+              val st = StMap.map (shift_ctx_i ctxd) st
 	      val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
             in
-              (DValPtrn (pn, Outer e, Outer r), ctxd, nps, [d])
+              (DValPtrn (pn, Outer e, Outer r), ctxd, nps, [d], st)
             end
 	  | U.DRec (name, bind, Outer r) =>
             (* a version that delegates most of the work to EAbs and EAbsI *)
@@ -1778,7 +1782,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               fun attach_bind_e (bind, e) =
                 case bind of
                     U.SortingST (name, Outer s) => U.MakeEAbsI (unBinderName name, s, e, r)
-                  | U.TypingST pn => U.MakeEAbs (pn, e)
+                  | U.TypingST (st, pn) => U.MakeEAbs (unInner st, pn, e)
               val e = foldr attach_bind_e e binds
               fun type_from_ptrn pn =
                 case pn of
@@ -1800,7 +1804,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               (* val () = println $ sprintf "te[pre] = $" [US.str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
 	      val te = check_kind_Type gctx ((sctx, kctx), te)
               (* val () = println $ sprintf "te[post] = $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
-	      val e = check_mtype_time (add_typing_skct (name, Mono te) ctx, e, te, T0 dummy)
+	      val (e, st) = check_mtype_time (add_typing_skct (name, Mono te) ctx, st) (e, te, T0 dummy)
               val (te, poly_te, free_uvars, free_uvar_names) = generalize te
               val e = UpdateExpr.update_e e
               val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
@@ -1809,7 +1813,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val tnames = tnames @ rev free_uvar_names
               val decl = DRec (Binder $ EName (name, r1), Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind TeleNil), ((te, T0 r), e)), Outer r)
             in
-              (decl, ctx_from_typing (name, poly_te), 0, [T0 dummy])
+              (decl, ctx_from_typing (name, poly_te), 0, [T0 dummy], st)
 	    end
 	  (* | U.DRec (name, bind, Outer r) => *)
           (*   (* todo: DRec should delegate most of the work to EAbs and EAbsI *) *)
@@ -1987,7 +1991,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
       ret
     end
 
-and check_decls gctx (ctx, decls) : decl list * context * int * idx list * context = 
+and check_decls gctx (ctx, st) decls : decl list * context * int * idx list * context * idx StMap.map = 
     let 
       val skctxn_old = (sctx_names $ #1 ctx, names $ #2 ctx)
       fun f (decl, (decls, ctxd, nps, ds, ctx)) =

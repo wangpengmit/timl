@@ -17,7 +17,7 @@ signature EXPR = sig
                                    
   datatype stbind = 
            SortingST of Binders.ibinder * sort Unbound.outer
-           | TypingST of ptrn
+           | TypingST of idx StMap.map Unbound.inner * ptrn
 
   type scoping_ctx = Binders.ibinder list * Binders.tbinder list * Binders.cbinder list * Binders.ebinder list
                                                                                        

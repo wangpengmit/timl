@@ -557,13 +557,14 @@ fun default_expr_visitor_vtable
       in
         [T.DValPtrn (pn, e, r)]
       end
+    fun visit_state f env st = StMap.map (f env) st
     fun visit_stbind this env data =
       let
         val vtable = cast this
       in
         case data of
             SortingST data => T.SortingST $ visit_pair (visit_ibinder this) (visit_outer (#visit_sort vtable this)) env data
-          | TypingST pn => T.TypingST $ #visit_ptrn vtable this env pn
+          | TypingST (st, pn) => T.TypingST (visit_inner (visit_state $ #visit_idx vtable this) env st, #visit_ptrn vtable this env pn)
       end
     fun visit_DRec this env data =
       let

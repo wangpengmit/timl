@@ -443,7 +443,7 @@ local
           let
             fun f bind =
                 case bind of
-		    Typing pn => TypingST (elab_pn pn)
+		    Typing pn => TypingST (Inner StMap.empty, elab_pn pn)
 		  | BindSort (nm, s, _) => SortingST (Binder $ IName nm, Outer $ elab_s s)
             val binds = map f binds
             (* if the function body is a [case] without annotations, copy the return clause from the function signature to the [case] *)

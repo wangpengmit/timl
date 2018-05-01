@@ -372,7 +372,7 @@ fun strn_e e =
         val pn = strn_pn pn
 	val e = strn_e e
       in
-        sprintf "(fn $$ => $)" [pn, e]
+        sprintf "(fn $$ => $)" [st, pn, e]
       end
     | EAbsI (bind, _) =>
       let
@@ -447,8 +447,8 @@ and strn_decl decl =
                 in
                   sprintf "{$ : $}" [name, strn_s s]
                 end
-              | TypingST pn =>
-                strn_pn pn
+              | TypingST (st, pn) =>
+                sprintf "$$" [strn_state $ unInner st, strn_pn pn]
           val binds = map f binds
           val binds = (join "" o map (prefix " ")) binds
           val t = strn_mt t
