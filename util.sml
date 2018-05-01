@@ -196,7 +196,8 @@ fun is_ShortCircuit a =
 
 val zip = ListPair.zip
 val unzip = ListPair.unzip
-fun map2 f = curry $ ListPair.mapEq $ uncurry f 
+fun map2 f = curry $ ListPair.mapEq $ uncurry f
+fun unzip3 ls = let val ((a, b), c) = mapFst unzip $ unzip $ map (fn (a, b, c) => ((a, b), c)) ls in (a, b, c) end
 
 fun allSome f (xs : 'a list) =
     let

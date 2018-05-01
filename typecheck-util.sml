@@ -96,14 +96,14 @@ fun add_sorting_skc pair (sctx, kctx, cctx) =
   (add_sorting pair sctx, 
    shiftx_i_kctx 1 kctx,
    shiftx_i_cs 1 cctx)
-fun add_sorting_skct pair ((sctx, kctx, cctx, tctx), st) = 
+fun add_sorting_skcts pair ((sctx, kctx, cctx, tctx), st) = 
   ((add_sorting pair sctx, 
    shiftx_i_kctx 1 kctx, 
    shiftx_i_cs 1 cctx, 
    shiftx_i_ts 1 tctx),
    StMap.map shift_i_i st)
 (* Within 'pairs', sort depends on previous sort *)
-fun add_sortings_skct pairs' ((pairs, kctx, cctx, tctx), st) = 
+fun add_sortings_skcts pairs' ((pairs, kctx, cctx, tctx), st) = 
   let
     val n = length pairs' 
   in
@@ -149,12 +149,11 @@ fun add_kinding_kct pair (kctx, cctx, tctx) =
   (add_kinding pair kctx,
    shiftx_t_cs 1 cctx,
    shiftx_t_ts 1 tctx)
-fun add_kindingext_skct pair ((sctx, kctx, cctx, tctx), st) = 
-  ((sctx,
+fun add_kindingext_skct pair (sctx, kctx, cctx, tctx) = 
+  (sctx,
    add_kindingext pair kctx,
    shiftx_t_cs 1 cctx,
-   shiftx_t_ts 1 tctx),
-   st)
+   shiftx_t_ts 1 tctx)
 fun add_kinding_skct pair = add_kindingext_skct $ mapSnd KeKind pair
 fun add_type_eq_skct pair = add_kindingext_skct $ mapSnd KeTypeEq pair
 fun add_kinding_sk pair (sctx, kctx) = 
@@ -163,38 +162,34 @@ fun add_kinding_sk pair (sctx, kctx) =
 fun add_kindings_sk pairs (sctx, kctx) = 
   (sctx, 
    add_kindings pairs kctx)
-fun add_kindingexts_skct pairs ((sctx, kctx, cctx, tctx), st) =
+fun add_kindingexts_skct pairs (sctx, kctx, cctx, tctx) =
   let val n = length pairs in
-    ((sctx,
+    (sctx,
      pairs @ kctx,
      shiftx_t_cs n cctx,
-     shiftx_t_ts n tctx),
-     st)
+     shiftx_t_ts n tctx)
   end
 
 fun add_kindings_skct pairs =
   add_kindingexts_skct $ map (mapSnd KeKind) pairs
 
-fun add_constrs_skct pairs ((sctx, kctx, cctx, tctx), st) = 
-  ((sctx, 
+fun add_constrs_skct pairs (sctx, kctx, cctx, tctx) = 
+  (sctx, 
    kctx, 
    pairs @ cctx,
-   tctx),
-   st)
+   tctx)
 
 fun add_typing pair tctx = pair :: tctx
-fun add_typing_skct pair ((sctx, kctx, cctx, tctx), st) = 
-  ((sctx, 
+fun add_typing_skct pair (sctx, kctx, cctx, tctx) = 
+  (sctx, 
    kctx, 
    cctx,
-   add_typing pair tctx),
-   st)
-fun add_typings_skct pairs ((sctx, kctx, cctx, tctx), st) = 
-  ((sctx, 
+   add_typing pair tctx)
+fun add_typings_skct pairs (sctx, kctx, cctx, tctx) = 
+  (sctx, 
    kctx, 
    cctx,
-   pairs @ tctx),
-   st)
+   pairs @ tctx)
 
 fun add_sgn (name, s) gctx =
   let
@@ -209,22 +204,22 @@ fun add_sigging (name, s) pairs = add_sgn (name, Sig s) pairs
 fun ctx_names (sctx, kctx, cctx, tctx) =
   (sctx_names sctx, names kctx, names cctx, names tctx) 
 
-fun add_ctx (sctx, kctx, cctx, tctx) ctx =
-  let val ctx = add_sortings_skct sctx ctx
+fun add_ctx_ctxst (sctx, kctx, cctx, tctx) (ctx, st) =
+  let val (ctx, st) = add_sortings_skcts sctx (ctx, st)
       val ctx = add_kindingexts_skct kctx ctx
       val ctx = add_constrs_skct cctx ctx
       val ctx = add_typings_skct tctx ctx
   in
-    ctx
+    (ctx, st)
   end
 
-val ctx2ctxd = fst
-fun ctxd2ctx a = (a, StMap.empty)
+val ctxst2ctx = fst
+fun ctx2ctxst a = (a, StMap.empty)
                                  
-fun add_ctxd ctxd1 ctxd2 = ctx2ctxd $ add_ctx ctxd1 $ ctxd2ctx ctxd2
+fun add_ctx ctx1 ctx2 = ctxst2ctx $ add_ctx_ctxst ctx1 $ ctx2ctxst ctx2
     
 fun add_ctx_skc ctx (sctx, kctx, cctx) =
-  let val ((sctx, kctx, cctx, _), _) = add_ctx ctx ((sctx, kctx, cctx, []), StMap.empty) in
+  let val (sctx, kctx, cctx, _) = add_ctx ctx (sctx, kctx, cctx, []) in
     (sctx, kctx, cctx)
   end
 
@@ -234,14 +229,14 @@ fun shift_ctx_i (sctx, _, _, _) i =
 fun shift_ctx_mt (sctx, kctx, _, _) t =
   (shiftx_t_mt 0 (length kctx) o shiftx_i_mt 0 (sctx_length sctx)) t
 
-val empty_ctxd = ([], [], [], [])
-val empty_ctx = (empty_ctxd, StMap.empty)
-fun ctx_from_sortings pairs = add_sortings_skct pairs empty_ctx
+val empty_ctx = ([], [], [], [])
+val empty_ctx_st = (empty_ctx, StMap.empty)
+fun ctx_from_sortings pairs = (pairs, [], [], [])
 fun ctx_from_sorting pair = ctx_from_sortings [pair]
-fun ctxd_from_full_sortings pairs = (pairs, [], [], [])
+fun ctx_from_full_sortings pairs = (pairs, [], [], [])
 fun ctx_from_kindingext pair = add_kindingext_skct pair empty_ctx
 fun ctx_from_kinding pair = add_kinding_skct pair empty_ctx
-fun ctxd_from_typing pair = ([], [], [], [pair])
+fun ctx_from_typing pair = ([], [], [], [pair])
 
 (* fetching from context *)
                                    

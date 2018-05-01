@@ -368,7 +368,7 @@ fun forget_mt r gctxn (skctxn as (sctxn, kctxn)) (sctxl, kctxl) t =
     t
   end
 
-fun forget_ctx_mt r gctx (sctx, kctx, _, _) (sctxd, kctxd, _, _) t =
+fun forget_ctx_mt r gctx (sctx, kctx) (sctxd, kctxd, _, _) t =
   let val (sctxn, kctxn) = (sctx_names sctx, names kctx)
       val sctxl = sctx_length sctxd
   in
@@ -412,7 +412,7 @@ fun substx_i_p_nonconsuming x v b =
     shiftx_i_p x 1 $ substx_i_p 0 x v b
   end
     
-fun forget_ctx_d r gctx (sctx, _, _, _) (sctxd, _, _, _) d =
+fun forget_ctx_d r gctx sctx sctxd d =
   let
     val sctxn = sctx_names sctx
     val sctxl = sctx_length sctxd
@@ -544,13 +544,13 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
                     Subset (bs, Bind (name, combine_And ps /\ p), r) :: sorts'
                   end
                 | _ => sorts
-          val ctxd = ctxd_from_full_sortings o ListPair.zip $ (rev inames, sorts)
+          val ctxd = ctx_from_full_sortings o ListPair.zip $ (rev inames, sorts)
           val () = open_ctx ctxd
           val () = open_premises ps
           val ctx = add_ctx_skc ctxd ctx
           val pn1 = opn
           val (pn1, cover, ctxd', nps) = match_ptrn (ctx, pn1, t1)
-          val ctxd = add_ctxd ctxd' ctxd
+          val ctxd = add_ctx ctxd' ctxd
           val cover = ConstrC (cx, cover)
         in
 	  (ConstrP (Outer ((cx, (length siblings, pos_in_family)), eia), map str2ibinder inames, pn1, Outer r), cover, ctxd, length ps + nps)
@@ -565,7 +565,7 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
           val () = if is_first_capital name then println $ sprintf "Warning: pattern $ is treated as a wildcard (did you misspell a constructor name?)" [name]
                    else ()
         in
-          (VarP ename, TrueC, ctxd_from_typing (name, Mono t), 0)
+          (VarP ename, TrueC, ctx_from_typing (name, Mono t), 0)
         end
       | U.PairP (pn1, pn2) =>
         let 
@@ -578,7 +578,7 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
           val (pn1, cover1, ctxd, nps1) = match_ptrn (ctx, pn1, t1)
           val ctx = add_ctx_skc ctxd ctx
           val (pn2, cover2, ctxd', nps2) = match_ptrn (ctx, pn2, shift_ctx_mt ctxd t2)
-          val ctxd = add_ctxd ctxd' ctxd
+          val ctxd = add_ctx ctxd' ctxd
         in
           (PairP (pn1, pn2), PairC (cover1, cover2), ctxd, nps1 + nps2)
         end
@@ -586,14 +586,14 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
         let
           val () = unify_mt r gctx (sctx, kctx) (t, Unit dummy)
         in
-          (TTP $ Outer r, TTC, empty_ctxd, 0)
+          (TTP $ Outer r, TTC, empty_ctx, 0)
         end
       | U.AliasP (ename, pn, r) =>
         let
           val pname = binder2str ename
-          val ctxd = ctxd_from_typing (pname, Mono t)
+          val ctxd = ctx_from_typing (pname, Mono t)
           val (pn, cover, ctxd', nps) = match_ptrn (ctx, pn, t)
-          val ctxd = add_ctxd ctxd' ctxd
+          val ctxd = add_ctx ctxd' ctxd
         in
           (AliasP (ename, pn, r), cover, ctxd, nps)
         end
@@ -734,11 +734,10 @@ fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
     rules
   end
 
-fun forget_or_check_return r gctx ctx ctxd (t', d') (t, d) =
+fun forget_or_check_return r gctx (ctx as (sctx, kctx)) ctxd (t', d') (t, d) =
   let
     val gctxn = gctx_names gctx
-    val (sctx, kctx, _, _) = ctx
-    val (sctxn, kctxn, _, _) = ctx_names ctx
+    val (sctxn, kctxn) = (sctx_names sctx, names kctx)
     val t =
         case t of
             SOME t =>
@@ -763,7 +762,7 @@ fun forget_or_check_return r gctx ctx ctxd (t', d') (t, d) =
             end
           | NONE =>
             let 
-	      val d' = forget_ctx_d r gctx ctx ctxd d'
+	      val d' = forget_ctx_d r gctx sctx (#1 ctxd) d'
             in
               d'
             end
@@ -1484,11 +1483,12 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val skcctx = (sctx, kctx, cctx) 
             val (pn, cover, ctxd, nps (* number of premises *)) = match_ptrn gctx (skcctx, pn, t)
 	    val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
-            val (ctx, pre_st) = add_ctx ctxd (ctx, pre_st)
+            val (ctx, pre_st) = add_ctx_ctxst ctxd (ctx, pre_st)
 	    val (e, t1, d, post_st) = get_mtype (ctx, pre_st) e
-	    val t1 = forget_ctx_mt (get_region_e e) gctx ctx ctxd t1 
-            val d = forget_ctx_d (get_region_e e) gctx ctx ctxd d
-            val post_st = forget_ctx_st (get_region_e e) gctx ctx ctxd post_st
+            val r = get_region_e e
+	    val t1 = forget_ctx_mt r gctx (#1 ctx, #2 ctx) ctxd t1 
+            val d = forget_ctx_d r gctx (#1 ctx) (#1 ctxd) d
+            val post_st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) post_st
             val () = close_n nps
             val () = close_ctx ctxd
           in
@@ -1499,14 +1499,15 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (decls, e) = Unbound.unBind bind
             val decls = unTeles decls
             val return = is_wf_return gctx (skctx, return)
-            val (decls, ctxd as (sctxd, kctxd, _, _), nps, ds, ctx) = check_decls (ctx, decls)
-	    val (e, t, d) = get_mtype (ctx, e)
+            val (decls, ctxd as (sctxd, kctxd, _, _), nps, ds, ctx, st) = check_decls (ctx, st) decls
+	    val (e, t, d, st) = get_mtype (ctx, st) e
             val ds = rev (d :: ds)
             val d = combine_AddI_Time ds
             (* val d = foldl' (fn (d, acc) => acc %+ d) (T0 dummy) ds *)
 	    (* val t = forget_ctx_mt r ctx ctxd t  *)
             (* val ds = map (forget_ctx_d r ctx ctxd) ds *)
-	    val (t, d) = forget_or_check_return (get_region_e e) gctx ctx ctxd (t, d) return 
+	    val (t, d) = forget_or_check_return (get_region_e e) gctx (#1 ctx, #2 ctx) ctxd (t, d) return 
+            val st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) st
             val () = close_n nps
             val () = close_ctx ctxd
             val e = EAsc (e, shift_ctx_mt ctxd t)
@@ -1523,7 +1524,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val ctxd = ctx_from_sorting (name, s)
             val ctx = add_ctx ctxd ctx
             val () = open_ctx ctxd
-	    val (e, t, _) = get_mtype (ctx, e) 
+	    val (e, t, _, _) = get_mtype (ctx, StMap.empty) e
             val () = close_ctx ctxd
           in
 	    (EAbsI (BindAnno ((iname, s), e), r_all), UniI (s, Bind ((name, r), t), r_all), T0 r_all, st)
@@ -1539,7 +1540,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	    val e = U.EApp (f, UnderscoredExprShift.shift_e_e e)
             (* val f_name = "__synthesized_constructor" *)
             val f_name = str_var #3 (gctx_names gctx) (names cctx) x
-	    val (e, t, d) = get_mtype (add_typing_skct (f_name, tc) ctx, e) 
+	    val (e, t, d, st) = get_mtype (add_typing_skct (f_name, tc) ctx, st) e 
             (* val () = println $ str_i sctxn d *)
             val d = update_i d
             val d = simp_i d
@@ -1612,7 +1613,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	  let
             val rules = map Unbound.unBind rules
             val return = if !anno_less then (fst return, NONE) else return
-            val (e, t1, d1) = get_mtype (ctx, e)
+            val (e, t1, d1, st) = get_mtype (ctx, st) e
             val return = is_wf_return gctx (skctx, return)
             val rules = expand_rules gctx ((sctx, kctx, cctx), rules, t1, r)
             val (rules, t_d_sts) = check_rules (ctx, rules, (t1, return), r)
@@ -1638,20 +1639,23 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           let
             val s1 = fresh_sort gctx sctx r
             val s2 = fresh_sort gctx sctx r
-            val (e, j_e) = check_mtype (ctx, e, TSumbool (s1, s2))
+            val (e, j_e, st) = check_mtype (ctx, st) (e, TSumbool (s1, s2))
             val (iname1, e1) = unBindSimpName bind1
             val (iname2, e2) = unBindSimpName bind2
-            val (e1, t1, j1) = open_close add_sorting_skct (fst iname1, s1) ctx (fn ctx => get_mtype (ctx, e1))
+            val (e1, t1, j1, st1) = open_close add_sorting_skcts (fst iname1, s1) (ctx, st) (fn ctx_st => get_mtype ctx_st e1)
             val ctxd = ctx_from_sorting (fst iname1, s1)
-            val ctx' = add_sorting_skct (fst iname1, s1) ctx
-            val (t1, j1) = forget_or_check_return r gctx ctx' ctxd (t1, j1) (NONE, NONE)
-            val (e2, t2, j2) = open_close add_sorting_skct (fst iname2, s2) ctx (fn ctx => get_mtype (ctx, e2))
+            val skctx' = add_sorting_sk (fst iname1, s1) (#1 ctx, #2 ctx)
+            val (t1, j1) = forget_or_check_return r gctx skctx' ctxd (t1, j1) (NONE, NONE)
+            val st1 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st1
+            val (e2, t2, j2, st2) = open_close add_sorting_skcts (fst iname2, s2) (ctx, st) (fn ctx_st => get_mtype ctx_st e2)
             val ctxd = ctx_from_sorting (fst iname2, s2)
-            val ctx' = add_sorting_skct (fst iname2, s2) ctx
-            val (t2, j2) = forget_or_check_return r gctx ctx' ctxd (t2, j2) (NONE, NONE)
+            val skctx' = add_sorting_sk (fst iname2, s2) (#1 ctx, #2 ctx)
+            val (t2, j2) = forget_or_check_return r gctx skctx' ctxd (t2, j2) (NONE, NONE)
+            val st2 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st2
             val () = unify_mt r gctx (sctx, kctx) (t2, t1)
+            val () = unify_state r gctx sctx (st2, st1)
           in
-            (ECaseSumbool (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %+ smart_max j1 j2)
+            (ECaseSumbool (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %+ smart_max j1 j2, st1)
           end
         | U.EIfi (e, bind1, bind2, r) =>
           let
@@ -1689,7 +1693,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     (e, t, d)
   end
 
-and check_decl gctx (ctx as (sctx, kctx, cctx, _), decl) =
+and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
     let
       val check_decl = check_decl gctx
       val check_decls = check_decls gctx
