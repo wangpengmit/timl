@@ -544,13 +544,13 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
                     Subset (bs, Bind (name, combine_And ps /\ p), r) :: sorts'
                   end
                 | _ => sorts
-          val ctxd = ctx_from_full_sortings o ListPair.zip $ (rev inames, sorts)
+          val ctxd = ctxd_from_full_sortings o ListPair.zip $ (rev inames, sorts)
           val () = open_ctx ctxd
           val () = open_premises ps
           val ctx = add_ctx_skc ctxd ctx
           val pn1 = opn
           val (pn1, cover, ctxd', nps) = match_ptrn (ctx, pn1, t1)
-          val ctxd = add_ctx ctxd' ctxd
+          val ctxd = add_ctxd ctxd' ctxd
           val cover = ConstrC (cx, cover)
         in
 	  (ConstrP (Outer ((cx, (length siblings, pos_in_family)), eia), map str2ibinder inames, pn1, Outer r), cover, ctxd, length ps + nps)
@@ -565,7 +565,7 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
           val () = if is_first_capital name then println $ sprintf "Warning: pattern $ is treated as a wildcard (did you misspell a constructor name?)" [name]
                    else ()
         in
-          (VarP ename, TrueC, ctx_from_typing (name, Mono t), 0)
+          (VarP ename, TrueC, ctxd_from_typing (name, Mono t), 0)
         end
       | U.PairP (pn1, pn2) =>
         let 
@@ -578,7 +578,7 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
           val (pn1, cover1, ctxd, nps1) = match_ptrn (ctx, pn1, t1)
           val ctx = add_ctx_skc ctxd ctx
           val (pn2, cover2, ctxd', nps2) = match_ptrn (ctx, pn2, shift_ctx_mt ctxd t2)
-          val ctxd = add_ctx ctxd' ctxd
+          val ctxd = add_ctxd ctxd' ctxd
         in
           (PairP (pn1, pn2), PairC (cover1, cover2), ctxd, nps1 + nps2)
         end
@@ -586,14 +586,14 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
         let
           val () = unify_mt r gctx (sctx, kctx) (t, Unit dummy)
         in
-          (TTP $ Outer r, TTC, empty_ctx, 0)
+          (TTP $ Outer r, TTC, empty_ctxd, 0)
         end
       | U.AliasP (ename, pn, r) =>
         let
           val pname = binder2str ename
-          val ctxd = ctx_from_typing (pname, Mono t)
+          val ctxd = ctxd_from_typing (pname, Mono t)
           val (pn, cover, ctxd', nps) = match_ptrn (ctx, pn, t)
-          val ctxd = add_ctx ctxd' ctxd
+          val ctxd = add_ctxd ctxd' ctxd
         in
           (AliasP (ename, pn, r), cover, ctxd, nps)
         end
@@ -1180,7 +1180,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
              | EUStorageGet =>
                let
                  val r = U.get_region_e e_all
-                 val (e, t, j) = get_mtype (ctx, e)
+                 val (e, t, j, st) = get_mtype (ctx, e)
                  val t = whnf_mt true gctx kctx t
                  val t = assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
                in
@@ -1479,7 +1479,8 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
             val (pn, cover, ctxd, nps (* number of premises *)) = match_ptrn gctx (skcctx, pn, t)
 	    val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
             val ctx = add_ctx ctxd ctx
-	    val (e, t1, d, post_st) = get_mtype (ctx, e, shift_ctx_st ctxd pre_st)
+            fun change_state (a, b, c, d, _) e = (a, b, c, d, e)
+	    val (e, t1, d, post_st) = get_mtype (change_state ctx $ StMap.map (shiftx_i_i 0 (length $ #1 ctxd)) pre_st, e)
 	    val t1 = forget_ctx_mt (get_region_e e) gctx ctx ctxd t1 
             val d = forget_ctx_d (get_region_e e) gctx ctx ctxd d
             val post_st = forget_ctx_st (get_region_e e) gctx ctx ctxd post_st

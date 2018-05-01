@@ -194,32 +194,29 @@ fun is_sub_sort r gctxn ctxn (s : sort, s' : sort) =
           | (Subset ((bs, r1), Bind ((name, _), p), _), Subset ((bs', _), Bind (_, p'), _)) =>
             let
 	      val () = unify_bs r (bs, bs')
-              val ctxd = ctx_from_sorting (name, Basic (bs, r1))
-              val () = open_ctx ctxd
+              val () = open_sorting (name, Basic (bs, r1))
 	      (* val () = write_prop (p <-> p', r) *)
 	      val () = write_prop (p --> p', r)
 	      (* val () = write_prop (p' --> p, r) *)
-              val () = close_ctx ctxd
+              val () = close_n 1
             in
               ()
             end
           | (Subset ((bs, r1), Bind ((name, _), p), _), Basic (bs', _)) =>
             let
 	      val () = unify_bs r (bs, bs')
-              val ctxd = ctx_from_sorting (name, Basic (bs, r1))
-              val () = open_ctx ctxd
+              val () = open_sorting (name, Basic (bs, r1))
 	      (* val () = write_prop (p, r) *)
-              val () = close_ctx ctxd
+              val () = close_n 1
             in
               ()
             end
           | (Basic (bs, r1), Subset ((bs', _), Bind ((name, _), p), _)) =>
             let
 	      val () = unify_bs r (bs, bs')
-              val ctxd = ctx_from_sorting (name, Basic (bs, r1))
-              val () = open_ctx ctxd
+              val () = open_sorting (name, Basic (bs, r1))
 	      val () = write_prop (p, r)
-              val () = close_ctx ctxd
+              val () = close_n 1
             in
               ()
             end
