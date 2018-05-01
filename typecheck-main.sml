@@ -1039,8 +1039,10 @@ fun assert_TMap err t =
       TMap a => a
     | _ => err ()
     
-fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, tctx : tcontext, st : idx StMap.map), e_all : U.expr) : expr * mtype * (idx (* * idx *)) * idx StMap.map =
+fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (idx (* * idx *)) * idx StMap.map =
   let
+    val (ctx, st) = ctx_st
+    val (sctx, kctx, cctx, tctx) = ctx
     val get_mtype = get_mtype gctx
     val check_mtype = check_mtype gctx
     val check_time = check_time gctx
@@ -1122,7 +1124,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  (* val r = U.get_region_e e *)
                  val t1 = fresh_mt gctx (sctx, kctx) r
                  val t2 = fresh_mt gctx (sctx, kctx) r
-                 val (e, d) = check_mtype (ctx, e, Prod (t1, t2)) 
+                 val (e, d, st) = check_mtype ctx_st (e, Prod (t1, t2)) 
                in 
                  (EFst (e, r), t1, d, st)
 	       end
@@ -1131,13 +1133,13 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  (* val r = U.get_region_e e *)
                  val t1 = fresh_mt gctx (sctx, kctx) r
                  val t2 = fresh_mt gctx (sctx, kctx) r
-                 val (e, d) = check_mtype (ctx, e, Prod (t1, t2)) 
+                 val (e, d, st) = check_mtype ctx_st (e, Prod (t1, t2)) 
                in 
                  (ESnd (e, r), t2, d, st)
 	       end
              | EUPrintc =>
                let
-                 val (e, d) = check_mtype (ctx, e, BaseType (Byte, r)) 
+                 val (e, d, st) = check_mtype ctx_st (e, BaseType (Byte, r)) 
                in
                  (EUnOp (EUPrintc, e, r), Unit r, d, st)
                end
@@ -1149,7 +1151,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
              (*   end *)
              | EUPrim opr =>
                let
-                 val (e, d) = check_mtype (ctx, e, BaseType (get_prim_expr_un_op_arg_ty opr, r)) 
+                 val (e, d, st) = check_mtype ctx_st (e, BaseType (get_prim_expr_un_op_arg_ty opr, r)) 
                in
                  (EUnOp (EUPrim opr, e, r), BaseType (get_prim_expr_un_op_res_ty opr, r), d, st)
                end
@@ -1158,7 +1160,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val r = U.get_region_e e_all
                  val t = fresh_mt gctx (sctx, kctx) r
                  val i = fresh_i gctx sctx (Base Nat) r
-                 val (e, d) = check_mtype (ctx, e, TyArray (t, i))
+                 val (e, d, st) = check_mtype ctx_st (e, TyArray (t, i))
                in
                  (EUnOp (opr, e, r), TyNat (i, r), d, st)
                end
@@ -1166,21 +1168,21 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                let
                  val r = U.get_region_e e_all
                  val i = fresh_i gctx sctx (Base Nat) r
-                 val (e, d) = check_mtype (ctx, e, TyNat (i, r))
+                 val (e, d, st) = check_mtype ctx_st (e, TyNat (i, r))
                in
                  (EUnOp (opr, e, r), BaseType (Int, r), d, st)
                end
 	     | EUInt2Nat =>
                let
                  val r = U.get_region_e e_all
-                 val (e, d) = check_mtype (ctx, e, BaseType (Int, r))
+                 val (e, d, st) = check_mtype ctx_st (e, BaseType (Int, r))
                in
                  (EUnOp (opr, e, r), MtVar $ QID $ qid_add_r r SOME_NAT_ID, d, st)
                end
              | EUStorageGet =>
                let
                  val r = U.get_region_e e_all
-                 val (e, t, j, st) = get_mtype (ctx, e)
+                 val (e, t, j, st) = get_mtype ctx_st e
                  val t = whnf_mt true gctx kctx t
                  val t = assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
                in
@@ -1191,22 +1193,22 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
           (case opr of
 	       EBPair => 
 	       let 
-                 val (e1, t1, d1) = get_mtype (ctx, e1) 
-	         val (e2, t2, d2) = get_mtype (ctx, e2) 
+                 val (e1, t1, d1, st) = get_mtype (ctx, st) e1
+	         val (e2, t2, d2, st) = get_mtype (ctx, st) e2
                in
 	         (EPair (e1, e2), Prod (t1, t2), d1 %+ d2, st)
 	       end
 	     | EBApp =>
 	       let
                  val r1 = U.get_region_e e1
-                 val (e1, t1, d1) = get_mtype (ctx, e1)
+                 val (e1, t1, d1, st) = get_mtype (ctx, st) e1
                  val ((pre_st, t2), d, (post_st, t)) =
                      case whnf_mt true gctx kctx t1 of
                          Arrow a => a
                        | t1 => raise Error (r1, "type mismatch:" ::
                                                 indent ["expect: _ -- _ --> _",
                                                         "got: " ^ str_mt gctxn skctxn t1])
-                 val (e2, d2) = check_mtype (ctx, e2, t2)
+                 val (e2, d2, st) = check_mtype (ctx, st) (e2, t2)
                  fun check_submap pre_st st =
                    let
                      val pre_st_minus_st = pre_st @@- st
@@ -1223,8 +1225,8 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                let
                  val r = U.get_region_e e_all
                  val i = fresh_i gctx sctx (Base Time) r
-                 val (e1, d1) = check_mtype (ctx, e1, TyNat (i, r))
-                 val (e2, t, d2) = get_mtype (ctx, e2)
+                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TyNat (i, r))
+                 val (e2, t, d2, st) = get_mtype (ctx, st) e2
                in
                  (EBinOp (opr, e1, e2), TyArray (t, i), d1 %+ d2, st)
                end
@@ -1234,8 +1236,8 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val t = fresh_mt gctx (sctx, kctx) r
                  val i1 = fresh_i gctx sctx (Base Time) r
                  val i2 = fresh_i gctx sctx (Base Time) r
-                 val (e1, d1) = check_mtype (ctx, e1, TyArray (t, i1))
-                 val (e2, d2) = check_mtype (ctx, e2, TyNat (i2, r))
+                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TyArray (t, i1))
+                 val (e2, d2, st) = check_mtype (ctx, st) (e2, TyNat (i2, r))
                  val () = write_lt (i2, i1, r)
                in
                  (EBinOp (opr, e1, e2), t, d1 %+ d2, st)
@@ -1245,8 +1247,8 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val r = U.get_region_e e_all
                  val i1 = fresh_i gctx sctx (Base Time) r
                  val i2 = fresh_i gctx sctx (Base Time) r
-                 val (e1, d1) = check_mtype (ctx, e1, TyNat (i1, r))
-                 val (e2, d2) = check_mtype (ctx, e2, TyNat (i2, r))
+                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TyNat (i1, r))
+                 val (e2, d2, st) = check_mtype (ctx, st) (e2, TyNat (i2, r))
                  val i2 = Simp.simp_i $ update_i i2
                  val () = if opr = EBNBoundedMinus then write_le (i2, i1, r) else ()
                  val i = interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Error (r, ["Can only divide by a nat whose index is a constant, not: " ^ str_i gctxn sctxn i2]))
@@ -1254,8 +1256,9 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  (EBinOp (EBNat opr, e1, e2), TyNat (i, r), d1 %+ d2 %+ T1 r, st)
                end
 	     | EBPrim opr =>
-	       let val (e1, d1) = check_mtype (ctx, e1, BaseType (get_prim_expr_bin_op_arg1_ty opr, dummy))
-	           val (e2, d2) = check_mtype (ctx, e2, BaseType (get_prim_expr_bin_op_arg2_ty opr, dummy)) in
+	       let
+                 val (e1, d1, st) = check_mtype (ctx, st) (e1, BaseType (get_prim_expr_bin_op_arg1_ty opr, dummy))
+	         val (e2, d2, st) = check_mtype (ctx, st) (e2, BaseType (get_prim_expr_bin_op_arg2_ty opr, dummy)) in
 	         (EBinOp (EBPrim opr, e1, e2), BaseType (get_prim_expr_bin_op_res_ty opr, dummy), d1 %+ d2 %+ T1 dummy, st)
 	       end
              | EBNatCmp opr =>
@@ -1263,15 +1266,15 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val r = U.get_region_e e_all
                  val i1 = fresh_i gctx sctx (Base Time) r
                  val i2 = fresh_i gctx sctx (Base Time) r
-                 val (e1, d1) = check_mtype (ctx, e1, TyNat (i1, r))
-                 val (e2, d2) = check_mtype (ctx, e2, TyNat (i2, r))
+                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TyNat (i1, r))
+                 val (e2, d2, st) = check_mtype (ctx, st) (e2, TyNat (i2, r))
                in
                  (EBinOp (EBNatCmp opr, e1, e2), TiBool (interp_nat_cmp r opr (i1, i2), r), d1 %+ d2, st)
                end
              | EBMapPtr =>
                let
                  val r = U.get_region_e e_all
-                 val (e1, t1, j1) = get_mtype (ctx, e1)
+                 val (e1, t1, j1, st) = get_mtype (ctx, st) e1
                  val t1 = whnf_mt true gctx kctx t1
                  fun err () = raise Error (get_region_e e1, "map_get(e1, e2): type of e1 is wrong:" ::
                                                             indent ["expect: state_field _",
@@ -1282,14 +1285,16 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                                   (true, t) => t
                                 | _ => raise Error (r, [sprintf "type of $ should be map, not vector" [str_st_key x]]))
                            | _ => assert_TMap err $ assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
-                 val (e2, j2) = check_mtype (ctx, e2, TInt r)
+                 val (e2, j2, st) = check_mtype (ctx, st) (e2, TInt r)
                in
                  (EBinOp (opr, e1, e2), t, j1 %+ j2, st)
                end
              | EBVectorGet =>
                let
                  val r = U.get_region_e e_all
-                 val (e1, t1, j1) = get_mtype (ctx, e1)
+                 val (e1, t1, j1, st) = get_mtype (ctx, st) e1
+                 val i = fresh_i gctx sctx (Base Nat) r
+                 val (e2, j2, st) = check_mtype (ctx, st) (e2, TyNat (i, r))
                  val x = case whnf_mt true gctx kctx t1 of
                               TState x => x
                             | t1 => raise Error (get_region_e e1, "vector_get(e1, e2): type of e1 is wrong:" ::
@@ -1301,8 +1306,6 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val len = case st @! x of
                                SOME a => a
                              | _ => raise Error (r, [sprintf "vector_get: state field $ must be in state spec" [str_st_key x]])
-                 val i = fresh_i gctx sctx (Base Nat) r
-                 val (e2, j2) = check_mtype (ctx, e2, TyNat (i, r))
                  val () = write_lt (i, len, r)
                in
                  (EBinOp (opr, e1, e2), t, j1 %+ j2, st)
@@ -1310,7 +1313,7 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
              | EBVectorPushBack =>
                let
                  val r = U.get_region_e e_all
-                 val (e1, t1, j1) = get_mtype (ctx, e1)
+                 val (e1, t1, j1, st) = get_mtype (ctx, st) e1
                  val x = case whnf_mt true gctx kctx t1 of
                               TState x => x
                             | t1 => raise Error (get_region_e e1, "push_back(e1, e2): type of e1 is wrong:" ::
@@ -1319,20 +1322,20 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
                  val t = case st_types @!! x of
                              (false, t) => t
                            | _ => raise Error (r, [sprintf "type of $ should be vector, not map" [str_st_key x]])
+                 val (e2, j2, st) = check_mtype (ctx, st) (e2, t)
                  val len = case st @! x of
                                SOME a => a
                              | _ => raise Error (r, [sprintf "push_back: state field $ must be in state spec" [str_st_key x]])
-                 val (e2, j2) = check_mtype (ctx, e2, t)
                in
                  (EBinOp (opr, e1, e2), Unit r, j1 %+ j2, st @+ (x, len %+ T1 r))
                end
              | EBStorageSet =>
                let
                  val r = U.get_region_e e_all
-                 val (e1, t1, j1) = get_mtype (ctx, e1)
+                 val (e1, t1, j1, st) = get_mtype (ctx, st) e1
                  val t1 = whnf_mt true gctx kctx t1
                  val t = assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
-                 val (e2, j2) = check_mtype (ctx, e2, t)
+                 val (e2, j2, st) = check_mtype (ctx, st) (e2, t)
                in
                  (EBinOp (opr, e1, e2), Unit r, j1 %+ j2, st)
                end
@@ -1341,7 +1344,9 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
         | U.ETriOp (ETVectorSet, e1, e2, e3) =>
           let
             val r = U.get_region_e e_all
-            val (e1, t1, j1) = get_mtype (ctx, e1)
+            val (e1, t1, j1, st) = get_mtype (ctx, st) e1
+            val i = fresh_i gctx sctx (Base Nat) r
+            val (e2, j2, st) = check_mtype (ctx, st) (e2, TyNat (i, r))
             val x = case whnf_mt true gctx kctx t1 of
                         TState x => x
                       | t1 => raise Error (get_region_e e1, "vector_set(e1, e2, e3): type of e1 is wrong:" ::
@@ -1350,14 +1355,12 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
             val t = case st_types @!! x of
                         (false, t) => t
                       | _ => raise Error (r, [sprintf "type of $ should be vector, not map" [str_st_key x]])
+            val (e3, j3, st) = check_mtype (ctx, st) (e3, t)
             val len = case st @! x of
                           SOME a => a
                         | _ => raise Error (r, [sprintf "vector_set: state field $ must be in state spec" [str_st_key x]])
                                      
-            val i = fresh_i gctx sctx (Base Nat) r
-            val (e2, j2) = check_mtype (ctx, e2, TyNat (i, r))
             val () = write_lt (i, len, r)
-            val (e3, j3) = check_mtype (ctx, e3, t)
           in
             (ETriOp (ETVectorSet, e1, e2, e3), Unit r, j1 %+ j2 %+ j3, st)
           end
@@ -1367,27 +1370,28 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
             val t = fresh_mt gctx (sctx, kctx) r
             val i1 = fresh_i gctx sctx (Base Time) r
             val i2 = fresh_i gctx sctx (Base Time) r
-            val (e1, d1) = check_mtype (ctx, e1, TyArray (t, i1))
-            val (e2, d2) = check_mtype (ctx, e2, TyNat (i2, r))
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TyArray (t, i1))
+            val (e2, d2, st) = check_mtype (ctx, st) (e2, TyNat (i2, r))
             val () = write_lt (i2, i1, r)
-            val (e3, d3) = check_mtype (ctx, e3, t)
+            val (e3, d3, st) = check_mtype (ctx, st) (e3, t)
           in
             (ETriOp (ETWrite, e1, e2, e3), Unit r, d1 %+ d2 %+ d3, st)
           end
 	| U.ETriOp (ETIte, e, e1, e2) =>
           let
             val r = U.get_region_e e_all
-            val (e, d) = check_mtype (ctx, e, BaseType (Bool, r))
-            val (e1, t, d1) = get_mtype (ctx, e1)
-            val (e2, d2) = check_mtype (ctx, e2, t)
+            val (e, d, st) = check_mtype (ctx, st) (e, BaseType (Bool, r))
+            val (e1, t, d1, st1) = get_mtype (ctx, st) e1
+            val (e2, d2, st2) = check_mtype (ctx, st) (e2, t)
+            val () = unify_state r gctx sctx (st2, st1)
           in
-            (ETriOp (ETIte, e, e1, e2), t, d %+ smart_max d1 d2, st)
+            (ETriOp (ETIte, e, e1, e2), t, d %+ smart_max d1 d2, st1)
           end
 	| U.EEI (opr, e, i) =>
           (case opr of
 	       EEIAppI =>
 	       let 
-                 val (e, t, d) = get_mtype (ctx, e) 
+                 val (e, t, d, st) = get_mtype (ctx, st) e
                in
                  case t of
                      UniI (s, Bind ((arg_name, _), t1), r) =>
@@ -1430,14 +1434,14 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
 	     | EETAsc => 
 	       let
                  val t = check_kind_Type gctx (skctx, t)
-	         val (e, d) = check_mtype (ctx, e, t)
+	         val (e, d, st) = check_mtype (ctx, st) (e, t)
                in
 	         (EAsc (e, t), t, d, st)
 	       end
              | EETHalt => 
 	       let
                  val t = check_kind_Type gctx (skctx, t)
-	         val (e, _, d) = get_mtype (ctx, e)
+	         val (e, _, d, st) = get_mtype (ctx, st) e
                in
 	         (EET (opr, e, t), t, d, st)
 	       end
@@ -1464,7 +1468,9 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
           let
 	    val t = check_kind_Type gctx (skctx, t)
             fun ignore2 (a, _, c) = (a, c)
-            val (es, ds) = unzip $ map (fn e => check_mtype (ctx, e, t)) es
+            val (es, ds, st) = foldl (fn (e, (es, ds, st)) => let val (e, d, st) = check_mtype (ctx, st) (e, t) in (e :: es, d :: ds, st) end) ([], [], st) es
+            val es = rev es
+            val ds = rev ds
             val d = combine_AddI_Time ds
           in
             (ENewArrayValues (t, es, r), TyArray (t, ConstIN (length es, r)), d, st)
@@ -1478,16 +1484,15 @@ fun get_mtype gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext, t
             val skcctx = (sctx, kctx, cctx) 
             val (pn, cover, ctxd, nps (* number of premises *)) = match_ptrn gctx (skcctx, pn, t)
 	    val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
-            val ctx = add_ctx ctxd ctx
-            fun change_state (a, b, c, d, _) e = (a, b, c, d, e)
-	    val (e, t1, d, post_st) = get_mtype (change_state ctx $ StMap.map (shiftx_i_i 0 (length $ #1 ctxd)) pre_st, e)
+            val (ctx, pre_st) = add_ctx ctxd (ctx, pre_st)
+	    val (e, t1, d, post_st) = get_mtype (ctx, pre_st) e
 	    val t1 = forget_ctx_mt (get_region_e e) gctx ctx ctxd t1 
             val d = forget_ctx_d (get_region_e e) gctx ctx ctxd d
             val post_st = forget_ctx_st (get_region_e e) gctx ctx ctxd post_st
             val () = close_n nps
             val () = close_ctx ctxd
           in
-	    (EAbs (pre_st, Unbound.Bind (AnnoP (pn, Outer t), e)), Arrow ((t, pre_st), d, (t1, post_st)), T0 dummy, st)
+	    (EAbs (pre_st, Unbound.Bind (AnnoP (pn, Outer t), e)), Arrow ((pre_st, t), d, (post_st, t1)), T0 dummy, st)
 	  end
 	| U.ELet (return, bind, r) => 
 	  let
@@ -2121,10 +2126,10 @@ and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), (* pcovers, *) (pn, e), t 
       ((pn, e), ((t, d), cover))
     end
 
-and check_mtype gctx (ctx as (sctx, kctx, cctx, tctx, st), e, t) =
+and check_mtype gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, t) =
     let
       val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names ctx
-      val (e, t', d) = get_mtype gctx (ctx, e)
+      val (e, t', d) = get_mtype gctx ctx_st e
       val () = unify_mt (get_region_e e) gctx (sctx, kctx) (t', t)
                         (* val () = println "check type" *)
                         (* val () = println $ str_region "" "ilist.timl" $ get_region_e e *)
@@ -2132,19 +2137,19 @@ and check_mtype gctx (ctx as (sctx, kctx, cctx, tctx, st), e, t) =
       (e, d)
     end
 
-and check_time gctx (ctx as (sctx, kctx, cctx, tctx), e, d) : expr * mtype =
+and check_time gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, d) : expr * mtype =
     let 
-      val (e, t, d') = get_mtype gctx (ctx, e)
+      val (e, t, d') = get_mtype gctx ctx_st e
       val () = smart_write_le (gctx_names gctx) (names sctx) (d', d, get_region_e e)
     in
       (e, t)
     end
 
-and check_mtype_time gctx (ctx as (sctx, kctx, cctx, tctx), e, t, d) =
+and check_mtype_time gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx))) (e, t, d) =
     let 
       val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names ctx
       (* val () = print (sprintf "Type checking $ against $ and $\n" [U.str_e ctxn e, str_mt (sctxn, kctxn) t, str_i sctxn d]) *)
-      val (e, d') = check_mtype gctx (ctx, e, t)
+      val (e, d') = check_mtype gctx ctx_st (e, t)
       (* val () = println "check type & time" *)
       (* val () = println $ str_region "" "ilist.timl" $ get_region_e e *)
       val () = smart_write_le (gctx_names gctx) (names sctx) (d', d, get_region_e e)
