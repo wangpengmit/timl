@@ -77,11 +77,20 @@ val BSNat = Base Nat
 val BSBool = Base BoolSort
 val BSUnit = Base UnitSort
                  
-val STime = Basic (Base Time, dummy)
-val SNat = Basic (Base Nat, dummy)
-val SBool = Basic (Base BoolSort, dummy)
-val SUnit = Basic (Base UnitSort, dummy)
+fun STime r = Basic (Base Time, r)
+fun SNat r = Basic (Base Nat, r)
+fun SBool r = Basic (Base BoolSort, r)
+fun SUnit r = Basic (Base UnitSort, r)
+                  
+(* val STime = Basic (Base Time, dummy) *)
+(* val SNat = Basic (Base Nat, dummy) *)
+(* val SBool = Basic (Base BoolSort, dummy) *)
+(* val SUnit = Basic (Base UnitSort, dummy) *)
 
+fun TInt r = BaseType (Int, r)
+fun TBool r = BaseType (Bool, r)
+fun TByte r = BaseType (Byte, r)
+  
 val Type = (0, [])
 
 (* notations *)

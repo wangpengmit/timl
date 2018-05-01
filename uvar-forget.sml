@@ -193,7 +193,7 @@ fun forget_i_mt x n b =
         val on_i_s = forget_i_s
       in
         case b of
-	    Arrow (t1, d, t2) => Arrow (f x n t1, on_i_i x n d, f x n t2)
+	    Arrow ((st1, t1), d, (st2, t2)) => Arrow ((StMap.map (on_i_i x n) st1, f x n t1), on_i_i x n d, (StMap.map (on_i_i x n) st2, f x n t2))
           | TyNat (i, r) => TyNat (on_i_i x n i, r)
           | TiBool (i, r) => TiBool (on_i_i x n i, r)
           | TyArray (t, i) => TyArray (f x n t, on_i_i x n i)

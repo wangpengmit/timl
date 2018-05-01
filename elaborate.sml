@@ -178,7 +178,7 @@ local
                   def ()
               | SOME _ => def ()
           end
-	| S.Arrow (t1, d, t2, _) => Arrow (elab_mt t1, elab_i d, elab_mt t2)
+	| S.Arrow (t1, d, t2, _) => PureArrow (elab_mt t1, elab_i d, elab_mt t2)
 	| S.Prod (t1, t2, _) => Prod (elab_mt t1, elab_mt t2)
 	| S.Quan (quan, binds, t, r) =>
 	  let fun f ((x, s, _), t) =
@@ -322,7 +322,7 @@ local
 	  let 
             fun f (b, e) =
 		case b of
-		    Typing pn => EAbs $ Unbound.Bind (elab_pn pn, e)
+		    Typing pn => EAbs (StMap.empty, Unbound.Bind (elab_pn pn, e))
 		  | BindSort (name, s, _) => EAbsI (BindAnno ((IName name, elab_s s), e), r)
             val e = elab e
             val e = case d of SOME d => EAscTime (e, elab_i d) | _ => e

@@ -24,7 +24,7 @@ signature EXPR = sig
   datatype expr =
 	   EVar of var * bool(*explicit index arguments (EIA)*)
            | EConst of Operators.expr_const * Region.region
-           | EState of string
+           | EState of string * Region.region
            | EUnOp of Operators.expr_un_op * expr * Region.region
            | EBinOp of Operators.expr_bin_op * expr * expr
 	   | ETriOp of Operators.expr_tri_op * expr * expr * expr

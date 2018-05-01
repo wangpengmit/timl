@@ -42,6 +42,7 @@ open BaseTypes
 open Bind
 
 infixr 0 $
+         
 infix  9 @!!
 fun m @!! k = StMapU.must_find m k
        

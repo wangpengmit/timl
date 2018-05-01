@@ -157,6 +157,9 @@ fun collect_Uni_UniI t =
     (map KindingT tnames @ map SortingT binds, t)
   end
 
+fun strn_state st = if StMap.numItems st = 0 then ""
+                    else StMapU.str_map (id, strn_i) st ^ " "
+                                      
 fun strn_mt t =
   let
     fun collect_MtAppI_or_MtApp t =
@@ -218,11 +221,11 @@ fun strn_mt t =
     (*     SOME ((x, _), i_args, t_args) => sprintf "($ ...)" [strn_uvar_mt (strn_raw_bs, strn_raw_k, strn_mt ([], [])) x] *)
     (*   | NONE => *)
     case t of
-        Arrow (t1, d, t2) =>
+        Arrow ((st1, t1), d, (st2, t2)) =>
         if is_T0 d then
-          sprintf "($ -> $)" [strn_mt t1, strn_mt t2]
+          sprintf "($$ -> $$)" [strn_state st1, strn_mt t1, strn_state st2, strn_mt t2]
         else
-          sprintf "($ -- $ --> $)" [strn_mt t1, strn_i d, strn_mt t2]
+          sprintf "($$ -- $ --> $$)" [strn_state st1, strn_mt t1, strn_i d, strn_state st2, strn_mt t2]
       | TyNat (i, _) => sprintf "(nat $)" [strn_i i]
       | TiBool (i, _) => sprintf "(ibool $)" [strn_i i]
       | TyArray (t, i) => sprintf "(array $ $)" [strn_mt t, strn_i i]
@@ -362,13 +365,14 @@ fun strn_e e =
            ETNever => sprintf "(never [$])" [strn_mt t]
          | ETBuiltin name => sprintf "(builtin $ [$])" [name, strn_mt t]
       )
-    | EAbs bind => 
+    | EAbs (st, bind) => 
       let
         val (pn, e) = Unbound.unBind bind
+        val st = strn_state st
         val pn = strn_pn pn
 	val e = strn_e e
       in
-        sprintf "(fn $ => $)" [pn, e]
+        sprintf "(fn $$ => $)" [pn, e]
       end
     | EAbsI (bind, _) =>
       let

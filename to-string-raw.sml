@@ -47,9 +47,11 @@ fun str_raw_s s =
                     
 fun str_raw_k k = "<kind>"
 
+fun str_raw_state st = StMapU.str_map (id, str_raw_i) st
+                                      
 fun str_raw_mt (t : mtype) : string =
   case t of
-      Arrow (t1, i, t2) => sprintf "Arrow ($, $, $)" [str_raw_mt t1, str_raw_i i, str_raw_mt t2]
+      Arrow ((st1, t1), i, (st2, t2)) => sprintf "Arrow ($, $, $, $, $)" [str_raw_state st1, str_raw_mt t1, str_raw_i i, str_raw_state st2, str_raw_mt t2]
     | TyNat (i, _) => sprintf "TyNat ($))" [str_raw_i i]
     | TiBool (i, _) => sprintf "TiBool ($))" [str_raw_i i]
     | TyArray (t, i) => sprintf "TyArray ($, $)" [str_raw_mt t, str_raw_i i]

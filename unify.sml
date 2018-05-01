@@ -25,6 +25,9 @@ infixr 2 \/
 infixr 1 -->
 infix 1 <->
         
+infix  9 @!!
+fun m @!! k = StMapU.must_find m k
+                               
 fun unify_error cls r (s, s') =             
   UnifyError (r, [sprintf "Can't unify $ " [cls]] @ indent [s] @ ["and"] @ indent [s'])
 
@@ -296,7 +299,17 @@ fun unify_kind r gctxn sctxn (k, k') =
         end
         handle UnifyError _ => raise UnifyError (r, [kind_mismatch gctxn sctxn (str_k gctxn sctxn k) k'])
 *)
-    
+
+fun check_map_size r (a, b) =
+  if StMap.numItems a = StMap.numItems b then
+    ()
+  else
+    raise Error (r, ["Map size mismatch"])
+
+fun unify_state r gctxn sctxn (st, st') =
+  (check_map_size r (st, st');
+   app (fn (k, v) => unify_i r gctxn sctxn (v, st' @!! k)) $ StMap.listItemsi st)
+                               
 fun unify_mt r gctx ctx (t, t') =
   let
     val unify_mt = unify_mt r gctx
@@ -374,10 +387,12 @@ fun unify_mt r gctx ctx (t, t') =
         raise error ctxn (t, t')
       else
       case (t, t') of
-          (Arrow (t1, d, t2), Arrow (t1', d', t2')) =>
-          (unify_mt ctx (t1, t1');
+          (Arrow ((st1, t1), d, (st2, t2)), Arrow ((st1', t1'), d', (st2', t2'))) =>
+          (unify_state r gctxn sctxn (st1, st1');
+           unify_mt ctx (t1, t1');
            unify_i r gctxn sctxn (d, d');
-           unify_mt ctx (t2, t2'))
+           unify_mt ctx (t2, t2');
+           unify_state r gctxn sctxn (st2, st2'))
         | (TyArray (t, i), TyArray (t', i')) =>
           (unify_mt ctx (t, t');
            unify_i r gctxn sctxn (i, i')

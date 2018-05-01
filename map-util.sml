@@ -30,8 +30,8 @@ fun single a = M.insert' (a, M.empty)
       
 fun must_find m k = Util.assert_SOME (M.find (m, k))
                                        
-infix  9 @!!
-fun m @!! k = must_find m k
+fun sub m m' = M.filteri (fn (k, _) => Util.isNone (M.find (m', k))) m
+fun union m m' = M.unionWith Util.snd (m, m')
                         
 end
 

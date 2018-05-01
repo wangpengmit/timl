@@ -33,7 +33,7 @@ type scoping_ctx = ibinder list * tbinder list * cbinder list * ebinder list
 datatype expr =
 	 EVar of var * bool(*explicit index arguments (EIA)*)
          | EConst of expr_const * region
-         | EState of string
+         | EState of string * region
          | EUnOp of expr_un_op * expr * region
          | EBinOp of expr_bin_op * expr * expr
 	 | ETriOp of expr_tri_op * expr * expr * expr
