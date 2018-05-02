@@ -85,6 +85,9 @@ fun get_region_mt t =
     | UVar (_, r) => r
     | TDatatype (_, r) => r
     | TSumbool (s1, s2) => combine_region (get_region_s s1) (get_region_s s2)
+    | TMap t => get_region_mt t
+    | TState (_, r) => r
+    | TTuplePtr (_, _, r) => r
 
 fun get_region_t t = 
   case t of
@@ -127,6 +130,7 @@ fun get_region_e e =
   case e of
       EVar (x, _) => get_region_var x
     | EConst (_, r) => r
+    | EState (_, r) => r
     | EUnOp (_, _, r) => r
     | EBinOp (_, e1, e2) => combine_region (get_region_e e1) (get_region_e e2)
     | ETriOp (_, e1, _, e3) => combine_region (get_region_e e1) (get_region_e e3)

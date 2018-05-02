@@ -117,6 +117,7 @@
 - [ ] Propogate return clauses through [ifdec] and [if]; let those time specs mean entire time including the matchee.
 - [ ] Have sprintf.
 - [ ] Check no-UVar after typechecking.
+- [ ] Write `simp_mt` using visitor.
 
 # To-do for MicroTiML
 

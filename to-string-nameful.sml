@@ -251,7 +251,7 @@ fun strn_mt t =
       | MtAbsI _ =>
         (* sprintf "(fn {$ : $} => $)" [name, strn_s gctx sctx s, strn_mt (name :: sctx, kctx) t] *)
         strn_abs t
-      | TSumbool (s1, s2) => sprintf "sumbool s1 s2" [strn_s s1, strn_s s2]
+      | TSumbool (s1, s2) => sprintf "(sumbool s1 s2)" [strn_s s1, strn_s s2]
       | BaseType (bt, _) => str_bt bt
       | UVar (u, r) =>
         let
@@ -280,6 +280,9 @@ fun strn_mt t =
         in
           sprintf "(datatype $$$ = $)" [fst name, tnames, bsorts, constr_decls]
         end
+      | TMap t => sprintf "(map $)" [strn_mt t]
+      | TState (x, _) => "typeof " ^ x
+      | TTuplePtr (ts, n, _) => sprintf "(tuple_ptr $ $)" [str_ls strn_mt ts, str_int n]
   end
 
 and strn_uni (binds, t) =
@@ -333,6 +336,7 @@ fun strn_e e =
   case e of
       EVar (x, b) => decorate_var b x
     | EConst (c, _) => str_expr_const c
+    | EState (x, _) => x
     | EUnOp (opr, e, _) => sprintf "($ $)" [str_expr_un_op opr, strn_e e]
     | EBinOp (opr, e1, e2) =>
       (case opr of
@@ -435,7 +439,7 @@ and strn_decl decl =
       | DRec (name, bind, _) =>
         let
           val name = binder2str name
-          val ((tnames, Rebind binds), ((t, d), e)) = Unbound.unBind $ unInner bind
+          val ((tnames, Rebind binds), ((pre_st, post_st), (t, d), e)) = Unbound.unBind $ unInner bind
           val binds = unTeles binds
           val tnames = map binder2str tnames
           val tnames = (join "" o map (fn nm => sprintf " [$]" [nm])) tnames
@@ -447,15 +451,15 @@ and strn_decl decl =
                 in
                   sprintf "{$ : $}" [name, strn_s s]
                 end
-              | TypingST (st, pn) =>
-                sprintf "$$" [strn_state $ unInner st, strn_pn pn]
+              | TypingST pn =>
+                sprintf "$" [strn_pn pn]
           val binds = map f binds
           val binds = (join "" o map (prefix " ")) binds
           val t = strn_mt t
           val d = strn_i d
           val e = strn_e e
         in
-          sprintf "rec$ $$ : $ |> $ = $" [tnames, name, binds, t, d, e]
+          sprintf "rec$ $$ : $$$ |> $ = $" [tnames, name, binds, strn_state pre_st, strn_state post_st, t, d, e]
         end
       | DIdxDef (name, Outer s, Outer i) =>
         let

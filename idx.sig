@@ -1,3 +1,6 @@
+structure StMap = StringBinaryMap
+structure StMapU = MapUtilFn (StMap)
+                             
 signature IDX = sig
 
   type base_sort

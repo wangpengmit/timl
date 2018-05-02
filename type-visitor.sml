@@ -321,6 +321,9 @@ fun default_type_visitor_vtable
           | UVar data => #visit_UVar vtable this env data
           | TDatatype data => #visit_TDatatype vtable this env data
           | TSumbool data => #visit_TSumbool vtable this env data
+          | TMap t => T.TMap $ #visit_mtype vtable this env t
+          | TState data => T.TState data
+          | TTuplePtr (ts, n, r) => T.TTuplePtr (visit_list (#visit_mtype vtable this) env ts, n, r)
       end
     fun visit_Arrow this env data =
       let

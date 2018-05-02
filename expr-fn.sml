@@ -26,7 +26,7 @@ type return = mtype option * idx option
                                  
 datatype stbind =
          SortingST of ibinder * sort outer
-         | TypingST of idx StMap.map inner * ptrn
+         | TypingST of ptrn
 
 type scoping_ctx = ibinder list * tbinder list * cbinder list * ebinder list
      
@@ -52,7 +52,7 @@ datatype expr =
      and decl =
          DVal of ebinder * (tbinder list, expr) bind outer * region outer
          | DValPtrn of ptrn * expr outer * region outer
-         | DRec of ebinder * (tbinder list * stbind tele rebind, (mtype * idx) * expr) bind inner * region outer
+         | DRec of ebinder * (tbinder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) bind inner * region outer
          | DIdxDef of ibinder * sort option outer * idx outer
          | DAbsIdx2 of ibinder * sort outer * idx outer
          | DAbsIdx of (ibinder * sort outer * idx outer) * decl tele rebind * region outer

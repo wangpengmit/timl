@@ -24,8 +24,8 @@ fun for_decls_e f (decls, e) =
     | _ => raise Impossible "for_decls_e"
                  
 fun for_rule f (pn, e) =
-  case f $ EAbs $ Bind (pn, e) of
-      EAbs bind => unBind bind
+  case f $ EAbs (StMap.empty, Bind (pn, e)) of
+      EAbs (_, bind) => unBind bind
     | _ => raise Impossible "for_rule"
                  
 end

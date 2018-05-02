@@ -443,7 +443,7 @@ local
           let
             fun f bind =
                 case bind of
-		    Typing pn => TypingST (Inner StMap.empty, elab_pn pn)
+		    Typing pn => TypingST (elab_pn pn)
 		  | BindSort (nm, s, _) => SortingST (Binder $ IName nm, Outer $ elab_s s)
             val binds = map f binds
             (* if the function body is a [case] without annotations, copy the return clause from the function signature to the [case] *)
@@ -452,7 +452,7 @@ local
             val d = default (UVarI ((), r)) (Option.map elab_i d)
             val e = elab e
           in
-	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((t, d), e)), Outer r)
+	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((StMap.empty, StMap.empty), (t, d), e)), Outer r)
           end
         | S.IdxDef ((name, r), s, i) =>
           let

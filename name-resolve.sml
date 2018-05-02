@@ -677,10 +677,10 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
             case d of
                 [DRec data] => data
               | _ => raise Impossible "import_e/visit_DRec"
-        val (names, ((t, d), e)) = Unbound.unBind $ unInner bind
+        val (names, (sts, (t, d), e)) = Unbound.unBind $ unInner bind
         val e = copy_anno (gctx_names gctx) (SOME t, SOME d) e
       in
-        [DRec (name, Inner $ Unbound.Bind (names, ((t, d), e)), r)]
+        [DRec (name, Inner $ Unbound.Bind (names, (sts, (t, d), e)), r)]
       end
     val vtable = EV.override_visit_DRec vtable visit_DRec
     fun visit_DTypeDef this ctx data =
@@ -1191,6 +1191,7 @@ fun on_top_bind gctx (name, bind) =
         in
           (TopFunctorApp ((f, f_r), m), [(name, Sig body), (formal_arg_name, Sig formal_arg)])
         end
+      | S.TBState (name, (b, t)) => (TBState (name, (b, on_mtype Gctx.empty ([], []) t)), [])
           
 and on_prog gctx binds =
     let

@@ -318,20 +318,20 @@ fun runWriter m _ =
     (r, vcs_admits) 
   end
 
-fun typecheck_expr gctx ctx e =
-  runWriter (fn () => get_mtype gctx (ctx, e)) ()
+fun typecheck_expr gctx ctx_st e =
+  runWriter (fn () => get_mtype gctx ctx_st e) ()
 	    
-fun typecheck_decls gctx ctx decls =
+fun typecheck_decls gctx (ctx, st) decls =
   let
     fun m () =
       let
         val skctxn_old = (sctx_names $ #1 ctx, names $ #2 ctx)
-        val (decls, ctxd, nps, ds, ctx) = check_decls gctx (ctx, decls)
+        val (decls, ctxd, nps, ds, ctx, st) = check_decls gctx (ctx, st) decls
         val () = close_n nps
         val () = close_ctx ctxd
                            (* val () = app println $ str_typing_info (gctx_names gctx) skctxn_old (ctxd, ds) *)
       in
-        (decls, ctxd, ds, ctx)
+        (decls, ctxd, ds, ctx, st)
       end
   in
     runWriter m ()

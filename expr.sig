@@ -17,7 +17,7 @@ signature EXPR = sig
                                    
   datatype stbind = 
            SortingST of Binders.ibinder * sort Unbound.outer
-           | TypingST of idx StMap.map Unbound.inner * ptrn
+           | TypingST of ptrn
 
   type scoping_ctx = Binders.ibinder list * Binders.tbinder list * Binders.cbinder list * Binders.ebinder list
                                                                                        
@@ -45,7 +45,7 @@ signature EXPR = sig
        and decl =
            DVal of Binders.ebinder * (Binders.tbinder list, expr) Unbound.bind Unbound.outer * Region.region Unbound.outer
            | DValPtrn of ptrn * expr Unbound.outer * Region.region Unbound.outer
-           | DRec of Binders.ebinder * (Binders.tbinder list * stbind Unbound.tele Unbound.rebind, (mtype * idx) * expr) Unbound.bind Unbound.inner * Region.region Unbound.outer
+           | DRec of Binders.ebinder * (Binders.tbinder list * stbind Unbound.tele Unbound.rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) Unbound.bind Unbound.inner * Region.region Unbound.outer
            | DIdxDef of Binders.ibinder * sort option Unbound.outer * idx Unbound.outer
            | DAbsIdx2 of Binders.ibinder * sort Unbound.outer * idx Unbound.outer
            | DAbsIdx of (Binders.ibinder * sort Unbound.outer * idx Unbound.outer) * decl Unbound.tele Unbound.rebind * Region.region Unbound.outer

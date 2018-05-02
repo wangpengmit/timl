@@ -209,6 +209,9 @@ fun forget_i_mt x n b =
 	  | BaseType a => BaseType a
           | UVar a => b
           | TDatatype _ => raise Unimpl "uvar_forget/forget_i_mt()/TDatatype"
+          | TMap t => TMap $ f x n t
+          | TState _ => b
+          | TTuplePtr (ts, n, r) => TTuplePtr (map (f x n) ts, n, r)
       end
     val ret =
         on_App_UVar ()

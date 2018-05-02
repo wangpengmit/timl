@@ -96,11 +96,13 @@ fun add_sorting_skc pair (sctx, kctx, cctx) =
   (add_sorting pair sctx, 
    shiftx_i_kctx 1 kctx,
    shiftx_i_cs 1 cctx)
-fun add_sorting_skcts pair ((sctx, kctx, cctx, tctx), st) = 
-  ((add_sorting pair sctx, 
+fun add_sorting_skct pair (sctx, kctx, cctx, tctx) = 
+  (add_sorting pair sctx, 
    shiftx_i_kctx 1 kctx, 
    shiftx_i_cs 1 cctx, 
-   shiftx_i_ts 1 tctx),
+   shiftx_i_ts 1 tctx)
+fun add_sorting_skcts pair (ctx, st) = 
+  (add_sorting_skct pair ctx,
    StMap.map shift_i_i st)
 (* Within 'pairs', sort depends on previous sort *)
 fun add_sortings_skcts pairs' ((pairs, kctx, cctx, tctx), st) = 

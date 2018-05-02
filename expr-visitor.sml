@@ -49,7 +49,7 @@ type ('this, 'env) expr_visitor_vtable =
        visit_decl : 'this -> 'env ctx -> decl -> T.decl list,
        visit_DVal : 'this -> 'env ctx -> ename binder * (tname binder list, expr) bind outer * region outer -> T.decl list,
        visit_DValPtrn : 'this -> 'env ctx -> ptrn * expr outer * region outer -> T.decl list,
-       visit_DRec : 'this -> 'env ctx -> ename binder * (tname binder list * stbind tele rebind, (mtype * idx) * expr) bind inner * region outer -> T.decl list,
+       visit_DRec : 'this -> 'env ctx -> ename binder * (tname binder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) bind inner * region outer -> T.decl list,
        visit_DIdxDef : 'this -> 'env ctx -> iname binder * sort option outer * idx outer -> T.decl list,
        visit_DAbsIdx2 : 'this -> 'env ctx -> iname binder * sort outer * idx outer -> T.decl list,
        visit_DAbsIdx : 'this -> 'env ctx -> (iname binder * sort outer * idx outer) * decl tele rebind * region outer -> T.decl list,
@@ -144,6 +144,7 @@ fun default_expr_visitor_vtable
         case data of
 	    EVar data => #visit_EVar vtable this env data
           | EConst data => #visit_EConst vtable this env data
+          | EState data => T.EState data
           | EUnOp data => #visit_EUnOp vtable this env data
           | EBinOp data => #visit_EBinOp vtable this env data
 	  | ETriOp data => #visit_ETriOp vtable this env data
@@ -557,14 +558,14 @@ fun default_expr_visitor_vtable
       in
         [T.DValPtrn (pn, e, r)]
       end
-    fun visit_state f env st = StMap.map (f env) st
+    fun visit_map f env st = StMap.map (f env) st
     fun visit_stbind this env data =
       let
         val vtable = cast this
       in
         case data of
             SortingST data => T.SortingST $ visit_pair (visit_ibinder this) (visit_outer (#visit_sort vtable this)) env data
-          | TypingST (st, pn) => T.TypingST (visit_inner (visit_state $ #visit_idx vtable this) env st, #visit_ptrn vtable this env pn)
+          | TypingST pn => T.TypingST (#visit_ptrn vtable this env pn)
       end
     fun visit_DRec this env data =
       let
@@ -575,9 +576,11 @@ fun default_expr_visitor_vtable
             visit_inner (
               visit_bind (visit_pair (visit_list (visit_tbinder this))
                                      (visit_rebind (visit_tele (visit_stbind this))))
-                         (visit_pair (visit_pair (#visit_mtype vtable this)
-                                                 (#visit_idx vtable this))
-                                     (#visit_expr vtable this))) env bind
+                         (visit_triple (visit_pair (visit_map $ #visit_idx vtable this)
+                                                   (visit_map $ #visit_idx vtable this))
+                                       (visit_pair (#visit_mtype vtable this)
+                                                   (#visit_idx vtable this))
+                                       (#visit_expr vtable this))) env bind
       in
         [T.DRec (name, bind, r)]
       end

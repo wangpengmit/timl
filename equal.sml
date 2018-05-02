@@ -253,5 +253,20 @@ fun eq_mt t t' =
              end
            | _ => false
         )
+      | TMap t =>
+        (case t' of
+             TMap t' => eq_mt t t'
+           | _ => false
+        )
+      | TState (x, _) =>
+        (case t' of
+             TState (x', _) => x = x'
+           | _ => false
+        )
+      | TTuplePtr (ts, n, _) =>
+        (case t' of
+             TTuplePtr (ts', n', _) => eq_ls (uncurry eq_mt) (ts, ts') andalso n = n'
+           | _ => false
+        )
 
 end

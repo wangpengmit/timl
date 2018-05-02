@@ -185,42 +185,42 @@ nouvar-expr.sml
 visitor.sml                                 
 parse-filename.sml
 vc-solver.sml
-remove-open.sml
-merge-modules.sml
-micro-timl/micro-timl.sml
-micro-timl/micro-timl-visitor.t.sml
-micro-timl/micro-timl-long-id.sml
-micro-timl/micro-timl-visitor2.sml
-micro-timl/micro-timl-util.sml
-micro-timl/micro-timl-pp.sml
-micro-timl/pattern-ex.sml
-micro-timl/post-process.sml
-micro-timl/export-pp.sml
-micro-timl/timl-to-micro-timl.sml
-micro-timl/micro-timl-util-timl.sml
-micro-timl/micro-timl-typecheck.sml
-micro-timl/micro-timl-locally-nameless.sml
-micro-timl/compiler-util.sml
-micro-timl/cps.sml
-micro-timl/cc.sml
-# micro-timl/pair-alloc.sml
-# micro-timl/tital.sml
-# micro-timl/tital-visitor.sml
-# micro-timl/tital-pp.sml
-# micro-timl/tital-export-pp.sml
-# micro-timl/tital-tc.sml
-# micro-timl/tital-eval.sml
-# micro-timl/code-gen.sml
-micro-timl/evm1.sml
-micro-timl/evm1-visitor.sml
-micro-timl/evm1-pp.sml
-micro-timl/evm1-export-pp.sml
-micro-timl/evm1-pp.sml
-micro-timl/evm-costs.sml
-micro-timl/evm1-util.sml
-micro-timl/evm1-tc.sml
-micro-timl/evm1-assemble.sml
-micro-timl/to-evm1.sml
+# remove-open.sml
+# merge-modules.sml
+# micro-timl/micro-timl.sml
+# micro-timl/micro-timl-visitor.t.sml
+# micro-timl/micro-timl-long-id.sml
+# micro-timl/micro-timl-visitor2.sml
+# micro-timl/micro-timl-util.sml
+# micro-timl/micro-timl-pp.sml
+# micro-timl/pattern-ex.sml
+# micro-timl/post-process.sml
+# micro-timl/export-pp.sml
+# micro-timl/timl-to-micro-timl.sml
+# micro-timl/micro-timl-util-timl.sml
+# micro-timl/micro-timl-typecheck.sml
+# micro-timl/micro-timl-locally-nameless.sml
+# micro-timl/compiler-util.sml
+# micro-timl/cps.sml
+# micro-timl/cc.sml
+# # micro-timl/pair-alloc.sml
+# # micro-timl/tital.sml
+# # micro-timl/tital-visitor.sml
+# # micro-timl/tital-pp.sml
+# # micro-timl/tital-export-pp.sml
+# # micro-timl/tital-tc.sml
+# # micro-timl/tital-eval.sml
+# # micro-timl/code-gen.sml
+# micro-timl/evm1.sml
+# micro-timl/evm1-visitor.sml
+# micro-timl/evm1-pp.sml
+# micro-timl/evm1-export-pp.sml
+# micro-timl/evm1-pp.sml
+# micro-timl/evm-costs.sml
+# micro-timl/evm1-util.sml
+# micro-timl/evm1-tc.sml
+# micro-timl/evm1-assemble.sml
+# micro-timl/to-evm1.sml
 unit-test.sml
 main.sml
 }

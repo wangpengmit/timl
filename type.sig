@@ -1,6 +1,3 @@
-structure StMap = StringBinaryMap
-structure StMapU = MapUtilFn (StMap)
-                   
 signature TYPE = sig
 
   type bsort
@@ -40,8 +37,8 @@ signature TYPE = sig
            | TDatatype of mtype datatype_def * region
            | TSumbool of sort * sort
            | TMap of mtype
-           | TState of string
-           | TTuplePtr of mtype list * int
+           | TState of string * region
+           | TTuplePtr of mtype list * int * region
 
   datatype ty = 
 	   Mono of mtype

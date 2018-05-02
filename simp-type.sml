@@ -6,6 +6,10 @@ functor SimpTypeFn (structure Type : TYPE
 
 open Type
 open SimpUtil
+
+(* todo: use visitor *)
+       
+infixr 0 $
          
 fun simp_mt t =
   case t of
@@ -40,6 +44,9 @@ fun simp_mt t =
         TDatatype (dt, r)
       end
     | TSumbool (s1, s2) => TSumbool (simp_s s1, simp_s s2)
+    | TMap t => TMap $ simp_mt t
+    | TState _ => t
+    | TTuplePtr (ts, n, r) => TTuplePtr (map simp_mt ts, n, r)
 
 fun simp_t t =
   case t of
