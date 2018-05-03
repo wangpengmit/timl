@@ -1080,7 +1080,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     val gctxn = gctx_names gctx
     val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names (sctx, kctx, cctx, tctx)
     val skctxn = (sctxn, kctxn)
-    val () = print $ sprintf "Typing $\n" [US.str_e gctxn ctxn e_all]
+    (* val () = print $ sprintf "Typing $\n" [US.str_e gctxn ctxn e_all] *)
     (* val () = print $ sprintf "  Typing $\n" [U.str_raw_e e_all] *)
     (* fun print_ctx gctx (ctx as (sctx, kctx, _, tctx)) = *)
     (*   let *)
@@ -1242,14 +1242,29 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	       let
                  val r1 = U.get_region_e e1
                  val (e1, t1, d1, st) = get_mtype (ctx, st) e1
+                 val t1 = whnf_mt true gctx kctx t1
                  val ((pre_st, t2), d, (post_st, t)) =
-                     case whnf_mt true gctx kctx t1 of
+                     case t1 of
                          Arrow a => a
-                       | t1 => raise Error (r1, "type mismatch:" ::
-                                                indent ["expect: _ -- _ --> _",
-                                                        "got: " ^ str_mt gctxn skctxn t1])
-                 val (e2, d2, st) = check_mtype (ctx, st) (e2, t2)
-                 val () = println "before check_submap"
+                       | t1 =>
+                         case is_MtApp_UVar t1 of
+                             SOME _ =>
+                             let
+                               val t2 = fresh_mt gctx (sctx, kctx) r1
+                               val d = fresh_i gctx sctx (Base Time) r1
+                               val t = fresh_mt gctx (sctx, kctx) r1
+                               val arrow = ((StMap.empty, t2), d, (StMap.empty, t))
+                               val () = unify_mt r1 gctx (sctx, kctx) (t1, Arrow arrow)
+                             in
+                               arrow
+                             end
+                           | NONE =>
+                             raise Error (r1, "type mismatch:" ::
+                                              indent ["expect: _ -- _ --> _",
+                                                      "got: " ^ str_mt gctxn skctxn t1])
+                 val (e2, t2', d2, st) = get_mtype (ctx, st) e2
+                 (* todo: if I swap (t2, t2'), unify_mt() has a bug that it unifies the index arguments too eagerly *)
+                 val () = unify_mt (get_region_e e2) gctx (sctx, kctx) (t2, t2')
                  fun check_submap pre_st st =
                    let
                      val pre_st_minus_st = pre_st @@- st
@@ -1258,7 +1273,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                      else raise Error (r1, ["these state fields are required by the function by missing in current state:", str_ls str_st_key $ StMapU.domain pre_st_minus_st])
                    end
                  val () = app (fn k => write_prop (st @!! k %= pre_st @!! k, r1)) $ StMapU.domain pre_st
-                 val () = println "after check_submap"
                  val st = st @@+ post_st
                in
                  (EApp (e1, e2), t, d1 %+ d2 %+ T1 r1 %+ d, st) 
@@ -1705,7 +1719,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     val t = SimpType.simp_mt $ normalize_mt true gctx kctx t
     val d = simp_i $ normalize_i d
     (* val () = println $ str_ls id $ #4 ctxn *)
-    val () = print (sprintf " Typed $: \n        $\n" [str_e gctxn ctxn e, str_mt gctxn skctxn t])
+    (* val () = print (sprintf " Typed $: \n        $\n" [str_e gctxn ctxn e, str_mt gctxn skctxn t]) *)
     (* val () = print (sprintf "   Time : $: \n" [str_i sctxn d]) *)
     (* val () = print (sprintf "  type: $ [for $]\n  time: $\n" [str_mt gctxn skctxn t, str_e gctxn ctxn e, str_i gctxn sctxn d]) *)
     (* val () = print (sprintf "  type: $\n" [str_mt gctxn skctxn t]) *)
@@ -2165,9 +2179,7 @@ and check_mtype gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, t) =
     let
       val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names ctx
       val (e, t', d, st) = get_mtype gctx ctx_st e
-      val () = println "before unify_mt()"
       val () = unify_mt (get_region_e e) gctx (sctx, kctx) (t', t)
-      val () = println "after unify_mt()"
                         (* val () = println "check type" *)
                         (* val () = println $ str_region "" "ilist.timl" $ get_region_e e *)
     in

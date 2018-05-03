@@ -65,7 +65,7 @@ fun TV r n = MtVar (ID (n, r))
 fun fresh_uvar_i ctx bsort =
   let
     val n = inc ()
-    val () = println $ "created uvar_i " ^ str_int n
+    (* val () = println $ "created uvar_i " ^ str_int n *)
   in
     ref (Fresh (n, ctx, bsort))
   end

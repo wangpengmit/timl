@@ -139,7 +139,7 @@ fun unify_i r gctxn ctxn (i, i') =
       end
     val i = whnf_i i (* todo: whnf_i is enough *)
     val i' = whnf_i i'
-    val () = println $ sprintf "Unifying indices $ and $" [str_i gctxn ctxn i, str_i gctxn ctxn i']
+    (* val () = println $ sprintf "Unifying indices $ and $" [str_i gctxn ctxn i, str_i gctxn ctxn i'] *)
     val () =
         (* first try unifying applications of uvars with the other index; if unsuccessful in both directions, then try ordinary structural unification *)
         unify_IApp r i i'
@@ -495,7 +495,7 @@ fun unify_mt r gctx ctx (t, t') =
 	| _ => raise error ctxn (t, t')
     val t = whnf_mt true gctx kctx t
     val t' = whnf_mt true gctx kctx t'
-    val () = println $ sprintf "Unifying types\n\t$\n  and\n\t$" [str_mt gctxn ctxn t, str_mt gctxn ctxn t']
+    (* val () = println $ sprintf "Unifying types\n\t$\n  and\n\t$" [str_mt gctxn ctxn t, str_mt gctxn ctxn t'] *)
     (* Apply [unify_MtApp] in which order? Here is a heuristic: *)
     fun more_uvar_args (a, b) =
       case (is_MtApp_UVar a, is_MtApp_UVar b) of
@@ -525,7 +525,7 @@ fun unify_mt r gctx ctx (t, t') =
             structural_compare (t, t')
           end
         end
-    val () = println "unify_mt () ended"
+    (* val () = println "unify_mt () ended" *)
   in
     ()
   end
