@@ -894,6 +894,7 @@ fun is_value (e : U.expr) : bool =
     case e of
         EVar _ => true (* todo: is this right? *)
       | EConst _ => true
+      | EState _ => true
       | EUnOp (opr, e, _) =>
         (case opr of
              EUProj _ => false
@@ -902,7 +903,8 @@ fun is_value (e : U.expr) : bool =
            | EUNat2Int => false
            | EUInt2Nat => false
            | EUPrintc => false
-           (* | EUPrint => false *)
+        (* | EUPrint => false *)
+           | EUStorageGet => false
         )
       | EBinOp (opr, e1, e2) =>
         (case opr of
@@ -913,12 +915,17 @@ fun is_value (e : U.expr) : bool =
            | EBPrim _ => false
            | EBNat _ => false
            | EBNatCmp _ => false
+           | EBVectorGet => false
+           | EBVectorPushBack => false
+           | EBMapPtr => false
+           | EBStorageSet => false
         )
       | ENewArrayValues _ => false
       | ETriOp (opr, _, _, _) =>
         (case opr of
              ETWrite => false
            | ETIte => false
+           | ETVectorSet => false
         )                        
       | EEI (opr, e, i) =>
         (case opr of
@@ -1073,7 +1080,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     val gctxn = gctx_names gctx
     val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names (sctx, kctx, cctx, tctx)
     val skctxn = (sctxn, kctxn)
-    (* val () = print $ sprintf "Typing $\n" [US.str_e gctxn ctxn e_all] *)
+    val () = print $ sprintf "Typing $\n" [US.str_e gctxn ctxn e_all]
     (* val () = print $ sprintf "  Typing $\n" [U.str_raw_e e_all] *)
     (* fun print_ctx gctx (ctx as (sctx, kctx, _, tctx)) = *)
     (*   let *)
@@ -1242,6 +1249,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                                                 indent ["expect: _ -- _ --> _",
                                                         "got: " ^ str_mt gctxn skctxn t1])
                  val (e2, d2, st) = check_mtype (ctx, st) (e2, t2)
+                 val () = println "before check_submap"
                  fun check_submap pre_st st =
                    let
                      val pre_st_minus_st = pre_st @@- st
@@ -1250,6 +1258,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                      else raise Error (r1, ["these state fields are required by the function by missing in current state:", str_ls str_st_key $ StMapU.domain pre_st_minus_st])
                    end
                  val () = app (fn k => write_prop (st @!! k %= pre_st @!! k, r1)) $ StMapU.domain pre_st
+                 val () = println "after check_submap"
                  val st = st @@+ post_st
                in
                  (EApp (e1, e2), t, d1 %+ d2 %+ T1 r1 %+ d, st) 
@@ -1390,7 +1399,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e, d, st) = check_mtype (ctx, st) (e, BaseType (Bool, r))
             val (e1, t, d1, st1) = get_mtype (ctx, st) e1
             val (e2, d2, st2) = check_mtype (ctx, st) (e2, t)
-            val () = unify_state r gctx sctx (st2, st1)
+            val () = unify_state r gctxn sctxn (st2, st1)
           in
             (ETriOp (ETIte, e, e1, e2), t, d %+ smart_max d1 d2, st1)
           end
@@ -1638,7 +1647,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             fun unify_states sts =
               case sts of
                   [] => NONE
-                | st :: ls => (app (fn st' => unify_state r gctx sctx (st', st)) ls; SOME st)
+                | st :: ls => (app (fn st' => unify_state r gctxn sctxn (st', st)) ls; SOME st)
             val st = default st $ unify_states sts
           in
             (ECase (e, return, map Unbound.Bind rules, r), t, d1 %+ d, st)
@@ -1661,7 +1670,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (t2, j2) = forget_or_check_return r gctx skctx' ctxd (t2, j2) (NONE, NONE)
             val st2 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st2
             val () = unify_mt r gctx (sctx, kctx) (t2, t1)
-            val () = unify_state r gctx sctx (st2, st1)
+            val () = unify_state r gctxn sctxn (st2, st1)
           in
             (ECaseSumbool (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %+ smart_max j1 j2, st1)
           end
@@ -1684,7 +1693,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (t2, j2) = forget_or_check_return r gctx skctx' ctxd (t2, j2) (NONE, NONE)
             val st2 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st2
             val () = unify_mt r gctx (sctx, kctx) (t2, t1)
-            val () = unify_state r gctx sctx (st2, st1)
+            val () = unify_state r gctxn sctxn (st2, st1)
           in
             (EIfi (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %+ smart_max j1 j2, st1)
           end
@@ -1696,7 +1705,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     val t = SimpType.simp_mt $ normalize_mt true gctx kctx t
     val d = simp_i $ normalize_i d
     (* val () = println $ str_ls id $ #4 ctxn *)
-    (* val () = print (sprintf " Typed $: \n        $\n" [str_e gctxn ctxn e, str_mt gctxn skctxn t]) *)
+    val () = print (sprintf " Typed $: \n        $\n" [str_e gctxn ctxn e, str_mt gctxn skctxn t])
     (* val () = print (sprintf "   Time : $: \n" [str_i sctxn d]) *)
     (* val () = print (sprintf "  type: $ [for $]\n  time: $\n" [str_mt gctxn skctxn t, str_e gctxn ctxn e, str_i gctxn sctxn d]) *)
     (* val () = print (sprintf "  type: $\n" [str_mt gctxn skctxn t]) *)
@@ -1794,7 +1803,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val e =
                   case rev binds of
                       U.TypingST pn :: binds =>
-                      U.MakeEAbs (pre_st, pn, foldl attach_bind_e e binds)
+                      foldl attach_bind_e (U.MakeEAbs (pre_st, pn, e)) binds
                     | _ => raise Error (r, ["Recursion must have a typing bind as the last bind"])
               fun type_from_ptrn pn =
                 case pn of
@@ -2106,7 +2115,7 @@ and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e
       val skcctx = (sctx, kctx, cctx) 
       val (pn, cover, ctxd as (sctxd, kctxd, _, _), nps) = match_ptrn gctx (skcctx, (* pcovers, *) pn, t1)
       val ctx0 = ctx
-      val ctx = add_ctx ctxd ctx
+      val (ctx, st) = add_ctx_ctxst ctxd (ctx, st)
       val (e, t, d, st) = get_mtype gctx (ctx, st) e
       val r = get_region_e e
       val (t, d) = forget_or_check_return r gctx (#1 ctx, #2 ctx) ctxd (t, d) return 
@@ -2156,7 +2165,9 @@ and check_mtype gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, t) =
     let
       val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names ctx
       val (e, t', d, st) = get_mtype gctx ctx_st e
+      val () = println "before unify_mt()"
       val () = unify_mt (get_region_e e) gctx (sctx, kctx) (t', t)
+      val () = println "after unify_mt()"
                         (* val () = println "check type" *)
                         (* val () = println $ str_region "" "ilist.timl" $ get_region_e e *)
     in
@@ -2357,10 +2368,11 @@ fun is_wf_map_val t =
           case t of
               TMap t => is_wf_map_val t
             | _ => is_base_storage_ty t
-      fun map_err () = raise Error (get_region_mt t, ["invalid state type"])
+      fun map_err () = raise Error (get_region_mt t, ["invalid map value type"])
     in
       case t of
           TTuplePtr (ts, offset, _) => (assert_b_m map_err (offset = 0); app is_wf_map_val_field ts)
+        | _ => map_err ()
     end
       
 fun is_wf_state_ty (is_map, t) =

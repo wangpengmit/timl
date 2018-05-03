@@ -62,7 +62,13 @@ fun refine_UVarS_to_Basic (x, r, info, args) =
 fun V r n = VarI (ID (n, r), [])
 fun TV r n = MtVar (ID (n, r))
 
-fun fresh_uvar_i ctx bsort = ref (Fresh (inc (), ctx, bsort))
+fun fresh_uvar_i ctx bsort =
+  let
+    val n = inc ()
+    val () = println $ "created uvar_i " ^ str_int n
+  in
+    ref (Fresh (n, ctx, bsort))
+  end
 fun fresh_uvar_mt ctx = ref (Fresh (inc (), ctx))
 
 fun get_ctx_and_args sel make_arg on_snd package gctx ctx_local r =

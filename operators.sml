@@ -94,6 +94,7 @@ datatype expr_un_op =
          | EUInt2Nat
          | EUPrintc
 (* | EUPrint *)
+         | EUStorageGet
 
 fun str_expr_const c =
   case c of
@@ -127,7 +128,8 @@ fun str_expr_un_op opr =
     | EUNat2Int => "nat2int"
     | EUInt2Nat => "int2nat"
     | EUPrintc => "printc"
-    (* | EUPrint => "print" *)
+(* | EUPrint => "print" *)
+    | EUStorageGet => "storage_get"
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =
@@ -144,7 +146,7 @@ datatype prim_expr_bin_op =
          | EBPIntNEq
          | EBPBoolAnd
          | EBPBoolOr
-         (* | EBPStrConcat *)
+(* | EBPStrConcat *)
 
 (* binary nat operators *)
 datatype nat_expr_bin_op =
@@ -169,6 +171,10 @@ datatype expr_bin_op =
          | EBPrim of prim_expr_bin_op
          | EBNat of nat_expr_bin_op
          | EBNatCmp of nat_cmp
+         | EBVectorGet
+         | EBVectorPushBack
+         | EBMapPtr
+         | EBStorageSet
 
 fun str_prim_expr_bin_op opr =
   case opr of
@@ -212,6 +218,10 @@ fun str_expr_bin_op opr =
     | EBPrim opr => str_prim_expr_bin_op opr
     | EBNat opr => str_nat_expr_bin_op opr
     | EBNatCmp opr => str_nat_cmp opr
+    | EBVectorGet => "vector_get"
+    | EBVectorPushBack => "vector_push_back"
+    | EBMapPtr => "map_ptr"
+    | EStorageSet => "storage_set"
 
 fun pretty_str_prim_expr_bin_op opr =
   case opr of
@@ -255,15 +265,21 @@ fun pretty_str_expr_bin_op opr =
     | EBPrim opr => pretty_str_prim_expr_bin_op opr
     | EBNat opr => pretty_str_nat_expr_bin_op opr
     | EBNatCmp opr => pretty_str_nat_cmp opr
+    | EBVectorGet => "vector_get"
+    | EBVectorPushBack => "vector_push_back"
+    | EBMapPtr => "map_ptr"
+    | EStorageSet => "storage_set"
 
 datatype expr_tri_op =
          ETWrite
          | ETIte
+         | ETVectorSet
 
 fun str_expr_tri_op opr =
   case opr of
       ETWrite => "write"
     | ETIte => "ite"
+    | ETVectorSet => "vector_set"
                   
 datatype expr_EI =
          EEIAppI
