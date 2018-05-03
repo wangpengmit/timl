@@ -1,0 +1,26 @@
+val m : map (*int*) int
+val mm : map (*int*) (map (*int*) int)
+val v : vector int
+
+structure TestState = struct
+
+fun inc n = n+1
+                
+fun foo {len : Nat} () pre {v : len} post {v : len} =
+  let
+    val () = push_back (v, 0)
+    val () = set v[0] 10
+    val () = modify v[0] inc (* == let val x = v[0] in set v[0] (inc x) end == set v[0] (inc v[0]) *)
+    val _ = v[0]
+    val () = mset m[1] = 100
+    val () = modify m[1] inc
+    val _ = mget m[1]
+    val () = mset mm[1][2] = 200
+    val () = modify mm[1][2] ++
+    val () = modify mm[1][2] += 2
+    val _ = mget mm[1][2]
+  in
+    ()
+  end
+
+end
