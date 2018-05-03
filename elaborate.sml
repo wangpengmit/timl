@@ -216,13 +216,13 @@ local
           if isNone (fst name) andalso not eia andalso null inames andalso isNone pn then
             VarP $ Binder $ EName (snd name)
           else
-            ConstrP (Outer ((to_long_id name, ()), eia), map str2ibinder inames, default (TTP $ Outer r) $ Option.map elab_pn pn, Outer r)
+            ConstrP (Outer ((to_long_id name, ()), eia), map str2ibinder inames, default (TTP r) $ Option.map elab_pn pn, r)
         | S.TupleP (pns, r) =>
           (case pns of
-               [] => TTP $ Outer r
+               [] => TTP r
              | pn :: pns => foldl (fn (pn2, pn1) => PairP (pn1, elab_pn pn2)) (elab_pn pn) pns)
         | S.AliasP (name, pn, r) =>
-          AliasP (Binder $ EName name, elab_pn pn, Outer r)
+          AliasP (Binder $ EName name, elab_pn pn, r)
         | S.AnnoP (pn, t, r) =>
           AnnoP (elab_pn pn, Outer $ elab_mt t)
   (*                                                              
@@ -432,10 +432,10 @@ local
           in
             case pn of
                 VarP name =>
-                DVal (name, Outer $ Unbound.Bind (map (Binder o TName) tnames, elab e), Outer r)
+                DVal (name, Outer $ Unbound.Bind (map (Binder o TName) tnames, elab e), r)
               | _ =>
                 if null tnames then
-                  DValPtrn (pn, Outer $ elab e, Outer r)
+                  DValPtrn (pn, Outer $ elab e, r)
                 else
                   raise Error (r, "compound pattern can't be generalized, so can't have explicit type variables")
           end
@@ -452,7 +452,7 @@ local
             val d = default (UVarI ((), r)) (Option.map elab_i d)
             val e = elab e
           in
-	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((StMap.empty, StMap.empty), (t, d), e)), Outer r)
+	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((StMap.empty, StMap.empty), (t, d), e)), r)
           end
         | S.IdxDef ((name, r), s, i) =>
           let
@@ -473,7 +473,7 @@ local
                         SOME i => elab_i i
                       | NONE => UVarI ((), r1)
           in
-            DAbsIdx ((Binder $ IName (name, r1), Outer s, Outer i), Rebind $ Teles $ map elab_decl decls, Outer r)
+            DAbsIdx ((Binder $ IName (name, r1), Outer s, Outer i), Rebind $ Teles $ map elab_decl decls, r)
           end
         | S.Datatype a =>
           let
@@ -482,7 +482,7 @@ local
             DTypeDef (Binder $ TName $ fst $ unBind dt, Outer $ TDatatype (dt, r))
           end
         | S.TypeDef (name, t) => DTypeDef (Binder $ TName name, Outer $ elab_mt t)
-        | S.Open name => DOpen (Outer name, NONE)
+        | S.Open name => DOpen (Inner name, NONE)
 
   fun elab_spec spec =
       case spec of

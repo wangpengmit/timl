@@ -108,15 +108,17 @@ open Pattern
 open Expr
 open Unbound
 
+infixr 0 $
+         
 fun get_region_binder (Binder (_, (_, r))) = r
                                              
 fun get_region_pn pn = 
   case pn of
-      ConstrP (_, _, _, Outer r) => r
+      ConstrP (_, _, _, r) => r
     | VarP name => get_region_binder name
     | PairP (pn1, pn2) => combine_region (get_region_pn pn1) (get_region_pn pn2)
-    | TTP (Outer r) => r
-    | AliasP (_, _, Outer r) => r
+    | TTP r => r
+    | AliasP (_, _, r) => r
     | AnnoP (pn, Outer t) => combine_region (get_region_pn pn) (get_region_mt t)
 
 fun get_region_bind fp ft bind =
@@ -150,15 +152,15 @@ fun get_region_rule (pn, e) = combine_region (get_region_pn pn) (get_region_e e)
 
 fun get_region_dec dec =
   case dec of
-      DVal (_, _, Outer r) => r
-    | DValPtrn (_, _, Outer r) => r
-    | DRec (_, _, Outer r) => r
+      DVal (_, _, r) => r
+    | DValPtrn (_, _, r) => r
+    | DRec (_, _, r) => r
     | DIdxDef (name, _, Outer i) => combine_region (get_region_binder name) (get_region_i i)
     | DAbsIdx2 (name, _, Outer i) => combine_region (get_region_binder name) (get_region_i i)
-    | DAbsIdx (_, _, Outer r) => r
+    | DAbsIdx (_, _, r) => r
     | DTypeDef (name, Outer t) => combine_region (get_region_binder name) (get_region_mt t)
     | DConstrDef (name, Outer x) => combine_region (get_region_binder name) (get_region_cvar x)
-    | DOpen (Outer (_, r), _) => r
+    | DOpen (x, _) => snd $ unInner x
 
 fun get_region_sig (_, r) = r
 

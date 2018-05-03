@@ -514,7 +514,7 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
     (* val () = println $ "sctxn=" ^ (str_ls id sctxn) *)
   in
     case pn of
-	U.ConstrP (Outer ((cx, ()), eia), inames, opn, Outer r) =>
+	U.ConstrP (Outer ((cx, ()), eia), inames, opn, r) =>
  	let
           val inames = map binder2str inames
           val c as (family, tbinds) = snd $ fetch_constr gctx (cctx, cx)
@@ -571,7 +571,7 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
           val ctxd = add_ctx ctxd' ctxd
           val cover = ConstrC (cx, cover)
         in
-	  (ConstrP (Outer ((cx, (length siblings, pos_in_family)), eia), map str2ibinder inames, pn1, Outer r), cover, ctxd, length ps + nps)
+	  (ConstrP (Outer ((cx, (length siblings, pos_in_family)), eia), map str2ibinder inames, pn1, r), cover, ctxd, length ps + nps)
 	end
       | U.VarP ename =>
         let
@@ -600,11 +600,11 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
         in
           (PairP (pn1, pn2), PairC (cover1, cover2), ctxd, nps1 + nps2)
         end
-      | U.TTP (Outer r) =>
+      | U.TTP r =>
         let
           val () = unify_mt r gctx (sctx, kctx) (t, Unit dummy)
         in
-          (TTP $ Outer r, TTC, empty_ctx, 0)
+          (TTP r, TTC, empty_ctx, 0)
         end
       | U.AliasP (ename, pn, r) =>
         let
@@ -685,14 +685,14 @@ fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
                                               (* else *)
                                               (*   VarP ("_", dummy) *)
                                    in
-                                     ConstrP (Outer ((x, ()), true), repeat (length name_sorts) $ str2ibinder "_", pn', Outer dummy)
+                                     ConstrP (Outer ((x, ()), true), repeat (length name_sorts) $ str2ibinder "_", pn', dummy)
                                    end
                                  | NONE => default ()
                               )
                             | TTH =>
                               (case t of
                                    Unit _ =>
-                                   TTP $ Outer dummy
+                                   TTP dummy
                                  | _ => default ()
                               )
                             | PairH (h1, h2) =>
@@ -1763,7 +1763,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
       (* val () = println $ sprintf "Typing Decl $" [fst $ U.str_decl (gctx_names gctx) (ctx_names ctx) decl] *)
       fun main () = 
         case decl of
-            U.DVal (ename, Outer bind, Outer r) =>
+            U.DVal (ename, Outer bind, r) =>
             let
               val name = binder2str ename
               (* val () = println $ "DVal " ^ name *)
@@ -1783,14 +1783,14 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                   val poly_t = Uni_Many (tnames, poly_t, r)
                   val tnames = tnames @ rev free_uvar_names
                 in
-                  (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, ty2mtype poly_t)), Outer r), ctx_from_typing (name, poly_t), 0, [d], st)
+                  (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, ty2mtype poly_t)), r), ctx_from_typing (name, poly_t), 0, [d], st)
                 end
               else if length tnames = 0 then
-                (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, t)), Outer r), ctx_from_typing (name, Mono t), 0, [d], st)
+                (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, t)), r), ctx_from_typing (name, Mono t), 0, [d], st)
               else
                 raise Error (r, ["explicit type variable cannot be generalized because of value restriction"])
             end
-          | U.DValPtrn (pn, Outer e, Outer r) =>
+          | U.DValPtrn (pn, Outer e, r) =>
             let 
               val skcctx = (sctx, kctx, cctx) 
               val (e, t, d, st) = get_mtype (ctx, st) e
@@ -1799,9 +1799,9 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val st = StMap.map (shift_ctx_i ctxd) st
 	      val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
             in
-              (DValPtrn (pn, Outer e, Outer r), ctxd, nps, [d], st)
+              (DValPtrn (pn, Outer e, r), ctxd, nps, [d], st)
             end
-	  | U.DRec (name, bind, Outer r) =>
+	  | U.DRec (name, bind, r) =>
             (* a version that delegates most of the work to EAbs and EAbsI *)
 	    let
               val (name, r1) = unBinderName name
@@ -1846,7 +1846,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val e = foldli (fn (v, uvar_ref, e) => SubstUVar.substu_t_e uvar_ref v e) e free_uvars
               val poly_te = Uni_Many (tnames, poly_te, r)
               val tnames = tnames @ rev free_uvar_names
-              val decl = DRec (Binder $ EName (name, r1), Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind TeleNil), ((StMap.empty, StMap.empty), (te, T0 r), e)), Outer r)
+              val decl = DRec (Binder $ EName (name, r1), Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind TeleNil), ((StMap.empty, StMap.empty), (te, T0 r), e)), r)
             in
               (decl, ctx_from_typing (name, poly_te), 0, [T0 dummy], st)
 	    end
@@ -1963,7 +1963,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                    (DTypeDef (Binder $ TName (name, r), Outer t), ctx_from_kindingext kinding, 0, [], st)
                  end
             )
-          | U.DAbsIdx ((name, Outer s, Outer i), Rebind decls, Outer r) =>
+          | U.DAbsIdx ((name, Outer s, Outer i), Rebind decls, r) =>
             let
               val (name, r1) = unBinderName name
               val decls = unTeles decls
@@ -1987,12 +1987,13 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val () = close_paren ()
               val ctxd = add_ctx ctxd2 ctxd
               val () = open_ctx ctxd
-              val decl = DAbsIdx ((Binder $ IName (name, r1), Outer s, Outer i), Rebind $ Teles decls, Outer r)
+              val decl = DAbsIdx ((Binder $ IName (name, r1), Outer s, Outer i), Rebind $ Teles decls, r)
             in
               (decl, ctxd, 0, ds, st)
             end
-          | U.DOpen (Outer (m, r), octx) =>
+          | U.DOpen (m, octx) =>
             let
+              val (m, r) = unInner m
               fun link_module (m, r) (sctx, kctx, cctx, tctx) =
                 let
                   fun sort_set_idx_eq s' i =
@@ -2015,7 +2016,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val st = StMap.map (shift_ctx_i ctxd) st
               val () = open_ctx ctxd
             in
-              (DOpen (Outer (m, r), octx), ctxd, 0, [], st)
+              (DOpen (Inner (m, r), octx), ctxd, 0, [], st)
             end
           | U.DConstrDef _ => raise Impossible "typecheck/DConstrDef"
       fun extra_msg () = ["when type-checking declaration "] @ indent [fst $ US.str_decl (gctx_names gctx) (ctx_names ctx) decl]

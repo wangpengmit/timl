@@ -43,14 +43,14 @@ signature EXPR = sig
        (* | EAbsT of (sort, expr) tbind_anno * region *)
 
        and decl =
-           DVal of Binders.ebinder * (Binders.tbinder list, expr) Unbound.bind Unbound.outer * Region.region Unbound.outer
-           | DValPtrn of ptrn * expr Unbound.outer * Region.region Unbound.outer
-           | DRec of Binders.ebinder * (Binders.tbinder list * stbind Unbound.tele Unbound.rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) Unbound.bind Unbound.inner * Region.region Unbound.outer
+           DVal of Binders.ebinder * (Binders.tbinder list, expr) Unbound.bind Unbound.outer * Region.region
+           | DValPtrn of ptrn * expr Unbound.outer * Region.region
+           | DRec of Binders.ebinder * (Binders.tbinder list * stbind Unbound.tele Unbound.rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) Unbound.bind Unbound.inner * Region.region
            | DIdxDef of Binders.ibinder * sort option Unbound.outer * idx Unbound.outer
            | DAbsIdx2 of Binders.ibinder * sort Unbound.outer * idx Unbound.outer
-           | DAbsIdx of (Binders.ibinder * sort Unbound.outer * idx Unbound.outer) * decl Unbound.tele Unbound.rebind * Region.region Unbound.outer
+           | DAbsIdx of (Binders.ibinder * sort Unbound.outer * idx Unbound.outer) * decl Unbound.tele Unbound.rebind * Region.region
            | DTypeDef of Binders.tbinder * mtype Unbound.outer
-           | DOpen of mod_id Unbound.outer * scoping_ctx option
+           | DOpen of mod_id Unbound.inner * scoping_ctx option
   (* these constructs won't show up in source program *)
            | DConstrDef of Binders.cbinder * cvar Unbound.outer
            (* | DBlock of decl Unbound.tele Unbound.rebind *)

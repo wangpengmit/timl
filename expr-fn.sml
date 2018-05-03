@@ -50,14 +50,14 @@ datatype expr =
 	 | ELet of return * (decl tele, expr) bind * region
 
      and decl =
-         DVal of ebinder * (tbinder list, expr) bind outer * region outer
-         | DValPtrn of ptrn * expr outer * region outer
-         | DRec of ebinder * (tbinder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) bind inner * region outer
+         DVal of ebinder * (tbinder list, expr) bind outer * region
+         | DValPtrn of ptrn * expr outer * region
+         | DRec of ebinder * (tbinder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) bind inner * region
          | DIdxDef of ibinder * sort option outer * idx outer
          | DAbsIdx2 of ibinder * sort outer * idx outer
-         | DAbsIdx of (ibinder * sort outer * idx outer) * decl tele rebind * region outer
+         | DAbsIdx of (ibinder * sort outer * idx outer) * decl tele rebind * region
          | DTypeDef of tbinder * mtype outer
-         | DOpen of mod_id outer * scoping_ctx option
+         | DOpen of mod_id inner * scoping_ctx option
          | DConstrDef of cbinder * cvar outer
 
 type name = string * Region.region

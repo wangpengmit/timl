@@ -515,8 +515,8 @@ and strn_decl decl =
                sprintf "type $ = $" [name, strn_mt t]
              end
         )
-      | DOpen (Outer m, _) =>
-        sprintf "open $" [m]
+      | DOpen (m, _) =>
+        sprintf "open $" [unInner m]
       
 and strn_rule bind =
     let

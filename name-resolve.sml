@@ -549,7 +549,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
       in
         name
       end
-    fun visit_ConstrP this env (Outer ((x, ()), eia), inames, pn, Outer r) =
+    fun visit_ConstrP this env (Outer ((x, ()), eia), inames, pn, r) =
       let
         val vtable = cast this
         val (_, _, cctx, _) = #outer env
@@ -566,7 +566,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
               val inames = map (visit_ibinder this env) inames
               val pn = #visit_ptrn vtable this env pn
             in
-              ConstrP (Outer ((x, ()), true), inames, pn, Outer r)
+              ConstrP (Outer ((x, ()), true), inames, pn, r)
             end
 	  | NONE =>
             raise Error (S.get_region_long_id x, "Unknown constructor " ^ SS.str_var #1 empty [] x)
@@ -585,7 +585,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
               val inames = map (str2ibinder o prefix "__") c_inames
               val inames = map (visit_ibinder this env) inames
             in
-              ConstrP (Outer ((x, ()), true), inames, TTP $ Outer r, Outer r)
+              ConstrP (Outer ((x, ()), true), inames, TTP r, r)
             end
 	  | NONE =>
             VarP $ visit_ebinder this env ename
@@ -720,8 +720,9 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
         d
       end
     val vtable = EV.override_visit_SpecTypeDef vtable visit_SpecTypeDef
-    fun visit_DOpen this ctx (Outer (m, r), _) =
+    fun visit_DOpen this ctx (m, _) =
       let
+        val (m, r) = unInner m
         val (m, ctxd) =
             case ns_lookup_module gctx m of
                 SOME a => a
@@ -749,7 +750,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
                                  tctx
                                 )
       in
-        [DOpen (Outer (m, r), SOME ctxd)]
+        [DOpen (Inner (m, r), SOME ctxd)]
       end
     val vtable = EV.override_visit_DOpen vtable visit_DOpen
   in

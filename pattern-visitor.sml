@@ -8,10 +8,10 @@ type ('this, 'env, 'cvar, 'mtype, 'cvar2, 'mtype2) ptrn_visitor_vtable =
      {
        visit_ptrn : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn -> ('cvar2, 'mtype2) ptrn,
        visit_VarP : 'this -> 'env ctx -> ename binder -> ('cvar2, 'mtype2) ptrn,
-       visit_TTP : 'this -> 'env ctx -> region outer -> ('cvar2, 'mtype2) ptrn,
+       visit_TTP : 'this -> 'env ctx -> region -> ('cvar2, 'mtype2) ptrn,
        visit_PairP : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * ('cvar, 'mtype) ptrn -> ('cvar2, 'mtype2) ptrn,
-       visit_AliasP : 'this -> 'env ctx -> ename binder * ('cvar, 'mtype) ptrn * region outer -> ('cvar2, 'mtype2) ptrn,
-       visit_ConstrP : 'this -> 'env ctx -> ('cvar * bool) outer * iname binder list * ('cvar, 'mtype) ptrn * region outer -> ('cvar2, 'mtype2) ptrn,
+       visit_AliasP : 'this -> 'env ctx -> ename binder * ('cvar, 'mtype) ptrn * region -> ('cvar2, 'mtype2) ptrn,
+       visit_ConstrP : 'this -> 'env ctx -> ('cvar * bool) outer * iname binder list * ('cvar, 'mtype) ptrn * region -> ('cvar2, 'mtype2) ptrn,
        visit_AnnoP : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * 'mtype outer -> ('cvar2, 'mtype2) ptrn,
        visit_cvar : 'this -> 'env -> 'cvar -> 'cvar2,
        visit_mtype : 'this -> 'env -> 'mtype -> 'mtype2,
