@@ -90,7 +90,7 @@ fun SUnit r = Basic (Base UnitSort, r)
 fun TInt r = BaseType (Int, r)
 fun TBool r = BaseType (Bool, r)
 fun TByte r = BaseType (Byte, r)
-  
+
 val Type = (0, [])
 
 (* notations *)
@@ -165,6 +165,8 @@ open Idx
 structure Type = TypeOfExpr
 open Type
        
+fun TCell t = TTuplePtr ([t], 0, get_region_mt t)
+  
 end
 
 (* Test that the result of [ExprFun] matches some signatures. We don't use a signature ascription because signature ascription (transparent or opaque) hides components that are not in the signature. SML should have a "signature check" kind of ascription. *)

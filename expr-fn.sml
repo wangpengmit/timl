@@ -48,6 +48,8 @@ datatype expr =
          | ECaseSumbool of expr * expr ibind * expr ibind * region
          | EIfi of expr * expr ibind * expr ibind * region
 	 | ELet of return * (decl tele, expr) bind * region
+         | ESetModify of bool(*is modify?*) * string * expr list * expr * region
+         | EGet of string * expr list * region
 
      and decl =
          DVal of ebinder * (tbinder list, expr) bind outer * region
@@ -96,7 +98,7 @@ datatype top_bind =
          (* | TopModSpec of name * sgn *)
          | TopFunctorBind of (name * sgn) (* list *) * mod
          | TopFunctorApp of mod_id * mod_id (* list *)
-         | TBState of string * (bool * mtype)
+         | TBState of bool * mtype
 
 type prog = (name * top_bind) list
 

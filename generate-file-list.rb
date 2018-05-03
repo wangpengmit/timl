@@ -71,39 +71,35 @@ unique-map.sml
 region.sml
 time.sml
 operators.sml
+parser/ast.sml
+sexp/sexp.sml
 }
 
 if target == :smlnj || target == :Makefile then
 
 print %{  
-sexp/sexp.sml
 sexp/sexp.grm
 sexp/sexp.lex
-sexp/parser.sml
-parser/ast.sml
 parser/timl.grm
 parser/timl.lex
-parser/parser.sml
 }
 
 elsif target == :mlton then
 
 print %{  
-sexp/sexp.sml
 sexp/sexp.grm.sig
 sexp/sexp.grm.sml
 sexp/sexp.lex.sml
-sexp/parser.sml
-parser/ast.sml
 parser/timl.grm.sig
 parser/timl.grm.sml
 parser/timl.lex.sml
-parser/parser.sml
 }
 
 end
 
 print %{
+sexp/parser.sml
+parser/parser.sml
 cont-util.sml
 module-context.sml
 to-string-util.sml

@@ -104,6 +104,10 @@ open Ast
     | NEVER
     | IFDEC
     | MOD
+    | SET
+    | MODIFY
+    | PRE
+    | POST
 
 %nonterm start of prog
        | exp of exp
@@ -126,7 +130,7 @@ open Ast
        | sort_bind_star of sort_bind list
        | sort_bind of sort_bind list
        | return of ty option * idx option
-       | rec_return of ty option * idx option
+       (* | rec_return of ty option * idx option *)
        | rule_bar_star of (ptrn * exp) list
        | bar_rule_star of (ptrn * exp) list
        | rule of ptrn * exp
@@ -176,6 +180,18 @@ open Ast
        | id_or_bsort_bind of id_or_bsort_bind list
        | id_or_bsort_bind_plus of id_or_bsort_bind list
        | id_or_bsort_bind_star of id_or_bsort_bind list
+       | set_modify of bool
+       | id_square_plus of id * exp list
+       | square_plus of exp list
+       | square_star of exp list
+       | square of exp
+       | pre of state
+       | post of state
+       | state of state
+       | state_field_star of state
+       | state_field_plus of state
+       | state_field of id * idx
+
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
 
@@ -223,6 +239,7 @@ top_bind : STRUCTURE id EQ id LPAREN id RPAREN (TopFunctorApp (id1, id2, id3))
          (* | STRUCTURE id sig_anno_opt EQ module (TopModBind (id, add_sig_anno module sig_anno_opt)) *)
          | STRUCTURE id COLON_GT sgn EQ module (TopModBind (id, ModSeal (module, sgn)))
          | STRUCTURE id COLON sgn EQ module (TopModBind (id, ModTransparentAsc (module, sgn)))
+         | VAL id COLON ty (TBState (id, ty))
          
 
 module : STRUCT decl_star END (ModComponents (decl_star, (decl_starleft, decl_starright)))
@@ -246,7 +263,7 @@ spec : VAL id tnames COLON ty (SpecVal (id, tnames, ty, (VALleft, tyright)))
   | TYPE id (SpecType ([id], [], (TYPEleft, idright))) (* need this rule. don't know why *)
 
 decl : VAL tnames ptrn EQ exp (Val (tnames, ptrn, exp, (VALleft, expright)))
-     | FUN id tnames bind_star return EQ exp (Rec (tnames, id, bind_star, return, exp, (FUNleft, expright)))
+     | FUN id tnames bind_star pre post return EQ exp (Rec (tnames, id, bind_star, pre, post, return, exp, (FUNleft, expright)))
     | DATATYPE datatype_def (Datatype datatype_def)
     | IDX id optional_colon_sort EQ idx (IdxDef (id, optional_colon_sort, idx))
     | ABSIDX id optional_colon_sort EQ idx (AbsIdx2 (id, optional_colon_sort, idx))
@@ -255,6 +272,20 @@ decl : VAL tnames ptrn EQ exp (Val (tnames, ptrn, exp, (VALleft, expright)))
     | ABSIDX LCUR id BAR prop RCUR optional_eq_idx WITH decl_star END (AbsIdx (id, SOME (Subset (Base ("_", (idleft, idright)), id, prop, (LCURleft, RCURright))), optional_eq_idx, decl_star, (ABSIDXleft, ENDright)))
     | TYPE id EQ ty (TypeDef (id, ty))
     | OPEN id (Open id)
+
+pre : PRE state (state)
+    | (empty_state)
+
+post : POST state (state)
+     | (empty_state)
+
+state : LCUR state_field_star RCUR (state_field_star)
+
+state_field : id COLON idx ((id, idx))
+
+state_field_star : state_field state_field_star (state_field :: state_field_star)
+	| ([])
+state_field_plus : state_field state_field_star (state_field :: state_field_star)
 
 datatype_def : id_plus bsorting_star datatype_def_kind EQ constr_bar_star (case map fst id_plus of id :: id_star => (id, id_star, bsorting_star, datatype_def_kind, constr_bar_star, (id_plusleft, constr_bar_starright)) | [] => raise Impossible "id_plus can't be empty")
                        
@@ -309,6 +340,7 @@ exp : aexp (aexp)
      | exp RTRI idx (AscTime (exp, idx, (expleft, idxright)))
      | exp LCUR idx RCUR (AppI (exp, idx, (expleft, idxright)))
      | exp LCUR RCUR (AppI (exp, VarI (underscore (LCURleft, RCURright)), (expleft, RCURright)))
+     | set_modify id_square_plus exp (ESetModify (set_modify, id_square_plus, exp, (set_modifyleft, expright)))
      | exp aexp (App (exp, aexp, (expleft, aexpright)))
 
 aexp : decorated_id (Var decorated_id)
@@ -325,6 +357,18 @@ aexp : decorated_id (Var decorated_id)
      | LSQ exp_comma_star RSQ (EList (exp_comma_star, (LSQleft, RSQright)))
      | TILDE aexp (EUnOp (EUPrim EUPIntNeg, aexp, (TILDEleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
+     | id_square_plus (EGet (id_square_plus, (id_square_plusleft, id_square_plusright)))
+
+id_square_plus : id square_plus ((id, square_plus))
+
+square : LSQ exp RSQ (exp)
+                    
+square_star : square square_star (square :: square_star)
+	| ([])
+square_plus : square square_star (square :: square_star)
+
+set_modify : SET (false)
+           | MODIFY (true)
 
 long_id : id ((NONE, id))
         | id DOT id (SOME id1, id2)
@@ -410,10 +454,10 @@ return : RETURN ty RTRI idx ((SOME ty, SOME idx))
        | RETURN RTRI idx ((NONE, SOME idx))
        | ((NONE, NONE))
 
-rec_return : COLON ty RTRI idx ((SOME ty, SOME idx))
-       | COLON ty ((SOME ty, NONE))
-       | RTRI idx ((NONE, SOME idx))
-       | ((NONE, NONE))
+(* rec_return : COLON ty RTRI idx ((SOME ty, SOME idx)) *)
+(*        | COLON ty ((SOME ty, NONE)) *)
+(*        | RTRI idx ((NONE, SOME idx)) *)
+(*        | ((NONE, NONE)) *)
 
 rule_bar_star : rule bar_rule_star (rule :: bar_rule_star)
 	      | ([])

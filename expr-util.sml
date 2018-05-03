@@ -38,6 +38,12 @@ fun ENew (e1, e2) = EBinOp (EBNew, e1, e2)
 fun ERead (e1, e2) = EBinOp (EBRead, e1, e2)
 fun EWrite (e1, e2, e3) = ETriOp (ETWrite, e1, e2, e3)
 fun EEmptyArray (t, r) = ENewArrayValues (t, [], r)
+fun EVectorGet (e1, e2) = EBinOp (EBVectorGet, e1, e2)
+fun EVectorPushBack (e1, e2) = EBinOp (EBVectorPushBack, e1, e2)
+fun EVectorSet (e1, e2, e3) = ETriOp (ETVectorSet, e1, e2, e3)
+fun EMapPtr (e1, e2) = EBinOp (EBMapPtr, e1, e2)
+fun EStorageSet (e1, e2) = EBinOp (EBStorageSet, e1, e2)
+fun EStorageGet (e, r) = EUnOp (EUStorageGet, e, r)
   
 fun collect_Pair e =
   case e of

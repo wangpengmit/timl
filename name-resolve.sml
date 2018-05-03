@@ -497,7 +497,13 @@ fun get_datatype_names (Bind (name, tbinds)) =
       
 structure EV = ExprVisitorFn (structure S = S
                               structure T = T)
-                             
+
+structure StSet = StringBinarySet
+val st_ref = ref StSet.empty
+fun add_ref a = binop_ref (curry $ StSet.add) a
+infix  9 @%!
+fun m @%! k = StSet.member (m, k)
+      
 fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
   let
     fun extend_i this (sctx, kctx, cctx, tctx) name = ((Name2str name :: sctx, kctx, cctx, tctx), name)
@@ -592,10 +598,22 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
       end
     val vtable = EV.override_visit_VarP vtable visit_VarP
     fun visit_EVar this (_, _, cctx, tctx) (x, b) =
-      case find_constr gctx cctx x of
-          (* Always treat constructors as fully applied. Can't handle partially applied constructors. *)
-	  SOME (x, _) => EAppConstr ((x, b), [], [], ETT $ get_region_long_id x, NONE)
-	| NONE => EVar ((on_long_id gctx #4 tctx x), b)
+      let
+        fun is_state_field x =
+          case x of
+              QID _ => NONE
+            | ID (x, r) =>
+              if !st_ref @%! x then SOME (x, r)
+              else NONE
+      in
+        case is_state_field x of
+            SOME a => EState a
+          | NONE =>
+            case find_constr gctx cctx x of
+                (* Always treat constructors as fully applied. Can't handle partially applied constructors. *)
+	        SOME (x, _) => EAppConstr ((x, b), [], [], ETT $ get_region_long_id x, NONE)
+	      | NONE => EVar ((on_long_id gctx #4 tctx x), b)
+      end
     val vtable = EV.override_visit_EVar vtable visit_EVar
     fun visit_EApp this (ctx as (_, _, cctx, _)) (e1, e2) =
       let
@@ -1192,7 +1210,12 @@ fun on_top_bind gctx (name, bind) =
         in
           (TopFunctorApp ((f, f_r), m), [(name, Sig body), (formal_arg_name, Sig formal_arg)])
         end
-      | S.TBState (name, (b, t)) => (TBState (name, (b, on_mtype Gctx.empty ([], []) t)), [])
+      | S.TBState (b, t) =>
+        let
+          val () = add_ref st_ref $ fst name
+        in
+          (TBState (b, on_mtype Gctx.empty ([], []) t), [])
+        end
           
 and on_prog gctx binds =
     let

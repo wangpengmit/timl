@@ -106,9 +106,9 @@
 - [ ] Simplify modules in output.
 - [ ] Rename [long_id]'s [ID] to "Bound" and [QID] to "Free", in accordance with locally nameless representation.
 - [ ] Add native booleans. Add more integer operations (including comparisons). Add more nat operations.
-- [ ] Add example links to website.
+- [x] Add example links to website.
 - [ ] Remove assert_b and assert_b_m to make sure when assertion are turned off no computation will be wasted.
-- [ ] Add ELength.
+- [x] Add ELength.
 - [x] eq_mt()/TDatatype needs to be implemented to allow instantiating dynamic-table.timl.
 - [ ] Add negative examples.
 - [ ] Argument module names of functors are put into global context, which may result in name conflicts. Should prefix argument module names with the functor names.

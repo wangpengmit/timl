@@ -102,7 +102,9 @@ datatype exp_const =
 datatype expr_tri_op =
          ETIte
          | ETIfDec
-              
+
+type state = (id * idx) list
+     
 datatype exp = 
 	 Var of long_id * bool
          | Tuple of exp list * region
@@ -120,10 +122,12 @@ datatype exp =
          | EIfi of exp * exp * exp * region
          | ENever of region
          | EStrConcat of exp * exp * region
+         | ESetModify of bool(*is modify?*) * (id * exp list) * exp * region
+         | EGet of (id * exp list) * region
 
      and decl =
          Val of id list * ptrn * exp * region
-         | Rec of id list * id * bind list * return * exp * region
+         | Rec of id list * id * bind list * state * state * return * exp * region
          | Datatype of datatype_def
          | IdxDef of id * sort option * idx
          | AbsIdx2 of id * sort option * idx
@@ -167,6 +171,7 @@ datatype top_bind =
          TopModBind of name * mod
          | TopFunctorBind of name * (name * sgn) * mod
          | TopFunctorApp of name * id * id
+       | TBState of name * ty
 
 type prog = top_bind list
 
@@ -189,6 +194,8 @@ fun underscore r = (NONE, ("_", r))
 fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
 
 fun UnOpI (opr, i, r) = BinOpI (IApp, VarI (NONE, (str_idx_un_op opr, r)), i, r)
-  
+
+val empty_state = []
+    
 end
 

@@ -39,6 +39,8 @@ signature EXPR = sig
            | ECaseSumbool of expr * expr Binders.ibind * expr Binders.ibind * Region.region
            | EIfi of expr * expr Binders.ibind * expr Binders.ibind * Region.region
 	   | ELet of return * (decl Unbound.tele, expr) Unbound.bind * Region.region
+           | ESetModify of bool(*is modify?*) * string * expr list * expr * Region.region
+           | EGet of string * expr list * Region.region
        (* these constructs won't show up in source program *)
        (* | EAbsT of (sort, expr) tbind_anno * region *)
 
@@ -91,7 +93,7 @@ signature EXPR = sig
            (* | TopModSpec of name * sgn *)
            | TopFunctorBind of (name * sgn) (* list *) * mod
            | TopFunctorApp of mod_id * mod_id (* list *)
-           | TBState of string * (bool * mtype)
+           | TBState of bool * mtype
 
   type prog = (name * top_bind) list
 

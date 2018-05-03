@@ -78,6 +78,10 @@ val keywords = [
     ("never", T.NEVER),
     ("ifdec", T.IFDEC),
     ("mod", T.MOD),
+    ("set", T.SET),
+    ("modify", T.MODIFY),
+    ("pre", T.PRE),
+    ("post", T.POST),
     ("as", T.AS)
 ]
  

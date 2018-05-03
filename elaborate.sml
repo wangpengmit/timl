@@ -8,6 +8,11 @@ open Bind
        
 infixr 0 $
 
+infix  9 @!
+fun m @! k = StMap.find (m, k)
+infix  6 @+
+fun m @+ a = StMap.insert' (a, m)
+                           
 exception Error of region * string
 
 local
@@ -288,7 +293,17 @@ local
       in
         (dt, r)
       end
-        
+
+  fun elab_state r ls =
+    let
+      fun check_new_key m k =
+        case m @! k of
+            SOME _ => raise Error (r, sprintf "state field $ already exists" [k])
+          | NONE => ()
+    in
+      foldl (fn (((k, _), v), m) => (check_new_key m k; m @+ (k, elab_i v))) StMap.empty ls
+    end
+      
   fun elab e =
       case e of
 	  S.Var (id as (m, (x, r)), eia) =>
@@ -405,6 +420,12 @@ local
                             ERead (elab e1, elab e2)
                           | _ => raise Error (r, "should be '__&sub (_, _)'")
                        )
+		     else if x = "push_back" then
+                       (case e2 of
+                            S.Tuple ([e1, e2], _) =>
+                            EVectorPushBack (elab e1, elab e2)
+                          | _ => raise Error (r, "should be 'push_back (_, _)'")
+                       )
 		     else if x = "__&update" then
                        (case e2 of
                             S.Tuple ([e1, e2, e3], _) =>
@@ -423,6 +444,8 @@ local
         | S.EIfi (e, e1, e2, r) => EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.VarT (NONE, ("_", r))), r)
         | S.EStrConcat (e1, e2, r) => EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, false), EPair (elab e1, elab e2))
+        | S.ESetModify (is_modify, (x, offsets), e, r) => ESetModify (is_modify, fst x, map elab offsets, elab e, r)
+        | S.EGet ((x, offsets), r) => EGet (fst x, map elab offsets, r)
 
   and elab_decl decl =
       case decl of
@@ -439,7 +462,7 @@ local
                 else
                   raise Error (r, "compound pattern can't be generalized, so can't have explicit type variables")
           end
-	| S.Rec (tnames, name, binds, (t, d), e, r) =>
+	| S.Rec (tnames, name, binds, pre, post, (t, d), e, r) =>
           let
             fun f bind =
                 case bind of
@@ -452,7 +475,7 @@ local
             val d = default (UVarI ((), r)) (Option.map elab_i d)
             val e = elab e
           in
-	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((StMap.empty, StMap.empty), (t, d), e)), r)
+	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((elab_state r pre, elab_state r post), (t, d), e)), r)
           end
         | S.IdxDef ((name, r), s, i) =>
           let
@@ -510,13 +533,37 @@ local
           S.ModComponents (comps, r) => ModComponents (map elab_decl comps, r)
         | S.ModSeal (m, sg) => ModSeal (elab_mod m, elab_sig sg)
         | S.ModTransparentAsc (m, sg) => ModTransparentAsc (elab_mod m, elab_sig sg)
+
+  fun is_vector t =
+    case t of
+        S.AppTT (S.VarT (ID (x, _)), t2) =>
+        if x = "vector" then SOME $ elab_mt t2
+        else NONE
+      | _ => NONE
+
+  fun is_map t =
+    case t of
+        S.AppTT (S.VarT (ID (x, _)), t2) =>
+        if x = "map" then
+          case is_map t2 of
+              SOME t => SOME $ TCell $ TMap t
+            | NONE => SOME $ TCell $ elab_mt t2
+        else NONE
+      | _ => NONE
                                                                          
   fun elab_top_bind bind =
       case bind of
           S.TopModBind (name, m) => (name, TopModBind (elab_mod m))
         | S.TopFunctorBind (name, (arg_name, arg), body) => (name, TopFunctorBind ((arg_name, elab_sig arg), elab_mod body))
         | S.TopFunctorApp (name, f, arg) => (name, TopFunctorApp (f, arg))
-                                                          
+        | S.TBState (name, t) =>
+          case is_vector t of
+              SOME t => TBState (false, t)
+            | NONE =>
+              case is_map t of
+                  SOME t => TBState (true, t)
+                | NONE => raise Error (r, ["wrong state declaration form"])
+
   fun elab_prog prog = map elab_top_bind prog
                            
 in

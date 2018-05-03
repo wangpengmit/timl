@@ -38,14 +38,15 @@ infix 1 <->
 
 infix  9 @!
 fun m @! k = StMap.find (m, k)
+infix  6 @+
+fun m @+ a = StMap.insert' (a, m)
+                           
 infix  9 @!!
 fun m @!! k = StMapU.must_find m k
 infix 6 @@-
 fun m @@- m' = StMapU.sub m m'
 infix 6 @@+
 fun m @@+ m' = StMapU.union m m'
-infix  6 @+
-fun m @+ a = StMap.insert' (a, m)
          
 val is_builtin_enabled = ref false
 fun turn_on_builtin () = (is_builtin_enabled := true)
@@ -1380,6 +1381,56 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                end
           )
         | U.EState (x, r) => (EState (x, r), TState (x, r), T0 r, st)
+        | U.EGet (x, es, r) =>
+          let
+            val () = if null es then raise Error (r, ["no offsets"]) else ()
+            val is_map = case st_types @!! x of
+                        (b, t) => b
+                          | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])
+            val x = U.EState (x, r)
+            val e = if is_map then
+                      U.EStorageGet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, r)
+                    else
+                      let
+                        val offset = case es of
+                                         [a] => a
+                                       | _ => Error (r, ["for vector there must only be one offset"])
+                      in
+                        U.EVectorGet (x, offset)
+                      end
+          in
+            get_mtype ctx_st e
+          end
+        | U.ESetModify (is_modify, x, es, e, r) =>
+          if is_modify then
+            let
+              fun check_value e =
+                if is_value e then ()
+                else raise Error (r, ["must be value"])
+              val () = app check_value es
+            in
+              U.ESetModify (false, x, es, (U.EApp (e, U.EGet (x, es, r))), r)
+            end
+          else
+          let
+            val () = if null es then raise Error (r, ["no offsets"]) else ()
+            val is_map = case st_types @!! x of
+                        (b, t) => b
+                          | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])
+            val x = U.EState (x, r)
+            val e = if is_map then
+                      U.EStorageSet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, e)
+                    else
+                      let
+                        val offset = case es of
+                                         [a] => a
+                                       | _ => Error (r, ["for vector there must only be one offset"])
+                      in
+                        U.EVectorSet (x, offset, e)
+                      end
+          in
+            get_mtype ctx_st e
+          end
         | U.ETriOp (ETVectorSet, e1, e2, e3) =>
           let
             val r = U.get_region_e e_all
@@ -2371,7 +2422,11 @@ fun is_base_storage_ty t =
         TyNat _ => ()
       | TiBool _ => ()
       | TyArray _ => ()
-      | BaseType _ => ()
+      | BaseType t =>
+        (case t of
+             Int => ()
+           | Bool => ()
+           | Byte => ())
       | Unit _ => ()
       | _ => raise Error (get_region_mt t, ["not a base storage type"])
         
@@ -2428,13 +2483,13 @@ fun check_top_bind gctx (name, bind) =
             in
               (TopFunctorApp (f, m), [(name, Sig body), (formal_arg_name, Sig formal_arg)])
             end
-          | U.TBState (name, (is_map, t)) =>
+          | U.TBState (is_map, t) =>
             let
               val t = check_kind_Type Gctx.empty (([], []), t)
               val () = is_wf_state_ty (is_map, t)
-              val () = add_ref st_types_ref (name, (is_map, t))
+              val () = add_ref st_types_ref (fst name, (is_map, t))
             in
-              (TBState (name, (is_map, t)), [])
+              (TBState (is_map, t), [])
             end
     (* val () = println $ sprintf "Typechecked program:" [] *)
     (* val () = app println $ map fst gctxd *)
