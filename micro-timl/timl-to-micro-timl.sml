@@ -52,7 +52,7 @@ val BSUnit = Base UnitSort
 
 fun on_mt (t : S.mtype) =
   case t of
-      S.Arrow (t1, i, t2) => TArrow (on_mt t1, i, on_mt t2)
+      S.Arrow ((i1, t1), i, (i2, t2)) => TArrow ((IState i1, on_mt t1), i, (IState i2, on_mt t2))
     | S.TyNat (i, _) => TNat i
     | S.TiBool (i, _) => TiBool i
     | S.TyArray (t, i) => TArr (on_mt t, i)
@@ -392,7 +392,7 @@ and on_decls (decls, e_body) =
               in
                 MakeELet (e, name, e_body)
               end
-            | S.DValPtrn (pn, Outer e, Outer r) =>
+            | S.DValPtrn (pn, Outer e, r) =>
               let
                 val e_body = SMakeELet (decls, e_body)
               in
@@ -406,7 +406,7 @@ and on_decls (decls, e_body) =
               in
                 MakeELet (e, name, e_body)
 	      end
-            | S.DAbsIdx ((iname, Outer s, Outer i), Rebind inner_decls, Outer r) =>
+            | S.DAbsIdx ((iname, Outer s, Outer i), Rebind inner_decls, r) =>
               let
                 val iname = unBinderName iname
                 fun make_Unpack_Pack ename (e, t) =
@@ -438,8 +438,9 @@ and on_decls (decls, e_body) =
                     end
                   | _ => raise Impossible $ "to-micro-timl/DAbsIdx: can only translate when the inner declarations are just one DRec" ^ " or one DVal"
               end
-            | S.DOpen (Outer m, octx) =>
+            | S.DOpen (m, octx) =>
               let
+                val m = unInner m
                 val ctx as (sctx, kctx, cctx, tctx) = octx !! (fn () => raise Impossible "to-micro-timl/DOpen: octx must be SOME")
                 val e = SMakeELet (decls, e_body)
                 open Package
@@ -512,7 +513,7 @@ and on_decls (decls, e_body) =
               end
         end
           
-and on_DVal (ename, Outer bind, Outer r) =
+and on_DVal (ename, Outer bind, r) =
     let
       val name = unBinderName ename
       val (tnames, e) = Unbound.unBind bind
@@ -530,7 +531,7 @@ and on_DVal (ename, Outer bind, Outer r) =
 and on_DRec (name, bind, _) =
     let
       val name = unBinderName name
-      val ((tnames, Rebind binds), ((t, i), e)) = Unbound.unBind $ unInner bind
+      val ((tnames, Rebind binds), ((pre, post), (t, i), e)) = Unbound.unBind $ unInner bind
       (* val t = t !! (fn () => raise Impossible "to-micro-timl/DRec: t must be SOME") *)
       (* val i = i !! (fn () => raise Impossible "to-micro-timl/DRec: i must be SOME") *)
       val tnames = map unBinderName tnames
@@ -538,22 +539,26 @@ and on_DRec (name, bind, _) =
       fun on_bind (bind, e) =
         case bind of
             S.SortingST (name, Outer s) => S.MakeEAbsI (unBinderName name, s, e, dummy)
-          | S.TypingST pn => S.MakeEAbs (pn, e)
-      val e = foldr on_bind e binds
+          | S.TypingST pn => S.MakeEAbs (StMap.empty, pn, e)
+      val e =
+          case rev binds of
+              S.TypingST pn :: binds =>
+              foldl on_bind (S.MakeEAbs (pre, pn, e)) binds
+            | _ => raise Impossible "to-micro-timl/DRec: Recursion must have a typing bind as the last bind"
       val e = on_e e
       fun on_bind_t (bind, t) =
         case bind of
             S.SortingST (name, Outer s) => S.MakeUniI (s, unBinderName name, t, dummy)
           | S.TypingST pn =>
             case pn of
-                AnnoP (_, Outer t1) => S.Arrow (t1, T0 dummy, t)
+                AnnoP (_, Outer t1) => S.Arrow ((StMap.empty, t1), T0 dummy, (StMap.empty, t))
               | _ => raise Impossible "to-micro-timl/DRec: must be AnnoP"
       val t = 
           case rev binds of
               S.TypingST (AnnoP (_, Outer t1)) :: binds =>
-              foldl on_bind_t (S.Arrow (t1, i, t)) binds
+              foldl on_bind_t (S.Arrow ((pre, t1), i, (post, t))) binds
             | [] => t
-            | _ => raise Impossible "to-micro-timl/DRec: Recursion must have a annotated typing bind as the last bind"
+            | _ => raise Impossible "to-micro-timl/DRec: Recursion must have an annotated typing bind as the last bind"
       val t = on_mt t
       val e = MakeERec (name, t, e)
       val t = TUniKind_Many (tnames, t)
@@ -584,108 +589,108 @@ structure U = UnderscoredExpr
 
 open ExportPP
                 
-fun test1 dirname =
-  let
-    val filename = join_dir_file (dirname, "test1.timl")
-    open Parser
-    val prog = parse_file filename
-    open Elaborate
-    val prog = elaborate_prog prog
-    open NameResolve
-    val (prog, _, _) = resolve_prog empty prog
-    val decls = case hd prog of
-                    (_, TopModBind (ModComponents (decls, _))) => decls
-                  | _ => raise Impossible ""
-    open TypeCheck
-    val ((decls, _, _, _), _) = typecheck_decls empty empty_ctx decls
-    val dt = case hd decls of
-                 DTypeDef (_, Outer (TDatatype (dt, _))) => dt
-               | _ => raise Impossible ""
-    val bind = case nth (decls, 1) of
-                   DVal (_, Outer bind, _) => bind
-                 | _ => raise Impossible ""
-    val (_, e) = Unbound.unBind bind
-    (* val dt = TypeTrans.on_dt dt *)
-    val t_list = TiML.TDatatype (dt, dummy)
-    val t = trans_mt t_list
-    (* val () = println $ str_e empty ([], ["'a", "list"], ["Cons", "Nil"], []) e *)
-    val e = SimpExpr.simp_e [("'a", KeKind Type), ("list", KeKind (1, [BSNat]))] e
-    val () = println $ str_e empty ([], ["'a", "list"], ["Cons", "Nil2", "Nil"], []) e
-    val () = println ""
-    (* fun visit_subst_t_pn a = PatternVisitor.visit_subst_t_pn_fn (use_idepth_tdepth substx_t_mt) a *)
-    val e = ExprSubst.substx_t_e (0, 1) 1 t_list e
-    val e = trans_e e
-    val e = export (NONE, NONE) ([], ["'a"], ["Cons", "Nil2", "Nil"], []) e
-    val () = pp_e (NONE, NONE) e
-    val () = println ""
-  in
-    ((* t, e *))
-  end
-  (* handle NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; raise Impossible "End") *)
-  (*      | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End") *)
-  (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *)
-  (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *)
+(* fun test1 dirname = *)
+(*   let *)
+(*     val filename = join_dir_file (dirname, "test1.timl") *)
+(*     open Parser *)
+(*     val prog = parse_file filename *)
+(*     open Elaborate *)
+(*     val prog = elaborate_prog prog *)
+(*     open NameResolve *)
+(*     val (prog, _, _) = resolve_prog empty prog *)
+(*     val decls = case hd prog of *)
+(*                     (_, TopModBind (ModComponents (decls, _))) => decls *)
+(*                   | _ => raise Impossible "" *)
+(*     open TypeCheck *)
+(*     val ((decls, _, _, _), _) = typecheck_decls empty empty_ctx decls *)
+(*     val dt = case hd decls of *)
+(*                  DTypeDef (_, Outer (TDatatype (dt, _))) => dt *)
+(*                | _ => raise Impossible "" *)
+(*     val bind = case nth (decls, 1) of *)
+(*                    DVal (_, Outer bind, _) => bind *)
+(*                  | _ => raise Impossible "" *)
+(*     val (_, e) = Unbound.unBind bind *)
+(*     (* val dt = TypeTrans.on_dt dt *) *)
+(*     val t_list = TiML.TDatatype (dt, dummy) *)
+(*     val t = trans_mt t_list *)
+(*     (* val () = println $ str_e empty ([], ["'a", "list"], ["Cons", "Nil"], []) e *) *)
+(*     val e = SimpExpr.simp_e [("'a", KeKind Type), ("list", KeKind (1, [BSNat]))] e *)
+(*     val () = println $ str_e empty ([], ["'a", "list"], ["Cons", "Nil2", "Nil"], []) e *)
+(*     val () = println "" *)
+(*     (* fun visit_subst_t_pn a = PatternVisitor.visit_subst_t_pn_fn (use_idepth_tdepth substx_t_mt) a *) *)
+(*     val e = ExprSubst.substx_t_e (0, 1) 1 t_list e *)
+(*     val e = trans_e e *)
+(*     val e = export (NONE, NONE) ([], ["'a"], ["Cons", "Nil2", "Nil"], []) e *)
+(*     val () = pp_e (NONE, NONE) e *)
+(*     val () = println "" *)
+(*   in *)
+(*     ((* t, e *)) *)
+(*   end *)
+(*   (* handle NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; raise Impossible "End") *) *)
+(*   (*      | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End") *) *)
+(*   (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *) *)
+(*   (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *) *)
                           
-fun test2 dirname =
-  let
-    val filename = join_dir_file (dirname, "test2.timl")
-    open Parser
-    val prog = parse_file filename
-    open Elaborate
-    val prog = elaborate_prog prog
-    open NameResolve
-    val (prog, _, _) = resolve_prog empty prog
-    val decls = case hd prog of
-                    (_, TopModBind (ModComponents (decls, _))) => decls
-                  | _ => raise Impossible ""
-    open TypeCheck
-    val () = TypeCheck.turn_on_builtin ()
-    val ((decls, _, _, _), _) = typecheck_decls empty empty_ctx decls
-    val e = SMakeELet (Teles decls, Expr.ETT dummy)
-    val e = SimpExpr.simp_e [] e
-    val () = println $ str_e empty ToStringUtil.empty_ctx e
-    val () = println ""
-    val e = trans_e e
-    val e = export (NONE, NONE) ToStringUtil.empty_ctx e
-    val () = pp_e (NONE, NONE) e
-    val () = println ""
-  in
-    ((* t, e *))
-  end
-  handle NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; raise Impossible "End")
-       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End")
-  (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *)
-  (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *)
+(* fun test2 dirname = *)
+(*   let *)
+(*     val filename = join_dir_file (dirname, "test2.timl") *)
+(*     open Parser *)
+(*     val prog = parse_file filename *)
+(*     open Elaborate *)
+(*     val prog = elaborate_prog prog *)
+(*     open NameResolve *)
+(*     val (prog, _, _) = resolve_prog empty prog *)
+(*     val decls = case hd prog of *)
+(*                     (_, TopModBind (ModComponents (decls, _))) => decls *)
+(*                   | _ => raise Impossible "" *)
+(*     open TypeCheck *)
+(*     val () = TypeCheck.turn_on_builtin () *)
+(*     val ((decls, _, _, _), _) = typecheck_decls empty empty_ctx decls *)
+(*     val e = SMakeELet (Teles decls, Expr.ETT dummy) *)
+(*     val e = SimpExpr.simp_e [] e *)
+(*     val () = println $ str_e empty ToStringUtil.empty_ctx e *)
+(*     val () = println "" *)
+(*     val e = trans_e e *)
+(*     val e = export (NONE, NONE) ToStringUtil.empty_ctx e *)
+(*     val () = pp_e (NONE, NONE) e *)
+(*     val () = println "" *)
+(*   in *)
+(*     ((* t, e *)) *)
+(*   end *)
+(*   handle NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; raise Impossible "End") *)
+(*        | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End") *)
+(*   (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *) *)
+(*   (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *) *)
 
-fun test3 dirname =
-  let
-    val filename = join_dir_file (dirname, "test3.timl")
-    open Parser
-    val prog = parse_file filename
-    open Elaborate
-    val prog = elaborate_prog prog
-    open NameResolve
-    val (prog, _, _) = resolve_prog empty prog
-    open TypeCheck
-    val () = TypeCheck.turn_on_builtin ()
-    val ((prog, _, _), _) = typecheck_prog empty prog
-    open MergeModules
-    val decls = merge_prog prog []
-    val e = SMakeELet (Teles decls, Expr.ETT dummy)
-    val e = SimpExpr.simp_e [] e
-    val () = println $ str_e empty ToStringUtil.empty_ctx e
-    val () = println ""
-    val e = trans_e e
-    val e = export (NONE, NONE) ToStringUtil.empty_ctx e
-    val () = pp_e (NONE, NONE) e
-    val () = println ""
-  in
-    ((* t, e *))
-  end
-  handle NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; raise Impossible "End")
-       | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End")
-  (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *)
-  (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *)
+(* fun test3 dirname = *)
+(*   let *)
+(*     val filename = join_dir_file (dirname, "test3.timl") *)
+(*     open Parser *)
+(*     val prog = parse_file filename *)
+(*     open Elaborate *)
+(*     val prog = elaborate_prog prog *)
+(*     open NameResolve *)
+(*     val (prog, _, _) = resolve_prog empty prog *)
+(*     open TypeCheck *)
+(*     val () = TypeCheck.turn_on_builtin () *)
+(*     val ((prog, _, _), _) = typecheck_prog empty prog *)
+(*     open MergeModules *)
+(*     val decls = merge_prog prog [] *)
+(*     val e = SMakeELet (Teles decls, Expr.ETT dummy) *)
+(*     val e = SimpExpr.simp_e [] e *)
+(*     val () = println $ str_e empty ToStringUtil.empty_ctx e *)
+(*     val () = println "" *)
+(*     val e = trans_e e *)
+(*     val e = export (NONE, NONE) ToStringUtil.empty_ctx e *)
+(*     val () = pp_e (NONE, NONE) e *)
+(*     val () = println "" *)
+(*   in *)
+(*     ((* t, e *)) *)
+(*   end *)
+(*   handle NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; raise Impossible "End") *)
+(*        | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; raise Impossible "End") *)
+(*   (*      | T2MTError msg => (println $ "T2MT.Error: " ^ msg; raise Impossible "End") *) *)
+(*   (*      | Impossible msg => (println $ "Impossible: " ^ msg; raise Impossible "End") *) *)
 
 fun test4 dirname =
   let
@@ -701,7 +706,9 @@ fun test4 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started typechecking ..."
+    val () = TypeCheck.st_types_ref := StMap.empty
     val ((prog, _, _), _) = typecheck_prog empty prog
+    val st_types = !TypeCheck.st_types_ref
     val () = println "Finished typechecking"
     open MergeModules
     val decls = merge_prog prog []

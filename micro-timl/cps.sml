@@ -16,6 +16,7 @@ infix 9 %@
 infix 8 %^
 infix 7 %*
 infix 6 %+ 
+infix 6 %++ 
 infix 4 %<=
 infix 4 %>=
 infix 4 %=
@@ -23,7 +24,9 @@ infixr 3 /\
 infixr 2 \/
 infixr 1 -->
 infix 1 <->
-        
+
+fun a %++ b = BinOpI (IBUnion, a, b)
+  
 fun IV x = VarI (make_Free_i x, [])
                 
 val T_0 = T0 dummy
@@ -152,15 +155,15 @@ fun cps_t t =
       end
     val t =                                         
     case whnf t of
-      TArrow ((t1, st1), i, (t2, st2)) =>
-      (* [[ {t1, st1} --i--> {t2, st2} ]] = \\j F. {[[t1]]*({[[t2]], st2+F} --j--> void), st1+F} -- blowup_time(i, j) --> void *)
+      TArrow ((st1, t1), i, (st2, t2)) =>
+      (* [[ {st1, t1} --i--> {st2, t2} ]] = \\j F. {st1+F, [[t1]]*(st2+F, {[[t2]]} --j--> void)} -- blowup_time(i, j) --> void *)
       let
         val t1 = cps_t t1
         val t2 = cps_t t2
         val j = fresh_ivar ()
         val F = fresh_ivar ()
-        val t = TProd (t1, TArrow ((t2, st2 %++ IV F), IV j, Void))
-        val t = TArrow ((t, st1 %++ IV F), blowup_time (i, IV j), Void)
+        val t = TProd (t1, TArrow ((st2 %++ IV F, t2), IV j, Void))
+        val t = TArrow ((st1 %++ IV F, t), blowup_time (i, IV j), Void)
       in
         TForallICloseMany ([(j, "j", STime), (F, "F", SState)], t)
       end

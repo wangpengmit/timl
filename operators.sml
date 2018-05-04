@@ -39,6 +39,7 @@ datatype idx_bin_op =
          | GeI
          | BoundedMinusI
          | MinusI (* only used internally for annotation propagation *)
+         | IBUnion
 
 (* binary logical connectives *)
 datatype bin_conn =

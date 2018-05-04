@@ -41,6 +41,8 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TArr of ('var, 'bsort, 'idx, 'sort) ty * 'idx
          | TAbsT of ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
          | TAppT of ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
+         | TMap of ('var, 'bsort, 'idx, 'sort) ty
+         | TState of string
          (* used by compiler/pair-alloc *)
          | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool)
          (* used by compiler/code-gen *)
@@ -48,7 +50,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TArrowEVM of 'idx(*pre-state*) * ('var, 'bsort, 'idx, 'sort) ty Rctx.map (*register typing*) * ('var, 'bsort, 'idx, 'sort) ty list (*stack typing*) * 'idx
          | TiBool of 'idx
          | TPreTuple of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * 'idx(*lowest inited pos*)
-         | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*)
+         | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * bool(*is storage?*)
          | TPreArray of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*lowest inited/uninited pos*) * (bool(*is length inited?*) * bool(*init direction; false: downward; true: upward *))
          | TArrayPtr of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*offset*)
 
@@ -75,7 +77,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EBinOp of expr_bin_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | ETriOp of expr_tri_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | ECase of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
-         | EAbs of 'idx * ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno
+         | EAbs of 'idx(*pre-condition*) * ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno
          | ERec of ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno
          | EAbsT of ('kind, ('var, 'idx, 'sort, 'kind, 'ty) expr) tbind_anno
          | EAppT of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty

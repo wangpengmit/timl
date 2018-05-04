@@ -506,9 +506,9 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
         val (t0, t1, sctx) = assert_cons2 sctx
         val t = 
             case t1 of
-                TNat i =>
+                TState x =>
                 let
-                  val t = assert_fst_true $ must_find st_types $ assert_INat $ simp_i i
+                  val t = assert_fst_true $ must_find st_types x
                 in
                   t
                 end
@@ -520,7 +520,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
     | MACRO_vector_ptr =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
-        val vec = assert_INat $ simp_i $ assert_TNat t0
+        val vec = assert_TState t0
         val offset = assert_TNat t1
       in
         ((itctx, rctx, TVectorPtr (vec, offset) :: sctx), T0)
@@ -528,7 +528,7 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
     | MACRO_vector_push_back =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
-        val vec = assert_INat $ simp_i $ assert_TNat t1
+        val vec = assert_TState t1
         val len = st @!! vec
         val t = assert_fst_false $ st_types @!! vec
         val () = is_eq_ty ictx (t0, t)
@@ -549,9 +549,8 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
                 in
                   t
                 end
-              | TNat i =>
+              | TState vec =>
                 let
-                  val vec = assert_INat $ simp_i i
                   val len = st @!! vec
                   val _ = assert_fst_false $ st_types @!! vec
                 in
@@ -583,9 +582,8 @@ fun tc_inst (hctx, num_regs) (ctx as (itctx as (ictx, tctx), rctx, sctx), st) in
                 in
                   (t, st)
                 end
-              | TNat i =>
+              | TState vec =>
                 let
-                  val vec = assert_INat $ simp_i i
                   val _ = assert_fst_false $ st_types @!! vec
                   val new = assert_TNat t1
                   val () = check_prop ictx (new %= N0)

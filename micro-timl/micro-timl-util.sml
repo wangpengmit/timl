@@ -36,6 +36,8 @@ fun TSum (t1, t2) = TBinOp (TBSum, t1, t2)
 fun TProd (t1, t2) = TBinOp (TBProd, t1, t2)
 fun TAppIs (t, is) = foldl (swap TAppI) t is
 fun TAppTs (t, ts) = foldl (swap TAppT) t ts
+fun TMemTuplePtr (ts, i) = TTuplePtr (ts, i, false)
+fun TStorageTuplePtr (ts, i) = TTuplePtr (ts, i, true)
          
 fun EPair (e1, e2) = EBinOp (EBPair, e1, e2)
 fun EProj (proj, e) = EUnOp (EUTiML $ EUProj proj, e)
@@ -55,7 +57,7 @@ fun ENew (e1, e2) = EBinOp (EBNew, e1, e2)
 fun ERead (e1, e2) = EBinOp (EBRead, e1, e2)
 fun EWrite (e1, e2, e3) = ETriOp (ETWrite, e1, e2, e3)
                                       
-fun MakeEAbs (name, t, e) = EAbs $ EBindAnno ((name, t), e)
+fun MakeEAbs (i, name, t, e) = EAbs (i, EBindAnno ((name, t), e))
 fun MakeEAbsI (name, s, e) = EAbsI $ IBindAnno ((name, s), e)
 fun MakeEUnpack (e1, tname, ename, e2) = EUnpack (e1, TBind (tname, EBind (ename, e2)))
 fun MakeEAbsT (name, k, e) = EAbsT $ TBindAnno ((name, k), e)

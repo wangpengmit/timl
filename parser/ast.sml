@@ -127,7 +127,7 @@ datatype exp =
 
      and decl =
          Val of id list * ptrn * exp * region
-         | Rec of id list * id * bind list * state * state * return * exp * region
+         | Rec of id list * id * bind list * state * state option * return * exp * region
          | Datatype of datatype_def
          | IdxDef of id * sort option * idx
          | AbsIdx2 of id * sort option * idx

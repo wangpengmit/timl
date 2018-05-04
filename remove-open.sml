@@ -25,8 +25,9 @@ fun remove_DOpen_expr_visitor_vtable cast () : ('this, unit) expr_visitor_vtable
           visit_noop
           visit_noop
           visit_noop
-    fun visit_DOpen this env (Outer m, octx) =
+    fun visit_DOpen this env (m, octx) =
       let
+        val m = unInner m
         val (sctx, kctx, cctx, tctx) = octx !! (fn () => raise Impossible "remove_DOpen: octx must be SOME")
         val decls = []
         fun V i = QID (m, (i, dummy))

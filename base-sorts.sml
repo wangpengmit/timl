@@ -6,6 +6,7 @@ datatype base_sort =
          | Time
 	 | BoolSort
 	 | UnitSort
+         | BSState
 
 fun str_b (s : base_sort) : string = 
   case s of
@@ -13,5 +14,7 @@ fun str_b (s : base_sort) : string =
     | Time => "Time"
     | BoolSort => "Bool"
     | UnitSort => "Unit"
+    | BSState => "State"
+                  
 end
 

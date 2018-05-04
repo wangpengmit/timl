@@ -190,7 +190,7 @@ open Ast
        | square_star of exp list
        | square of exp
        | pre of state
-       | post of state
+       | post of state option
        | state of state
        | state_field_star of state
        | state_field_plus of state
@@ -280,8 +280,8 @@ decl : VAL tnames ptrn EQ exp (Val (tnames, ptrn, exp, (VALleft, expright)))
 pre : PRE state (state)
     | (empty_state)
 
-post : POST state (state)
-     | (empty_state)
+post : POST state (SOME state)
+     | (NONE)
 
 state : LCUR state_field_star RCUR (state_field_star)
 

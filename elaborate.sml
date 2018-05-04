@@ -464,6 +464,7 @@ local
           end
 	| S.Rec (tnames, name, binds, pre, post, (t, d), e, r) =>
           let
+            val post = default pre post
             fun f bind =
                 case bind of
 		    Typing pn => TypingST (elab_pn pn)

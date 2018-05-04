@@ -28,6 +28,7 @@ datatype idx =
          | BinOpI of idx_bin_op * idx * idx
          | Ite of idx * idx * idx * region
          | IAbs of bsort * (name * idx) ibind * region
+         | IState of idx StMap.map
          | UVarI of (bsort, idx) uvar_i * region
 
 and prop =

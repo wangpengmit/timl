@@ -111,15 +111,19 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
-      | TArrow (t1, i, t2) =>
+      | TArrow ((i1, t1), i, (i2, t2)) =>
         (
           open_hbox ();
           str "TArrow";
           space ();
           str "(";
+          str $ str_i i1;
+          comma ();
           pp_t t1;
           comma ();
           str $ str_i i;
+          comma ();
+          str $ str_i i2;
           comma ();
           pp_t t2;
           str ")";
@@ -269,7 +273,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
-      | TTuplePtr (ts, i) =>
+      | TTuplePtr (ts, i, b) =>
         (
           open_hbox ();
           str "TTuplePtr";
@@ -277,6 +281,8 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str "(";
           app (fn t => (pp_t t; comma ())) ts;
           str $ str_i i;
+          comma ();
+          str $ str_bool b;
           str ")";
           close_box ()
         )
@@ -353,12 +359,14 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
-      | TArrowEVM (rctx, ts, i) =>
+      | TArrowEVM (i1, rctx, ts, i2) =>
         (
           open_hbox ();
           str "TArrowEVM";
           space ();
           str "(";
+          str $ str_i i1;
+          comma ();
           str "{";
           Rctx.appi
             (fn (r, t) =>
@@ -372,7 +380,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           app (fn t => (pp_t t; comma ())) ts;
           str "]";
           comma ();
-          str $ str_i i;
+          str $ str_i i2;
           str ")";
           close_box ()
         )
@@ -717,7 +725,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         end
-      | EAbs bind =>
+      | EAbs (i, bind) =>
         let
           val (name, t, e) = get_bind_anno bind
         in
@@ -726,6 +734,8 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str "EAbs";
           space ();
           str "(";
+          str $ str_i i;
+          comma ();
           str name;
           comma ();
           pp_t t;

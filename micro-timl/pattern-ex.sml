@@ -27,10 +27,10 @@ type inj = int * int
              
 datatype ('mtype, 'expr) ptrn =
          PnVar of ename binder
-         | PnTT of region outer
+         | PnTT of region
          | PnPair of ('mtype, 'expr) ptrn * ('mtype, 'expr) ptrn
-         | PnAlias of ename binder * ('mtype, 'expr) ptrn * region outer
-	 | PnConstr of inj outer * iname binder list * ('mtype, 'expr) ptrn * region outer
+         | PnAlias of ename binder * ('mtype, 'expr) ptrn * region
+	 | PnConstr of inj outer * iname binder list * ('mtype, 'expr) ptrn * region
          | PnAnno of ('mtype, 'expr) ptrn * 'mtype outer
          (* | PnUnOp of ptrn_un_op outer * ('mtype, 'expr) ptrn *)
          | PnInj of inj outer * ('mtype, 'expr) ptrn
@@ -84,10 +84,10 @@ type ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable =
      {
        visit_ptrn : 'this -> 'env ctx -> ('mtype, 'expr) ptrn -> ('mtype2, 'expr2) ptrn,
        visit_PnVar : 'this -> 'env ctx -> ename binder -> ('mtype2, 'expr2) ptrn,
-       visit_PnTT : 'this -> 'env ctx -> region outer -> ('mtype2, 'expr2) ptrn,
+       visit_PnTT : 'this -> 'env ctx -> region -> ('mtype2, 'expr2) ptrn,
        visit_PnPair : 'this -> 'env ctx -> ('mtype, 'expr) ptrn * ('mtype, 'expr) ptrn -> ('mtype2, 'expr2) ptrn,
-       visit_PnAlias : 'this -> 'env ctx -> ename binder * ('mtype, 'expr) ptrn * region outer -> ('mtype2, 'expr2) ptrn,
-       visit_PnConstr : 'this -> 'env ctx -> inj outer * iname binder list * ('mtype, 'expr) ptrn * region outer -> ('mtype2, 'expr2) ptrn,
+       visit_PnAlias : 'this -> 'env ctx -> ename binder * ('mtype, 'expr) ptrn * region -> ('mtype2, 'expr2) ptrn,
+       visit_PnConstr : 'this -> 'env ctx -> inj outer * iname binder list * ('mtype, 'expr) ptrn * region -> ('mtype2, 'expr2) ptrn,
        visit_PnAnno : 'this -> 'env ctx -> ('mtype, 'expr) ptrn * 'mtype outer -> ('mtype2, 'expr2) ptrn,
        (* visit_PnUnOp : 'this -> 'env ctx -> ptrn_un_op outer * ('mtype, 'expr) ptrn -> ('mtype2, 'expr2) ptrn, *)
        visit_PnUnpackI : 'this -> 'env ctx -> iname binder * ('mtype, 'expr) ptrn -> ('mtype2, 'expr2) ptrn,
@@ -235,12 +235,7 @@ fun default_ptrn_visitor_vtable
       in
         PnVar $ #visit_ebinder vtable this env data
       end
-    fun visit_PnTT this env data =
-      let
-        val vtable = cast this
-      in
-        PnTT $ visit_outer (#visit_region vtable this) env data
-      end
+    fun visit_PnTT this env r = PnTT r
     fun visit_PnPair this env data = 
       let
         val vtable = cast this
@@ -256,7 +251,6 @@ fun default_ptrn_visitor_vtable
         val (name, p, r) = data
         val name = #visit_ebinder vtable this env name
         val p = #visit_ptrn vtable this env p
-        val r = visit_outer (#visit_region vtable this) env r
       in
         PnAlias (name, p, r)
       end
@@ -276,7 +270,6 @@ fun default_ptrn_visitor_vtable
         val x = visit_outer (#visit_inj vtable this) env x
         val inames = map (#visit_ibinder vtable this env) inames
         val p = #visit_ptrn vtable this env p
-        val r = visit_outer (#visit_region vtable this) env r
       in
         PnConstr (x, inames, p, r)
       end
@@ -490,7 +483,7 @@ fun remove_var_ptrn_visitor_vtable cast ()
       (* if fst (unBinderName data) = "_" then *)
       (*   PnWildcard *)
       (* else *)
-        PnAlias (data, PnWildcard, Outer dummy)
+        PnAlias (data, PnWildcard, dummy)
     val vtable =
         default_ptrn_visitor_vtable
           cast
@@ -594,7 +587,7 @@ fun remove_constr (params as (shift_i_e, str_e)) p =
   let
     (* val str_pn = str_pn str_e *)
     (* val () = println $ "before remove_constr: " ^ str_pn p *)
-    val p = fst $ remove_constr_k params (p, PnTT $ Outer dummy)
+    val p = fst $ remove_constr_k params (p, PnTT dummy)
     (* val () = println $ "after remove_constr: " ^ str_pn p *)
     (* val () = println "" *)
   in
@@ -839,7 +832,6 @@ fun test () =
     val IName = fn s => IName (s, dummy)
                               
     fun IVar n = VarI (ID (n, dummy), [])
-    val dummy = Outer dummy
                       
     val p = PnAnno (PnPair (PnAnno (PnTT dummy, Outer ()), PnAnno (PnTT dummy, Outer ())), Outer ())
     val p1 = remove_anno p
@@ -864,7 +856,6 @@ fun test2 () =
     val IName = fn s => IName (s, dummy)
     val EName = fn s => EName (s, dummy)
     fun EV n = EVar n
-    val dummy = Outer dummy
 
     fun shift_i_e a = shift_i_e_fn (shiftx_i_i, shiftx_i_s, shiftx_i_mt) a
     fun shift_e_e a = shift_e_e_fn shift_var a

@@ -20,7 +20,7 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'va
        visit2_TVar : 'this -> 'env -> 'var * 'bsort kind list -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TConst : 'this -> 'env -> ty_const -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TBinOp : 'this -> 'env -> ty_bin_op * ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
-       visit2_TArrow : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * 'idx * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
+       visit2_TArrow : 'this -> 'env -> ('idx * ('var, 'bsort, 'idx, 'sort) ty) * 'idx * ('idx * ('var, 'bsort, 'idx, 'sort) ty) -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TAbsI : 'this -> 'env -> ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TAppI : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TQuan : 'this -> 'env -> unit quan * ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
@@ -270,10 +270,11 @@ fun default_ty_visitor2_vtable
           | TAppT data => #visit2_TAppT vtable this env data other
           | TProdEx data => #visit2_TProdEx vtable this env data other
           | TArrowTAL data => #visit2_TArrowTAL vtable this env data other
-          | TArrowEVM (data as (rctx, ts, i)) =>
+          | TArrowEVM (data as (i1, rctx, ts, i2)) =>
             (case other of
-                 TArrowEVM (rctx', ts', i') =>
+                 TArrowEVM (i1', rctx', ts', i2') =>
                  let
+                   val i1 = #visit2_idx vtable this env i1 i1'
                    val () = if Rctx.numItems rctx = Rctx.numItems rctx' then ()
                             else error (TArrowEVM data) other
                    val rctx = Rctx.unionWith (fn (inl (inl t), inl (inr t')) => inr $ #visit2_ty vtable this env t t'
@@ -284,9 +285,9 @@ fun default_ty_visitor2_vtable
                    val rctx = Rctx.map (fn inr t => t
                                        | _ => error (TArrowEVM data) other) rctx
                    val ts = visit2_list (#visit2_ty vtable this) env ts ts'
-                   val i = #visit2_idx vtable this env i i'
+                   val i2 = #visit2_idx vtable this env i2 i2'
                  in
-                   TArrowEVM (rctx, ts, i)
+                   TArrowEVM (i1, rctx, ts, i2)
                  end
                | _ => error (TArrowEVM data) other)
           | TiBool i =>
@@ -304,11 +305,11 @@ fun default_ty_visitor2_vtable
                  TArrayPtr (t', i1', i2') =>
                  TArrayPtr (#visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2')
                | _ => error (TArrayPtr (t, i1, i2)) other)
-          | TTuplePtr (ts, i) =>
+          | TTuplePtr (data as (ts, i, b)) =>
             (case other of
-                 TTuplePtr (ts', i') =>
-                 TTuplePtr (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i')
-               | _ => error (TTuplePtr (ts, i)) other)
+                 TTuplePtr (ts', i', b') =>
+                 TTuplePtr (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i', visit2_eq op= this env b b')
+               | _ => error (TTuplePtr data) other)
           | TPreTuple (ts, i, i2) =>
             (case other of
                  TPreTuple (ts', i', i2') =>
@@ -352,16 +353,18 @@ fun default_ty_visitor2_vtable
     fun visit2_TArrow this env data other = 
       let
         val vtable = cast this
-        val (t1, i, t2) = data
+        val ((i1, t1), i, (i2, t2)) = data
       in
         case other of
-            TArrow (t1', i', t2') =>
+            TArrow ((i1', t1'), i', (i2', t2')) =>
             let
+              val i1 = #visit2_idx vtable this env i1 i1'
               val t1 = #visit2_ty vtable this env t1 t1'
               val i = #visit2_idx vtable this env i i'
+              val i2 = #visit2_idx vtable this env i2 i2'
               val t2 = #visit2_ty vtable this env t2 t2'
             in
-              TArrow (t1, i, t2)
+              TArrow ((i1, t1), i, (i2, t2))
             end
           | _ => error (TArrow data) other
       end

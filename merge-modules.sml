@@ -178,6 +178,12 @@ fun top_bind_to_mod rev_p (name, bind) =
       in
         [m2, m1]
       end
+    | TBState (is_map, t) =>
+      let
+        (* val () = add_ref st_types_ref (name, (is_map, t)) *)
+      in
+        []
+      end
 
 fun prog2modules' p =
   case p of

@@ -76,4 +76,6 @@ fun IBool c = IConst (ICBool c, dummy)
                      
 fun TiBoolConst b = TiBool $ IBool b
                            
+val SState = Basic (Base BSState, dummy)
+  
 end

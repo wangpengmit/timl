@@ -240,13 +240,15 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TBinOp (opr, t1, t2), get_ty_bin_op_res_kind opr)
       end
-    | TArrow (t1, i, t2) =>
+    | TArrow ((i1, t1), i, (i2, t2)) =>
       let
+        val i1 = sc_against_sort ictx (i1, SState)
         val t1 = kc_against_kind ctx (t1, KType)
         val i = sc_against_sort ictx (i, STime)
+        val i2 = sc_against_sort ictx (i2, SState)
         val t2 = kc_against_kind ctx (t2, KType)
       in
-        (TArrow (t1, i, t2), KType)
+        (TArrow ((i1, t1), i, (i2, t2)), KType)
       end
     | TAbsI data =>
       let
