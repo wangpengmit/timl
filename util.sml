@@ -445,6 +445,18 @@ fun partitionOption f xs =
             | _ => (ys, x :: zs)
         end
 
+fun partitionSum f xs =
+    case xs of
+        [] => ([], [])
+      | x :: xs =>
+        let
+          val (ys, zs) = partitionSum f xs
+        in
+          case f x of
+              inl y => (y :: ys, zs)
+            | inr z => (ys, z :: zs)
+        end
+
 fun partitionOptionFirst f xs =
     case xs of
         [] => NONE

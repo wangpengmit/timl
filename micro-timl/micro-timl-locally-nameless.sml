@@ -139,6 +139,10 @@ fun test1 dirname =
       val () = println "MicroTiMLLocallyNameless.UnitTest started"
       open Expr
       open MicroTiMLUtil
+      val STime = STime dummy
+      val SNat = SNat dummy
+      val SBool = SBool dummy
+      val SUnit = SUnit dummy
       val t = TNat $ VarI (ID (1, dummy), [])
       val s = Subset ((Base Nat, dummy), Bind.Bind (("_VC", dummy), ConstIN (0, dummy) %= VarI (ID (1, dummy), [])), dummy)
       val t = MakeTForallI (s, ("_VC", dummy), t)

@@ -77,5 +77,14 @@ fun IBool c = IConst (ICBool c, dummy)
 fun TiBoolConst b = TiBool $ IBool b
                            
 val SState = Basic (Base BSState, dummy)
-  
+fun IUnion (a, b) = BinOpI (IBUnion, a, b)
+val collect_IUnion = collect_BinOpI IBUnion
+fun combine_IUnion i is = foldl (fn (i, acc) => IUnion (acc, i)) i is
+val IEmptyState = IState StMap.empty
+                                
+fun assert_TArrow t =
+  case t of
+      TArrow a => a
+    | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+                                                          
 end

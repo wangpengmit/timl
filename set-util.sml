@@ -20,3 +20,11 @@ fun pop s =
 fun enumerate c : (S.item, 'result) Enum.enum = fn f => (fn init => S.foldl f init c)
                        
 end
+
+structure IntBinarySetUtil = SetUtilFn (IntBinarySet)
+structure StringBinarySetUtil = SetUtilFn (StringBinarySet)
+structure ISet = IntBinarySet
+structure SSet = StringBinarySet
+structure ISetU = IntBinarySetUtil
+structure SSetU = StringBinarySetUtil
+                                    

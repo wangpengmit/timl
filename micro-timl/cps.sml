@@ -25,10 +25,15 @@ infixr 2 \/
 infixr 1 -->
 infix 1 <->
 
-fun a %++ b = BinOpI (IBUnion, a, b)
+fun a %++ b = IUnion (a, b)
   
 fun IV x = VarI (make_Free_i x, [])
                 
+val STime = STime dummy
+val SNat = SNat dummy
+val SBool = SBool dummy
+val SUnit = SUnit dummy
+
 val T_0 = T0 dummy
 val T_1 = T1 dummy
 
@@ -42,12 +47,16 @@ fun unBindAnno2 data =
 
 fun unBindSimp2 bind = mapFst Name2str $ unBindSimp bind
             
-fun TForallTimeClose ((x, name), t) = TForallI $ close0_i_t_anno ((x, name, STime), t)
-fun EAbsTimeClose ((x, name), e) = EAbsI $ close0_i_e_anno ((x, name, STime), e)
+fun TForallIClose (x, t) = TForallI $ close0_i_t_anno (x, t)
+fun TForallICloseMany (xs, b) = foldr TForallIClose b xs
+fun TForallTimeClose ((x, name), t) = TForallIClose ((x, name, STime), t)
+fun EAbsIClose (x, e) = EAbsI $ close0_i_e_anno (x, e)
+fun EAbsICloseMany (xs, b) = foldr EAbsIClose b xs
+fun EAbsTimeClose ((x, name), e) = EAbsIClose ((x, name, STime), e)
 fun ELetConstrClose ((x, name), e1, e2) = MakeELetConstr (e1, (name, dummy), close0_c_e x e2)
   
-fun Eid t = EAbs $ EBindAnno ((("x", dummy), t), EVar $ Bound 0)
-fun EHaltFun t_arg t_result = EAbs $ EBindAnno ((("x", dummy), t_arg), EHalt (EVar $ Bound 0, t_result))
+fun Eid t = EAbs (IEmptyState, EBindAnno ((("x", dummy), t), EVar $ Bound 0))
+fun EHaltFun t_arg t_result = EAbs (IEmptyState, EBindAnno ((("x", dummy), t_arg), EHalt (EVar $ Bound 0, t_result)))
 
 infix 0 %:
 fun a %: b = EAscType (a, b)
@@ -58,7 +67,7 @@ fun a |> b = EAscTime (a, b)
 (* pre: e1 and e2 must be value *)
 fun EApp_alias_fun_arg (e1, e2) =
     case e1 of
-        EAbs bind =>
+        EAbs (st, bind) =>
         let
           val (t_x, (name_x, e_body)) = unBindAnnoName bind
           val e = MakeELet (e2 (* %: t_x *), name_x, e_body)
@@ -78,7 +87,7 @@ fun EApp_alias_fun_arg (e1, e2) =
 (* pre: e2 must be value *)
 fun EApp_alias_arg (e1, e2) =
     case e1 of
-        EAbs bind =>
+        EAbs (st, bind) =>
         let
           val (t_x, (name_x, e_body)) = unBindAnnoName bind
           val e = MakeELet (e2 (* %: t_x *), name_x, e_body)
@@ -134,21 +143,21 @@ fun blowup_time (i : idx, j : idx) = i %* ConstIT (TimeType.fromInt 999, dummy) 
 fun blowup_time_t (j : idx) = j %* ConstIT (TimeType.fromInt 888, dummy)
 fun blowup_time_i (j : idx) = j %* ConstIT (TimeType.fromInt 777, dummy)
 
-val Void = (IState empty, TUnit)
+val Void = (IEmptyState, TUnit)
                                 
 (* CPS conversion on types *)
 fun cps_t t =
   let
     (* val () = println $ "cps_t() on: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
     (* val t = whnf t *)
-    (* [[ \\a.t ]] = \\a. \\j F. {({[[t]], F} --j--> void), F} -- blowup_time_t(j) --> void *)
+    (* [[ \\a.t ]] = \\a. \\j F. {F, ({F, [[t]]} --j--> void)} -- blowup_time_t(j) --> void *)
     fun cps_Forall t =
       let
         val t = cps_t t
         val j = fresh_ivar ()
         val F = fresh_ivar ()
-        val t = TArrow ((t, IV F), IV j, Void)
-        val t = TArrow ((t, IV F), IV j %+ T_1, Void)
+        val t = TArrow ((IV F, t), IV j, Void)
+        val t = TArrow ((IV F, t), IV j %+ T_1, Void)
         val t = TForallICloseMany ([(j, "j", STime), (F, "F", SState)], t)
       in
         t
@@ -275,9 +284,9 @@ fun cps (e, t_e) (k, j_k) =
         val (e, _) = cps (e, t_e) (EV c, IV j)
         val e = EAscTime (e, blowup_time_t (IV j))
         val t_e = cps_t t_e
-        val t_c = cont_type ((t_e, IV F), IV j)
+        val t_c = cont_type ((IV F, t_e), IV j)
         val e = EAbs (IV F, close0_e_e_anno ((c, "c", t_c), e))
-        val e = EAbsIClose ([(j, "j", STime), (F, "F", SState)], e)
+        val e = EAbsICloseMany ([(j, "j", STime), (F, "F", SState)], e)
       in
         e
       end
@@ -286,13 +295,13 @@ fun cps (e, t_e) (k, j_k) =
       S.EVar x =>
       (* [[ x ]](k) = k x *)
       (k $$ EVar x, j_k %+ T_1)
-    | S.EAbs bind =>
+    | S.EAbs (_, bind) =>
       (* [[ \x {pre_st}. e {post_st} ]](k) = k (\\j F. \(x, c) {pre_st+F}. [[e]](c) |> blowup_time(i, j))
          where [i] is the time bound of [e], blowup_time(i,j) = b(i+1)+2i+1+j, [b] is blow-up factor *)
       let
         val ((name_x, _), e) = unBindAnno2 bind
         val t_e = whnf t_e
-        val ((t_x, pre_st), i, (t_e, post_st)) = assert_TArrow t_e
+        val ((pre_st, t_x), i, (post_st, t_e)) = assert_TArrow t_e
         val x = fresh_evar ()
         val e = open0_e_e x e
         val c = fresh_evar ()
@@ -301,9 +310,9 @@ fun cps (e, t_e) (k, j_k) =
         val (e, _) = cps (e, t_e) (EV c, IV j)
         val e = EAscTime (e, blowup_time (i, IV j))
         val t_e = cps_t t_e
-        val t_c = cont_type ((t_e, post_st %++ IV F), IV j)
+        val t_c = cont_type ((post_st %++ IV F, t_e), IV j)
         val t_x = cps_t t_x
-        val e = EAbsPairClose ((x, name_x, t_x), (c, "c", t_c), pre_st %++ IV F, e)
+        val e = EAbsPairClose (pre_st %++ IV F, (x, name_x, t_x), (c, "c", t_c), e)
         val e = EAbsICloseMany ([(j, "j", STime), (F, "F", SState)], e)
       in
         (k $$ e, j_k %+ T_1)
@@ -313,14 +322,15 @@ fun cps (e, t_e) (k, j_k) =
       let
         val (e1, t_e1) = assert_EAscType e1
         val t_e1 = whnf t_e1
-        val (t_e2, i, _) = assert_TArrow t_e1
+        val ((_, t_e2), i, _) = assert_TArrow t_e1
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
         val xk = fresh_evar ()
         val e = EAppI (EV x1, j_k) %$ EPair (EV x2, EV xk)
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
-        val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
+        (*here*)
+        val e = EAbs ((), close0_e_e_anno ((x2, "x2", t_x2), e))
         val (e, i_e) = cps (e2, t_e2) (e, blowup_time (i, j_k))
         val t_x1 = cps_t t_e1
         val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e)

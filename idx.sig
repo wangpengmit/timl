@@ -1,5 +1,5 @@
-structure StMap = StringBinaryMap
-structure StMapU = MapUtilFn (StMap)
+structure StMap = SMap
+structure StMapU = SMapU
                              
 signature IDX = sig
 

@@ -10,7 +10,9 @@ fun str_map (fk, fv) = Util.surround "{" "}" o Util.join ", " o List.map (fn (k,
   
 fun domain m = List.map Util.fst (M.listItemsi m)
 
-fun is_same_domain m m' = M.numItems m = M.numItems m' andalso List.all (fn k => Option.isSome (M.find (m', k))) (domain m)
+fun is_sub_domain m m' = List.all (fn k => Option.isSome (M.find (m', k))) (domain m)
+
+fun is_same_domain m m' = M.numItems m = M.numItems m' andalso is_sub_domain m m'
 
 fun addList (m, kvs) = foldl (fn ((k, v), m) => M.insert (m, k, v)) m kvs
 fun fromList kvs = addList (M.empty, kvs)
@@ -37,3 +39,7 @@ end
 
 structure IntBinaryMapUtil = MapUtilFn (IntBinaryMap)
 structure StringBinaryMapUtil = MapUtilFn (StringBinaryMap)
+structure IMap = IntBinaryMap
+structure SMap = StringBinaryMap
+structure IMapU = IntBinaryMapUtil
+structure SMapU = StringBinaryMapUtil

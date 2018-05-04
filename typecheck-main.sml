@@ -43,10 +43,10 @@ fun m @+ a = StMap.insert' (a, m)
                            
 infix  9 @!!
 fun m @!! k = StMapU.must_find m k
-infix 6 @@-
-fun m @@- m' = StMapU.sub m m'
-infix 6 @@+
-fun m @@+ m' = StMapU.union m m'
+infix 6 @--
+fun m @-- m' = StMapU.sub m m'
+infix 6 @++
+fun m @++ m' = StMapU.union m m'
          
 val is_builtin_enabled = ref false
 fun turn_on_builtin () = (is_builtin_enabled := true)
@@ -1270,13 +1270,13 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val () = unify_mt (get_region_e e2) gctx (sctx, kctx) (t2, t2')
                  fun check_submap pre_st st =
                    let
-                     val pre_st_minus_st = pre_st @@- st
+                     val pre_st_minus_st = pre_st @-- st
                    in
                      if StMap.numItems pre_st_minus_st = 0 then ()
                      else raise Error (r1, ["these state fields are required by the function by missing in current state:", str_ls str_st_key $ StMapU.domain pre_st_minus_st])
                    end
-                 val () = app (fn k => write_prop (st @!! k %= pre_st @!! k, r1)) $ StMapU.domain pre_st
-                 val st = st @@+ post_st
+                 val () = app (fn k => unify_i r1 gctxn sctxn (st @!! k, pre_st @!! k)) $ StMapU.domain pre_st
+                 val st = st @++ post_st
                in
                  (EApp (e1, e2), t, d1 %+ d2 %+ T1 r1 %+ d, st) 
 	       end

@@ -21,10 +21,6 @@ fun assert_IBool a =
   case a of
       IConst (ICBool a, _) => a
     | _ => raise assert_fail "assert_IBool"
-fun assert_TArrow t =
-  case t of
-      TArrow a => a
-    | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TProd t =
   case t of
       TBinOp (TBProd, t1, t2) => (t1, t2)
@@ -112,7 +108,7 @@ fun assert_TNat t =
                  
 fun assert_EAbs e =
   case e of
-      EAbs bind => unBindAnnoName bind
+      EAbs (st, bind) => (st, unBindAnnoName bind)
     | _ => raise assert_fail "assert_EAbs"
                  
 fun assert_EAscType e =
@@ -138,13 +134,13 @@ fun EV x = EVar $ make_Free_e x
 fun ELetClose ((x, name, e1), e2) = MakeELet (e1, (name, dummy), close0_e_e x e2)
 fun ELetManyClose (ds, e) = foldr ELetClose e ds
 
-fun EAbsPairClose ((x1, name1, t1), (x2, name2, t2), e) =
+fun EAbsPairClose (st, (x1, name1, t1), (x2, name2, t2), e) =
   let
     val x = fresh_evar ()
     val e = ELetClose ((x2, name2, ESnd (EV x)), e)
     val e = ELetClose ((x1, name1, EFst (EV x)), e)
   in
-    EAbs $ close0_e_e_anno ((x, "x", TProd (t1, t2)), e)
+    EAbs (st, close0_e_e_anno ((x, "x", TProd (t1, t2)), e))
   end
     
 fun EUnpackClose (e1, (a, name_a), (x, name_x), e2) =
