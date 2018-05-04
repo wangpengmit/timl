@@ -116,5 +116,7 @@ fun str_raw_e e =
     | ECaseSumbool _ => "ECaseSumbool (...)"
     | EIfi _ => "EIfi (...)"
     | ELet _ => "ELet (...)"
+    | ESetModify _ => "ESetModify (...)"
+    | EGet _ => "EGet (...)"
 
 end

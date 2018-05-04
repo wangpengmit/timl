@@ -12,6 +12,8 @@ open Ast
     | FUN
     | LSQ
     | RSQ
+    | LSQSQ
+    | RSQSQ
     | LCUR
     | RCUR
     | UNPACK
@@ -108,6 +110,8 @@ open Ast
     | MODIFY
     | PRE
     | POST
+    | PLUS_PLUS
+    | PLUS_EQ
 
 %nonterm start of prog
        | exp of exp
@@ -358,10 +362,12 @@ aexp : decorated_id (Var decorated_id)
      | TILDE aexp (EUnOp (EUPrim EUPIntNeg, aexp, (TILDEleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
      | id_square_plus (EGet (id_square_plus, (id_square_plusleft, id_square_plusright)))
+     | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
+     | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
 
 id_square_plus : id square_plus ((id, square_plus))
 
-square : LSQ exp RSQ (exp)
+square : LSQSQ exp RSQSQ (exp)
                     
 square_star : square square_star (square :: square_star)
 	| ([])

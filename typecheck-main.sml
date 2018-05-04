@@ -953,6 +953,8 @@ fun is_value (e : U.expr) : bool =
       | ECase _ => false
       | ECaseSumbool _ => false
       | EIfi _ => false
+      | ESetModify _ => false
+      | EGet _ => false
   end
 
 fun get_expr_const_type (c, r) =
@@ -1384,8 +1386,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
         | U.EGet (x, es, r) =>
           let
             val () = if null es then raise Error (r, ["no offsets"]) else ()
-            val is_map = case st_types @!! x of
-                        (b, t) => b
+            val is_map = case st_types @! x of
+                             SOME (b, t) => b
                           | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])
             val x = U.EState (x, r)
             val e = if is_map then
@@ -1394,7 +1396,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                       let
                         val offset = case es of
                                          [a] => a
-                                       | _ => Error (r, ["for vector there must only be one offset"])
+                                       | _ => raise Error (r, ["for vector there must only be one offset"])
                       in
                         U.EVectorGet (x, offset)
                       end
@@ -1408,14 +1410,15 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                 if is_value e then ()
                 else raise Error (r, ["must be value"])
               val () = app check_value es
+              val e = U.ESetModify (false, x, es, (U.EApp (e, U.EGet (x, es, r))), r)
             in
-              U.ESetModify (false, x, es, (U.EApp (e, U.EGet (x, es, r))), r)
+              get_mtype ctx_st e
             end
           else
           let
             val () = if null es then raise Error (r, ["no offsets"]) else ()
-            val is_map = case st_types @!! x of
-                        (b, t) => b
+            val is_map = case st_types @! x of
+                             SOME (b, t) => b
                           | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])
             val x = U.EState (x, r)
             val e = if is_map then
@@ -1424,7 +1427,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                       let
                         val offset = case es of
                                          [a] => a
-                                       | _ => Error (r, ["for vector there must only be one offset"])
+                                       | _ => raise Error (r, ["for vector there must only be one offset"])
                       in
                         U.EVectorSet (x, offset, e)
                       end
@@ -2422,7 +2425,7 @@ fun is_base_storage_ty t =
         TyNat _ => ()
       | TiBool _ => ()
       | TyArray _ => ()
-      | BaseType t =>
+      | BaseType (t, _) =>
         (case t of
              Int => ()
            | Bool => ()
@@ -2487,7 +2490,7 @@ fun check_top_bind gctx (name, bind) =
             let
               val t = check_kind_Type Gctx.empty (([], []), t)
               val () = is_wf_state_ty (is_map, t)
-              val () = add_ref st_types_ref (fst name, (is_map, t))
+              val () = add_ref st_types_ref (name, (is_map, t))
             in
               (TBState (is_map, t), [])
             end

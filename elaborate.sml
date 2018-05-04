@@ -536,14 +536,14 @@ local
 
   fun is_vector t =
     case t of
-        S.AppTT (S.VarT (ID (x, _)), t2) =>
+        S.AppTT (S.VarT (NONE, (x, _)), t2, _) =>
         if x = "vector" then SOME $ elab_mt t2
         else NONE
       | _ => NONE
 
   fun is_map t =
     case t of
-        S.AppTT (S.VarT (ID (x, _)), t2) =>
+        S.AppTT (S.VarT (NONE, (x, _)), t2, _) =>
         if x = "map" then
           case is_map t2 of
               SOME t => SOME $ TCell $ TMap t
@@ -558,11 +558,11 @@ local
         | S.TopFunctorApp (name, f, arg) => (name, TopFunctorApp (f, arg))
         | S.TBState (name, t) =>
           case is_vector t of
-              SOME t => TBState (false, t)
+              SOME t => (name, TBState (false, t))
             | NONE =>
               case is_map t of
-                  SOME t => TBState (true, t)
-                | NONE => raise Error (r, ["wrong state declaration form"])
+                  SOME t => (name, TBState (true, t))
+                | NONE => raise Error (S.get_region_t t, "wrong state declaration form")
 
   fun elab_prog prog = map elab_top_bind prog
                            

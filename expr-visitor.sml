@@ -158,10 +158,13 @@ fun default_expr_visitor_vtable
 	  | ECase data => #visit_ECase vtable this env data
 	  | ELet data => #visit_ELet vtable this env data
 	  | ECaseSumbool data => #visit_ECaseSumbool vtable this env data
-	  | EIfi (e, bind1, bind2, r) => T.EIfi
-                                           (#visit_expr vtable this env e,
-                                            visit_ibind this (#visit_expr vtable this) env bind1,
-                                            visit_ibind this (#visit_expr vtable this) env bind2, r)
+	  | EIfi (e, bind1, bind2, r) =>
+            T.EIfi
+              (#visit_expr vtable this env e,
+               visit_ibind this (#visit_expr vtable this) env bind1,
+               visit_ibind this (#visit_expr vtable this) env bind2, r)
+          | ESetModify (b, x, es, e, r) => T.ESetModify (b, x, visit_list (#visit_expr vtable this) env es, #visit_expr vtable this env e, r)
+          | EGet (x, es, r) => T.EGet (x, visit_list (#visit_expr vtable this) env es, r)
       end
     fun visit_EVar this env data =
       let

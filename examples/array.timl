@@ -76,7 +76,7 @@ fun modifyi ['a] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a -- m --> '
     loop <| length a
   end
 
-fun modify ['a] {m : Time} {len : Nat} (f : 'a -- m --> 'a) (a : array 'a {len}) return unit using (m + $6) * $len + 4.0 =
+fun modify_ ['a] {m : Time} {len : Nat} (f : 'a -- m --> 'a) (a : array 'a {len}) return unit using (m + $6) * $len + 4.0 =
   modifyi (fn (_, x) => f x) a
 
 fun foldri ['a 'b] {m : Time} {len : Nat} (f : nat_less_than {len} * 'a * 'b -- m --> 'b) (x : 'b) (a : array 'a {len}) return 'b using (m + $5) * $len + 2.0 =

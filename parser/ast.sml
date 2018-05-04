@@ -149,6 +149,8 @@ fun EList (es, r) = foldr (fn (e, acc) => ECons (e, acc, r)) (ENil r) es
 fun PNil r = PShortVar ("Nil", r)
 fun PList (pns, r) = foldr (fn (pn, acc) => PCons (pn, acc, r)) (PNil r) pns
 fun ESemiColon (e1, e2, r) = Let ((NONE, NONE), [Val ([], PShortVar ("_", r), e1, r)], e2, r)
+fun EInc r =EShortVar ("inc", r)
+fun EAdd r =EShortVar ("add", r)
                                
 type name = id
               
@@ -196,6 +198,6 @@ fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
 fun UnOpI (opr, i, r) = BinOpI (IApp, VarI (NONE, (str_idx_un_op opr, r)), i, r)
 
 val empty_state = []
-    
+
 end
 

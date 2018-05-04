@@ -415,6 +415,8 @@ fun strn_e e =
       in
         sprintf "(ifi $ (itrue $ => $) (ifalse $ => $))" [strn_e e, fst name1, strn_e e1, fst name2, strn_e e2]
       end
+    | ESetModify (is_modify, x, es, e, _) => sprintf "($ $$ $)" [if is_modify then "modify" else "set", x, join "" $ map (surround "[" "]" o strn_e) es, strn_e e]
+    | EGet (x, es, _) => sprintf "$$" [x, join "" $ map (surround "[" "]" o strn_e) es]
 
 and strn_decl decl =
     case decl of

@@ -116,6 +116,8 @@ string = [^\"];
 <INITIAL>"=>" => (T.DARROW (make_region (yypos, size yytext)));
 <INITIAL>"[" => (T.LSQ (make_region (yypos, size yytext)));
 <INITIAL>"]" => (T.RSQ (make_region (yypos, size yytext)));
+<INITIAL>"[[" => (T.LSQSQ (make_region (yypos, size yytext)));
+<INITIAL>"]]" => (T.RSQSQ (make_region (yypos, size yytext)));
 <INITIAL>"{" => (T.LCUR (make_region (yypos, size yytext)));
 <INITIAL>"}" => (T.RCUR (make_region (yypos, size yytext)));
 <INITIAL>"::" => (T.DCOLON (make_region (yypos, size yytext)));
@@ -170,6 +172,8 @@ string = [^\"];
 <INITIAL>"<==" => (T.BIG_O_INFIX (make_region (yypos, size yytext)));
 <INITIAL>"^" => (T.STR_CONCAT (make_region (yypos, size yytext)));
 <INITIAL>";" => (T.SEMI_COLON (make_region (yypos, size yytext)));
+<INITIAL>"++" => (T.PLUS_PLUS (make_region (yypos, size yytext)));
+<INITIAL>"+=" => (T.PLUS_EQ (make_region (yypos, size yytext)));
 
 <INITIAL>{digit}+\.{digit}+ => ((T.NNREAL o flat)
                  (yytext, make_region (yypos, size yytext)));

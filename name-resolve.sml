@@ -1212,7 +1212,7 @@ fun on_top_bind gctx (name, bind) =
         end
       | S.TBState (b, t) =>
         let
-          val () = add_ref st_ref $ fst name
+          val () = add_ref st_ref name
         in
           (TBState (b, on_mtype Gctx.empty ([], []) t), [])
         end
