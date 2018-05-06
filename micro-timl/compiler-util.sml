@@ -129,6 +129,15 @@ fun assert_EAscTime e =
       | _ => raise assert_fail $ "assert_EAscTime; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
     
+fun assert_EAscState e =
+  let
+    val (e, ts) = collect_EAscType e
+  in
+    case e of
+        EAscState (e, i) => (EAscTypes (e, ts), i)
+      | _ => raise assert_fail $ "assert_EAscState; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+  end
+    
 fun EV x = EVar $ make_Free_e x
                 
 fun ELetClose ((x, name, e1), e2) = MakeELet (e1, (name, dummy), close0_e_e x e2)

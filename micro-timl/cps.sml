@@ -271,17 +271,19 @@ fun cont_type (t, i) = TArrow (t, i, Void)
 (* CPS conversion on terms *)
 (* pre: ... |- k : [[t_e]] --j_k-=> unit |> 0 *)
 (* the 'unit' part can be relaxed if e is a value *)
-fun cps (e, t_e) (k, j_k) =
+fun cps (e, t_e, F) (k, j_k) =
   let
     (* val () = println $ "CPS on " ^ (substr 0 400 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
     (* [[ \\a.e ]](k) = k (\\a. \\j F. \c {F}. [[e]](c)) *)
+    val cps_with_frame = cps
+    fun cps (e, t_e) (k, j_k) = cps_with_frame (e, t_e, F) (k, j_k)
     fun cps_EAbsIT (e, t_e) =
       let
         val j = fresh_ivar ()
         val F = fresh_ivar ()
         val c = fresh_evar ()
         val () = assert_b_m (fn () => "is_value() on " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)) $ is_value e
-        val (e, _) = cps (e, t_e) (EV c, IV j)
+        val (e, _) = cps_with_frame (e, t_e, F) (EV c, IV j)
         val e = EAscTime (e, blowup_time_t (IV j))
         val t_e = cps_t t_e
         val t_c = cont_type ((IV F, t_e), IV j)
@@ -307,7 +309,7 @@ fun cps (e, t_e) (k, j_k) =
         val c = fresh_evar ()
         val j = fresh_ivar ()
         val F = fresh_ivar ()
-        val (e, _) = cps (e, t_e) (EV c, IV j)
+        val (e, _) = cps_with_frame (e, t_e, F) (EV c, IV j)
         val e = EAscTime (e, blowup_time (i, IV j))
         val t_e = cps_t t_e
         val t_c = cont_type ((post_st %++ IV F, t_e), IV j)
@@ -320,7 +322,9 @@ fun cps (e, t_e) (k, j_k) =
     | S.EBinOp (EBApp, e1, e2) =>
       (* [[ e1 e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. x1 {k.j} (x2, k))) *)
       let
+        val (e1, st_e1) = assert_EAscState e1
         val (e1, t_e1) = assert_EAscType e1
+        val (e2, st_e2) = assert_EAscState e2
         val t_e1 = whnf t_e1
         val ((_, t_e2), i, _) = assert_TArrow t_e1
         val x1 = fresh_evar ()
@@ -329,11 +333,10 @@ fun cps (e, t_e) (k, j_k) =
         val e = EAppI (EV x1, j_k) %$ EPair (EV x2, EV xk)
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
-        (*here*)
-        val e = EAbs ((), close0_e_e_anno ((x2, "x2", t_x2), e))
+        val e = EAbs (st_e2 %++ IV F, close0_e_e_anno ((x2, "x2", t_x2), e))
         val (e, i_e) = cps (e2, t_e2) (e, blowup_time (i, j_k))
         val t_x1 = cps_t t_e1
-        val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e)
+        val e = EAbs (st_e1 %++ IV F, close0_e_e_anno ((x1, "x1", t_x1), e))
       in
         cps (e1, t_e1) (e, i_e)
       end
@@ -395,28 +398,31 @@ fun cps (e, t_e) (k, j_k) =
     | S.EAppT (e, t) =>
       (* [[ e[t] ]](k) = [[e]](\x. x[t]{k.j}(k)) *)
       let
+        val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
         val c = EAppI (EAppT (EV x, cps_t t), j_k) %$ k
         val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+        val c = EAbs (st_e %++ IV F, close0_e_e_anno ((x, "x", t_x), c))
       in
         cps (e, t_e) (c, blowup_time_t j_k)
       end
     | S.EAppI (e, i) =>
       (* [[ e[i] ]](k) = [[e]](\x. x[i]{k.j}(k)) *)
       let
+        val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
         val c = EAppI (EAppI (EV x, i), j_k) %$ k
         val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+        val c = EAbs (st_e %++ IV F, close0_e_e_anno ((x, "x", t_x), c))
       in
         cps (e, t_e) (c, blowup_time_i j_k)
       end
     | S.EPack (t_pack, t, e) =>
       (* [[ pack <t, e> ]](k) = [[e]](\x. k (pack <t, x>)) *)
       let
+        val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
         val t_pack = cps_t t_pack
@@ -424,26 +430,28 @@ fun cps (e, t_e) (k, j_k) =
         val c = EPack (t_pack, t, EV x)
         val c = k $$ c
         val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+        val c = EAbs (st_e %++ IV F, close0_e_e_anno ((x, "x", t_x), c))
       in
         cps (e, t_e) (c, j_k %+ T_1)
       end
     | S.EPackI (t_pack, i, e) =>
       (* [[ packI <i, e> ]](k) = [[e]](\x. k (packI <i, x>)) *)
       let
+        val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
         val t_pack = cps_t t_pack
         val c = EPackI (t_pack, i, EV x)
         val c = k $$ c
         val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+        val c = EAbs (st_e %++ IV F, close0_e_e_anno ((x, "x", t_x), c))
       in
         cps (e, t_e) (c, j_k %+ T_1)
       end
     | S.EUnpack (e1, bind) =>
       (* [[ unpack e1 as <alpha, x> in e2 ]](k) = [[e1]](\x1. unpack x1 as <alpha, x> in [[e2]](k)) *)
       let
+        val (e1, st_e1) = assert_EAscState e1
         val (e1, t_e1) = assert_EAscType e1
         val (name_alpha, e2) = unBindSimp2 bind
         val (name_x, e2) = unBindSimp2 e2
@@ -456,13 +464,14 @@ fun cps (e, t_e) (k, j_k) =
         val (c, i_c) = cps (e2, t_e2) (k, j_k)
         val c = EUnpackClose (EV x1, (alpha, name_alpha), (x, name_x), c)
         val t_x1 = cps_t t_e1
-        val c = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), c)
+        val c = EAbs (st_e1 %++ IV F, close0_e_e_anno ((x1, "x1", t_x1), c))
       in
         cps (e1, t_e1) (c, i_c)
       end
     | S.EUnpackI (e1, bind) =>
       (* [[ unpackI e1 as <a, x> in e2 ]](k) = [[e1]](\x1. unpack x1 as <a, x> in [[e2]](k)) *)
       let
+        val (e1, st_e1) = assert_EAscState e1
         val (e1, t_e1) = assert_EAscType e1
         val (name_a, e2) = unBindSimp2 bind
         val (name_x, e2) = unBindSimp2 e2
@@ -475,13 +484,15 @@ fun cps (e, t_e) (k, j_k) =
         val (c, i_c) = cps (e2, t_e2) (k, j_k)
         val c = EUnpackIClose (EV x1, (a, name_a), (x, name_x), c)
         val t_x1 = cps_t t_e1
-        val c = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), c)
+        val c = EAbs (st_e1 %++ IV F, close0_e_e_anno ((x1, "x1", t_x1), c))
       in
         cps (e1, t_e1) (c, i_c)
       end
     | S.EBinOp (opr, e1, e2) =>
       (* [[ e1 o e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. k (x1 o x2))) *)
       let
+        val (e1, st_e1) = assert_EAscState e1
+        val (e2, st_e2) = assert_EAscState e2
         fun get_comp_types (e1, e2) t_e =
           case opr of
               EBPair => ((e1, e2), assert_TProd t_e)
@@ -499,21 +510,21 @@ fun cps (e, t_e) (k, j_k) =
         val t_x1 = cps_t t_e1
         val t_x2 = cps_t t_e2
         val e = k $$ EBinOp (opr, EV x1, EV x2)
-        val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
+        val e = EAbs (st_e2 %++ IV F, close0_e_e_anno ((x2, "x2", t_x2), e))
         val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T_1)
-        val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e)
+        val e = EAbs (st_e1 %++ IV F, close0_e_e_anno ((x1, "x1", t_x1), e))
       in
         cps (e1, t_e1) (e, i_e)
       end
     | S.ENewArrayValues (t, es) =>
       let
         val t_x = cps_t t
-        val xs_names_es = mapi (fn (i, e) => (fresh_evar (), "x" ^ str_int (i+1), e)) es
+        val xs_names_es = mapi (fn (i, e) => (fresh_evar (), "x" ^ str_int (i+1), assert_EAscState e)) es
         val xs = map (fn (x, _, _) => x) xs_names_es
         val ek = k $$ ENewArrayValues (t_x, map EV xs)
-        fun f ((x, name, e), (ek, i_ek)) =
+        fun f ((x, name, (e, st_e)), (ek, i_ek)) =
           let
-            val ek = EAbs $ close0_e_e_anno ((x, name, t_x), ek)
+            val ek = EAbs (st_e %++ IV F, close0_e_e_anno ((x, name, t_x), ek))
           in
             cps (e, t) (ek, i_ek)
           end
@@ -523,13 +534,14 @@ fun cps (e, t_e) (k, j_k) =
     | S.EUnOp (opr, e) =>
       (* [[ opr e ]](k) = [[e]](\x. k (opr x)) *)
       let
+        val (e, st_e) = assert_EAscState e
         fun cps_EUnOp t_e f =
           let
             val x = fresh_evar ()
             val c = f x
             val c = k $$ c
             val t_x = cps_t t_e
-            val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+            val c = EAbs (st_e %++ IV F, close0_e_e_anno ((x, "x", t_x), c))
           in
             cps (e, t_e) (c, j_k %+ T_1)
           end
@@ -575,6 +587,7 @@ fun cps (e, t_e) (k, j_k) =
     | S.ECase (e, bind1, bind2) =>
       (* [[ case e (x.e1) (x.e2) ]](k) = [[e]](\y. case y (x. [[e1]](k)) (x. [[e2]](k))) *)
       let
+        val (e, st_e) = assert_EAscState e
         val (name_x_1, e1) = unBindSimp2 bind1
         val (name_x_2, e2) = unBindSimp2 bind2
         val x = fresh_evar ()
@@ -590,7 +603,7 @@ fun cps (e, t_e) (k, j_k) =
         val c = ECaseClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
         val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((y, "y", t_y), c)
+        val c = EAbs (st_e %++ IV F, close0_e_e_anno ((y, "y", t_y), c))
         val i_c = IMax (i_e1, i_e2)
       in
         cps (e, t_e) (c, i_c)
@@ -598,6 +611,7 @@ fun cps (e, t_e) (k, j_k) =
     | S.EIfi (e, bind1, bind2) =>
       (* [[ ifi e (x.e1) (x.e2) ]](k) = [[e]](\y. ifi y (x. [[e1]](k)) (x. [[e2]](k))) *)
       let
+        val (e, st_e) = assert_EAscState e
         val (name_x_1, e1) = unBindSimp2 bind1
         val (name_x_2, e2) = unBindSimp2 bind2
         val x = fresh_evar ()
@@ -613,7 +627,7 @@ fun cps (e, t_e) (k, j_k) =
         val c = EIfiClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
         val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((y, "y", t_y), c)
+        val c = EAbs (st_e %++ IV F, close0_e_e_anno ((y, "y", t_y), c))
         val i_c = IMax (i_e1, i_e2)
       in
         cps (e, t_e) (c, i_c)
@@ -621,6 +635,7 @@ fun cps (e, t_e) (k, j_k) =
     | S.ETriOp (ETIte, e, e1, e2) =>
       (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
       let
+        val (e, st_e) = assert_EAscState e
         val t_res = t_e
         val t_e = TBool
         val t_res = cps_t t_res
@@ -631,7 +646,7 @@ fun cps (e, t_e) (k, j_k) =
         val c = ETriOp (ETIte, EV y, e1, e2)
         val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((y, "y", t_y), c)
+        val c = EAbs (st_e %++ IV F, close0_e_e_anno ((y, "y", t_y), c))
         val i_c = IMax (i_e1, i_e2)
       in
         cps (e, t_e) (c, i_c)
@@ -639,6 +654,7 @@ fun cps (e, t_e) (k, j_k) =
     | S.ELet (e1, bind) =>
       (* [[ let x = e1 in e2 ]](k) = [[e1]](\x. [[e2]](k)) *)
       let
+        val (e1, st_e1) = assert_EAscState e1
         val (e1, t_e1) = assert_EAscType e1
         val t_res = t_e
         val (name_x, e2) = unBindSimp2 bind
@@ -646,7 +662,7 @@ fun cps (e, t_e) (k, j_k) =
         val e2 = open0_e_e x e2
         val (c, i_c) = cps (e2, t_res) (k, j_k)
         val t_x = cps_t t_e1
-        val c = EAbs $ close0_e_e_anno ((x, name_x, t_x), c)
+        val c = EAbs (st_e1 %++ IV F, close0_e_e_anno ((x, name_x, t_x), c))
       in
         cps (e1, t_e1) (c, i_c)
       end
@@ -671,8 +687,11 @@ fun cps (e, t_e) (k, j_k) =
     | S.ETriOp (ETWrite, e1, e2, e3) =>
       (* [[ write e1 e2 e3 ]](k) = [[e1]] (\x1. [[e2]] (\x2. [[e3]] (\x3. k (write x1 x2 x3)))) *)
       let
+        val (e1, st_e1) = assert_EAscState e1
         val (e1, t_e1) = assert_EAscType e1
+        val (e2, st_e2) = assert_EAscState e2
         val (e2, t_e2) = assert_EAscType e2
+        val (e3, st_e3) = assert_EAscState e3
         val (e3, t_e3) = assert_EAscType e3
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
@@ -681,11 +700,11 @@ fun cps (e, t_e) (k, j_k) =
         val t_x2 = cps_t t_e2
         val t_x3 = cps_t t_e3
         val e = k $$ EWrite (EV x1, EV x2, EV x3)
-        val e = EAbs $ close0_e_e_anno ((x3, "x3", t_x3), e)
+        val e = EAbs (st_e1 %++ IV F, close0_e_e_anno ((x3, "x3", t_x3), e))
         val (e, i_e) = cps (e3, t_e3) (e, j_k %+ T_1)
-        val e = EAbs $ close0_e_e_anno ((x2, "x2", t_x2), e)
+        val e = EAbs (st_e2 %++ IV F, close0_e_e_anno ((x2, "x2", t_x2), e))
         val (e, i_e) = cps (e2, t_e2) (e, i_e)
-        val e = EAbs $ close0_e_e_anno ((x1, "x1", t_x1), e)
+        val e = EAbs (st_e3 %++ IV F, close0_e_e_anno ((x1, "x1", t_x1), e))
       in
         cps (e1, t_e1) (e, i_e)
       end
@@ -693,11 +712,12 @@ fun cps (e, t_e) (k, j_k) =
     | S.EHalt (e, _) =>
       (* [[ halt e [_] ]](k) = [[e]](\x. halt x [unit]) *)
       let
+        val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
         val c = EHalt (EV x, TUnit)
         val t_x = cps_t t_e
-        val c = EAbs $ close0_e_e_anno ((x, "x", t_x), c)
+        val c = EAbs (st_e %++ IV F, close0_e_e_anno ((x, "x", t_x), c))
       in
         cps (e, t_e) (c, T_1)
       end
