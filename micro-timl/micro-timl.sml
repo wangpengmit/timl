@@ -53,6 +53,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * bool(*is storage?*)
          | TPreArray of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*lowest inited/uninited pos*) * (bool(*is length inited?*) * bool(*init direction; false: downward; true: upward *))
          | TArrayPtr of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*offset*)
+         | TVectorPtr of string * 'idx(*offset*)
 
 type loc = int
              

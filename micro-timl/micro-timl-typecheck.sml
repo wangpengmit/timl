@@ -871,6 +871,9 @@ fun a %: b = smart_EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)
 
+fun check_sub_map ictx (pre_st, st) =
+  StMap.appi (fn (k, v) => check_prop ictx $ v %= st @!! k) pre_st
+             
 val anno_EVar = ref false
 val anno_EProj = ref false
 val anno_EFold = ref false
@@ -1021,32 +1024,6 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
         let
           val (e1, t_e1, i1, st) = tc (ctx, st) e1
           val (e2, t_e2, i2, st) = tc (ctx, st) e2
-          fun decompose_state i =
-            let
-              val is = collect_IUnion i
-              val (vars_info, maps) = partitionSum
-                                   (fn i =>
-                                       case i of
-                                           VarI (ID (n, _), ls) => inl (n, ls)
-                                         | IState m => inr m
-                                   ) is
-              val m = foldl (fn (m, acc) => acc @++ m) StMap.empty maps
-              val vars = ISetU.to_set $ map fst vars_info
-              val vars_info = IMapU.fromList vars_info
-            in
-              (vars, vars_info, m)
-            end
-          fun compose_state (vars, vars_info, m) =
-            combine_IUnion (IState m) $ map (fn n => VarI (ID (n, dummy), IMapU.must_find vars_info n)) $ ISetU.to_list vars
-          fun IUnion_simp (i1, i2) =
-            let
-              val (vars1, vars_info1, map1) = decompose_state i1
-              val (vars2, vars_info2, map2) = decompose_state i2
-            in
-              compose_state (vars1 @%++ vars2, IMapU.union vars_info1 vars_info2, map1 @++ map2)
-            end
-          fun check_sub_map ictx (pre_st, st) =
-            StMap.appi (fn (k, v) => check_prop ictx $ st @!! k %= v) pre_st
           fun check_sub_domain pre_st st =
             let
               val (pre_vars, _, pre_map) = decompose_state pre_st

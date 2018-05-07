@@ -2424,7 +2424,6 @@ fun is_base_storage_ty t =
     case t of
         TyNat _ => ()
       | TiBool _ => ()
-      | TyArray _ => ()
       | BaseType (t, _) =>
         (case t of
              Int => ()

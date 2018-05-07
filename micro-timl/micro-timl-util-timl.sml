@@ -87,4 +87,37 @@ fun assert_TArrow t =
       TArrow a => a
     | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                                                           
+infix 6 @++
+fun m @++ m' = StMapU.union m m'
+                            
+infix 6 @%++
+val op@%++ = ISet.union
+         
+fun decompose_state i =
+  let
+    val is = collect_IUnion i
+    val (vars_info, maps) = partitionSum
+                              (fn i =>
+                                  case i of
+                                      VarI (ID (n, _), ls) => inl (n, ls)
+                                    | IState m => inr m
+                              ) is
+    val m = foldl (fn (m, acc) => acc @++ m) StMap.empty maps
+    val vars = ISetU.to_set $ map fst vars_info
+    val vars_info = IMapU.fromList vars_info
+  in
+    (vars, vars_info, m)
+  end
+    
+fun compose_state (vars, vars_info, m) =
+  combine_IUnion (IState m) $ map (fn n => VarI (ID (n, dummy), IMapU.must_find vars_info n)) $ ISetU.to_list vars
+                 
+fun IUnion_simp (i1, i2) =
+  let
+    val (vars1, vars_info1, map1) = decompose_state i1
+    val (vars2, vars_info2, map2) = decompose_state i2
+  in
+    compose_state (vars1 @%++ vars2, IMapU.union vars_info1 vars_info2, map1 @++ map2)
+  end
+    
 end
