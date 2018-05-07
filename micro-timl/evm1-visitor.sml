@@ -188,15 +188,17 @@ fun default_evm1_visitor_vtable
 fun visit_sum visit1 visit2 env = map_inl_inr (visit1 env) (visit2 env)
 fun visit_map map visit env = map (visit env)
 fun visit_triple visit1 visit2 visit3 env (a, b, c) = (visit1 env a, visit2 env b, visit3 env c)
+fun visit_tuple_4 visit1 visit2 visit3 visit4 env (a, b, c, d) = (visit1 env a, visit2 env b, visit3 env c, visit4 env d)
                                   
 fun visit_hval (extend_i, extend_t, visit_idx, visit_sort, visit_kind, visit_ty, visit_insts) env (h : ('idx, 'sort, 'kind, 'ty) hval) : ('idx2, 'sort2, 'kind2, 'ty2) hval =
   visit_bind
     (visit_tele $ visit_sum
                 (visit_pair (visit_binder extend_i) (visit_outer $ visit_sort))
                 (visit_pair (visit_binder extend_t) visit_kind))
-    (visit_pair (visit_triple (visit_map Rctx.map visit_ty)
-                              (visit_list visit_ty)
-                              visit_idx) visit_insts) env h
+    (visit_pair (visit_tuple_4 visit_idx
+                               (visit_map Rctx.map visit_ty)
+                               (visit_list visit_ty)
+                               visit_idx) visit_insts) env h
     
 fun visit_prog (visit_label, visit_hval, visit_insts) env (H, I) =
   (visit_list (visit_pair (visit_pair visit_label return2) visit_hval) env H, visit_insts env I)

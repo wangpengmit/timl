@@ -40,13 +40,13 @@ datatype ('idx, 'ty) inst =
          | AND
          | OR
          | BYTE
-         (* | SHA3 *)
+         | SHA3
          | POP
          | MLOAD
          | MSTORE
          | MSTORE8
-         (* | SLOAD *)
-         (* | SSTORE *)
+         | SLOAD
+         | SSTORE
          | JUMPI
          (* | JUMPI_i *)
          | JUMPDEST
@@ -83,6 +83,9 @@ datatype ('idx, 'ty) inst =
          | MACRO_int2byte
          | MACRO_inj of 'ty inner
          | MACRO_br_sum
+         | MACRO_map_ptr
+         | MACRO_vector_ptr
+         | MACRO_vector_push_back
 
 datatype ('idx, 'ty) insts =
          ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind
@@ -94,7 +97,7 @@ datatype ('idx, 'ty) insts =
 
 type 'v rctx = 'v IntBinaryMap.map
                   
-type ('idx, 'sort, 'kind, 'ty) hval = ((ibinder * 'sort outer, tbinder * 'kind) sum tele, ('ty rctx * 'ty list * 'idx) * ('idx, 'ty) insts) bind
+type ('idx, 'sort, 'kind, 'ty) hval = ((ibinder * 'sort outer, tbinder * 'kind) sum tele, ('idx * 'ty rctx * 'ty list * 'idx) * ('idx, 'ty) insts) bind
 
 infixr 0 $
 

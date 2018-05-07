@@ -77,8 +77,6 @@ val SNat = SNat dummy
 val SBool = SBool dummy
 val SUnit = SUnit dummy
 
-fun TProd (a, b) = TMemTuplePtr ([a, b], N0)
-
 fun add_sorting_full new ((ictx, tctx), rctx, sctx, st) = ((new :: ictx, tctx), Rctx.map (* lazy_ *)shift01_i_t rctx, map shift01_i_t sctx, (* lazy_ *)shift01_i_i st)
 fun add_kinding_full new ((ictx, tctx), rctx, sctx, st) = ((ictx, new :: tctx), Rctx.map (* lazy_ *)shift01_t_t rctx, map shift01_t_t sctx, st)
 fun add_r p (itctx, rctx, sctx, st) = (itctx, rctx @+ p, sctx, st)
@@ -218,6 +216,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
               | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset %+ i, inited)
               | (TNat i, TArrayPtr (t, len, offset)) => TArrayPtr (t, len, offset %+ i)
               | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %+ i)
+              | (TVectorPtr (x, offset), TNat i) => TVectorPtr (x, offset %+ i)
               | _ => raise Impossible $ sprintf "ADD: can't add operands of types ($) and ($)" [str_t t0, str_t t1]
       in
         ((itctx, rctx, t :: sctx, st), T_ADD)
@@ -233,6 +232,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
               | (TTuplePtr (ts, offset, b), TNat i) => TTuplePtr (ts, offset %%- i, b)
               | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset %%- i, inited)
               | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %%- i)
+              | (TVectorPtr (x, offset), TNat i) => TVectorPtr (x, offset %%- i)
               | _ => raise Impossible $ sprintf "SUB: can't subtract operands of types ($) and ($)" [str_t t0, str_t t1]
       in
         ((itctx, rctx, t :: sctx, st), T_SUB)
@@ -798,10 +798,10 @@ fun tc_insts (params as (hctx, num_regs, st_types)) (ctx as (itctx as (ictx, tct
     ret
   end
 
-fun tc_hval (params as (hctx, num_regs)) h =
+fun tc_hval (params as (hctx, num_regs, st_types)) h =
   let
     val () = println "tc_hval() started"
-    val (itbinds, ((rctx, sctx, i), insts)) = unBind h
+    val (itbinds, ((st, rctx, sctx, i), insts)) = unBind h
     val itbinds = unTeles itbinds
     val () = println "before getting itctx"
     val itctx as (ictx, tctx) =
@@ -826,8 +826,9 @@ fun tc_hval (params as (hctx, num_regs)) h =
     val sctx = map (kc_against_KType itctx) sctx
     val () = println "before checking i"
     val i = sc_against_sort ictx (i, STime)
+    val st = sc_against_sort ictx (st, SState)
     val () = println "before checking insts"
-    val i' = tc_insts params (itctx, rctx, sctx) insts
+    val i' = tc_insts params (itctx, rctx, sctx, st) insts
     val () = println "after checking insts"
     val () = check_prop ictx (i' %<= i)
     val () = println "tc_hval() finished"
@@ -835,28 +836,28 @@ fun tc_hval (params as (hctx, num_regs)) h =
     ()
   end
 
-fun tc_prog num_regs (H, I) =
+fun tc_prog (num_regs, st_types, init_st) (H, I) =
   let
     fun get_hval_type h =
       let
-        val (itbinds, ((rctx, sctx, i), _)) = unBind h
+        val (itbinds, ((st, rctx, sctx, i), _)) = unBind h
         val itbinds = unTeles itbinds
         val itbinds = map (map_inl_inr (mapPair' unBinderName unOuter) (mapFst unBinderName)) itbinds
-        val t = TForallITs (itbinds, TArrowEVM (rctx, sctx, i))
+        val t = TForallITs (itbinds, TArrowEVM (st, rctx, sctx, i))
       in
         t
       end
     fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
-    val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval (hctx, num_regs) h)) H
-    val i = tc_insts (hctx, num_regs) (([], []), Rctx.empty, []) I
+    val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval (hctx, num_regs, st_types) h)) H
+    val i = tc_insts (hctx, num_regs, st_types) (([], []), Rctx.empty, [], init_st) I
   in
     i
   end
     
-fun evm1_typecheck num_regs P =
+fun evm1_typecheck params P =
   let
-    val ret = runWriter (fn () => tc_prog num_regs P) ()
+    val ret = runWriter (fn () => tc_prog params P) ()
   in
     ret
   end

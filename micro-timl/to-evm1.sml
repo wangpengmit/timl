@@ -64,8 +64,6 @@ fun shift01_t_insts a = shift_t_insts 0 1 a
 
 fun shift01_i_block ((rctx, ts, i), I) = ((Rctx.map shift01_i_t rctx, map shift01_i_t ts, shift_i_i i), shift01_i_insts I)
                                             
-fun TProd (a, b) = TTuplePtr ([a, b], INat 0)
-
 fun reg_addr r = 32 * (r + 1)
 (* use r0 as scratch space *)
 (* val scratch = 32 *)
@@ -73,6 +71,11 @@ val scratch = reg_addr 0
 val FIRST_GENERAL_REG = 2
 val ARG_REG = FIRST_GENERAL_REG
                
+fun assert_EState e =
+  case e of
+      EState a => a
+    | _ => raise assert_fail "assert_EState"
+                 
 fun cg_ty_visitor_vtable cast () =
   let
     val vtable =
@@ -84,13 +87,13 @@ fun cg_ty_visitor_vtable cast () =
           visit_noop
           visit_noop
           visit_noop
-    fun visit_TArrow this env (data as (t1, i, t2)) =
+    fun visit_TArrow this env (data as ((pre, t1), i, (_, t2))) =
       let
-        val () = assert_TUnit "cg_t(): result type of TArrow must be TUnit" t2
+        (* val () = assert_TUnit "cg_t(): result type of TArrow must be TUnit" t2 *)
         val cg_t = #visit_ty (cast this) this env
         val t1 = cg_t t1
       in
-        TArrowEVM (rctx_single (ARG_REG, t1), [], i)
+        TArrowEVM (pre, rctx_single (ARG_REG, t1), [], i)
       end
     val vtable = override_visit_TArrow vtable visit_TArrow
     fun visit_TBinOp this env (data as (opr, t1, t2)) =
@@ -101,7 +104,7 @@ fun cg_ty_visitor_vtable cast () =
             val t1 = cg_t t1
             val t2 = cg_t t2
           in
-            TTuplePtr ([t1, t2], INat 0)
+            TProd (t1, t2)
           end
         | _ => #visit_TBinOp vtable this env data (* call super *)
     val vtable = override_visit_TBinOp vtable visit_TBinOp
@@ -204,7 +207,7 @@ fun inline_macro_inst inst =
     | MACRO_br_sum => [DUP2, MLOAD, SWAP1, JUMPI]
     | MACRO_map_ptr => [PUSH_reg $ scratch, MSTORE, PUSH_reg $ scratch+32, MSTORE, PUSH1nat 64, PUSH_reg $ scratch, SHA3]
     | MACRO_vector_ptr => [PUSH_reg $ scratch, MSTORE, PUSH1nat 32, PUSH_reg $ scratch, SHA3, ADD]
-    | MACRO_vector_push_back => [DUP2, DUP1, SLOAD, SWAP1, DUP2, PUSH1nat 1, ADD, SWAP1, SSTORE, SWAP1, SWAP2] @ inline_macro_inst MACRO_vector_ptr @ [STORE]
+    | MACRO_vector_push_back => [DUP2, DUP1, SLOAD, SWAP1, DUP2, PUSH1nat 1, ADD, SWAP1, SSTORE, SWAP1, SWAP2] @ inline_macro_inst MACRO_vector_ptr @ [SSTORE]
     | _ => [inst]
 
 fun inline_macro_insts insts =
@@ -285,6 +288,7 @@ fun impl_expr_un_op opr =
     | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD, MLOAD]
     | EUPrintc => printc
     (* | EUPrint => [PRINT] *)
+    | EUStorageGet => [SLOAD]
                         
 fun impl_nat_expr_bin_op opr =
   case opr of
@@ -293,6 +297,8 @@ fun impl_nat_expr_bin_op opr =
     | EBNDiv => [SWAP1, DIV]
     | EBNBoundedMinus => [SWAP1, SUB]
 
+val st_ref = ref IEmptyState
+                 
 fun compile ectx e =
   let
     val compile = compile ectx
@@ -364,7 +370,8 @@ fun compile ectx e =
     | EUnOp (EUUnfold, e) =>
       compile e @ [UNFOLD]
     | EUnOp (EUTiML opr, e) =>
-      compile e @ impl_expr_un_op opr
+      compile e @
+      impl_expr_un_op opr
     | EBinOp (EBNat opr, e1, e2) =>
       compile e1 @ 
       compile e2 @
@@ -377,9 +384,6 @@ fun compile ectx e =
       compile e1 @ 
       compile e2 @
       [MACRO_map_ptr]
-    | EUnOp (EUStorageGet, e) =>
-      compile e @ 
-      [SLOAD]
     | EBinOp (ETStorageSet, e1, e2) =>
       compile e1 @ 
       compile e2 @
@@ -394,9 +398,17 @@ fun compile ectx e =
       compile e3 @
       [SWAP2, MACRO_vector_ptr, SSTORE, PUSH1 WTT]
     | EBinOp (EBVectorPushBack, e1, e2) =>
-      compile e1 @
-      compile e2 @
-      [MACRO_vector_push_back, PUSH1 WTT]
+      let
+        val I = compile e1 @
+                compile e2 @
+                [MACRO_vector_push_back, PUSH1 WTT]
+        val x = assert_EState e1
+        val st = !st_ref
+        val len = st @%!! x
+        val () = st_ref := st @%+ (x, len %+ N1)
+      in
+        I
+      end
     | EUnOp (EUVectorClear, e) =>
       compile e @
       [PUSH1nat 0, SWAP1, SSTORE, PUSH1 WTT]
@@ -406,10 +418,18 @@ fun compile ectx e =
     | _ => raise Impossible $ "compile() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
 
-fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
+val compile = fn (ectx, e, st) =>
+                 let
+                   val () = st_ref := IEmptyState
+                   val I = compile ectx e
+                 in
+                   (I, !st_ref)
+                 end
+
+fun cg_e reg_counter (params as (ectx, itctx, rctx, st)) e =
   let
     (* val () = print $ "cg_e() started:\n" *)
-    val compile = compile ectx
+    val compile = fn (e, st) => compile (ectx, e, st)
     val cg_e = cg_e reg_counter
     fun fresh_reg () =
       let
@@ -444,6 +464,8 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         case e1 of
             EBinOp (EBNew, e1, e2) =>
             let
+              val (I_e1, st) = compile (e1, st) 
+              val (I_e2, st) = compile (e2, st)
               val (t, len, _) = assert_TArrayPtr t
               val (name, e) = unBindSimpName bind
               val (e, i_e) = assert_EAscTime e
@@ -478,7 +500,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                         array_init_assign @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
                         JUMP)
-                    val block = ((rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
+                    val block = ((st, rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -493,50 +515,52 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
                         (shift01_i_insts $
                         [POP, POP, SWAP1, POP, MARK_PreArray2ArrayPtr] @@
                         set_reg r @@
-                        cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len))) e)
+                        cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len)), st) e)
                     val t_ex = make_exists "__p" $ Subset_from_prop dummy $ (FIV i %* N32 %=? N0) %= Itrue
-                    val block = ((rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], T1 %+ i_e), post_loop_code)
+                    val block = ((st, rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], T1 %+ i_e), post_loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
                   end
               val () = output_heap ((post_loop_label, "new_array_post_loop"), post_loop_block)
             in
-              compile e1 @@
-              compile e2 @@
+              I_e1 @ I_e2 @
               pre_loop_code
             end
         | _ =>
           let
+            val (I_e1, st) = compile (e1, st)
             val (name, e2) = unBindSimpName bind
-            val I = cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, t)) e2
+            val I = cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, t), st) e2
           in
-            compile e1 @@ set_reg r @@ I
+            I_e1 @@ set_reg r @@ I
           end
       end
     | EUnpack (e1, bind) =>
       let
         val (e1, t) = assert_EAscType e1
+        val (I_e1, st) = compile (e1, st)
         val ((_, k), t) = assert_TExists t
         val t = cg_t t
         val (name_a, bind) = unBindSimpName bind
         val (name_x, e2) = unBindSimpName bind
         val r = fresh_reg ()
-        val I = cg_e ((name_x, inl r) :: ectx, inr (name_a, k) :: itctx, Rctx.map shift01_t_t rctx @+ (r, t)) e2
+        val I = cg_e ((name_x, inl r) :: ectx, inr (name_a, k) :: itctx, Rctx.map shift01_t_t rctx @+ (r, t), st) e2
       in
-        compile e1 @@ [UNPACK $ TBinder name_a] @@ set_reg r @@ I
+        I_e1 @@ [UNPACK $ TBinder name_a] @@ set_reg r @@ I
       end
     | EUnpackI (e1, bind) =>
       let
         val (e1, t) = assert_EAscType e1
+        val (I_e1, st) = compile (e1, st)
         val ((_, s), t) = assert_TExistsI t
         val t = cg_t t
         val (name_a, bind) = unBindSimpName bind
         val (name_x, e2) = unBindSimpName bind
         val r = fresh_reg ()
-        val I = cg_e ((name_x, inl r) :: ectx, inl (name_a, s) :: itctx, Rctx.map shift01_i_t rctx @+ (r, t)) e2
+        val I = cg_e ((name_x, inl r) :: ectx, inl (name_a, s) :: itctx, Rctx.map shift01_i_t rctx @+ (r, t), shift_i_i st) e2
       in
-        compile e1 @@ [UNPACKI $ IBinder name_a] @@ set_reg r @@ I
+        I_e1 @@ [UNPACKI $ IBinder name_a] @@ set_reg r @@ I
       end
     (* | EUnpackI (v, bind) => *)
     (*   let *)
@@ -552,25 +576,31 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
     (*     i @:: I *)
     (*   end *)
     | EBinOp (EBApp, e1, e2) =>
-      compile e1 @@ compile e2 @@ set_reg ARG_REG @@ JUMP
+      let
+        val (I_e1, st) = compile (e1, st) 
+        val (I_e2, st) = compile (e2, st)
+      in
+        I_e1 @@ I_e2 @@ set_reg ARG_REG @@ JUMP
+      end
     | ECase (e, bind1, bind2) =>
       let
         val (e, t) = assert_EAscType e
+        val (I_e, st) = compile (e, st)
         val t = cg_t t
         val (t1, t2) = assert_TSum t
         val (name1, e1) = unBindSimpName bind1
         val (name2, e2) = unBindSimpName bind2
         val (e2, i_e2) = assert_EAscTime e2
         val r = fresh_reg ()
-        val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1)) e1
-        val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2)) e2
+        val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1), st) e1
+        val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2), st) e2
         val branch_prelude = [PUSH1nat 32, ADD, MLOAD] @ set_reg r
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((rctx, [TProd (TiBoolConst true, t2)](*the stack spec*), i_e2), branch_prelude @@ I2))
+        val hval = HCode' (itbinds, ((st, rctx, [TProd (TiBoolConst true, t2)](*the stack spec*), i_e2), branch_prelude @@ I2))
         val l = fresh_label ()
         val () = output_heap ((l, "inr_branch"), hval)
       in
-        compile e @@
+        I_e @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
         br_sum @@
         branch_prelude @@
@@ -579,6 +609,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
     | EIfi (e, bind1, bind2) =>
       let
         val (e, t) = assert_EAscType e
+        val (I_e, st) = compile (e, st)
         val t = cg_t t
         val i = assert_TiBool t
         val make_exists = make_exists "__p"
@@ -588,15 +619,15 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
         val (name2, e2) = unBindSimpName bind2
         val (e2, i_e2) = assert_EAscTime e2
         val r = fresh_reg ()
-        val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1)) e1
-        val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2)) e2
+        val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1), st) e1
+        val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2), st) e2
         val branch_prelude = set_reg r
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((rctx, [t2], i_e2), branch_prelude @@ I2))
+        val hval = HCode' (itbinds, ((st, rctx, [t2], i_e2), branch_prelude @@ I2))
         val l = fresh_label ()
         val () = output_heap ((l, "ifi_else_branch"), hval)
       in
-        compile e @@
+        I_e @@
         [ISZERO, PUSH1 WTT, SWAP1] @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
         [JUMPI] @@
@@ -605,15 +636,16 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
       end
     | ETriOp (ETIte, e, e1, e2) =>
       let
+        val (I_e, st) = compile (e, st)
         val (e2, i_e2) = assert_EAscTime e2
-        val I1 = cg_e (ectx, itctx, rctx) e1
-        val I2 = cg_e (ectx, itctx, rctx) e2
+        val I1 = cg_e (ectx, itctx, rctx, st) e1
+        val I2 = cg_e (ectx, itctx, rctx, st) e2
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((rctx, [], i_e2), I2))
+        val hval = HCode' (itbinds, ((st, rctx, [], i_e2), I2))
         val l = fresh_label ()
         val () = output_heap ((l, "else_branch"), hval)
       in
-        compile e @@
+        I_e @@
         [ISZERO] @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
         [JUMPI] @@
@@ -622,9 +654,10 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx)) e =
     | EHalt (e, _) =>
       let
         val (e, t) = assert_EAscType e
+        val (I_e, st) = compile (e, st)
         val t = cg_t t
       in
-        compile e @@ halt t
+        I_e @@ halt t
       end
     | EAscTime (e, i) => ASCTIME (Inner i) @:: cg_e params e
     | EAscType (e, _) => cg_e params e
