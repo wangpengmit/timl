@@ -95,6 +95,7 @@ fun forget_i_i x n b =
 	  | BinOpI (opr, i1, i2) => BinOpI (opr, f x n i1, f x n i2)
           | Ite (i1, i2, i3, r) => Ite (f x n i1, f x n i2, f x n i3, r)
           | IAbs (b, bind, r) => IAbs (b, on_i_ibind f x n bind, r)
+          | IState st => IState $ StMap.map (f x n) st
           | UVarI a => b (* uvars are closed, so no need to deal with *)
       end
     val ret =

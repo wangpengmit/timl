@@ -398,6 +398,7 @@ fun default_idx_visitor_vtable
           | Ite data => #visit_Ite vtable this env data
           | IAbs data => #visit_IAbs vtable this env data
           | UVarI data => #visit_UVarI vtable this env data
+          | IState st => T.IState $ StMap.map (#visit_idx vtable this env) st
       end
     fun visit_VarI this env data =
       let

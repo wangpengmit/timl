@@ -18,6 +18,7 @@ fun get_region_i i =
     | Ite (_, _, _, r) => r
     | IAbs (_, _, r) => r
     | UVarI (_, r) => r
+    | IState _ => dummy
 
 fun set_region_i i r =
   case i of
@@ -28,6 +29,7 @@ fun set_region_i i r =
     | Ite (i1, i2, i3, _) => Ite (i1, i2, i3, r)
     | IAbs (name, i, _) => IAbs (name, i, r)
     | UVarI (a, _) => UVarI (a, r)
+    | IState _ => i
 
 fun get_region_p p = 
   case p of

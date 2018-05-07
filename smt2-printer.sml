@@ -33,6 +33,7 @@ fun print_idx_bin_op opr =
       | MinI => raise Impossible "print_idx_bin_op ()"
       | IApp => raise Impossible "print_idx_bin_op ()"
       | MinusI => raise Impossible "print_idx_bin_op ()"
+      | IBUnion => raise Impossible "print_idx_bin_op ()"
         
 fun print_i ctx i =
   case i of
@@ -102,6 +103,7 @@ fun print_i ctx i =
       )
     | Ite (i1, i2, i3, _) => sprintf "(ite $ $ $)" [print_i ctx i1, print_i ctx i2, print_i ctx i3]
     | IAbs _ => raise SMTError "can't handle abstraction"
+    | IState _ => raise SMTError "can't handle IState"
     | UVarI (x, _) =>
       case !x of
           Refined i => print_i ctx i
@@ -115,6 +117,7 @@ fun print_base_sort b =
     | BoolSort => "Bool"
     | Nat => "Int"
     | Time => "Real"
+    | BSState => "Unit"
 
 fun print_bsort bsort =
   case bsort of
@@ -252,6 +255,7 @@ fun conv_base_sort b =
         | BoolSort => (BoolSort, NONE)
         | Nat => (Nat, SOME (BinPred (LeP, ConstIN (0, dummy), VarI (ID (0, dummy), []))))
         | Time => (Time, SOME (BinPred (LeP, ConstIT (TimeType.zero, dummy), VarI (ID (0, dummy), []))))
+        | BSState => (UnitSort, NONE)
 
 fun conv_bsort bsort =
   case bsort of

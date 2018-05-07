@@ -211,4 +211,9 @@ fun interp_nat_cmp r opr =
     | NCNEq => neq
   end
     
+fun IUnion (a, b) = BinOpI (IBUnion, a, b)
+val collect_IUnion = collect_BinOpI IBUnion
+fun combine_IUnion i is = foldl (fn (i, acc) => IUnion (acc, i)) i is
+val IEmptyState = IState StMap.empty
+                         
 end

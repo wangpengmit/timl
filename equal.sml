@@ -83,10 +83,13 @@ fun eq_i i i' =
         | IAbs (b, Bind (_, i), _) => (case i' of IAbs (b', Bind (_, i'), _) => eq_bs b b' andalso loop i i'
                                                 | _ => false)
         | UVarI (u, _) => (case i' of UVarI (u', _) => eq_uvar_i (u, u') | _ => false)
+        | IState st => (case i' of IState st' => eq_state st st' | _ => false)
   in
     loop i i'
   end
 
+and eq_state st st' = StMapU.is_same_domain st st' andalso List.all (fn (k, v) => eq_i v $ st' @!! k) $ StMap.listItemsi st
+    
 fun eq_quan q q' =
   case q of
       Forall => (case q' of Forall => true | Exists _ => false)
@@ -133,8 +136,6 @@ fun eq_ls eq (ls1, ls2) = length ls1 = length ls2 andalso List.all eq $ zip (ls1
 fun eq_k ((n, sorts) : kind) (n', sorts') =
   n = n' andalso eq_ls (uncurry eq_bs) (sorts, sorts')
 
-fun eq_state st st' = StMapU.is_same_domain st st' andalso List.all (fn (k, v) => eq_i v $ st' @!! k) $ StMap.listItemsi st
-  
 fun eq_mt t t' = 
     case t of
 	Arrow ((st1, t1), i, (st2, t2)) =>

@@ -243,6 +243,7 @@ local
                      mark $ ConstIN (bounded_minus n1 n2, r ())
                    | _ => def ())
               | MinusI => raise Impossible "simp_p()/MinusI"
+              | IBUnion => def ()
           end
         | Ite (i, i1, i2, r) =>
           if eq_i i (TrueI dummy) then
@@ -285,6 +286,7 @@ local
           IAbs (b, Bind (name, passi i), r)
         | VarI _ => i
         | UVarI _ => i
+        | IState st => IState $ StMap.map passi st
     end
       
   fun passp p =
@@ -479,6 +481,7 @@ local
                         FalseI dummy
                       | UnitSort =>
                         TTI dummy
+                      | BSState => IEmptyState
                   fun bsort_default_idx bs =
                     case bs of
                         Base b => SOME $ base_sort_default_idx b

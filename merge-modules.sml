@@ -159,6 +159,7 @@ fun collect_names_top_name rev_p name =
         TopModBind m => collect_names_mod m
       | TopFunctorBind (_, body) => collect_names_mod body
       | TopFunctorApp (name1, name2) => collect_names_top_name rev_p name1
+      | TBState _ => ([], [], [], [])
   end
 
 fun top_bind_to_mod rev_p (name, bind) =

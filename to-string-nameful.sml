@@ -87,6 +87,7 @@ fun strn_i i =
     (* | IAbs ((name, _), i, _) => sprintf "(fn $ => $)" [name, strn_i (name :: ctx) i] *)
     | UVarI (u, _) =>
       str_uvar_i (strn_bs, strn_i) u
+    | IState st => StMapU.str_map (id, strn_i) st
                                  
 fun strn_p p =
   case p of

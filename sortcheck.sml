@@ -313,6 +313,7 @@ and get_bsort gctx (ctx, i) =
                   | ModI => raise Impossible "idx_bin_op_type ()"
                   | BoundedMinusI => raise Impossible "idx_bin_op_type ()"
                   | MinusI => raise Impossible "idx_bin_op_type()/MinusI"
+                  | IBUnion => (BSState, BSState, BSState)
             in
               case opr of
                   IApp =>
@@ -369,6 +370,8 @@ and get_bsort gctx (ctx, i) =
                 (*   | _ => raise Error (get_region_i i, "Sort of time funtion body should be time function" :: indent ["want: time function", "got: " ^ str_bs bs]) *)
             end
           | U.UVarI data => get_bsort_UVarI gctx ctx data
+          | U.IState st =>
+            (IState $ StMap.map (fn i => check_bsort (ctx, i, Base Nat)) st, Base BSState)
       val ret = main ()
                 handle
                 Error (r, msg) =>

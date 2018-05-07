@@ -368,6 +368,7 @@ fun by_master_theorem uvar (hs, p) =
             | IAbs _ => i
             | VarI _ => i
             | UVarI _ => i
+            | IState st => IState $ StMap.map loop st
       in
         loop i
       end

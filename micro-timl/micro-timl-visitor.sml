@@ -573,6 +573,9 @@ fun default_ty_visitor_vtable
           | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
           | TPreTuple (ts, i, i2) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, #visit_idx vtable this env i2)
           | TTuplePtr (ts, i, b) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, b)
+          | TMap t => TMap $ #visit_ty vtable this env t
+          | TState x =>  TState x
+          | TVectorPtr (x, i) => TVectorPtr (x, #visit_idx vtable this env i)
       end
     fun visit_TVar this env data =
       let
@@ -2113,10 +2116,13 @@ fun default_expr_visitor_vtable
           | EProjProtected data => #visit_EProjProtected vtable this env data
           | EHalt data => #visit_EHalt vtable this env data
           | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_list (#visit_expr vtable this) env es)
-          | EIfi (e, e1, e2) => EIfi
-                                   (#visit_expr vtable this env e,
-                                    visit_ebind this (#visit_expr vtable this) env e1,
-                                    visit_ebind this (#visit_expr vtable this) env e2)
+          | EIfi (e, e1, e2) =>
+            EIfi
+              (#visit_expr vtable this env e,
+               visit_ebind this (#visit_expr vtable this) env e1,
+               visit_ebind this (#visit_expr vtable this) env e2)
+          | EState x => EState x
+          | EAscState (e, i) => EAscState (#visit_expr vtable this env e, #visit_idx vtable this env i)
       end
     fun visit_EVar this env data =
       let

@@ -39,6 +39,7 @@ fun str_raw_i i =
     | Ite (i1, i2, i3, _) => sprintf "Ite ($, $, $)" [str_raw_i i1, str_raw_i i2, str_raw_i i3]
     | IAbs (b, bind, _) => sprintf "IAbs ($, $)" [str_raw_bs b, str_raw_bind str_raw_i bind]
     | UVarI (u, _) => str_uvar_i (str_raw_bs, str_raw_i) u
+    | IState st => sprintf "IState $" [StMapU.str_map (id, str_raw_i) st]
 
 fun str_raw_s s =
   case s of
