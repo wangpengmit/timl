@@ -143,8 +143,6 @@ fun blowup_time (i : idx, j : idx) = i %* ConstIT (TimeType.fromInt 999, dummy) 
 fun blowup_time_t (j : idx) = j %* ConstIT (TimeType.fromInt 888, dummy)
 fun blowup_time_i (j : idx) = j %* ConstIT (TimeType.fromInt 777, dummy)
 
-val Void = (IEmptyState, TUnit)
-                                
 (* CPS conversion on types *)
 fun cps_t t =
   let
@@ -265,8 +263,6 @@ fun cps_t t =
   in
     t
   end
-
-fun cont_type (t, i) = TArrow (t, i, Void)
 
 (* CPS conversion on terms *)
 (* pre: ... |- k : [[t_e]] --j_k-=> unit |> 0 *)

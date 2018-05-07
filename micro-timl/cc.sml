@@ -439,11 +439,11 @@ fun cc_t t =
 and cc_t_arrow t =
     let
       val (binds, t) = open_collect_TForallIT t
-      val (t1, i, t2) = assert_TArrow t
+      val ((st1, t1), i, (st2, t2)) = assert_TArrow t
       val t1 = cc_t t1
       val t2 = cc_t t2
       val alpha = fresh_tvar ()
-      val t = TArrow (TProd (TV (alpha, KType), t1), i, t2)
+      val t = TArrow ((st1, TProd (TV (alpha, KType), t1)), i, (st2, t2))
       val t = close_TForallITs (binds, t)
       val t = TProd (t, TV (alpha, KType))
       val t = TExists $ close0_t_t_anno ((alpha, "'a", KType), t)
@@ -608,7 +608,7 @@ and cc_ERec (* e_all *) outer_binds bind =
       (* val () = println $ "cc(): before open_collect_EAbsIT()" *)
       val (inner_binds, e) = open_collect_EAbsIT e
       (* val () = println $ "cc(): after open_collect_EAbsIT()" *)
-      val (t_z, (name_z, e)) = assert_EAbs e
+      val (st, (t_z, (name_z, e))) = assert_EAbs e
       val z = fresh_evar ()
       val e = open0_e_e z e
       val e = cc e
@@ -637,7 +637,7 @@ and cc_ERec (* e_all *) outer_binds bind =
       (* val () = println $ "cc(): after getting free vars" *)
       val t_env = TRecord sigmas
       val t_z = cc_t t_z
-      val t_arrow = TArrow (TProd (t_env, t_z), i, TUnit)
+      val t_arrow = cont_type ((st, TProd (t_env, t_z)), i)
       val z_code = fresh_evar ()
       val z_env = fresh_evar ()
       fun EAppITs_binds (e, binds) =
@@ -653,7 +653,7 @@ and cc_ERec (* e_all *) outer_binds bind =
       (* val () = println $ "cc(): before ELetManyClose()" *)
       val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, e)
       (* val () = println $ "cc(): after ELetManyClose()" *)
-      val e = EAbsPairClose ((z_env, "z_env", t_env), (z, fst name_z, t_z), e)
+      val e = EAbsPairClose (st, (z_env, "z_env", t_env), (z, fst name_z, t_z), e)
       val betas_outer_inner_binds = betas @ outer_inner_binds
       (* val () = println $ "cc(): before close_EAbsITs()" *)
       val e = close_EAbsITs (betas_outer_inner_binds, e)
@@ -727,9 +727,9 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
         let
           val (t_x, (name_x, e)) = unBindAnnoName bind
           val (binds, e) = collect_EAbsIT e
-          val (t_y, (name_y, e)) = assert_EAbs e
+          val (st, (t_y, (name_y, e))) = assert_EAbs e
           val e = #visit_expr (cast this) this env e
-          val e = EAbs $ EBindAnno ((name_y, t_y), e)
+          val e = EAbs (st, EBindAnno ((name_y, t_y), e))
         in
           ERec $ EBindAnno ((name_x, t_x), EAbsITs (binds, e))
         end
@@ -737,7 +737,7 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
     val len_mark_begin = String.size mark_begin
     val mark_end = #"$"
     val default_fun_name = "__f"
-    fun visit_EAbs this env bind =
+    fun visit_EAbs this env (pre, bind) =
       let
         val (t_y, ((name_y, r), e)) = unBindAnnoName bind
         (* val () = println $ "visit_EAbs()/name_y: " ^ name_y *)
@@ -748,11 +748,13 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
                  | _ => (default_fun_name, name_y)
               )
             else (default_fun_name, name_y)
-        val ((_, t_e), i) = mapFst assert_EAscType $ assert_EAscTime e
+        val (e, post) = assert_EAscState e
+        val (e, i) = assert_EAscTime e
+        val (_, t_e) = assert_EAscType e
         val e = #visit_expr (cast this) this env e
-        val e = EAbs $ EBindAnno (((name_y, r), t_y), e)
+        val e = EAbs (pre, EBindAnno (((name_y, r), t_y), e))
       in
-        ERec $ EBindAnno (((fun_name, dummy), TArrow (t_y, i, t_e)), shift01_e_e e)
+        ERec $ EBindAnno (((fun_name, dummy), TArrow ((pre, t_y), i, (post, t_e))), shift01_e_e e)
       end
     fun visit_ELet this env (data as (e1, bind)) =
         let
@@ -761,11 +763,11 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
           val (binds, e1) = collect_EAbsIT e1
           val e1 = 
               case e1 of
-                  EAbs bind1 =>
+                  EAbs (st, bind1) =>
                   let
                     val (t_y, ((name_y, r), e1)) = unBindAnnoName bind1
                   in
-                    EAbs $ EBindAnno (((mark_begin ^ name_x ^ String.str mark_end ^ name_y, r), t_y), e1)
+                    EAbs (st, EBindAnno (((mark_begin ^ name_x ^ String.str mark_end ^ name_y, r), t_y), e1))
                   end
                 | _ => e1
           val e1 = EAbsITs (binds, e1)
@@ -1039,7 +1041,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i, st), vcs, admits) = typecheck cps_tc_flags (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP
@@ -1054,7 +1056,7 @@ fun test1 dirname =
     (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
-    val (e, _) = cps (e, TUnit) (EHaltFun TUnit TUnit, T_0)
+    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val e = uniquefy_e empty_ctx $ MicroTiMLPostProcess.post_process e
     val () = println "Finished CPS conversion"
@@ -1065,7 +1067,7 @@ fun test1 dirname =
     val () = println e_str
     val () = println ""
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i), vcs, admits) = typecheck cc_tc_flags ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i, st), vcs, admits) = typecheck cc_tc_flags (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
@@ -1089,7 +1091,7 @@ fun test1 dirname =
     (* val () = println "Checking closed-ness of ERec's" *)
     (* val () = check_ERec_closed e *)
     val () = println "Started MicroTiML typechecking #3 ..."
-    val ((e, t, i), vcs, admits) = typecheck [] ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i, st), vcs, admits) = typecheck [] (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #3"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t

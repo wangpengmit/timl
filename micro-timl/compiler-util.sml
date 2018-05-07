@@ -300,4 +300,7 @@ fun collect_TForallIT b =
       end
     | _ => ([], b)
 
+val Void = (IEmptyState, TUnit)
+fun cont_type (t, i) = TArrow (t, i, Void)
+
 end

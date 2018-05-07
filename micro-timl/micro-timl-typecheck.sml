@@ -1085,7 +1085,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
               compose_state (diff_vars, IMapU.fromList $ map (fn (n, sorts) => (dec n, map forget01_i_s sorts)) $ IMap.listItemsi st_vars_info, diff_map)
             end
           val t_e1 = whnf itctx t_e1
-          val (((pre_st, t1), i, (post_st, t2)), st) =
+          val (((pre_st, t1), i, (post_st, t2)), st, (e1, t_e1)) =
               case t_e1 of
                   TArrow (data as ((pre_st, t1), i, (post_st, t2))) =>
                     let
@@ -1097,7 +1097,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
                       val () = check_sub_map ictx (pre_map, st_map)
                       val st = IUnion_simp (st, post_st)
                     in
-                      (data, st)
+                      (data, st, (e1, t_e1))
                     end
                 | TQuanI (Forall, bind) =>
                   let
@@ -1109,7 +1109,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
                     val data as ((pre_st, t1), i, (post_st, t2)) = assert_TArrow t
                     val st = post_st
                   in
-                    (data, st)
+                    (data, st, (EAppI (e1, diff), t))
                   end
                 | _ => raise MTCError "EApp"
           val () = is_eq_ty itctx (t_e2, t1)
