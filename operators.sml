@@ -333,6 +333,7 @@ fun str_idx_bin_op opr =
     | GeI => ">=?"
     | BoundedMinusI => "-"
     | MinusI => "MinusI"
+    | IBUnion => "IBUnion"
 
 fun str_bin_conn opr =
   case opr of

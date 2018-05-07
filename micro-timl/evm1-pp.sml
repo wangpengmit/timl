@@ -331,7 +331,7 @@ fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
     fun open_vbox () = PP.openVBox s (PP.Rel 2)
     fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
     fun close_box () = PP.closeBox s
-    val (itbinds, ((rctx, ts, i), insts)) = unBind bind
+    val (itbinds, ((st, rctx, ts, i), insts)) = unBind bind
     val itbinds = unTeles itbinds
     val itbinds = map (map_inl_inr (mapPair' binder2str unOuter) (mapFst binder2str)) itbinds
   in
@@ -357,6 +357,8 @@ fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
     close_box ();
     space ();
     open_vbox_noindent ();
+    str $ str_i st;
+    comma ();
     str "{";
     Rctx.appi (fn (r, t) =>
               (str $ str_reg r;

@@ -51,22 +51,9 @@ infix  6 @+
 infix  9 @!
 
 infix  9 @!!
-fun m @!! k = StMapU.must_find m k
-                               
-fun idx_st_must_find i k =
-  let
-    val (_, _, m) = decompose_state i
-  in
-    m @!! k
-  end
-fun idx_st_add i p = IUnion_simp (i, IState (StMapU.single p))
-                                 
 infix  9 @%!!
-fun a @%!! b = idx_st_must_find a b
-
 infix  6 @%+
-fun a @%+ b = idx_st_add a b
-                                
+         
 val T0 = T0 dummy
 val T1 = T1 dummy
 val N0 = INat 0

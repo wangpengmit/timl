@@ -48,13 +48,22 @@ infixr 5 @@
 infix  6 @+
 infix  9 @!
 
+infix  9 @!!
+infix  9 @%!!
+infix  6 @%+
+         
+val STime = STime dummy
+val SNat = SNat dummy
+val SBool = SBool dummy
+val SUnit = SUnit dummy
+
 fun close_i_insts a = shift_i_insts_fn (close_i_i, close_i_s, close_i_t) a
 fun close_t_insts a = shift_t_insts_fn close_t_t a
 
 fun close0_i_insts a = close_i_insts 0 a
 fun close0_t_insts a = close_t_insts 0 a
 
-fun close0_i_block x ((rctx, ts, i), I) = ((Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
+fun close0_i_block x ((st, rctx, ts, i), I) = ((close0_i_i x st, Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
                                             
 fun shift_i_insts a = shift_i_insts_fn (shiftx_i_i, shiftx_i_s, shift_i_t) a
 fun shift_t_insts a = shift_t_insts_fn shift_t_t a
@@ -62,7 +71,7 @@ fun shift_t_insts a = shift_t_insts_fn shift_t_t a
 fun shift01_i_insts a = shift_i_insts 0 1 a
 fun shift01_t_insts a = shift_t_insts 0 1 a
 
-fun shift01_i_block ((rctx, ts, i), I) = ((Rctx.map shift01_i_t rctx, map shift01_i_t ts, shift_i_i i), shift01_i_insts I)
+fun shift01_i_block ((st, rctx, ts, i), I) = ((shift_i_i st, Rctx.map shift01_i_t rctx, map shift01_i_t ts, shift_i_i i), shift01_i_insts I)
                                             
 fun reg_addr r = 32 * (r + 1)
 (* use r0 as scratch space *)
@@ -190,7 +199,6 @@ fun make_inj t_other = [MACRO_inj $ Inner t_other]
 val br_sum = [MACRO_br_sum]
 fun halt t = MACRO_halt t
                  
-
 fun inline_macro_inst inst =
   case inst of
       MACRO_init_free_ptr num_regs => [PUSH_reg $ reg_addr num_regs, PUSH1nat 0, MSTORE]
@@ -524,7 +532,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx, st)) e =
                   end
               val () = output_heap ((post_loop_label, "new_array_post_loop"), post_loop_block)
             in
-              I_e1 @ I_e2 @
+              I_e1 @@ I_e2 @@
               pre_loop_code
             end
         | _ =>
@@ -675,13 +683,13 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx, st)) e =
 fun cg_hval ectx (e, t_all) =
   let
     val (itbinds, e) = collect_EAbsIT e
-    val (t, (name, e)) = assert_EAbs e
+    val (st, (t, (name, e))) = assert_EAbs e
     val t = cg_t t
     (* input argument is always stored in ARG_REG *)
     val ectx = (name, inl ARG_REG) :: ectx
     val rctx = rctx_single (ARG_REG, t)
     val reg_counter = ref $ ARG_REG+1
-    val I = cg_e reg_counter (ectx, rev itbinds, rctx) e
+    val I = cg_e reg_counter (ectx, rev itbinds, rctx, st) e
     fun get_time t =
       let
         val (_, t) = collect_TForallIT t
@@ -689,12 +697,12 @@ fun cg_hval ectx (e, t_all) =
       in
         i
       end
-    val hval = HCode' (itbinds, ((rctx, [], get_time t_all), I))
+    val hval = HCode' (itbinds, ((st, rctx, [], get_time t_all), I))
   in
     (hval, !reg_counter)
   end
   
-fun cg_prog e =
+fun cg_prog init_st e =
   let
     val () = heap_ref := []
     val (binds, e) = collect_ELetRec e
@@ -713,7 +721,7 @@ fun cg_prog e =
       end
     val (ectx, num_regs) = foldl on_bind ([], 0) binds
     val reg_counter = ref FIRST_GENERAL_REG
-    val I = cg_e reg_counter (ectx, [], Rctx.empty) e
+    val I = cg_e reg_counter (ectx, [], Rctx.empty, init_st) e
     val H = !heap_ref
     val H = rev H
     val num_regs = max num_regs (!reg_counter)
@@ -735,7 +743,7 @@ structure TestUtil = struct
 
 open CPS
 open CC
-open PairAlloc
+(* open PairAlloc *)
 open LongId
 open Util
 open MicroTiML
@@ -768,7 +776,9 @@ fun test1 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started TiML typechecking ..."
+    val () = TypeCheck.st_types_ref := StMap.empty
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
+    val st_types = !TypeCheck.st_types_ref
     val vcs = VCSolver.vc_solver filename vcs
     val () = if null vcs then ()
              else
@@ -789,6 +799,7 @@ fun test1 dirname =
     (* val () = println "" *)
     val () = println "Started translating ..."
     val e = trans_e e
+    val st_types = StMap.map (mapSnd trans_mt) st_types
     val () = println "Finished translating"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
@@ -796,7 +807,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i), vcs, admits) = typecheck cps_tc_flags ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i, st), vcs, admits) = typecheck cps_tc_flags (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP
@@ -811,7 +822,7 @@ fun test1 dirname =
     (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
-    val (e, _) = cps (e, TUnit) (EHaltFun TUnit TUnit, T_0)
+    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
@@ -821,7 +832,7 @@ fun test1 dirname =
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i), vcs, admits) = typecheck cc_tc_flags ([], [], [](* , HeapMap.empty *)) e
+    val ((e, t, i, st), vcs, admits) = typecheck cc_tc_flags (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
@@ -866,7 +877,7 @@ fun test1 dirname =
     (* val () = check_CPSed_expr e *)
     (* val () = println "Finished post-pair-allocation form checking" *)
     val () = println "Started MicroTiML typechecking #4 ..."
-    val ((e, t, i), vcs, admits) = typecheck code_gen_tc_flags ([], [], []) e
+    val ((e, t, i, st), vcs, admits) = typecheck code_gen_tc_flags (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #4"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
@@ -876,7 +887,7 @@ fun test1 dirname =
                      
     open EVM1ExportPP
     val () = println "Started Code Generation ..."
-    val (prog, num_regs) = cg_prog e
+    val (prog, num_regs) = cg_prog IEmptyState e
     val () = println "Finished Code Generation"
     val () = println $ "# of registers: " ^ str_int num_regs
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
@@ -896,7 +907,7 @@ fun test1 dirname =
     (* val () = println "" *)
     open EVM1Typecheck
     val () = println "Started EVM1 typechecking ..."
-    val (i, vcs, admits) = evm1_typecheck num_regs prog
+    val (i, vcs, admits) = evm1_typecheck (num_regs, st_types, IEmptyState) prog
     val () = println "Finished EVM1 typechecking"
     (* val () = println "Time:" *)
     (* val i = simp_i i *)

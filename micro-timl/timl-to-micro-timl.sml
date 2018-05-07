@@ -720,6 +720,7 @@ fun test4 dirname =
     (* val () = println "" *)
     val () = println "Started translating ..."
     val e = trans_e e
+    val st_types = StMap.map (mapSnd trans_mt) st_types
     val () = println "Finished translating"
     val e = export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = pp_e (NONE, NONE) e

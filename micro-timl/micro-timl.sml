@@ -73,7 +73,7 @@ datatype 'ty expr_un_op =
 datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          EVar of 'var
          | EConst of Operators.expr_const
-         (* | ELoc of loc *)
+         | EState of string
          | EUnOp of 'ty expr_un_op * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | EBinOp of expr_bin_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | ETriOp of expr_tri_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
