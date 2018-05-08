@@ -1773,7 +1773,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       | ENewArrayValues (t, es) =>
         let
           val t = kc_against_kind itctx (t, KType)
-          val (eis, st) = foldl (fn (e, (eis, st)) => let val (e, i, st) = tc_against_ty (ctx, st) (e, t) in ((e, i) :: eis, st) end) ([], st) es
+          val (eis, st) =
+              foldl (fn (e, (eis, st)) =>
+                        let
+                          val (e, i, st) = tc_against_ty (ctx, st) (e, t)
+                          val e = if !anno_ENewArrayValues_state then e %~ st else e
+                        in
+                          ((e, i) :: eis, st)
+                        end) ([], st) es
           val (es, is) = unzip $ rev eis
           val i = combine_AddI_Time is
         in
