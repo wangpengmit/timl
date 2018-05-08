@@ -16,6 +16,7 @@ fun str_word_const c =
     | WCByte c => Char.toCString c
     | WCiBool b => "#" ^ str_bool b
     | WCLabel l => "l_" ^ str_int l
+    | WCState n => "st_" ^ str_int n
                                 
 fun str_inst a =
   let
@@ -73,6 +74,12 @@ fun str_inst a =
     | MACRO_tuple_malloc ts => err ()
     | MACRO_array_malloc t => err ()
     | MACRO_inj t => err ()
+         | SHA3 => "SHA3"
+         | SLOAD => "SLOAD"
+         | SSTORE => "SSTORE"
+         | MACRO_map_ptr => "MACRO_map_ptr"
+         | MACRO_vector_ptr => "MACRO_vector_ptr"
+         | MACRO_vector_push_back => "MACRO_vector_push_back"
   end
 
 fun pp_w pp_t s w =

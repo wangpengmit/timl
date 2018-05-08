@@ -111,13 +111,26 @@ fun check_sorts gctx (ctx, is : U.idx list, sorts, r) : idx list =
   (check_length r (is, sorts);
    ListPair.map (fn (i, s) => check_sort gctx (ctx, i, s)) (is, sorts))
 
-val st_types_ref = ref StMap.empty
+val st_types_ref = (ref StMap.empty, ref StMap.empty)
 fun add_ref a = binop_ref (curry $ swap StMap.insert') a
-
+fun add_state (x, t) =
+  (add_ref (#1 st_types_ref) (x, t);
+   add_ref (#2 st_types_ref) (x, StMap.numItems $ !(#2 st_types_ref)))
+fun clear_st_types () =
+  (#1 st_types_ref := StMap.empty;
+   #2 st_types_ref := StMap.empty)
+fun get_st_types () =
+  let
+    val name2ty = !(#1 st_types_ref)
+    val name2int = !(#2 st_types_ref)
+  in
+    (name2ty, name2int)
+  end
+    
 val str_st_key = id
                    
 fun is_good_st_key r k =
-    case !st_types_ref @! k of
+    case !(#1 st_types_ref) @! k of
         SOME _ => ()
       | _ => raise Error (r, ["unkown state field " ^ str_st_key k])
                    
@@ -199,7 +212,7 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
            HType)
         | U.TState (x, r) =>
           let
-            val () = if Option.isSome $ !st_types_ref @! x then ()
+            val () = if Option.isSome $ !(#1 st_types_ref) @! x then ()
                      else raise Error (r, [sprintf "state field $ not found" [x]])
           in
 	    (TState (x, r), HType)
@@ -1078,7 +1091,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     val check_decls = check_decls gctx
     val check_rule = check_rule gctx
     val check_rules = check_rules gctx
-    val st_types = !st_types_ref
+    val st_types = !(#1 st_types_ref)
     val skctx = (sctx, kctx)
     val gctxn = gctx_names gctx
     val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names (sctx, kctx, cctx, tctx)
@@ -2489,7 +2502,7 @@ fun check_top_bind gctx (name, bind) =
             let
               val t = check_kind_Type Gctx.empty (([], []), t)
               val () = is_wf_state_ty (is_map, t)
-              val () = add_ref st_types_ref (name, (is_map, t))
+              val () = add_state (name, (is_map, t))
             in
               (TBState (is_map, t), [])
             end

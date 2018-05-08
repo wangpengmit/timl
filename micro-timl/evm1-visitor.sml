@@ -137,10 +137,13 @@ fun default_evm1_visitor_vtable
           | AND => AND
           | OR => OR
           | BYTE => BYTE
+          | SHA3 => SHA3
           | POP => POP
           | MLOAD => MLOAD
           | MSTORE => MSTORE
           | MSTORE8 => MSTORE8
+          | SLOAD => SLOAD
+          | SSTORE => SSTORE
           | JUMPI => JUMPI
           | JUMPDEST => JUMPDEST
           | DUP a => DUP a
@@ -154,12 +157,15 @@ fun default_evm1_visitor_vtable
           | MACRO_init_free_ptr n => MACRO_init_free_ptr n
           | MARK_PreArray2ArrayPtr => MARK_PreArray2ArrayPtr
           | MARK_PreTuple2TuplePtr => MARK_PreTuple2TuplePtr
-         | MACRO_tuple_assign => MACRO_tuple_assign
-         | MACRO_printc => MACRO_printc
-         | MACRO_array_init_assign => MACRO_array_init_assign
-         | MACRO_array_init_len => MACRO_array_init_len
-         | MACRO_int2byte => MACRO_int2byte
-         | MACRO_br_sum => MACRO_br_sum
+          | MACRO_tuple_assign => MACRO_tuple_assign
+          | MACRO_printc => MACRO_printc
+          | MACRO_array_init_assign => MACRO_array_init_assign
+          | MACRO_array_init_len => MACRO_array_init_len
+          | MACRO_int2byte => MACRO_int2byte
+          | MACRO_br_sum => MACRO_br_sum
+         | MACRO_map_ptr => MACRO_map_ptr
+         | MACRO_vector_ptr => MACRO_vector_ptr
+         | MACRO_vector_push_back => MACRO_vector_push_back
       end
     fun visit_insts this env data =
       let

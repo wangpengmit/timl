@@ -1951,9 +1951,9 @@ fun test1 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started TiML typechecking ..."
-    val () = TypeCheck.st_types_ref := StMap.empty
+    val () = TypeCheck.clear_st_types ()
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
-    val st_types = !TypeCheck.st_types_ref
+    val st_types = fst $ TypeCheck.get_st_types ()
     val vcs = VCSolver.vc_solver filename vcs
     val () = if null vcs then ()
              else

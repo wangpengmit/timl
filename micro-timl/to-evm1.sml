@@ -307,9 +307,10 @@ fun impl_nat_expr_bin_op opr =
 
 val st_ref = ref IEmptyState
                  
-fun compile ectx e =
+fun compile st_name2int ectx e =
   let
-    val compile = compile ectx
+    val compile = compile st_name2int ectx
+    fun err () = raise Impossible $ "compile() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   in
   case e of
       EBinOp (EBPrim opr, e1, e2) =>
@@ -322,12 +323,14 @@ fun compile ectx e =
               | inr l => PUSH_value $ VLabel l)
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
     | EConst c => PUSH_value $ VConst $ cg_c c
+    | EState x => PUSH_value $ VState $ st_name2int @!! x
     | EAppT (e, t) => compile e @ [VALUE_AppT $ Inner $ cg_t t]
     | EAppI (e, i) => compile e @ [VALUE_AppI $ Inner i]
     | EPack (t_pack, t, e) => compile e @ [VALUE_Pack (Inner $ cg_t t_pack, Inner $ cg_t t)]
     | EPackI (t_pack, i, e) => compile e @ [VALUE_PackI (Inner $ cg_t t_pack, Inner i)]
     | EUnOp (EUFold t, e) => compile e @ [VALUE_Fold $ Inner $ cg_t t]
     | EAscType (e, t) => compile e @ [VALUE_AscType $ Inner $ cg_t t]
+    | EAscState (e, st) => compile e
     | ENever t => PUSH_value $ VNever $ cg_t t
     | EBuiltin (name, t) => PUSH_value $ VBuiltin (name, cg_t t)
     | EBinOp (EBPair, e1, e2) =>
@@ -392,7 +395,7 @@ fun compile ectx e =
       compile e1 @ 
       compile e2 @
       [MACRO_map_ptr]
-    | EBinOp (ETStorageSet, e1, e2) =>
+    | EBinOp (EBStorageSet, e1, e2) =>
       compile e1 @ 
       compile e2 @
       [SWAP1, SSTORE, PUSH1 WTT]
@@ -417,28 +420,55 @@ fun compile ectx e =
       in
         I
       end
-    | EUnOp (EUVectorClear, e) =>
-      compile e @
-      [PUSH1nat 0, SWAP1, SSTORE, PUSH1 WTT]
-    | EUnOp (EUVectorLength, e) =>
-      compile e @
-      [SLOAD]
-    | _ => raise Impossible $ "compile() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+    (* | EUnOp (EUVectorClear, e) => *)
+    (*   compile e @ *)
+    (*   [PUSH1nat 0, SWAP1, SSTORE, PUSH1 WTT] *)
+    (* | EUnOp (EUVectorLength, e) => *)
+    (*   compile e @ *)
+    (*   [SLOAD] *)
+    | ETriOp (ETIte, _, _, _) => err ()
+    | EBinOp (EBApp, _, _) => err ()
+    | EBinOp (EBNew, _, _) => err ()
+    | ECase _ => err ()
+    | EAbs _ => err ()
+    | ERec _ => err ()
+    | EAbsT _ => err ()
+    | EAbsI _ => err ()
+    | EUnpack _ => err ()
+    | EUnpackI _ => err ()
+    | EAscTime _ => err ()
+    | ELet _ => err ()
+    | ELetIdx _ => err ()
+    | ELetType _ => err ()
+    | ELetConstr _ => err ()
+    | EAbsConstr _ => err ()
+    | EAppConstr _ => err ()
+    | EVarConstr _ => err ()
+    | EPackIs _ => err ()
+    | EMatchSum _ => err ()
+    | EMatchPair _ => err ()
+    | EMatchUnfold _ => err ()
+    | EIfi _ => err ()
+    | EHalt _ => err ()
+    | EMallocPair _ => err ()
+    | EPairAssign _ => err ()
+    | EProjProtected _ => err ()
+    | EVar (QID _) => err ()
   end
 
-val compile = fn (ectx, e, st) =>
+val compile = fn (st_name2int, ectx, e, st) =>
                  let
                    val () = st_ref := IEmptyState
-                   val I = compile ectx e
+                   val I = compile st_name2int ectx e
                  in
                    (I, !st_ref)
                  end
 
-fun cg_e reg_counter (params as (ectx, itctx, rctx, st)) e =
+fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
   let
     (* val () = print $ "cg_e() started:\n" *)
-    val compile = fn (e, st) => compile (ectx, e, st)
-    val cg_e = cg_e reg_counter
+    val compile = fn (e, st) => compile (st_name2int, ectx, e, st)
+    val cg_e = cg_e (reg_counter, st_name2int)
     fun fresh_reg () =
       let
         val v = !reg_counter
@@ -461,6 +491,8 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx, st)) e =
     val (ictxn, tctxn) = mapPair (map $ fst o fst, map $ fst o fst) $ split_inl_inr itctx
     (* val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 2, SOME 3) (ictxn, tctxn, [], ectxn) e *)
     (* val () = println $ e_str *)
+    fun err () = raise Impossible $ "unknown case of cg_e() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+
     fun main () =
   case e of
       ELet (e1, bind) =>
@@ -668,8 +700,50 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx, st)) e =
         I_e @@ halt t
       end
     | EAscTime (e, i) => ASCTIME (Inner i) @:: cg_e params e
-    | EAscType (e, _) => cg_e params e
-    | _ => raise Impossible $ "cg_e() on:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+    (* | EAscType (e, _) => cg_e params e *)
+    (* | EAscState (e, _) => cg_e params e *)
+    | EBinOp (EBPair, _, _) => err ()
+    | EBinOp (EBNew, _, _) => err ()
+    | EBinOp (EBRead, _, _) => err ()
+    | EBinOp (EBPrim _, _, _) => err ()
+    | EBinOp (EBNat _, _, _) => err ()
+    | EBinOp (EBNatCmp _, _, _) => err ()
+    | EBinOp (EBVectorGet, _, _) => err ()
+    | EBinOp (EBVectorPushBack, _, _) => err ()
+    | EBinOp (EBMapPtr, _, _) => err ()
+    | EBinOp (EBStorageSet, _, _) => err ()
+    | ETriOp (ETWrite, _, _, _) => err ()
+    | ETriOp (ETVectorSet, _, _, _) => err ()
+    | EVar _ => err ()
+    | EConst _ => err ()
+    | EState _ => err ()
+    | EUnOp _ => err ()
+    | EAbs _ => err ()
+    | ERec _ => err ()
+    | EAbsT _ => err ()
+    | EAppT _ => err ()
+    | EAbsI _ => err ()
+    | EAppI _ => err ()
+    | EPack _ => err ()
+    | EPackI _ => err ()
+    | EAscState _ => err ()
+    | EAscType _ => err ()
+    | ENever _ => err ()
+    | EBuiltin _ => err ()
+    | ENewArrayValues _ => err ()
+    | ELetIdx _ => err ()
+    | ELetType _ => err ()
+    | ELetConstr _ => err ()
+    | EAbsConstr _ => err ()
+    | EAppConstr _ => err ()
+    | EVarConstr _ => err ()
+    | EPackIs _ => err ()
+    | EMatchSum _ => err ()
+    | EMatchPair _ => err ()
+    | EMatchUnfold _ => err ()
+    | EMallocPair _ => err ()
+    | EPairAssign _ => err ()
+    | EProjProtected _ => err ()
     fun extra_msg () = "\nwhen code-gen-ing:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 5) (ictxn, tctxn, [], ectxn) e)
     val ret = main ()
               handle Impossible m => raise Impossible (m ^ extra_msg ())
@@ -680,7 +754,7 @@ fun cg_e reg_counter (params as (ectx, itctx, rctx, st)) e =
         
                        
 (* ectx: variable mapping, maps variables to registers or labels *)
-fun cg_hval ectx (e, t_all) =
+fun cg_hval (st_name2int, ectx) (e, t_all) =
   let
     val (itbinds, e) = collect_EAbsIT e
     val (st, (t, (name, e))) = assert_EAbs e
@@ -689,7 +763,7 @@ fun cg_hval ectx (e, t_all) =
     val ectx = (name, inl ARG_REG) :: ectx
     val rctx = rctx_single (ARG_REG, t)
     val reg_counter = ref $ ARG_REG+1
-    val I = cg_e reg_counter (ectx, rev itbinds, rctx, st) e
+    val I = cg_e (reg_counter, st_name2int) (ectx, rev itbinds, rctx, st) e
     fun get_time t =
       let
         val (_, t) = collect_TForallIT t
@@ -702,7 +776,7 @@ fun cg_hval ectx (e, t_all) =
     (hval, !reg_counter)
   end
   
-fun cg_prog init_st e =
+fun cg_prog (st_name2int, init_st) e =
   let
     val () = heap_ref := []
     val (binds, e) = collect_ELetRec e
@@ -714,14 +788,14 @@ fun cg_prog init_st e =
         (* val t = cg_t t *)
         val l = fresh_label ()
         val ectx = (name, inr l) :: ectx
-        val (hval, mr) = cg_hval ectx (e, t)
+        val (hval, mr) = cg_hval (st_name2int, ectx) (e, t)
         val () = output_heap ((l, fst name), hval)
       in
         (ectx, max num_regs mr)
       end
     val (ectx, num_regs) = foldl on_bind ([], 0) binds
     val reg_counter = ref FIRST_GENERAL_REG
-    val I = cg_e reg_counter (ectx, [], Rctx.empty, init_st) e
+    val I = cg_e (reg_counter, st_name2int) (ectx, [], Rctx.empty, init_st) e
     val H = !heap_ref
     val H = rev H
     val num_regs = max num_regs (!reg_counter)
@@ -776,9 +850,9 @@ fun test1 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started TiML typechecking ..."
-    val () = TypeCheck.st_types_ref := StMap.empty
+    val () = TypeCheck.clear_st_types ()
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
-    val st_types = !TypeCheck.st_types_ref
+    val (st_name2ty, st_name2int) = TypeCheck.get_st_types ()
     val vcs = VCSolver.vc_solver filename vcs
     val () = if null vcs then ()
              else
@@ -799,7 +873,7 @@ fun test1 dirname =
     (* val () = println "" *)
     val () = println "Started translating ..."
     val e = trans_e e
-    val st_types = StMap.map (mapSnd trans_mt) st_types
+    val st_name2ty = StMap.map (mapSnd trans_mt) st_name2ty
     val () = println "Finished translating"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
@@ -807,7 +881,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (cps_tc_flags, st_types) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (cps_tc_flags, st_name2ty) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP
@@ -832,7 +906,7 @@ fun test1 dirname =
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (cc_tc_flags, st_types) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
@@ -877,7 +951,7 @@ fun test1 dirname =
     (* val () = check_CPSed_expr e *)
     (* val () = println "Finished post-pair-allocation form checking" *)
     val () = println "Started MicroTiML typechecking #4 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (code_gen_tc_flags, st_types) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #4"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
@@ -887,7 +961,7 @@ fun test1 dirname =
                      
     open EVM1ExportPP
     val () = println "Started Code Generation ..."
-    val (prog, num_regs) = cg_prog IEmptyState e
+    val (prog, num_regs) = cg_prog (st_name2int, IEmptyState) e
     val () = println "Finished Code Generation"
     val () = println $ "# of registers: " ^ str_int num_regs
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
@@ -907,7 +981,9 @@ fun test1 dirname =
     (* val () = println "" *)
     open EVM1Typecheck
     val () = println "Started EVM1 typechecking ..."
-    val (i, vcs, admits) = evm1_typecheck (num_regs, st_types, IEmptyState) prog
+    fun invert_map m = StMap.foldli (fn (k, v, acc) => IMap.insert (acc, v, k)) IMap.empty m
+    val st_int2name = invert_map st_name2int
+    val (i, vcs, admits) = evm1_typecheck (num_regs, st_name2ty, st_int2name, IEmptyState) prog
     val () = println "Finished EVM1 typechecking"
     (* val () = println "Time:" *)
     (* val i = simp_i i *)

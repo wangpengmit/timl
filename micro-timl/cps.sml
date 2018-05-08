@@ -288,6 +288,7 @@ fun cps (e, t_e, F) (k, j_k) =
       in
         e
       end
+    fun err () = raise Impossible $ "unknown case of cps() on: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
     fun main () =
   case e of
       S.EVar x =>
@@ -337,8 +338,11 @@ fun cps (e, t_e, F) (k, j_k) =
         cps (e1, t_e1) (e, i_e)
       end
     | S.EConst c =>
-      (* [[ x ]](c) = k c *)
+      (* [[ c ]](k) = k c *)
       (k $$ EConst c, j_k %+ T_1)
+    | S.EState x =>
+      (* [[ x ]](k) = k x *)
+      (k $$ EState x, j_k %+ T_1)
     | S.ENever t =>
       (* [[ never ]](k) = k(never) *)
       (k $$ ENever (cps_t t), j_k %+ T_1)
@@ -628,25 +632,6 @@ fun cps (e, t_e, F) (k, j_k) =
       in
         cps (e, t_e) (c, i_c)
       end
-    | S.ETriOp (ETIte, e, e1, e2) =>
-      (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
-      let
-        val (e, st_e) = assert_EAscState e
-        val t_res = t_e
-        val t_e = TBool
-        val t_res = cps_t t_res
-        val x_k = fresh_evar ()
-        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
-        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
-        val y = fresh_evar ()
-        val c = ETriOp (ETIte, EV y, e1, e2)
-        val c = ELetClose ((x_k, "k", k), c)
-        val t_y = cps_t t_e
-        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
-        val i_c = IMax (i_e1, i_e2)
-      in
-        cps (e, t_e) (c, i_c)
-      end
     | S.ELet (e1, bind) =>
       (* [[ let x = e1 in e2 ]](k) = [[e1]](\x. [[e2]](k)) *)
       let
@@ -680,8 +665,29 @@ fun cps (e, t_e, F) (k, j_k) =
       in
         (e (* |> i' *) |> i, i)
       end
-    | S.ETriOp (ETWrite, e1, e2, e3) =>
-      (* [[ write e1 e2 e3 ]](k) = [[e1]] (\x1. [[e2]] (\x2. [[e3]] (\x3. k (write x1 x2 x3)))) *)
+    | S.EAscState (e, _) =>
+      cps (e, t_e) (k, j_k)
+    | S.ETriOp (ETIte, e, e1, e2) =>
+      (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
+      let
+        val (e, st_e) = assert_EAscState e
+        val t_res = t_e
+        val t_e = TBool
+        val t_res = cps_t t_res
+        val x_k = fresh_evar ()
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
+        val y = fresh_evar ()
+        val c = ETriOp (ETIte, EV y, e1, e2)
+        val c = ELetClose ((x_k, "k", k), c)
+        val t_y = cps_t t_e
+        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
+        val i_c = IMax (i_e1, i_e2)
+      in
+        cps (e, t_e) (c, i_c)
+      end
+    | S.ETriOp (opr, e1, e2, e3) =>
+      (* [[ opr e1 e2 e3 ]](k) = [[e1]] (\x1. [[e2]] (\x2. [[e3]] (\x3. k (opr x1 x2 x3)))) *)
       let
         val (e1, st_e1) = assert_EAscState e1
         val (e1, t_e1) = assert_EAscType e1
@@ -695,7 +701,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val t_x1 = cps_t t_e1
         val t_x2 = cps_t t_e2
         val t_x3 = cps_t t_e3
-        val e = k $$ EWrite (EV x1, EV x2, EV x3)
+        val e = k $$ ETriOp (opr, EV x1, EV x2, EV x3)
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x3, "x3", t_x3), e))
         val (e, i_e) = cps (e3, t_e3) (e, j_k %+ T_1)
         val e = EAbs (st_e2 %++ F, close0_e_e_anno ((x2, "x2", t_x2), e))
@@ -733,12 +739,19 @@ fun cps (e, t_e, F) (k, j_k) =
     (*   in *)
     (*     cps (e1, t_e1) (c, i_c) *)
     (*   end *)
-    | _ =>
-      let
-        val s = (* substr 0 100 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e
-      in
-        raise Unimpl $ "cps() on: " ^ s
-      end
+    | S.ELetIdx _ => err ()
+    | S.ELetType _ => err ()
+    | S.ELetConstr _ => err ()
+    | S.EAbsConstr _ => err ()
+    | S.EAppConstr _ => err ()
+    | S.EVarConstr _ => err ()
+    | S.EPackIs _ => err ()
+    | S.EMatchSum _ => err ()
+    | S.EMatchPair _ => err ()
+    | S.EMatchUnfold _ => err ()
+    | S.EMallocPair _ => err ()
+    | S.EPairAssign _ => err ()
+    | S.EProjProtected _ => err ()
     fun extra_msg () = "\nwhen cps-ing:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 5) ([], [], [], []) e)
     val ret = main ()
               handle Impossible m => raise Impossible (m ^ extra_msg ())
@@ -836,6 +849,8 @@ fun check_CPSed_type_e b =
 fun check_CPSed_expr e =
   let
     val loop = check_CPSed_expr
+    fun err () = raise Impossible $ "check_CPSed_expr():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+
   in
   case fst $ collect_EAscType e of
       ELet (e1, bind) =>
@@ -891,7 +906,48 @@ fun check_CPSed_expr e =
       end
     | EHalt (e, _) => check_value e
     | EAscTime (e, _) => loop e
-    | _ => raise Impossible $ "check_CPSed_expr():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+    | EBinOp (EBPair, _, _) => err ()
+    | EBinOp (EBNew, _, _) => err ()
+    | EBinOp (EBRead, _, _) => err ()
+    | EBinOp (EBPrim _, _, _) => err ()
+    | EBinOp (EBNat _, _, _) => err ()
+    | EBinOp (EBNatCmp _, _, _) => err ()
+    | EBinOp (EBVectorGet, _, _) => err ()
+    | EBinOp (EBVectorPushBack, _, _) => err ()
+    | EBinOp (EBMapPtr, _, _) => err ()
+    | EBinOp (EBStorageSet, _, _) => err ()
+    | ETriOp (ETWrite, _, _, _) => err ()
+    | ETriOp (ETVectorSet, _, _, _) => err ()
+    | EVar _ => err ()
+    | EConst _ => err ()
+    | EState _ => err ()
+    | EUnOp _ => err ()
+    | EAbs _ => err ()
+    | ERec _ => err ()
+    | EAbsT _ => err ()
+    | EAppT _ => err ()
+    | EAbsI _ => err ()
+    | EAppI _ => err ()
+    | EPack _ => err ()
+    | EPackI _ => err ()
+    | EAscState _ => err ()
+    | EAscType _ => err ()
+    | ENever _ => err ()
+    | EBuiltin _ => err ()
+    | ENewArrayValues _ => err ()
+    | ELetIdx _ => err ()
+    | ELetType _ => err ()
+    | ELetConstr _ => err ()
+    | EAbsConstr _ => err ()
+    | EAppConstr _ => err ()
+    | EVarConstr _ => err ()
+    | EPackIs _ => err ()
+    | EMatchSum _ => err ()
+    | EMatchPair _ => err ()
+    | EMatchUnfold _ => err ()
+    | EMallocPair _ => err ()
+    | EPairAssign _ => err ()
+    | EProjProtected _ => err ()
   end
 
 and check_decl e =
@@ -916,8 +972,13 @@ and check_decl e =
                     raise Impossible $ "check_decl():\n" ^ msg
         
 and check_value e =
+    let
+      fun err () = raise Impossible $ "check_value():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+
+    in
   case e of
       EConst _ => ()
+    | EState _ => ()
     | EBinOp (EBPair, e1, e2) => (check_value e1; check_value e2)
     | EUnOp (EUInj _, e) => check_value e
     | EAbs (_, bind) =>
@@ -943,6 +1004,7 @@ and check_value e =
     | EPackIs (_, _, e) => check_value e
     | EUnOp (EUFold _, e) => check_value e
     | EAscType (e, _) => check_value e
+    | EAscState (e, _) => check_value e
     | EAppT (e, _) => check_value e
     | EAppI (e, _) => check_value e
     | ERec data =>
@@ -954,7 +1016,40 @@ and check_value e =
     | EVar _ => () (* variables denote values *)
     | ENever _ => ()
     | EBuiltin _ => ()
-    | _ => raise Impossible $ "check_value():\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+    | EUnOp (EUUnfold, _) => err ()
+    | EUnOp (EUTiML _, _) => err ()
+    | EBinOp (EBApp, _, _) => err ()
+    | EBinOp (EBNew, _, _) => err ()
+    | EBinOp (EBRead, _, _) => err ()
+    | EBinOp (EBPrim _, _, _) => err ()
+    | EBinOp (EBNat _, _, _) => err ()
+    | EBinOp (EBNatCmp _, _, _) => err ()
+    | EBinOp (EBVectorGet, _, _) => err ()
+    | EBinOp (EBVectorPushBack, _, _) => err ()
+    | EBinOp (EBMapPtr, _, _) => err ()
+    | EBinOp (EBStorageSet, _, _) => err ()
+    | ETriOp _ => err ()
+    | ECase _ => err ()
+    | EUnpack _ => err ()
+    | EUnpackI _ => err ()
+    | EAscTime _ => err ()
+    | ELet _ => err ()
+    | ENewArrayValues _ => err ()
+    | ELetIdx _ => err ()
+    | ELetType _ => err ()
+    | ELetConstr _ => err ()
+    | EAbsConstr _ => err ()
+    | EAppConstr _ => err ()
+    | EVarConstr _ => err ()
+    | EMatchSum _ => err ()
+    | EMatchPair _ => err ()
+    | EMatchUnfold _ => err ()
+    | EIfi _ => err ()
+    | EHalt _ => err ()
+    | EMallocPair _ => err ()
+    | EPairAssign _ => err ()
+    | EProjProtected _ => err ()
+    end
 
 val check_CPSed_expr = fn e => (check_CPSed_type_e e; check_CPSed_expr e)
                               
@@ -993,9 +1088,9 @@ fun test1 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started TiML typechecking ..."
-    val () = TypeCheck.st_types_ref := StMap.empty
+    val () = TypeCheck.clear_st_types ()
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
-    val st_types = !TypeCheck.st_types_ref
+    val st_types = fst $ TypeCheck.get_st_types ()
     val vcs = VCSolver.vc_solver filename vcs
     val () = if null vcs then ()
              else

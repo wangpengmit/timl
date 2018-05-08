@@ -368,74 +368,86 @@ fun unBindSimpOpen_e bind =
       (x, name, b)
     end
 
-fun cc_t t =
-  case t of
-      TArrow _ =>
-      cc_t_arrow t
-    | TQuan (Forall, _) =>
-      cc_t_arrow t
-    | TQuanI (Forall, _) =>
-      cc_t_arrow t
-    | TVar _ => t
-    | TConst _ => t
-    | TBinOp (opr, t1, t2) => TBinOp (opr, cc_t t1, cc_t t2)
-    | TQuan (q, bind) =>
+fun cc_ty_visitor_vtable cast () =
+  let
+    val vtable =
+        default_ty_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_ty this env t =
       let
-        val (k, (name, t)) = unBindAnnoName bind
-        val a = fresh_tvar ()
-        val t = open0_t_t a t
-        val t = cc_t t
+        fun cc_t t = #visit_ty (cast this) this env t
       in
-        TQuan (q, close0_t_t_anno ((a, fst name, k), t))
+      case t of
+          TArrow _ => cc_t_arrow t
+        | TQuan (Forall, _) => cc_t_arrow t
+        | TQuanI (Forall, _) => cc_t_arrow t
+        | TQuan (q, bind) =>
+          let
+            val (k, (name, t)) = unBindAnnoName bind
+            val a = fresh_tvar ()
+            val t = open0_t_t a t
+            val t = cc_t t
+          in
+            TQuan (q, close0_t_t_anno ((a, fst name, k), t))
+          end
+        | TQuanI (q, bind) =>
+          let
+            val (s, (name, t)) = unBindAnnoName bind
+            val a = fresh_ivar ()
+            val t = open0_i_t a t
+            val t = cc_t t
+          in
+            TQuanI (q, close0_i_t_anno ((a, fst name, s), t))
+          end
+        | TRec bind =>
+          let
+            val (k, (name, t)) = unBindAnnoName bind
+            val a = fresh_tvar ()
+            val t = open0_t_t a t
+            val t = cc_t t
+          in
+            TRec $ close0_t_t_anno ((a, fst name, k), t)
+          end
+        | TAbsT bind =>
+          let
+            val (k, (name, t)) = unBindAnnoName bind
+            val a = fresh_tvar ()
+            val t = open0_t_t a t
+            val t = cc_t t
+          in
+            TAbsT $ close0_t_t_anno ((a, fst name, k), t)
+          end
+        | TAbsI bind =>
+          let
+            val (s, (name, t)) = unBindAnnoName bind
+            val a = fresh_ivar ()
+            val t = open0_i_t a t
+            val t = cc_t t
+          in
+            TAbsI $ close0_i_t_anno ((a, fst name, s), t)
+          end
+        | _ => #visit_ty vtable this env t (* call super *)
       end
-    | TQuanI (q, bind) =>
-      let
-        val (s, (name, t)) = unBindAnnoName bind
-        val a = fresh_ivar ()
-        val t = open0_i_t a t
-        val t = cc_t t
-      in
-        TQuanI (q, close0_i_t_anno ((a, fst name, s), t))
-      end
-    | TRec bind =>
-      let
-        val (k, (name, t)) = unBindAnnoName bind
-        val a = fresh_tvar ()
-        val t = open0_t_t a t
-        val t = cc_t t
-      in
-        TRec $ close0_t_t_anno ((a, fst name, k), t)
-      end
-    | TAbsT bind =>
-      let
-        val (k, (name, t)) = unBindAnnoName bind
-        val a = fresh_tvar ()
-        val t = open0_t_t a t
-        val t = cc_t t
-      in
-        TAbsT $ close0_t_t_anno ((a, fst name, k), t)
-      end
-    | TAbsI bind =>
-      let
-        val (s, (name, t)) = unBindAnnoName bind
-        val a = fresh_ivar ()
-        val t = open0_i_t a t
-        val t = cc_t t
-      in
-        TAbsI $ close0_i_t_anno ((a, fst name, s), t)
-      end
-    | TNat _ => t
-    | TiBool _ => t
-    | TAppT (t, t') => TAppT (cc_t t, cc_t t')
-    | TAppI (t, i) => TAppI (cc_t t, i)
-    | TArr (t, i) => TArr (cc_t t, i)
-    | _ =>
-      let
-        val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t
-      in
-        raise Impossible $ "cc_t() on: " ^ s
-      end
+    val vtable = override_visit_ty vtable visit_ty
+  in
+    vtable
+  end
 
+and new_cc_ty_visitor a = new_ty_visitor cc_ty_visitor_vtable a
+    
+and cc_t t =
+  let
+    val visitor as (TyVisitor vtable) = new_cc_ty_visitor ()
+  in
+    #visit_ty vtable visitor () t
+  end
+    
 and cc_t_arrow t =
     let
       val (binds, t) = open_collect_TForallIT t
@@ -475,116 +487,131 @@ fun apply_TForallIT b args =
       | (_, []) => b
       | _ => raise Impossible "apply_TForallIT"
 
-fun cc e =
+fun cc_expr_visitor_vtable cast () =
   let
-    (* val () = print $ "cc() started: " *)
-    (* val e_str = (* substr 0 400 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 1) ([], [], [], []) e *)
-    (* val () = println $ e_str *)
-    val e =
-    case e of
-        EBinOp (EBApp, e1, e2) =>
-        let
-          (* val () = println "cc() on EApp" *)
-          val (e1, itargs) = collect_EAppIT e1
-          (* val (e1, t_e1) = assert_EAscType e1 *)
-          (* val t_e1 = cc_t t_e1 *)
-          (* val (_, t_pair) = assert_TExists t_e1 *)
-          (* val (t_code, _) = assert_TProd t_pair *)
-          val gamma = fresh_tvar ()
-          val z = fresh_evar ()
-          val z_code = fresh_evar ()
-          val z_env = fresh_evar ()
-          val e = EAppITs (EV z_code, map (map_inr cc_t) itargs) %$ EPair (EV z_env, cc e2)
-          (* val () = println $ "cc()/EApp: before ELetManyClose()" *)
-          val e = ELetManyClose ([(z_code, "z_code", EFst $ EV z), (z_env, "z_env", ESnd $ EV z)], e)
-          (* val () = println $ "cc()/EApp: after ELetManyClose()" *)
-          val e = EUnpackClose (cc e1, (gamma, "'c"), (z, "z"), e)
-          (* val () = println "cc() done on EApp" *)
-        in
-          e
-        end
-      | EAbsT _ => cc_abs e
-      | EAbsI _ => cc_abs e
-      | EAbs _ => cc_abs e
-      | ERec _ => cc_abs e
-      | EBinOp (opr, e1, e2) => EBinOp (opr, cc e1, cc e2)
-      | ELet (e1, bind) =>
-        let
-          val e1 = cc e1
-          val (x, name, e2) = unBindSimpOpen_e bind
-          val e2 = cc e2
-        in
-          ELetClose ((x, fst name, e1), e2)
-        end
-      | ECase (e, bind1, bind2) =>
-        let
-          val e = cc e
-          val (x1, name1, e1) = unBindSimpOpen_e bind1
-          val (x2, name2, e2) = unBindSimpOpen_e bind2
-        in
-          ECaseClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
-        end
-      | EIfi (e, bind1, bind2) =>
-        let
-          val e = cc e
-          val (x1, name1, e1) = unBindSimpOpen_e bind1
-          val (x2, name2, e2) = unBindSimpOpen_e bind2
-        in
-          EIfiClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
-        end
-      | ETriOp (ETIte, e, e1, e2) =>
-        ETriOp (ETIte, cc e, cc e1, cc e2)
-      | EPack (tp, t, e) => EPack (cc_t tp, cc_t t, cc e)
-      | EUnpack (e1, bind) =>
-        let
-          val e1 = cc e1
-          val (name_a, bind) = unBindSimpName bind
-          val (name_x, e2) = unBindSimpName bind
-          val a = fresh_tvar ()
-          val x = fresh_evar ()
-          val e2 = open0_t_e a e2
-          val e2 = open0_e_e x e2
-          val e2 = cc e2
-        in
-          EUnpackClose (e1, (a, fst name_a), (x, fst name_x), e2)
-        end
-      | EPackI (tp, i, e) => EPackI (cc_t tp, i, cc e)
-      | EUnpackI (e1, bind) =>
-        let
-          (* val () = println "before cc()/EUnpackI/cc#1" *)
-          val e1 = cc e1
-          (* val () = println "after cc()/EUnpackI/cc#1" *)
-          val (name_a, bind) = unBindSimpName bind
-          val (name_x, e2) = unBindSimpName bind
-          val a = fresh_ivar ()
-          val x = fresh_evar ()
-          (* val () = println "before cc()/EUnpackI/open0_i_e()" *)
-          (* this could be slow *)
-          val e2 = open0_i_e a e2
-          (* val () = println "after cc()/EUnpackI/open0_i_e()" *)
-          val e2 = open0_e_e x e2
-          (* val () = println "before cc()/EUnpackI/cc#2" *)
-          val e2 = cc e2
-          (* val () = println "after cc()/EUnpackI/cc#2" *)
-          val e = EUnpackIClose (e1, (a, fst name_a), (x, fst name_x), e2)
-          (* val () = println "done cc()/EUnpackI" *)
-        in
-          e
-        end
-      | EVar _ => e
-      | EConst _ => e
-      | EUnOp (opr, e) => EUnOp (cc_expr_un_op opr, cc e)
-      | EAscType (e, t) => EAscType (cc e, cc_t t)
-      | EAscTime (e, i) => EAscTime (cc e, i)
-      | ENever t => ENever (cc_t t)
-      | EBuiltin (name, t) => EBuiltin (name, cc_t t)
-      | ETriOp (ETWrite, e1, e2, e3) => EWrite (cc e1, cc e2, cc e3)
-      | ENewArrayValues (t, es) => ENewArrayValues (cc_t t, map cc es)
-      | EHalt (e, t) => EHalt (cc e, cc_t t)
-      | _ => raise Unimpl $ "cc(): " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
-    (* val () = println $ "cc() finished: " ^ e_str *)
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          (ignore_this_env cc_t)
+    fun visit_expr this env e =
+      let
+        (* val () = print $ "cc() started: " *)
+        (* val e_str = (* substr 0 400 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 1) ([], [], [], []) e *)
+        (* val () = println $ e_str *)
+        (* fun err () = raise Impossible $ "unknown case of cc() on: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e) *)
+        fun cc_t t = #visit_ty (cast this) this env t
+        fun cc_e e = #visit_expr (cast this) this env e
+        val e =
+            case e of
+                EBinOp (EBApp, e1, e2) =>
+                let
+                  (* val () = println "cc() on EApp" *)
+                  val (e1, itargs) = collect_EAppIT e1
+                  (* val (e1, t_e1) = assert_EAscType e1 *)
+                  (* val t_e1 = cc_t t_e1 *)
+                  (* val (_, t_pair) = assert_TExists t_e1 *)
+                  (* val (t_code, _) = assert_TProd t_pair *)
+                  val gamma = fresh_tvar ()
+                  val z = fresh_evar ()
+                  val z_code = fresh_evar ()
+                  val z_env = fresh_evar ()
+                  val e = EAppITs (EV z_code, map (map_inr cc_t) itargs) %$ EPair (EV z_env, cc e2)
+                  (* val () = println $ "cc()/EApp: before ELetManyClose()" *)
+                  val e = ELetManyClose ([(z_code, "z_code", EFst $ EV z), (z_env, "z_env", ESnd $ EV z)], e)
+                  (* val () = println $ "cc()/EApp: after ELetManyClose()" *)
+                  val e = EUnpackClose (cc e1, (gamma, "'c"), (z, "z"), e)
+                                       (* val () = println "cc() done on EApp" *)
+                in
+                  e
+                end
+              | EAbsT _ => cc_abs e
+              | EAbsI _ => cc_abs e
+              | EAbs _ => cc_abs e
+              | ERec _ => cc_abs e
+              | ELet (e1, bind) =>
+                let
+                  val e1 = cc e1
+                  val (x, name, e2) = unBindSimpOpen_e bind
+                  val e2 = cc e2
+                in
+                  ELetClose ((x, fst name, e1), e2)
+                end
+              | ECase (e, bind1, bind2) =>
+                let
+                  val e = cc e
+                  val (x1, name1, e1) = unBindSimpOpen_e bind1
+                  val (x2, name2, e2) = unBindSimpOpen_e bind2
+                in
+                  ECaseClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
+                end
+              | EIfi (e, bind1, bind2) =>
+                let
+                  val e = cc e
+                  val (x1, name1, e1) = unBindSimpOpen_e bind1
+                  val (x2, name2, e2) = unBindSimpOpen_e bind2
+                in
+                  EIfiClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
+                end
+              | EUnpack (e1, bind) =>
+                let
+                  val e1 = cc e1
+                  val (name_a, bind) = unBindSimpName bind
+                  val (name_x, e2) = unBindSimpName bind
+                  val a = fresh_tvar ()
+                  val x = fresh_evar ()
+                  val e2 = open0_t_e a e2
+                  val e2 = open0_e_e x e2
+                  val e2 = cc e2
+                in
+                  EUnpackClose (e1, (a, fst name_a), (x, fst name_x), e2)
+                end
+              | EUnpackI (e1, bind) =>
+                let
+                  (* val () = println "before cc()/EUnpackI/cc#1" *)
+                  val e1 = cc e1
+                  (* val () = println "after cc()/EUnpackI/cc#1" *)
+                  val (name_a, bind) = unBindSimpName bind
+                  val (name_x, e2) = unBindSimpName bind
+                  val a = fresh_ivar ()
+                  val x = fresh_evar ()
+                  (* val () = println "before cc()/EUnpackI/open0_i_e()" *)
+                  (* this could be slow *)
+                  val e2 = open0_i_e a e2
+                  (* val () = println "after cc()/EUnpackI/open0_i_e()" *)
+                  val e2 = open0_e_e x e2
+                  (* val () = println "before cc()/EUnpackI/cc#2" *)
+                  val e2 = cc e2
+                  (* val () = println "after cc()/EUnpackI/cc#2" *)
+                  val e = EUnpackIClose (e1, (a, fst name_a), (x, fst name_x), e2)
+                                        (* val () = println "done cc()/EUnpackI" *)
+                in
+                  e
+                end
+              | _ => #visit_expr vtable this env e (* call super *)
+                                 (* val () = println $ "cc() finished: " ^ e_str *)
+      in
+        e
+      end
+    val vtable = override_visit_expr vtable visit_expr
   in
-    e
+    vtable
+  end
+
+and new_cc_expr_visitor params = new_expr_visitor cc_expr_visitor_vtable params
+
+and cc b =
+  let
+    val visitor as (ExprVisitor vtable) = new_cc_expr_visitor ()
+  in
+    #visit_expr vtable visitor () b
   end
 
 and cc_abs e_all =
@@ -1012,9 +1039,9 @@ fun test1 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started TiML typechecking ..."
-    val () = TypeCheck.st_types_ref := StMap.empty
+    val () = TypeCheck.clear_st_types ()
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
-    val st_types = !TypeCheck.st_types_ref
+    val st_types = fst $ TypeCheck.get_st_types ()
     val vcs = VCSolver.vc_solver filename vcs
     val () = if null vcs then ()
              else

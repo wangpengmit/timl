@@ -69,7 +69,7 @@ fun add_kinding_full new ((ictx, tctx), rctx, sctx, st) = ((ictx, new :: tctx), 
 fun add_r p (itctx, rctx, sctx, st) = (itctx, rctx @+ p, sctx, st)
 fun add_stack t (itctx, rctx, sctx, st) = (itctx, rctx, t :: sctx, st)
 
-fun get_word_const_type hctx c =
+fun get_word_const_type (hctx, st_int2name) c =
   case c of
       WCTT => TUnit
     | WCNat n => TNat $ INat n
@@ -82,10 +82,11 @@ fun get_word_const_type hctx c =
            SOME t => t
          | NONE => raise Impossible $ "unbound label: " ^ str_int l
       )
+    | WCState n => TState $ IMapU.must_find st_int2name n
 
-fun tc_w hctx (ctx as (itctx as (ictx, tctx))) w =
+fun tc_w (hctx, st_int2name) (ctx as (itctx as (ictx, tctx))) w =
   case w of
-      WConst c => get_word_const_type hctx c
+      WConst c => get_word_const_type (hctx, st_int2name) c
     | WUninit t => kc_against_kind itctx (t, KType)
     | WBuiltin (name, t) => kc_against_kind itctx (t, KType)
     | WNever t => kc_against_kind itctx (t, KType)
@@ -124,7 +125,7 @@ fun assert_base_storage_ty t =
                | Byte => ())
       | _ => raise Impossible "not a base storage type"
         
-fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sctx, st : idx)) inst =
+fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, tctx), rctx, sctx, st : idx)) inst =
   let
     fun itctxn () = itctx_names itctx
     val str_t = fn t => ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctxn ()) t
@@ -152,6 +153,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
       in
         ((itctx, rctx, t :: sctx, st), time)
       end
+    fun err () = raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctx_names itctx) inst)
   in
   case inst of
       ADD =>
@@ -279,7 +281,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
       end
     | JUMPDEST => (ctx, T0)
     | PUSH (n, w) =>
-      (assert_b "tc/PUSH/n" (1 <= n andalso n <= 32); ((itctx, rctx, tc_w hctx itctx (unInner w) :: sctx, st), T_PUSH))
+      (assert_b "tc/PUSH/n" (1 <= n andalso n <= 32); ((itctx, rctx, tc_w (hctx, st_int2name) itctx (unInner w) :: sctx, st), T_PUSH))
     | DUP n => 
       let
         val () = assert_b "tc/DUP/n" (1 <= n andalso n <= 16)
@@ -513,7 +515,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
         val (t0, t1, sctx) = assert_cons2 sctx
         val t1 = whnf itctx t1
         val t = case t1 of
-                    TState x => assert_fst_true $ st_types @!! x
+                    TState x => assert_fst_true $ st_name2ty @!! x
                   | _ => assert_TMap $ assert_TCell t1
         val () = assert_TInt t0
       in
@@ -532,7 +534,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
         val (t0, t1, sctx) = assert_cons2 sctx
         val vec = assert_TState t1
         val len = st @%!! vec
-        val t = assert_fst_false $ st_types @!! vec
+        val t = assert_fst_false $ st_name2ty @!! vec
         val () = is_eq_ty itctx (t0, t)
       in
         ((itctx, rctx, sctx, st @%+ (vec, len %+ N1)), T0)
@@ -546,7 +548,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
                 TVectorPtr (vec, offset) =>
                 let
                   val len = st @%!! vec
-                  val t = assert_fst_false $ st_types @!! vec
+                  val t = assert_fst_false $ st_name2ty @!! vec
                   val () = check_prop ictx (offset %< len)
                 in
                   t
@@ -554,7 +556,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
               | TState vec =>
                 let
                   val len = st @%!! vec
-                  val _ = assert_fst_false $ st_types @!! vec
+                  val _ = assert_fst_false $ st_name2ty @!! vec
                 in
                   TNat len
                 end
@@ -578,7 +580,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
                 TVectorPtr (vec, offset) =>
                 let
                   val len = st @%!! vec
-                  val t = assert_fst_false $ st_types @!! vec
+                  val t = assert_fst_false $ st_name2ty @!! vec
                   val () = check_prop ictx (offset %< len)
                   val () = is_eq_ty itctx (t1, t)
                 in
@@ -586,7 +588,7 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
                 end
               | TState vec =>
                 let
-                  val _ = assert_fst_false $ st_types @!! vec
+                  val _ = assert_fst_false $ st_name2ty @!! vec
                   val new = assert_TNat t1
                   val () = check_prop ictx (new %= N0)
                 in
@@ -604,10 +606,16 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
       in
         ((itctx, rctx, sctx, st), T0)
       end
-    | _ => raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctx_names itctx) inst)
+    | BYTE => err ()
+    | SHA3 => err ()
+    | MSTORE8 => err ()
+    | JUMPI => err ()
+    | LOG _ => err ()
+    | ASCTIME _ => err ()
+    | MACRO_br_sum => err ()
   end
       
-fun tc_insts (params as (hctx, num_regs, st_types)) (ctx as (itctx as (ictx, tctx), rctx, sctx, st)) insts =
+fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itctx as (ictx, tctx), rctx, sctx, st)) insts =
   let
     val tc_insts = tc_insts params
     fun itctxn () = itctx_names itctx
@@ -634,6 +642,7 @@ fun tc_insts (params as (hctx, num_regs, st_types)) (ctx as (itctx as (ictx, tct
       in
         ()
       end
+    fun err () = raise Impossible $ "unknown case in tc_insts(): " ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, NONE) (itctx_names itctx) insts)
     fun main () =
   case insts of
       JUMP =>
@@ -662,6 +671,7 @@ fun tc_insts (params as (hctx, num_regs, st_types)) (ctx as (itctx as (ictx, tct
         T0
       end
     | ISDummy _ => T0
+    | RETURN => err ()
     | ISCons bind =>
       let
         val (inst, I) = unBind bind
@@ -731,7 +741,6 @@ fun tc_insts (params as (hctx, num_regs, st_types)) (ctx as (itctx as (ictx, tct
               i1 %+ i2
             end
       end
-    | _ => raise Impossible $ "unknown case in tc_insts(): " ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, NONE) (itctx_names itctx) insts)
     fun extra_msg () = "\nwhen typechecking\n" ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, SOME 5) (itctx_names itctx) insts)
     val ret = main ()
               handle
@@ -744,7 +753,7 @@ fun tc_insts (params as (hctx, num_regs, st_types)) (ctx as (itctx as (ictx, tct
     ret
   end
 
-fun tc_hval (params as (hctx, num_regs, st_types)) h =
+fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
   let
     val () = println "tc_hval() started"
     val (itbinds, ((st, rctx, sctx, i), insts)) = unBind h
@@ -782,7 +791,7 @@ fun tc_hval (params as (hctx, num_regs, st_types)) h =
     ()
   end
 
-fun tc_prog (num_regs, st_types, init_st) (H, I) =
+fun tc_prog (num_regs, st_name2ty, st_int2name, init_st) (H, I) =
   let
     fun get_hval_type h =
       let
@@ -795,8 +804,8 @@ fun tc_prog (num_regs, st_types, init_st) (H, I) =
       end
     fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
-    val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval (hctx, num_regs, st_types) h)) H
-    val i = tc_insts (hctx, num_regs, st_types) (([], []), Rctx.empty, [], init_st) I
+    val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval (hctx, num_regs, st_name2ty, st_int2name) h)) H
+    val i = tc_insts (hctx, num_regs, st_name2ty, st_int2name) (([], []), Rctx.empty, [], init_st) I
   in
     i
   end

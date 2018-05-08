@@ -16,6 +16,7 @@ datatype word_const =
          | WCByte of Char.char
          | WCiBool of bool
          | WCLabel of label
+         | WCState of int
 
 (* atomic word values *)
 datatype 'ty word =
@@ -144,6 +145,7 @@ fun VConst a = VWord $ WConst a
 fun VLabel a = VWord $ WLabel a
 fun VNever a = VWord $ WNever a
 fun VBuiltin a = VWord $ WBuiltin a
+fun VState a = VConst $ WCState a
 
 fun VAppIT (e, arg) =
     case arg of

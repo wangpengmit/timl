@@ -16,6 +16,7 @@ fun wc2i c =
     | WCByte c => Char.ord c
     | WCiBool b => b2i b
     | WCLabel n => n
+    | WCState n => n
                      
 fun w2i w =
   case w of
@@ -54,10 +55,13 @@ fun enc inst =
     | AND => "16"
     | OR => "17"
     | BYTE => "1a"
+         | SHA3 => "20"
     | POP => "50"
     | MLOAD => "51"
     | MSTORE => "52"
     | MSTORE8 => "53"
+         | SLOAD => "54"
+         | SSTORE => "55"
     | JUMPI => "57"
     | JUMPDEST => "5b"
     | PUSH (n, w) => hex 1 (0x60+n-1) ^ hex n (w2i $ unInner w)
@@ -89,6 +93,9 @@ fun enc inst =
     | MACRO_int2byte => macro "MACRO_int2byte"
     | MACRO_inj _ => macro "MACRO_inj"
     | MACRO_br_sum => macro "MACRO_br_sum"
+         | MACRO_map_ptr => macro "MACRO_map_ptr"
+         | MACRO_vector_ptr => macro "MACRO_vector_ptr"
+         | MACRO_vector_push_back => macro "MACRO_vector_push_back"
   end
                                  
 fun enc_insts out insts =
@@ -128,10 +135,13 @@ fun size_inst inst =
     | AND => 1
     | OR => 1
     | BYTE => 1
+    | SHA3 => 1
     | POP => 1
     | MLOAD => 1
     | MSTORE => 1
     | MSTORE8 => 1
+    | SLOAD => 1
+    | SSTORE => 1
     | JUMPI => 1
     | JUMPDEST => 1
     | PUSH (n, w) => n+1
@@ -163,6 +173,9 @@ fun size_inst inst =
     | MACRO_int2byte => macro "MACRO_int2byte"
     | MACRO_inj _ => macro "MACRO_inj"
     | MACRO_br_sum => macro "MACRO_br_sum"
+         | MACRO_map_ptr => macro "MACRO_map_ptr"
+         | MACRO_vector_ptr => macro "MACRO_vector_ptr"
+         | MACRO_vector_push_back => macro "MACRO_vector_push_back"
   end
 
 fun size_insts insts =

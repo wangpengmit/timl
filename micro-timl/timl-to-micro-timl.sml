@@ -716,9 +716,9 @@ fun test4 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started typechecking ..."
-    val () = TypeCheck.st_types_ref := StMap.empty
+    val () = TypeCheck.clear_st_types ()
     val ((prog, _, _), _) = typecheck_prog empty prog
-    val st_types = !TypeCheck.st_types_ref
+    val st_types = fst $ TypeCheck.get_st_types ()
     val () = println "Finished typechecking"
     open MergeModules
     val decls = merge_prog prog []
