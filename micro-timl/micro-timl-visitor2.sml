@@ -315,6 +315,21 @@ fun default_ty_visitor2_vtable
                  TPreTuple (ts', i', i2') =>
                  TPreTuple (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i', #visit2_idx vtable this env i2 i2')
                | _ => error (TPreTuple (ts, i, i2)) other)
+          | TMap t =>
+            (case other of
+                 TMap t' =>
+                 TMap (#visit2_ty vtable this env t t')
+               | _ => error (TMap t) other)
+          | TState x =>
+            (case other of
+                 TState x' =>
+                 TState (visit2_eq op= this env x x')
+               | _ => error (TState x) other)
+          | TVectorPtr (data as (x, i)) =>
+            (case other of
+                 TVectorPtr (x', i') =>
+                 TVectorPtr (visit2_eq op= this env x x', #visit2_idx vtable this env i i')
+               | _ => error (TVectorPtr data) other)
       end
     fun visit2_TVar this env data other =
       let

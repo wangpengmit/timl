@@ -1369,7 +1369,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val (x, t, len) = get_vector (fn () => get_region_e e1) t1
                  val () = unify_mt r gctx (sctx, kctx) (t2, t)
                in
-                 (EBinOp (opr, e1, e2), Unit r, j1 %+ j2, st @+ (x, len %+ T1 r))
+                 (EBinOp (opr, e1, e2), Unit r, j1 %+ j2, st @+ (x, len %+ N1 r))
                end
              | EBStorageSet =>
                let

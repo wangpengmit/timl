@@ -82,6 +82,26 @@ fun assert_TArrow t =
   case t of
       TArrow a => a
     | _ => raise assert_fail $ "assert_TArrow; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TState t =
+  case t of
+      TState a => a
+    | _ => raise assert_fail $ "assert_TState; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TNat t =
+  case t of
+      TNat a => a
+    | _ => raise assert_fail $ "assert_TNat failed; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TNat_m t err =
+  case t of
+      TNat a => a
+    | _ => err $ "assert_TNat failed; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_fst_true p =
+  case p of
+      (true, a) => a
+    | _ => raise Impossible "assert_fst_true"
+fun assert_fst_false p =
+  case p of
+      (false, a) => a
+    | _ => raise Impossible "assert_fst_false"
                                                           
 infix 6 @++
 fun m @++ m' = StMapU.union m m'
@@ -89,6 +109,9 @@ fun m @++ m' = StMapU.union m m'
 infix 6 @%++
 val op@%++ = ISet.union
          
+infix  9 @!!
+fun m @!! k = StMapU.must_find m k
+                               
 fun decompose_state i =
   let
     val is = collect_IUnion i
@@ -97,6 +120,7 @@ fun decompose_state i =
                                   case i of
                                       VarI (ID (n, _), ls) => inl (n, ls)
                                     | IState m => inr m
+                                    | _ => raise Impossible "decompose_state: wrong idx"
                               ) is
     val m = foldl (fn (m, acc) => acc @++ m) StMap.empty maps
     val vars = ISetU.to_set $ map fst vars_info
@@ -116,4 +140,18 @@ fun IUnion_simp (i1, i2) =
     compose_state (vars1 @%++ vars2, IMapU.union vars_info1 vars_info2, map1 @++ map2)
   end
     
+fun idx_st_must_find i k =
+  let
+    val (_, _, m) = decompose_state i
+  in
+    m @!! k
+  end
+fun idx_st_add i p = IUnion_simp (i, IState (StMapU.single p))
+                                 
+infix  9 @%!!
+fun a @%!! b = idx_st_must_find a b
+
+infix  6 @%+
+fun a @%+ b = idx_st_add a b
+                                
 end

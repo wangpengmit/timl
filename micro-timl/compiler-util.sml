@@ -101,10 +101,6 @@ fun assert_TArrayPtr t =
   case t of
       TArrayPtr a => a
     | _ => raise assert_fail $ "assert_TArrayPtr; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-fun assert_TNat t =
-  case t of
-      TNat a => a
-    | _ => raise assert_fail $ "assert_TNat; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                  
 fun assert_EAbs e =
   case e of

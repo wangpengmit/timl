@@ -192,8 +192,8 @@ micro-timl/micro-timl-pp.sml
 micro-timl/pattern-ex.sml
 micro-timl/post-process.sml
 micro-timl/export-pp.sml
-micro-timl/timl-to-micro-timl.sml
 micro-timl/micro-timl-util-timl.sml
+micro-timl/timl-to-micro-timl.sml
 micro-timl/micro-timl-typecheck.sml
 micro-timl/micro-timl-locally-nameless.sml
 micro-timl/compiler-util.sml

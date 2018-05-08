@@ -807,7 +807,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck cps_tc_flags (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (cps_tc_flags, st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP
@@ -832,7 +832,7 @@ fun test1 dirname =
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck cc_tc_flags (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (cc_tc_flags, st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
@@ -877,7 +877,7 @@ fun test1 dirname =
     (* val () = check_CPSed_expr e *)
     (* val () = println "Finished post-pair-allocation form checking" *)
     val () = println "Started MicroTiML typechecking #4 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck code_gen_tc_flags (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (code_gen_tc_flags, st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #4"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t

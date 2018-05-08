@@ -384,6 +384,29 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
+      | TMap t =>
+        (
+          open_hbox ();
+          str "TMap";
+          space ();
+          str "(";
+          pp_t t;
+          str ")";
+          close_box ()
+        )
+      | TState x => str $ "TState " ^ x
+      | TVectorPtr (x, i) =>
+        (
+          open_hbox ();
+          str "TVectorPtr";
+          space ();
+          str "(";
+          str x;
+          comma ();
+          str $ str_i i;
+          str ")";
+          close_box ()
+        )
   end
 
 open WithPP
@@ -426,6 +449,12 @@ fun str_expr_un_op str_t opr =
     | EUUnfold => "unfold"
     | EUTiML opr => Operators.str_expr_un_op opr
 
+fun str_expr_tri_op opr =
+  case opr of
+      ETWrite => "EWrite"
+    | ETIte => "EIte"
+    | ETVectorSet => "EVectorSet"
+                                             
 fun str_e str_var str_i e =
   let
     val str_e = str_e str_var str_i
@@ -661,10 +690,31 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | ETriOp (ETWrite, e1, e2, e3) =>
+      | ETriOp (ETIte, e, e1, e2) =>
+        (
+          open_vbox (); open_hbox (); str "ETIte"; space (); str "("; pp_e e; close_box (); comma ();
+    	    open_vbox_noindent (); pp_e e1; comma ();
+            space ();
+            pp_e e2; close_box (); str ")"; close_box ()
+        )
+      (* | ETriOp (ETWrite, e1, e2, e3) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EWrite"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e1; *)
+      (*     comma (); *)
+      (*     pp_e e2; *)
+      (*     comma (); *)
+      (*     pp_e e3; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
+      | ETriOp (opr, e1, e2, e3) =>
         (
           open_hbox ();
-          str "EWrite";
+          str $ str_expr_tri_op opr;
           space ();
           str "(";
           pp_e e1;
@@ -674,13 +724,6 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           pp_e e3;
           str ")";
           close_box ()
-        )
-      | ETriOp (ETIte, e, e1, e2) =>
-        (
-          open_vbox (); open_hbox (); str "ETIte"; space (); str "("; pp_e e; close_box (); comma ();
-    	    open_vbox_noindent (); pp_e e1; comma ();
-            space ();
-            pp_e e2; close_box (); str ")"; close_box ()
         )
       | ECase (e, bind1, bind2) =>
         let
@@ -1012,6 +1055,21 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           close_box ()
         )
         (* pp_e e *)
+      | EAscState (e, i) =>
+        (
+	  open_vbox_noindent ();
+          open_hbox ();
+          str "EAscState";
+          space ();
+          str "(";
+          str $ str_i i;
+          close_box ();
+          comma ();
+          pp_e e;
+          str ")";
+          close_box ()
+        )
+        (* pp_e e *)
       | EAscType (e, t) =>
         (
 	  open_vbox_noindent ();
@@ -1172,6 +1230,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
+      | EState x => str $ "EState " ^ x
   end
 
 open WithPP

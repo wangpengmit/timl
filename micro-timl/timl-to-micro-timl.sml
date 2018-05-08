@@ -18,6 +18,7 @@ infixr 0 !!
 
 exception T2MTError of string
 
+open MicroTiMLUtilTiML
 open MicroTiMLUtil
        
 fun on_k ((n, bs) : S.kind) : bsort kind = KArrowTypes n $ KArrows bs KType
@@ -102,6 +103,9 @@ fun on_mt (t : S.mtype) =
       in
         TRec $ BindAnno ((TName dt_name, k), t)
       end
+    | S.TMap t => TMap $ on_mt t
+    | S.TState (x, _) => TState x
+    | S.TTuplePtr (ts, n, _) => TStorageTuplePtr (map on_mt ts, INat n)
 
 val trans_mt = on_mt
                  
@@ -123,9 +127,13 @@ end
 fun EV n = EVar (ID (n, dummy))
 
 fun on_e (e : S.expr) =
+  let
+    fun err () = raise Impossible $ "unknown case in tc: " ^ ToString.str_e Gctx.empty ToStringUtil.empty_ctx e
+  in
   case e of
       S.EVar (x, _) => EVar x
     | S.EConst (c, _) => EConst c
+    | S.EState (x, _) => EState x
     | S.EUnOp (opr, e, _) => EUnOp (EUTiML opr, on_e e)
     | S.EBinOp (opr, e1, e2) => EBinOp (opr, on_e e1, on_e e2)
     | S.ETriOp (opr, e1, e2, e3) => ETriOp (opr, on_e e1, on_e e2, on_e e3)
@@ -266,7 +274,9 @@ fun on_e (e : S.expr) =
       in
 	on_decls (decls, e)
       end
-    (* | _ => raise Unimpl "" *)
+    | S.ESetModify _ => err ()
+    | S.EGet _ => err ()
+  end
                  
 and add_constr_decls (dt, e_body) =
     let

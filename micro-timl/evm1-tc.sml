@@ -109,42 +109,6 @@ fun is_tuple_offset num_fields n =
       else NONE
     | NONE => NONE
 
-fun assert_TMap t =
-  case t of
-      TMap a => a
-    | _ => raise assert_fail $ "assert_TMap; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-
-fun assert_TState t =
-  case t of
-      TState a => a
-    | _ => raise assert_fail $ "assert_TState; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-
-fun assert_fst_true p =
-  case p of
-      (true, a) => a
-    | _ => raise Impossible "assert_fst_true"
-fun assert_fst_false p =
-  case p of
-      (false, a) => a
-    | _ => raise Impossible "assert_fst_false"
-
-(* fun TCell t = TTuplePtr ([t], N0) *)
-fun assert_TCell t =
-  let
-    fun err () = raise Impossible "assert_TCell"
-  in
-    case t of
-        TTuplePtr (ts, offset, true) =>
-        (case simp_i offset of
-             IConst (ICNat n, _) =>
-             (* todo: [ts] may contain embeded structs, so offset calculation may be more involved than this *)
-             (case nth_error ts n of
-                  SOME t => t
-                | NONE => err ())
-           | _ => err ())
-      | _ => err ()
-  end
-
 fun assert_base_storage_ty t =
     case t of
         TNat _ => ()
@@ -547,15 +511,10 @@ fun tc_inst (hctx, num_regs, st_types) (ctx as (itctx as (ictx, tctx), rctx, sct
     | MACRO_map_ptr =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
-        val t = 
-            case t1 of
-                TState x =>
-                let
-                  val t = assert_fst_true $ must_find st_types x
-                in
-                  t
-                end
-              | _ => assert_TMap $ assert_TCell t1
+        val t1 = whnf itctx t1
+        val t = case t1 of
+                    TState x => assert_fst_true $ st_types @!! x
+                  | _ => assert_TMap $ assert_TCell t1
         val () = assert_TInt t0
       in
         ((itctx, rctx, t :: sctx, st), T0)

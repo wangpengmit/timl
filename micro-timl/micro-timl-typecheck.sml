@@ -34,15 +34,16 @@ fun m @! k = StMap.find (m, k)
 infix  6 @+
 fun m @+ a = StMap.insert' (a, m)
                            
-infix  9 @!!
-fun m @!! k = StMapU.must_find m k
 infix 6 @--
 fun m @-- m' = StMapU.sub m m'
+                          
 infix 6 @++
-fun m @++ m' = StMapU.union m m'
-                            
+infix  9 @!!
+         
 infix 6 @%++
-val op@%++ = ISet.union
+        
+infix 6 @%!!
+infix  6 @%+
          
 fun is_wf_bsort_UVarBS data = UVarBS data
     
@@ -235,8 +236,12 @@ fun add_kinding_it new (ictx, tctx) = (ictx, new :: tctx)
 fun ictx_names ictx = map fst ictx
 fun itctx_names (ictx, tctx) = (map fst ictx, map fst tctx)
                                  
-fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
+fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
   let
+    (* val kc = kc st_types *)
+    (* fun check_state_field x = *)
+    (*   if Option.isSome $ st_types @! x then () *)
+    (*   else raise Impossible $ sprintf "state field $ not found" [x] *)
     fun main () =
   case t_input of
       TVar (x, ks) =>
@@ -400,6 +405,20 @@ fun kc (ctx as (ictx, tctx) : icontext * tcontext) t_input =
         val i = sc_against_sort ictx (i, STime)
       in
         (TArrowEVM (st, rctx, ts, i), KType)
+      end
+    | TMap t => (TMap $ kc_against_KType ctx t, KType)
+    | TState x => 
+      let
+        (* val () = check_state_field x *)
+      in
+	(TState x, KType)
+      end
+    | TVectorPtr (x, i) => 
+      let
+        (* val () = check_state_field x *)
+        val i = sc_against_sort ictx (i, SNat)
+      in
+	(TVectorPtr (x, i), KType)
       end
     fun extra_msg () = "\nwhen kindchecking: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t_input)
     val ret = main ()
@@ -758,6 +777,8 @@ fun get_prim_expr_bin_op_res_ty opr =
 
 val T0 = T0 dummy
 val T1 = T1 dummy
+val N0 = N0 dummy
+val N1 = N1 dummy
 
 (* structure IntMap = IntBinaryMap *)
 (* structure HeapMap = IntMap *)
@@ -874,6 +895,28 @@ fun a |> b = EAscTime (a, b)
 fun check_sub_map ictx (pre_st, st) =
   StMap.appi (fn (k, v) => check_prop ictx $ v %= st @!! k) pre_st
              
+fun assert_TMap t =
+  case t of
+      TMap a => a
+    | _ => raise assert_fail $ "assert_TMap; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+
+(* fun TCell t = TTuplePtr ([t], N0) *)
+fun assert_TCell t =
+  let
+    fun err () = raise Impossible "assert_TCell"
+  in
+    case t of
+        TTuplePtr (ts, offset, true) =>
+        (case Simp.simp_i offset of
+             IConst (ICNat n, _) =>
+             (* todo: [ts] may contain embeded structs, so offset calculation may be more involved than this *)
+             (case nth_error ts n of
+                  SOME t => t
+                | NONE => err ())
+           | _ => err ())
+      | _ => err ()
+  end
+
 val anno_EVar = ref false
 val anno_EProj = ref false
 val anno_EFold = ref false
@@ -902,12 +945,25 @@ val anno_EIte_e2_time = ref false
 
 val allow_substate_call = ref false
                               
-fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
+fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
   let
+    val tc = tc st_types
+    val tc_against_ty = tc_against_ty st_types
+    val tc_against_ty_time = tc_against_ty_time st_types
+    val tc_against_time = tc_against_time st_types
     (* val () = print "tc() start: " *)
     (* val e_input_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input *)
     (* val () = print $ e_input_str *)
+    fun err () = raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
     val itctx = (ictx, tctx)
+    fun get_vector t1 =
+      let
+        val x = assert_TState t1 
+        val t = assert_fst_false $ st_types @!! x 
+        val len = st @%!! x
+      in
+        (x, t, len)
+      end
     fun main () =
         case e_input of
         EVar x =>
@@ -982,6 +1038,14 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
           val () = println "end Int2Nat"
         in
           (EUnOp (EUTiML EUInt2Nat, e), TSomeNat (), j, st)
+        end
+      | EUnOp (opr as EUTiML EUStorageGet, e) =>
+        let
+          val (e, t, j, st) = tc (ctx, st) e
+          val t = whnf itctx t
+          val t = assert_TCell t
+        in
+          (EUnOp (opr, e), t, j, st)
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
@@ -1134,14 +1198,65 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
                           | _ => raise MTCError "ERead 1"
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val t2 = whnf itctx t2
-          val i2 = case t2 of
-                       TNat i => i
-                     | _ => raise MTCError "ERead 2"
+          val i2 = assert_TNat_m t2 (fn s => raise MTCError $ "ERead: " ^ s)
           val () = check_prop ictx (i2 %< i1)
           val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
         in
           (ERead (e1, e2), t, j1 %+ j2, st)
         end
+      | EBinOp (EBMapPtr, e1, e2) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val t1 = whnf itctx t1
+          val t = case t1 of
+                      TState x => assert_fst_true $ st_types @!! x 
+                    | _ => assert_TMap $ assert_TCell t1
+          val (e2, j2, st) = tc_against_ty (ctx, st) (e2, TInt)
+        in
+          (EBinOp (EBMapPtr, e1, e2), t, j1 %+ j2, st)
+        end
+      | EBinOp (EBVectorGet, e1, e2) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val (e2, t2, j2, st) = tc (ctx, st) e2
+          val i = assert_TNat_m t2 (fn s => raise MTCError $ "EVectorGet: " ^ s)
+          val (x, t, len) = get_vector $ whnf itctx t1
+          val () = check_prop ictx (i %< len)
+        in
+          (EBinOp (EBVectorGet, e1, e2), t, j1 %+ j2, st)
+        end
+      | EBinOp (EBVectorPushBack, e1, e2) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val (e2, t2, j2, st) = tc (ctx, st) e2
+          val (x, t, len) = get_vector $ whnf itctx t1
+          val () = is_eq_ty itctx (t2, t)
+        in
+          (EBinOp (EBVectorPushBack, e1, e2), TUnit, j1 %+ j2, st @%+ (x, len %+ N1))
+        end
+      | ETriOp (ETVectorSet, e1, e2, e3) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val (e2, t2, j2, st) = tc (ctx, st) e2
+          val i = assert_TNat_m t2 (fn s => raise MTCError $ "EVectorSet: " ^ s)
+          val (e3, t3, j3, st) = tc (ctx, st) e3
+          val t1 = whnf itctx t1
+          val (x, t, len) = get_vector t1
+          val () = is_eq_ty itctx (t3, t)
+          val () = check_prop ictx (i %< len)
+        in
+          (ETriOp (ETVectorSet, e1, e2, e3), TUnit, j1 %+ j2 %+ j3, st)
+        end
+      | EBinOp (EBStorageSet, e1, e2) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val t1 = whnf itctx t1
+          val t = assert_TCell t1
+          val (e2, j2, st) = tc_against_ty (ctx, st) (e2, t)
+        in
+          (EBinOp (EBStorageSet, e1, e2), TUnit, j1 %+ j2, st)
+        end
+      | EState x => (EState x, TState x, T0, st)
       | EBinOp (EBNat opr, e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
@@ -1184,12 +1299,12 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
           val t1 = whnf itctx t1
           val (t, i1) = case t1 of
                             TArr data => data
-                          | _ => raise MTCError "ERead 1"
+                          | _ => raise MTCError "EWrite 1"
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val t2 = whnf itctx t2
           val i2 = case t2 of
                        TNat i => i
-                     | _ => raise MTCError "ERead 2"
+                     | _ => raise MTCError "EWrite 2"
           val () = check_prop ictx (i2 %< i1)
           val (e3, j3, st) = tc_against_ty (ctx, st) (e3, t)
           val (e1, e2, e3) = if !anno_EWrite then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
@@ -1499,6 +1614,14 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
         in
           (e %: t2, t2, i, st)
         end
+      | EAscState (e, st') =>
+        let
+          val (e, t, i, st) = tc (ctx, st) e
+          val st' = sc_against_sort ictx (st', SState)
+          val () = is_eq_idx ictx (st, st')
+        in
+          (EAscState (e, st'), t, i, st')
+        end
       | ENever t =>
         let
           val t = kc_against_kind itctx (t, KType)
@@ -1623,7 +1746,12 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
         in
           (EHalt (e, t), t, i_e, st)
         end
-      | _ => raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
+      | EAbsConstr _ => err ()
+      | EAppConstr _ => err ()
+      | EVarConstr _ => err ()
+      | EMatchSum _ => err ()
+      | EMatchPair _ => err ()
+      | EMatchUnfold _ => err ()
     fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, SOME 5) (ctx_names ctx) e_input)
     val (e_output, t, i, st) = main ()
                  handle ForgetError (r, m) => raise MTCError ("Forgetting error: " ^ m ^ extra_msg ())
@@ -1641,7 +1769,7 @@ fun tc (ctx as (ictx, tctx, ectx : econtext), st) e_input =
     (e_output, t, i, st)
   end
 
-and tc_against_ty (ctx as (ictx, tctx, _), st) (e, t) =
+and tc_against_ty st_types (ctx as (ictx, tctx, _), st) (e, t) =
     let
       (* val () = print "tc_against_ty() start:\n" *)
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
@@ -1650,7 +1778,7 @@ and tc_against_ty (ctx as (ictx, tctx, _), st) (e, t) =
       (*       e_str, *)
       (*       t_str *)
       (*     ] *)
-      val (e, t', i, st) = tc (ctx, st) e
+      val (e, t', i, st) = tc st_types (ctx, st) e
       (* val () = print "tc_against_ty() to compare types:\n" *)
       (* val () = println $ sprintf "  $\n  $\n" [ *)
       (*       substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t', *)
@@ -1664,12 +1792,12 @@ and tc_against_ty (ctx as (ictx, tctx, _), st) (e, t) =
       (e, i, st)
     end
     
-and tc_against_time (ctx as (ictx, tctx, _), st) (e, i) =
+and tc_against_time st_types (ctx as (ictx, tctx, _), st) (e, i) =
     let
       (* val () = print "tc_against_time() start:\n" *)
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
       (* val () = println e_str *)
-      val (e, t, i', st) = tc (ctx, st) e
+      val (e, t, i', st) = tc st_types (ctx, st) e
       (* val () = println "before tc_against_time()/check_prop()" *)
       val () = check_prop ictx (i' %<= i)
       (* val () = println "tc_against_time() finished:" *)
@@ -1678,12 +1806,12 @@ and tc_against_time (ctx as (ictx, tctx, _), st) (e, i) =
       (e, t, st)
     end
     
-and tc_against_ty_time (ctx as (ictx, tctx, _), st) (e, t, i) =
+and tc_against_ty_time st_types (ctx as (ictx, tctx, _), st) (e, t, i) =
     let
       (* val () = print "tc_against_ty_time() start:\n" *)
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
       (* val () = println e_str *)
-      val (e, t', st) = tc_against_time (ctx, st) (e, i)
+      val (e, t', st) = tc_against_time st_types (ctx, st) (e, i)
       (* val () = print "tc_against_ty_time() to compare types:\n" *)
       (* val t_str = substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
       (* val () = println $ sprintf "  $\n  $\n" [ *)
@@ -1756,7 +1884,7 @@ datatype tc_flag =
        | Anno_ECase_e2_time
        | Anno_EIte_e2_time
 
-fun typecheck flags ctx e =
+fun typecheck (flags, st_types) ctx e =
   let
     val mem = fn (a : tc_flag) => mem op= a
     val () = anno_EVar := mem Anno_EVar flags
@@ -1784,7 +1912,7 @@ fun typecheck flags ctx e =
     val () = anno_EHalt := mem Anno_EHalt flags
     val () = anno_ECase_e2_time := mem Anno_ECase_e2_time flags
     val () = anno_EIte_e2_time := mem Anno_EIte_e2_time flags
-    val ret = runWriter (fn () => tc ctx e) ()
+    val ret = runWriter (fn () => tc st_types ctx e) ()
   in
     ret
   end
@@ -1823,7 +1951,9 @@ fun test1 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started TiML typechecking ..."
+    val () = TypeCheck.st_types_ref := StMap.empty
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
+    val st_types = !TypeCheck.st_types_ref
     val vcs = VCSolver.vc_solver filename vcs
     val () = if null vcs then ()
              else
@@ -1843,6 +1973,7 @@ fun test1 dirname =
     (* val () = println "" *)
     val () = println "Started translating ..."
     val e = trans_e e
+    val st_types = StMap.map (mapSnd trans_mt) st_types
     val () = println "Finished translating"
     open ExportPP
     val () = pp_e (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
@@ -1850,7 +1981,7 @@ fun test1 dirname =
     open TestUtil
     open ExportPP
     val () = println "Started MicroTiML typechecking ..."
-    val ((_, t, i, st), vcs, admits) = typecheck [] (([], [], []), IEmptyState) e
+    val ((_, t, i, st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t

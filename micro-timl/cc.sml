@@ -1012,7 +1012,9 @@ fun test1 dirname =
     open TypeCheck
     val () = TypeCheck.turn_on_builtin ()
     val () = println "Started TiML typechecking ..."
+    val () = TypeCheck.st_types_ref := StMap.empty
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
+    val st_types = !TypeCheck.st_types_ref
     val vcs = VCSolver.vc_solver filename vcs
     val () = if null vcs then ()
              else
@@ -1034,6 +1036,7 @@ fun test1 dirname =
     (* val () = println "" *)
     val () = println "Started translating ..."
     val e = trans_e e
+    val st_types = StMap.map (mapSnd trans_mt) st_types
     val () = println "Finished translating"
     (* val () = pp_e $ export empty_ctx e *)
     (* val () = println "" *)
@@ -1041,7 +1044,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck cps_tc_flags (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (cps_tc_flags, st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP
@@ -1067,7 +1070,7 @@ fun test1 dirname =
     val () = println e_str
     val () = println ""
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck cc_tc_flags (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (cc_tc_flags, st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
@@ -1091,7 +1094,7 @@ fun test1 dirname =
     (* val () = println "Checking closed-ness of ERec's" *)
     (* val () = check_ERec_closed e *)
     val () = println "Started MicroTiML typechecking #3 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck [] (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #3"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
