@@ -1,4 +1,4 @@
-(* test-state.timl *)
+test-state.timl
 (* unit-test-basic1.timl *)
 
 (* pervasive.timl *)
@@ -8,7 +8,7 @@
 (* array.timl *)
 (* string.timl *)
 
-stdlib.pkg
+(* stdlib.pkg *)
                
 (* unit-test-basic.timl *)
             
@@ -23,7 +23,7 @@ stdlib.pkg
 (* single-var.timl *)
 (* bug.timl *)
 (* pldi-2017-review-example.timl *)
-braun-tree-sortedness.timl
+(* braun-tree-sortedness.timl *)
 (* rbt-sortedness.timl *)
 
 (* ragged-matrix.timl *)

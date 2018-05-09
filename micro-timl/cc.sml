@@ -596,7 +596,7 @@ fun cc_expr_visitor_vtable cast () =
                   e
                 end
               | _ => #visit_expr vtable this env e (* call super *)
-                                 (* val () = println $ "cc() finished: " ^ e_str *)
+        (* val () = println $ "cc() finished: " ^ e_str *)
       in
         e
       end
@@ -616,13 +616,12 @@ and cc b =
 
 and cc_abs e_all =
     let
-      (* val () = println $ "cc_abs(): before open_collect_EAbsIT()" *)
-      val (binds, e) = open_collect_EAbsIT e_all
-      (* val () = println $ "cc_abs(): after open_collect_EAbsIT()" *)
+      val () = println $ "cc_abs(): before open_collect_EAbsIT()"
+      val (binds, e) = open_collect_EAbsIT e_all (* todo: this could be slow, should be combined *)
+      val () = println $ "cc_abs(): after open_collect_EAbsIT()"
     in
       case e of
           ERec bind => cc_ERec e_all binds bind
-        (* | EAbs bind => cc_EAbs e_all binds bind *)
         | _ => raise Impossible "cc_abs"
     end
 
@@ -632,19 +631,19 @@ and cc_ERec e_all outer_binds bind =
       val () = println $ "cc() on: " ^ fst name_x
       val x = fresh_evar ()
       val e = open0_e_e x e
-      (* val () = println $ "cc(): before open_collect_EAbsIT()" *)
-      val (inner_binds, e) = open_collect_EAbsIT e
-      (* val () = println $ "cc(): after open_collect_EAbsIT()" *)
+      val () = println $ "cc(): before open_collect_EAbsIT()"
+      val (inner_binds, e) = open_collect_EAbsIT e (* todo: this could be slow, should be combined *)
+      val () = println $ "cc(): after open_collect_EAbsIT()"
       val (st, (t_z, (name_z, e))) = assert_EAbs e
       val z = fresh_evar ()
       val e = open0_e_e z e
       val e = cc e
-      (* val () = println $ "cc() really on: " ^ fst name_x *)
-      (* val () = println $ "cc(): before collect_TForallIT_open_with()" *)
+      val () = println $ "cc() really on: " ^ fst name_x
+      val () = println $ "cc(): before collect_TForallIT_open_with()"
       val (_, t_arrow) = collect_TForallIT_open_with inner_binds t_x
-      (* val () = println $ "cc(): after collect_TForallIT_open_with()" *)
+      val () = println $ "cc(): after collect_TForallIT_open_with()"
       val (_, i, _) = assert_TArrow t_arrow
-      (* val () = println $ "cc(): before getting free vars" *)
+      val () = println $ "cc(): before getting free vars"
       val excluded = IntBinarySet.addList (!code_labels, map unFree_e [x, z])
       val ys_anno = free_evars_with_anno excluded e
       val (ys, sigmas) = unzip $ ys_anno
@@ -655,15 +654,15 @@ and cc_ERec e_all outer_binds bind =
             | (inr (x, _, _), inr (x', _, _)) => x = x'
             | _ => false
       val outer_inner_binds = outer_binds @ inner_binds
-      (* val () = println "before free_ivars" *)
+      val () = println "before free_ivars"
       (* val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e *)
-      val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *)
-      (* val () = println "after free_ivars" *)
+      val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *) (* todo: e can be much smaller than e_all because e is after CC, so collecting free vars on e_all could be slow *)
+      val () = println "after free_ivars"
       (* val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e *)
       val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *)
       val betas = map inl free_ivars @ map inr free_tvars
       (* val betas = diff eq_bind betas outer_inner_binds *) (* no need when we use e_all to collect free vars *)
-      (* val () = println $ "cc(): after getting free vars" *)
+      val () = println $ "cc(): after getting free vars"
       val t_env = TRecord sigmas
       val t_z = cc_t t_z
       val t_arrow = cont_type ((st, TProd (t_env, t_z)), i)
@@ -679,64 +678,33 @@ and cc_ERec e_all outer_binds bind =
       val def_x = EPack (cc_t t_x, t_env, EPair (EAppITs_binds (EV z_code, betas @ outer_binds), EV z_env))
       val len_ys = length ys
       val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ERecordProj (len_ys, i) $ EV z_env)) ys
-      (* val () = println $ "cc(): before ELetManyClose()" *)
+      val () = println $ "cc(): before ELetManyClose()"
       val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, e)
-      (* val () = println $ "cc(): after ELetManyClose()" *)
+      val () = println $ "cc(): after ELetManyClose()"
       val e = EAbsPairClose (st, (z_env, "z_env", t_env), (z, fst name_z, t_z), e)
       val betas_outer_inner_binds = betas @ outer_inner_binds
-      (* val () = println $ "cc(): before close_EAbsITs()" *)
+      val () = println $ "cc(): before close_EAbsITs()"
       val e = close_EAbsITs (betas_outer_inner_binds, e)
-      (* val () = println $ "cc(): after close_EAbsITs()" *)
-      (* val () = println $ "cc(): before close_TForallITs()" *)
+      val () = println $ "cc(): after close_EAbsITs()"
+      val () = println $ "cc(): before close_TForallITs()"
       val t_rawcode = close_TForallITs (betas_outer_inner_binds, t_arrow)
-      (* val () = println $ "cc(): after close_TForallITs()" *)
+      val () = println $ "cc(): after close_TForallITs()"
       (* val t_code = TForallITClose (inner_binds, t_arrow) *)
       fun decorate_code_name s = "code_" ^ s
       val v_code = ERec $ close0_e_e_anno ((z_code,  decorate_code_name $ fst name_x, t_rawcode), e)
       fun EV_anno (y, anno) = EAscType (EV y, anno)
       val v_env = ERecord $ map EV_anno ys_anno
       val x_code = fresh_evar ()
-      (* val () = println $ "cc(): before close_TForallITs()#2" *)
+      val () = println $ "cc(): before close_TForallITs()#2"
       val e = EPack (cc_t $ close_TForallITs (outer_binds, t_x), t_env, EPair (EAppITs_binds (EV x_code(* v_code *), betas), v_env))
-      (* val () = println $ "cc(): after close_TForallITs()#2" *)
+      val () = println $ "cc(): after close_TForallITs()#2"
       val x_v_code = (x_code, decorate_code_name $ fst name_x, v_code)
       val () = add_code_block x_v_code
       (* val e = ELetClose (x_v_code, e) *)
-      (* val () = println $ "cc() done on: " ^ fst name_x *)
+      val () = println $ "cc() done on: " ^ fst name_x
     in
       e
     end
-
-(* and cc_EAbs e_all outer_binds bind = *)
-(*     let *)
-(*       val (t_z, (name_z, e)) = unBindAnnoName bind *)
-(*       val z = fresh_evar () *)
-(*       val e = open0_e_e z e *)
-(*       val (e, i) = assert_EAscTime e *)
-(*       val t_e_all = TForallIT (outer_binds, TArrow (t_z, i, TUnit)) *)
-(*       val (ys, sigmas) = unzip $ free_vars_with_anno e_all *)
-(*       val betas = free_tvars e_all *)
-(*       val t_env = cc_t $ TRecord sigmas *)
-(*       val t_z = cc_t t_z *)
-(*       val t_arrow = TArrow (TProd (t_env, t_z), i, TUnit) *)
-(*       (* val t_rawcode = TForallITClose (betas @ outer_binds, t_arrow) *) *)
-(*       (* val t_code = TForallITClose (outer_binds, t_arrow) *) *)
-(*       val z_env = fresh_evar () *)
-(*       val len_ys = length ys *)
-(*       val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ERecordProj (len_ys, i) $ EV z_env)) ys *)
-(*       val e = ELetManyClose (ys_defs, cc e) *)
-(*       val e = EAbsPairClose ((z_env, "z_env", t_env), (z, name_z, t_z), e) *)
-(*       val v_code = EAbsITClose (betas @ outer_binds, e) *)
-(*       val v_env = ERecord ys *)
-(*       val e = EPack (cc_t $ t_e_all, t_env, EPair (EAppITs (v_code, betas), v_env)) *)
-(*     in *)
-(*       e *)
-(*     end *)
-
-(* fun free_itvars_with_anno_e e = *)
-(*     let *)
-(*     in *)
-(*     end *)
 
 fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
   let

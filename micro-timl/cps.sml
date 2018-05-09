@@ -241,7 +241,6 @@ fun cps_t t =
       in
         TAbsT t
       end
-    | TAppT (t1, t2) => TAppT (cps_t t1, cps_t t2)
     | TAbsI bind => 
       let
         val ((name_a, s_a), t) = unBindAnno2 bind
@@ -252,6 +251,7 @@ fun cps_t t =
       in
         TAbsI t
       end
+    | TAppT (t1, t2) => TAppT (cps_t t1, cps_t t2)
     | TAppI (t, i) => TAppI (cps_t t, i)
     | _ =>
       let
@@ -559,28 +559,23 @@ fun cps (e, t_e, F) (k, j_k) =
               | EUFold t_fold =>
                 let
                   val (e, t_e) = assert_EAscType e
-                  val t_fold = cps_t t_fold
                 in
-                  (t_e, EUFold t_fold)
-                end
-              | EUUnfold =>
-                let
-                  val (e, t_e) = assert_EAscType e
-                in
-                  (t_e, opr)
-                end
-              | EUTiML (EUProj _) =>
-                let
-                  val (e, t_e) = assert_EAscType e
-                in
-                  (t_e, opr)
+                  (t_e, EUFold $ cps_t t_fold)
                 end
               | EUTiML EUPrintc =>
                 (TByte, opr)
               (* | EUTiML EUPrint => *)
               (*   (TString, opr) *)
-              | EUTiML EUInt2Str =>
+              (* | EUTiML EUInt2Str => *)
+              (*   (TInt, opr) *)
+              | EUTiML EUInt2Nat =>
                 (TInt, opr)
+              | _ =>
+                let
+                  val (e, t_e) = assert_EAscType e
+                in
+                  (t_e, opr)
+                end
       in
         cps_EUnOp t_e (fn x => EUnOp (opr, EV x))
       end
@@ -774,6 +769,14 @@ val cps_tc_flags =
       [Anno_EApp, Anno_EAppT, Anno_EAppI, Anno_EFold, Anno_EUnfold, Anno_EPack, Anno_EPackI, Anno_EUnpack, Anno_EUnpackI, Anno_EBPrim, Anno_ENew, Anno_ERead, Anno_ENat, Anno_ENatCmp, Anno_EProj, Anno_ECase, Anno_ELet, Anno_EWrite, Anno_EHalt,
        Anno_EIfi,
        Anno_EVectorSet,
+       Anno_EMapPtr,
+       Anno_EVectorGet,
+       Anno_EVectorPushBack,
+       Anno_EStorageSet,
+       Anno_EUPrim,
+       Anno_EArrayLen,
+       Anno_ENat2Int,
+       Anno_EStorageGet,
        Anno_EProj_state,
        Anno_EPrintc_state,
        Anno_EUPrim_state,
