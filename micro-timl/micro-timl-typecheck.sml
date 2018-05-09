@@ -891,6 +891,8 @@ infix 0 %:
 fun a %: b = smart_EAscType (a, b)
 infix 0 |>
 fun a |> b = EAscTime (a, b)
+infix 0 %~
+fun a %~ b = EAscState (a, b)
 
 fun check_sub_map ictx (pre_st, st) =
   StMap.appi (fn (k, v) => check_prop ictx $ v %= st @!! k) pre_st
@@ -942,6 +944,45 @@ val anno_ELet = ref false
 val anno_EHalt = ref false
 val anno_ECase_e2_time = ref false
 val anno_EIte_e2_time = ref false
+val anno_EIfi = ref false
+val anno_EVectorSet = ref false
+
+val anno_EProj_state = ref false
+val anno_EPrintc_state = ref false
+val anno_EUPrim_state = ref false
+val anno_EArrayLen_state = ref false
+val anno_ENat2Int_state = ref false
+val anno_EInt2Nat_state = ref false
+val anno_EStorageGet_state = ref false
+val anno_EInj_state = ref false
+val anno_EFold_state = ref false
+val anno_EUnfold_state = ref false
+val anno_EApp_state = ref false
+val anno_EPair_state = ref false
+val anno_EBPrim_state = ref false
+val anno_ENew_state = ref false
+val anno_ERead_state = ref false
+val anno_EMapPtr_state = ref false
+val anno_EVectorGet_state = ref false
+val anno_EVectorPushBack_state = ref false
+val anno_EVectorSet_state = ref false
+val anno_EStorageSet_state = ref false
+val anno_ENat_state = ref false
+val anno_ENatCmp_state = ref false
+val anno_EWrite_state = ref false
+val anno_ECase_state = ref false
+val anno_EIte_state = ref false
+val anno_EIfi_state = ref false
+val anno_EAppT_state = ref false
+val anno_EAppI_state = ref false
+val anno_EPack_state = ref false
+val anno_EPackI_state = ref false
+val anno_EUnpack_state = ref false
+val anno_EUnpackI_state = ref false
+val anno_ELet_state = ref false
+val anno_ENewArrayValues_state = ref false
+val anno_EHalt_state = ref false
+val anno_EAbs_state = ref false
 
 val allow_substate_call = ref false
                               
@@ -992,12 +1033,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                              TBinOp (TBProd, t1, t2) => (t1, t2)
                            | _ => raise MTCError "EProj"
           val e = if !anno_EProj then e %: t_e else e
+          val e = if !anno_EProj_state then e %~ st else e
         in
           (EProj (proj, e), choose (t1, t2) proj, i, st)
         end
       | EUnOp (EUTiML EUPrintc, e) =>
         let
           val (e, i, st) = tc_against_ty (ctx, st) (e, TByte)
+          val e = if !anno_EPrintc_state then e %~ st else e
         in
           (EUnOp (EUTiML EUPrintc, e), TUnit, i, st)
         end
@@ -1010,6 +1053,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       | EUnOp (EUTiML (EUPrim opr), e) =>
         let
           val (e, i, st) = tc_against_ty (ctx, st) (e, get_prim_expr_un_op_arg_ty opr)
+          val e = if !anno_EUPrim_state then e %~ st else e
         in
           (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i, st)
         end
@@ -1019,6 +1063,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (_, i) = case whnf itctx t of
                             TArr data => data
                           | _ => raise MTCError "EArrayLen"
+          val e = if !anno_EArrayLen_state then e %~ st else e
         in
           (EUnOp (EUTiML EUArrayLen, e), TNat i, j, st)
         end
@@ -1028,6 +1073,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i = case whnf itctx t of
                             TNat data => data
                           | _ => raise MTCError "ENat2Int"
+          val e = if !anno_ENat2Int_state then e %~ st else e
         in
           (EUnOp (EUTiML EUNat2Int, e), TInt, j, st)
         end
@@ -1036,6 +1082,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = println "begin Int2Nat"
           val (e, j, st) = tc_against_ty (ctx, st) (e, TInt)
           val () = println "end Int2Nat"
+          val e = if !anno_EInt2Nat_state then e %~ st else e
         in
           (EUnOp (EUTiML EUInt2Nat, e), TSomeNat (), j, st)
         end
@@ -1044,6 +1091,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e, t, j, st) = tc (ctx, st) e
           val t = whnf itctx t
           val t = assert_TCell t
+          val e = if !anno_EStorageGet_state then e %~ st else e
         in
           (EUnOp (opr, e), t, j, st)
         end
@@ -1052,6 +1100,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t' = kc_against_kind itctx (t', KType)
           val (e, t, i, st) = tc (ctx, st) e
           val e = if !anno_EInj then e %: t else e
+          val e = if !anno_EInj_state then e %~ st else e
         in
           (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i, st)
         end
@@ -1069,6 +1118,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e, i, st) = tc_against_ty (ctx, st) (e, t) 
           (* val () = println "EFold: after tc_against_ty" *)
           val e = if !anno_EFold then e %: t else e
+          val e = if !anno_EFold_state then e %~ st else e
         in
           (EFold (t', e), t', i, st)
         end
@@ -1081,6 +1131,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                                  TRec data => unBindAnnoName data
                                | _ => raise MTCError "EUnfold"
           val e = if !anno_EUnfold then e %: t_e else e
+          val e = if !anno_EUnfold_state then e %~ st else e
         in
           (EUnfold e, TAppITs (subst0_t_t t t1) args, i, st)
         end
@@ -1089,6 +1140,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t_e1, i1, st) = tc (ctx, st) e1
           val st_e1 = st
           val (e2, t_e2, i2, st) = tc (ctx, st) e2
+          val st_e2 = st
           fun check_sub_domain pre_st st =
             let
               val (pre_vars, _, pre_map) = decompose_state pre_st
@@ -1156,8 +1208,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 | _ => raise MTCError "EApp"
           val () = is_eq_ty itctx (t_e2, t1)
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
-          val e1 = if !anno_EApp_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_EApp_state_2 then e2 %~ st_e2 else e2
+          val (e1, e2) = if !anno_EApp_state then (e1 %~ st_e1, e2 %~ st_e2) else (e1, e2)
         in
           (EApp (e1, e2), t2, i1 %+ i2 %+ T1 %+ i, st)
         end
@@ -1167,8 +1218,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val st_e1 = st
           val (e2, t2, i2, st) = tc (ctx, st) e2
           val (e1, e2) = if !anno_EPair then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val e1 = if !anno_EPair_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_EPair_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_EPair_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EPair (e1, e2), TProd (t1, t2), i1 %+ i2, st)
         end
@@ -1182,8 +1232,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EBPrim then (e1 %: t1, e2 %: t2) else (e1, e2)
           val e = EBinOpPrim (opr, e1, e2)
           val t = get_prim_expr_bin_op_res_ty opr
-          val e1 = if !anno_EPrim_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_EPrim_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_EBPrim_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (e, t, i1 %+ i2, st)
         end
@@ -1197,8 +1246,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                     | _ => raise MTCError "ENew"
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val (e1, e2) = if !anno_ENew then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val e1 = if !anno_ENew_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_ENew_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_ENew_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (ENew (e1, e2), TArr (t2, i), j1 %+ j2, st)
         end
@@ -1214,8 +1262,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i2 = assert_TNat_m t2 (fn s => raise MTCError $ "ERead: " ^ s)
           val () = check_prop ictx (i2 %< i1)
           val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val e1 = if !anno_ERead_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_ERead_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_ERead_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (ERead (e1, e2), t, j1 %+ j2, st)
         end
@@ -1228,8 +1275,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                       TState x => assert_fst_true $ st_types @!! x 
                     | _ => assert_TMap $ assert_TCell t1
           val (e2, j2, st) = tc_against_ty (ctx, st) (e2, TInt)
-          val e1 = if !anno_EMapPtr_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_EMapPtr_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_EMapPtr_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EBinOp (EBMapPtr, e1, e2), t, j1 %+ j2, st)
         end
@@ -1241,8 +1287,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i = assert_TNat_m t2 (fn s => raise MTCError $ "EVectorGet: " ^ s)
           val (x, t, len) = get_vector $ whnf itctx t1
           val () = check_prop ictx (i %< len)
-          val e1 = if !anno_EVectorGet_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_EVectorGet_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_EVectorGet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EBinOp (EBVectorGet, e1, e2), t, j1 %+ j2, st)
         end
@@ -1253,21 +1298,24 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val (x, t, len) = get_vector $ whnf itctx t1
           val () = is_eq_ty itctx (t2, t)
-          val e1 = if !anno_EVectorPushBack_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_EVectorPushBack_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_EVectorPushBack_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EBinOp (EBVectorPushBack, e1, e2), TUnit, j1 %+ j2, st @%+ (x, len %+ N1))
         end
       | ETriOp (ETVectorSet, e1, e2, e3) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
+          val st_e1 = st
           val (e2, t2, j2, st) = tc (ctx, st) e2
+          val st_e2 = st
           val i = assert_TNat_m t2 (fn s => raise MTCError $ "EVectorSet: " ^ s)
           val (e3, t3, j3, st) = tc (ctx, st) e3
           val t1 = whnf itctx t1
           val (x, t, len) = get_vector t1
           val () = is_eq_ty itctx (t3, t)
           val () = check_prop ictx (i %< len)
+          val (e1, e2, e3) = if !anno_EVectorSet then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
+          val (e1, e2, e3) = if !anno_EVectorSet_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
           (ETriOp (ETVectorSet, e1, e2, e3), TUnit, j1 %+ j2 %+ j3, st)
         end
@@ -1278,8 +1326,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t1 = whnf itctx t1
           val t = assert_TCell t1
           val (e2, j2, st) = tc_against_ty (ctx, st) (e2, t)
-          val e1 = if !anno_EStorageSet_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_EStorageSet_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_EStorageSet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EBinOp (EBStorageSet, e1, e2), TUnit, j1 %+ j2, st)
         end
@@ -1301,8 +1348,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i2 = Simp.simp_i $ update_i i2
           val () = if opr = EBNBoundedMinus then check_prop ictx (i2 %<= i1) else ()
           val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
-          val e1 = if !anno_ENat_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_ENat_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_ENat_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EBinOp (EBNat opr, e1, e2), t, j1 %+ j2, st)
         end
@@ -1321,19 +1367,20 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                      | _ => raise MTCError "ENatAdd 2"
           val (e1, e2) = if !anno_ENatCmp then (e1 %: t1, e2 %: t2) else (e1, e2)
           val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
-          val e1 = if !anno_ENatCmp_state_1 then e1 %~ st_e1 else e1
-          val e2 = if !anno_ENatCmp_state_2 then e2 %~ st else e2
+          val (e1, e2) = if !anno_ENatCmp_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EBinOp (EBNatCmp opr, e1, e2), t, j1 %+ j2, st)
         end
       | ETriOp (ETWrite, e1, e2, e3) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
+          val st_e1 = st
           val t1 = whnf itctx t1
           val (t, i1) = case t1 of
                             TArr data => data
                           | _ => raise MTCError "EWrite 1"
           val (e2, t2, j2, st) = tc (ctx, st) e2
+          val st_e2 = st
           val t2 = whnf itctx t2
           val i2 = case t2 of
                        TNat i => i
@@ -1341,6 +1388,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = check_prop ictx (i2 %< i1)
           val (e3, j3, st) = tc_against_ty (ctx, st) (e3, t)
           val (e1, e2, e3) = if !anno_EWrite then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
+          val (e1, e2, e3) = if !anno_EWrite_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
           (EWrite (e1, e2, e3), TUnit, j1 %+ j2 %+ j3, st)
         end
@@ -1358,6 +1406,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = is_eq_ty itctx (t1, t2)
           val () = is_eq_idx ictx (st2, st1)
           val e = if !anno_ECase then e %: t_e else e
+          val e = if !anno_ECase_state then e %~ st else e
         in
           (MakeECase (e, (name1, e1), (name2, e2)), t1, i %+ IMax (i1, i2), st1)
         end
@@ -1372,6 +1421,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, i2, st2) = tc_against_ty (ctx, st) (e2, t)
           val () = is_eq_idx ictx (st2, st1)
           val e2 = if !anno_EIte_e2_time then e2 |> i2 else e2
+          val e = if !anno_EIte_state then e %~ st else e
         in
           (ETriOp (ETIte, e, e1, e2), t, i %+ IMax (i1, i2), st1)
         end
@@ -1388,7 +1438,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e2 = if !anno_ECase_e2_time then e2 |> i2 else e2
           val () = is_eq_ty itctx (t1, t2)
           val () = is_eq_idx ictx (st2, st1)
-          val e = if !anno_ECase then e %: t_e else e
+          val e = if !anno_EIfi then e %: t_e else e
+          val e = if !anno_EIfi_state then e %~ st else e
         in
           (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %+ IMax (i1, i2), st1)
         end
@@ -1399,6 +1450,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t1 = kc_against_kind itctx (t1, KType)
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
           val e = if !anno_EAbs then e %: t2 |> i else e
+          val e = if !anno_EAbs_state then e %~ post_st else e
         in
           (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), T0, st)
         end
@@ -1608,10 +1660,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
               let
                 val (e1, (name, e2)) = unELet data
                 val (e1, t1, i1, st) = tc (ctx, st) e1
+                val st_e1 = st
                 val e2 = EAscTypes (e2, ts)
                 val e2 = EAscTime (e2, BinOpI (MinusI, i, i1))
                 val (e2, t2, _, st) = tc (add_typing_full (fst name, t1) ctx, st) e2
                 val e1 = if !anno_ELet then e1 %: t1 else e1
+                val e1 = if !anno_ELet_state then e1 %~ st_e1 else e1
                 val e = MakeELet (e1, name, e2)
               in
                 (e |> i, t2, i, st)
@@ -1691,6 +1745,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
               let
                 val (e, t, i, st) = tc (ctx, st) e
                 val e = if !anno_ELet then e %: t else e
+                val e = if !anno_ELet_state then e %~ st else e
                 val decl = ((name, e), i)
                 val decls = decl :: decls
                 val ctx = add_typing_full (fst name, t) ctx
@@ -1791,6 +1846,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t = kc_against_kind itctx (t, KType)
           val (e, t_e, i_e, st) = tc (ctx, st) e
           val e = if !anno_EHalt then e %: t_e else e
+          val e = if !anno_EHalt_state then e %~ st else e
         in
           (EHalt (e, t), t, i_e, st)
         end
@@ -1931,6 +1987,44 @@ datatype tc_flag =
        | Anno_EHalt
        | Anno_ECase_e2_time
        | Anno_EIte_e2_time
+       | Anno_EIfi
+       | Anno_EVectorSet
+       | Anno_EProj_state
+       | Anno_EPrintc_state
+       | Anno_EUPrim_state
+       | Anno_EArrayLen_state
+       | Anno_ENat2Int_state
+       | Anno_EInt2Nat_state
+       | Anno_EStorageGet_state
+       | Anno_EInj_state
+       | Anno_EFold_state
+       | Anno_EUnfold_state
+       | Anno_EApp_state
+       | Anno_EPair_state
+       | Anno_EBPrim_state
+       | Anno_ENew_state
+       | Anno_ERead_state
+       | Anno_EMapPtr_state
+       | Anno_EVectorGet_state
+       | Anno_EVectorPushBack_state
+       | Anno_EVectorSet_state
+       | Anno_EStorageSet_state
+       | Anno_ENat_state
+       | Anno_ENatCmp_state
+       | Anno_EWrite_state
+       | Anno_ECase_state
+       | Anno_EIte_state
+       | Anno_EIfi_state
+       | Anno_EAppT_state
+       | Anno_EAppI_state
+       | Anno_EPack_state
+       | Anno_EPackI_state
+       | Anno_EUnpack_state
+       | Anno_EUnpackI_state
+       | Anno_ELet_state
+       | Anno_ENewArrayValues_state
+       | Anno_EHalt_state
+       | Anno_EAbs_state
 
 fun typecheck (flags, st_types) ctx e =
   let
@@ -1960,6 +2054,44 @@ fun typecheck (flags, st_types) ctx e =
     val () = anno_EHalt := mem Anno_EHalt flags
     val () = anno_ECase_e2_time := mem Anno_ECase_e2_time flags
     val () = anno_EIte_e2_time := mem Anno_EIte_e2_time flags
+    val () = anno_EIfi := mem Anno_EIfi flags
+    val () = anno_EVectorSet := mem Anno_EVectorSet flags
+    val () = anno_EProj_state := mem Anno_EProj_state flags
+    val () = anno_EPrintc_state := mem Anno_EPrintc_state flags
+    val () = anno_EUPrim_state := mem Anno_EUPrim_state flags
+    val () = anno_EArrayLen_state := mem Anno_EArrayLen_state flags
+    val () = anno_ENat2Int_state := mem Anno_ENat2Int_state flags
+    val () = anno_EInt2Nat_state := mem Anno_EInt2Nat_state flags
+    val () = anno_EStorageGet_state := mem Anno_EStorageGet_state flags
+    val () = anno_EInj_state := mem Anno_EInj_state flags
+    val () = anno_EFold_state := mem Anno_EFold_state flags
+    val () = anno_EUnfold_state := mem Anno_EUnfold_state flags
+    val () = anno_EApp_state := mem Anno_EApp_state flags
+    val () = anno_EPair_state := mem Anno_EPair_state flags
+    val () = anno_EBPrim_state := mem Anno_EBPrim_state flags
+    val () = anno_ENew_state := mem Anno_ENew_state flags
+    val () = anno_ERead_state := mem Anno_ERead_state flags
+    val () = anno_EMapPtr_state := mem Anno_EMapPtr_state flags
+    val () = anno_EVectorGet_state := mem Anno_EVectorGet_state flags
+    val () = anno_EVectorPushBack_state := mem Anno_EVectorPushBack_state flags
+    val () = anno_EVectorSet_state := mem Anno_EVectorSet_state flags
+    val () = anno_EStorageSet_state := mem Anno_EStorageSet_state flags
+    val () = anno_ENat_state := mem Anno_ENat_state flags
+    val () = anno_ENatCmp_state := mem Anno_ENatCmp_state flags
+    val () = anno_EWrite_state := mem Anno_EWrite_state flags
+    val () = anno_ECase_state := mem Anno_ECase_state flags
+    val () = anno_EIte_state := mem Anno_EIte_state flags
+    val () = anno_EIfi_state := mem Anno_EIfi_state flags
+    val () = anno_EAppT_state := mem Anno_EAppT_state flags
+    val () = anno_EAppI_state := mem Anno_EAppI_state flags
+    val () = anno_EPack_state := mem Anno_EPack_state flags
+    val () = anno_EPackI_state := mem Anno_EPackI_state flags
+    val () = anno_EUnpack_state := mem Anno_EUnpack_state flags
+    val () = anno_EUnpackI_state := mem Anno_EUnpackI_state flags
+    val () = anno_ELet_state := mem Anno_ELet_state flags
+    val () = anno_ENewArrayValues_state := mem Anno_ENewArrayValues_state flags
+    val () = anno_EHalt_state := mem Anno_EHalt_state flags
+    val () = anno_EAbs_state := mem Anno_EAbs_state flags
     val ret = runWriter (fn () => tc st_types ctx e) ()
   in
     ret

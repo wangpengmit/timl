@@ -763,7 +763,45 @@ val cps_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_EApp, Anno_EAppT, Anno_EAppI, Anno_EFold, Anno_EUnfold, Anno_EPack, Anno_EPackI, Anno_EUnpack, Anno_EUnpackI, Anno_EBPrim, Anno_ENew, Anno_ERead, Anno_ENat, Anno_ENatCmp, Anno_EProj, Anno_ECase, Anno_ELet, Anno_EWrite, Anno_EHalt]
+      [Anno_EApp, Anno_EAppT, Anno_EAppI, Anno_EFold, Anno_EUnfold, Anno_EPack, Anno_EPackI, Anno_EUnpack, Anno_EUnpackI, Anno_EBPrim, Anno_ENew, Anno_ERead, Anno_ENat, Anno_ENatCmp, Anno_EProj, Anno_ECase, Anno_ELet, Anno_EWrite, Anno_EHalt,
+       Anno_EIfi,
+       Anno_EVectorSet,
+       Anno_EProj_state,
+       Anno_EPrintc_state,
+       Anno_EUPrim_state,
+       Anno_EArrayLen_state,
+       Anno_ENat2Int_state,
+       Anno_EInt2Nat_state,
+       Anno_EStorageGet_state,
+       Anno_EInj_state,
+       Anno_EFold_state,
+       Anno_EUnfold_state,
+       Anno_EApp_state,
+       Anno_EPair_state,
+       Anno_EBPrim_state,
+       Anno_ENew_state,
+       Anno_ERead_state,
+       Anno_EMapPtr_state,
+       Anno_EVectorGet_state,
+       Anno_EVectorPushBack_state,
+       Anno_EVectorSet_state,
+       Anno_EStorageSet_state,
+       Anno_ENat_state,
+       Anno_ENatCmp_state,
+       Anno_EWrite_state,
+       Anno_ECase_state,
+       Anno_EIte_state,
+       Anno_EIfi_state,
+       Anno_EAppT_state,
+       Anno_EAppI_state,
+       Anno_EPack_state,
+       Anno_EPackI_state,
+       Anno_EUnpack_state,
+       Anno_EUnpackI_state,
+       Anno_ELet_state,
+       Anno_ENewArrayValues_state,
+       Anno_EHalt_state
+      ]
     end
                      
 (* Checks the form invariants after CPS, according to the 'System F to TAL' paper. *)
