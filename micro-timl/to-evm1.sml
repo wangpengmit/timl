@@ -460,7 +460,7 @@ fun compile st_name2int ectx e =
 
 val compile = fn (st_name2int, ectx, e, st) =>
                  let
-                   val () = st_ref := IEmptyState
+                   val () = st_ref := st
                    val I = compile st_name2int ectx e
                  in
                    (I, !st_ref)

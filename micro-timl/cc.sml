@@ -621,12 +621,12 @@ and cc_abs e_all =
       (* val () = println $ "cc_abs(): after open_collect_EAbsIT()" *)
     in
       case e of
-          ERec bind => cc_ERec (* e_all *) binds bind
+          ERec bind => cc_ERec e_all binds bind
         (* | EAbs bind => cc_EAbs e_all binds bind *)
         | _ => raise Impossible "cc_abs"
     end
 
-and cc_ERec (* e_all *) outer_binds bind =
+and cc_ERec e_all outer_binds bind =
     let
       val (t_x, (name_x, e)) = unBindAnnoName bind
       val () = println $ "cc() on: " ^ fst name_x
@@ -649,18 +649,20 @@ and cc_ERec (* e_all *) outer_binds bind =
       val ys_anno = free_evars_with_anno excluded e
       val (ys, sigmas) = unzip $ ys_anno
       fun add_name prefix (i, (a, b)) = (a, prefix ^ str_int (1+i), b)
-      (* val () = println "before free_ivars" *)
-      val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e
-      (* val () = println "after free_ivars" *)
-      val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e
-      val outer_inner_binds = outer_binds @ inner_binds
       fun eq_bind xx' =
           case xx' of
               (inl (x, _, _), inl (x', _, _)) => x = x'
             | (inr (x, _, _), inr (x', _, _)) => x = x'
             | _ => false
+      val outer_inner_binds = outer_binds @ inner_binds
+      (* val () = println "before free_ivars" *)
+      (* val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e *)
+      val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *)
+      (* val () = println "after free_ivars" *)
+      (* val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e *)
+      val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *)
       val betas = map inl free_ivars @ map inr free_tvars
-      val betas = diff eq_bind betas outer_inner_binds
+      (* val betas = diff eq_bind betas outer_inner_binds *) (* no need when we use e_all to collect free vars *)
       (* val () = println $ "cc(): after getting free vars" *)
       val t_env = TRecord sigmas
       val t_z = cc_t t_z
@@ -930,6 +932,7 @@ val cc =
       val decls = rev $ !code_blocks
       val e = ELetManyClose (decls, e)
       val e = remove_var_anno_e e
+      val e = ExportPP.uniquefy_e ToStringUtil.empty_ctx $ MicroTiMLPostProcess.post_process e
     in
       e
     end
@@ -1088,7 +1091,6 @@ fun test1 dirname =
     val () = println "Started CPS conversion ..."
     val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
-    val e = uniquefy_e empty_ctx $ MicroTiMLPostProcess.post_process e
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export empty_ctx e *)
     (* val () = println "" *)
@@ -1109,7 +1111,6 @@ fun test1 dirname =
                      
     val () = println "Started CC ..."
     val e = cc e
-    val e = uniquefy_e empty_ctx $ MicroTiMLPostProcess.post_process e
     val () = println "Finished CC"
     (* val () = pp_e $ export empty_ctx e *)
     (* val () = println "" *)

@@ -46,14 +46,14 @@ fun fact_tail {n : Nat} (n : nat {n}, acc) =
   ifdec n #< #1 then acc
   else fact_tail (n #- #1, __&nat2int n *acc) using 4.0 * $n
                  
-(* val a = fact_tail (#4, 1) *)
+val a = fact_tail (#4, 1)
                   
-(* fun fact {n : Nat} (n : nat {n}) = *)
-(*   ifdec n #< #1 then 1 *)
-(*   else *)
-(*     __&nat2int n * fact (n #- #1) using 4.0 * $n *)
+fun fact {n : Nat} (n : nat {n}) =
+  ifdec n #< #1 then 1
+  else
+    __&nat2int n * fact (n #- #1) using 4.0 * $n
                  
-(* val a = fact #4 *)
+val a = fact #4
                  
 (* (* val () = __&halt a *) *)
               

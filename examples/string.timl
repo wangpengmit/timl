@@ -41,7 +41,7 @@ fun print {len : Nat} (s : string {len}) =
 (* val a = print "abc" *)
 (* val () = __&halt a *)
 
-fun assert {len : Nat} (b, msg : string {len}) = if b then () else print "assert failed: "; print msg; print "\n"; __&halt 1                                                                                     
+fun assert {len : Nat} (b, msg : string {len}) = if b then () else print "assert failed: "; print msg; print "\n"; __&halt 1
     
 fun int2char i = int2byte (i + 48)
                           

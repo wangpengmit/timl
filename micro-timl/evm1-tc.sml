@@ -636,8 +636,12 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
       end
     fun is_eq_st ictx (i, i') =
       let
+        (* val ictxn = map fst ictx *)
+        (* val () = println $ sprintf "to compare states\n$\nand\n$" [ExportPP.str_i $ ExportPP.export_i ictxn i, ExportPP.str_i $ ExportPP.export_i ictxn i'] *)
         val (vars, _, m) = decompose_state i
         val (vars', _, m') = decompose_state i'
+        (* val () = println $ "vars: " ^ ISetU.str_set str_int vars *)
+        (* val () = println $ "vars': " ^ ISetU.str_set str_int vars' *)
         val () = assert_b "vars == vars'" $ (ISet.equal (vars, vars'))
         val () = assert_b "is_eq_st/is_same_domain" $ (StMapU.is_same_domain m m')
         val () = check_sub_map ictx (m, m')
@@ -757,10 +761,10 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
 
 fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
   let
-    val () = println "tc_hval() started"
+    (* val () = println "tc_hval() started" *)
     val (itbinds, ((st, rctx, sctx, i), insts)) = unBind h
     val itbinds = unTeles itbinds
-    val () = println "before getting itctx"
+    (* val () = println "before getting itctx" *)
     val itctx as (ictx, tctx) =
         foldl
           (fn (bind, (ictx, tctx)) =>
@@ -768,7 +772,7 @@ fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
                   inl (name, s) => ((binder2str name, is_wf_sort ictx $ unOuter s) :: ictx, tctx)
                 | inr (name, k) => (ictx, (binder2str name, k) :: tctx)
           ) ([], []) itbinds
-    val () = println "before checking rctx"
+    (* val () = println "before checking rctx" *)
     (* val itctxn = itctx_names itctx *)
     val rctx = Rctx.mapi
                  (fn (r, t) =>
@@ -779,16 +783,16 @@ fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
                      in
                        ret
                      end) rctx
-    val () = println "before checking sctx"
+    (* val () = println "before checking sctx" *)
     val sctx = map (kc_against_KType itctx) sctx
-    val () = println "before checking i"
+    (* val () = println "before checking i" *)
     val i = sc_against_sort ictx (i, STime)
     val st = sc_against_sort ictx (st, SState)
-    val () = println "before checking insts"
+    (* val () = println "before checking insts" *)
     val i' = tc_insts params (itctx, rctx, sctx, st) insts
-    val () = println "after checking insts"
+    (* val () = println "after checking insts" *)
     val () = check_prop ictx (i' %<= i)
-    val () = println "tc_hval() finished"
+    (* val () = println "tc_hval() finished" *)
   in
     ()
   end

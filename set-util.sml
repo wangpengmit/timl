@@ -19,6 +19,8 @@ fun pop s =
                 
 fun enumerate c : (S.item, 'result) Enum.enum = fn f => (fn init => S.foldl f init c)
                        
+fun str_set f = Util.surround "{" "}" o Util.join ", " o List.map (fn k => f k) o to_list
+  
 end
 
 structure IntBinarySetUtil = SetUtilFn (IntBinarySet)

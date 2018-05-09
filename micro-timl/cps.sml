@@ -759,6 +759,14 @@ fun cps (e, t_e, F) (k, j_k) =
     ret
   end
 
+val cps = fn (e, t_e, F) => fn (k, j_k) =>
+             let
+               val (e, i) = cps (e, t_e, F) (k, j_k)
+               val e = ExportPP.uniquefy_e ToStringUtil.empty_ctx $ MicroTiMLPostProcess.post_process e
+             in
+               (e, i)
+             end
+                        
 val cps_tc_flags =
     let
       open MicroTiMLTypecheck
@@ -1176,7 +1184,7 @@ fun test1 dirname =
     val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion ..."
-    val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx $ uniquefy_e empty_ctx $ MicroTiMLPostProcess.post_process e
+    val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx e
     val () = println ""
     val () = println "Started post-CPS form checking"
     val () = check_CPSed_expr e
