@@ -564,7 +564,7 @@ fun default_ty_visitor_vtable
           | TProdEx data => #visit_TProdEx vtable this env data
           | TArrowTAL data => #visit_TArrowTAL vtable this env data
           | TArrowEVM (i1, rctx, ts, i2) =>
-            TArrowEVM (#visit_idx vtable this env i2,
+            TArrowEVM (#visit_idx vtable this env i1,
                        Rctx.map (#visit_ty vtable this env) rctx,
                        visit_list (#visit_ty vtable this) env ts,
                        #visit_idx vtable this env i2)

@@ -1,4 +1,4 @@
-structure CCTestBasic = struct
+structure UnitTestBasic = struct
 
 open String
 

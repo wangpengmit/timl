@@ -10,6 +10,4 @@ val N = INat
 val T = ITime
 val N32 = INat 32
 
-fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
-
 end

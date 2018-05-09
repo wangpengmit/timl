@@ -7,21 +7,21 @@ structure TestState = struct
 fun inc n = n + 1
 fun add a b = a + b
                 
-fun foo {len : Nat} () pre {TestState_v : len} post {TestState_v : len+1} =
-  let
-    val () = push_back (TestState_v, 0)
-    val () = set TestState_v[[#0]] 10
-    val () = modify TestState_v[[#0]] inc (* == let val x = TestState_v[[0]] in set TestState_v[[0]] (inc x) end == set TestState_v[[0]] (inc TestState_v[[0]]) *)
-    val _ = TestState_v[[#0]]
-    val () = set TestState_m[[1]] 100
-    val () = modify TestState_m[[1]] inc
-    val _ = TestState_m[[1]]
-    val () = set TestState_mm[[1]][[2]] 200
-    val () = modify TestState_mm[[1]][[2]] ++
-    val () = modify TestState_mm[[1]][[2]] += 2
-    val _ = TestState_mm[[1]][[2]]
-  in
-    ()
-  end
+(* fun foo {len : Nat} () pre {TestState_v : len} post {TestState_v : len+1} = *)
+(*   let *)
+(*     val () = push_back (TestState_v, 0) *)
+(*     (* val () = set TestState_v[[#0]] 10 *) *)
+(*     (* val () = modify TestState_v[[#0]] inc (* == let val x = TestState_v[[0]] in set TestState_v[[0]] (inc x) end == set TestState_v[[0]] (inc TestState_v[[0]]) *) *) *)
+(*     (* val _ = TestState_v[[#0]] *) *)
+(*     (* val () = set TestState_m[[1]] 100 *) *)
+(*     (* val () = modify TestState_m[[1]] inc *) *)
+(*     (* val _ = TestState_m[[1]] *) *)
+(*     (* val () = set TestState_mm[[1]][[2]] 200 *) *)
+(*     (* val () = modify TestState_mm[[1]][[2]] ++ *) *)
+(*     (* val () = modify TestState_mm[[1]][[2]] += 2 *) *)
+(*     (* val _ = TestState_mm[[1]][[2]] *) *)
+(*   in *)
+(*     () *)
+(*   end *)
 
 end

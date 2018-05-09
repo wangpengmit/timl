@@ -615,6 +615,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | MACRO_br_sum => err ()
   end
       
+fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
+
 fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itctx as (ictx, tctx), rctx, sctx, st)) insts =
   let
     val tc_insts = tc_insts params

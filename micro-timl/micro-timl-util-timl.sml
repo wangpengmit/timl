@@ -120,7 +120,7 @@ fun decompose_state i =
                                   case i of
                                       VarI (ID (n, _), ls) => inl (n, ls)
                                     | IState m => inr m
-                                    | _ => raise Impossible "decompose_state: wrong idx"
+                                    | _ => raise Impossible $ "decompose_state: wrong idx: " ^ (ExportPP.str_i $ ExportPP.export_i [] i)
                               ) is
     val m = foldl (fn (m, acc) => acc @++ m) StMap.empty maps
     val vars = ISetU.to_set $ map fst vars_info

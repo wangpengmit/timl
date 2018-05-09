@@ -1230,9 +1230,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t2 = get_prim_expr_bin_op_arg2_ty opr
           val (e2, i2, st) = tc_against_ty (ctx, st) (e2, t2)
           val (e1, e2) = if !anno_EBPrim then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val (e1, e2) = if !anno_EBPrim_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
           val e = EBinOpPrim (opr, e1, e2)
           val t = get_prim_expr_bin_op_res_ty opr
-          val (e1, e2) = if !anno_EBPrim_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (e, t, i1 %+ i2, st)
         end
@@ -1347,8 +1347,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ENat then (e1 %: t1, e2 %: t2) else (e1, e2)
           val i2 = Simp.simp_i $ update_i i2
           val () = if opr = EBNBoundedMinus then check_prop ictx (i2 %<= i1) else ()
-          val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
           val (e1, e2) = if !anno_ENat_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
+          val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
         in
           (EBinOp (EBNat opr, e1, e2), t, j1 %+ j2, st)
         end
@@ -1366,8 +1366,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                        TNat i => i
                      | _ => raise MTCError "ENatAdd 2"
           val (e1, e2) = if !anno_ENatCmp then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
           val (e1, e2) = if !anno_ENatCmp_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
+          val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
         in
           (EBinOp (EBNatCmp opr, e1, e2), t, j1 %+ j2, st)
         end

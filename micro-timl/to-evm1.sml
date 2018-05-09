@@ -85,6 +85,8 @@ fun assert_EState e =
       EState a => a
     | _ => raise assert_fail "assert_EState"
                  
+fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
+
 fun cg_ty_visitor_vtable cast () =
   let
     val vtable =
@@ -700,8 +702,8 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         I_e @@ halt t
       end
     | EAscTime (e, i) => ASCTIME (Inner i) @:: cg_e params e
-    (* | EAscType (e, _) => cg_e params e *)
-    (* | EAscState (e, _) => cg_e params e *)
+    | EAscType (e, _) => cg_e params e
+    | EAscState (e, _) => cg_e params e
     | EBinOp (EBPair, _, _) => err ()
     | EBinOp (EBNew, _, _) => err ()
     | EBinOp (EBRead, _, _) => err ()
@@ -726,8 +728,8 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
     | EAppI _ => err ()
     | EPack _ => err ()
     | EPackI _ => err ()
-    | EAscState _ => err ()
-    | EAscType _ => err ()
+    (* | EAscState _ => err () *)
+    (* | EAscType _ => err () *)
     | ENever _ => err ()
     | EBuiltin _ => err ()
     | ENewArrayValues _ => err ()
@@ -808,7 +810,7 @@ val code_gen_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EPair, Anno_EInj]
+      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EIfi, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EPair, Anno_EInj]
     end
                      
 structure UnitTest = struct
@@ -922,7 +924,7 @@ fun test1 dirname =
     val () = println "Finished CC"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1, NONE) ToStringUtil.empty_ctx e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file (join_dir_file' dirname $ "unit-test-after-cc.tmp", e_str)
     (* val () = println e_str *)
     (* val () = println "" *)

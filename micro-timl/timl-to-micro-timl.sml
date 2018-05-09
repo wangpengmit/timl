@@ -129,7 +129,7 @@ fun EV n = EVar (ID (n, dummy))
 fun on_e (e : S.expr) =
   let
     fun err () = raise Impossible $ "unknown case in tc: " ^ ToString.str_e Gctx.empty ToStringUtil.empty_ctx e
-  in
+    fun main () = 
   case e of
       S.EVar (x, _) => EVar x
     | S.EConst (c, _) => EConst c
@@ -276,6 +276,12 @@ fun on_e (e : S.expr) =
       end
     | S.ESetModify _ => err ()
     | S.EGet _ => err ()
+    fun extra_msg () = "\nwhen translating\n" ^ ToString.str_e Gctx.empty ToStringUtil.empty_ctx e
+    val ret = main ()
+              handle
+              Impossible m => raise Impossible (m ^ extra_msg ())
+  in
+    ret
   end
                  
 and add_constr_decls (dt, e_body) =
@@ -550,10 +556,11 @@ and on_DRec (name, bind, _) =
         case bind of
             S.SortingST (name, Outer s) => S.MakeEAbsI (unBinderName name, s, e, dummy)
           | S.TypingST pn => S.MakeEAbs (StMap.empty, pn, e)
+      (* val e = foldr on_bind e binds *)
       val e =
           case rev binds of
-              S.TypingST pn :: binds =>
-              foldl on_bind (S.MakeEAbs (pre, pn, e)) binds
+              S.TypingST pn :: binds => foldl on_bind (S.MakeEAbs (pre, pn, e)) binds
+            | [] => e
             | _ => raise Impossible "to-micro-timl/DRec: Recursion must have a typing bind as the last bind"
       val e = on_e e
       fun on_bind_t (bind, t) =
