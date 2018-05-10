@@ -883,7 +883,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (cps_tc_flags, st_name2ty) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP

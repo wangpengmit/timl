@@ -59,6 +59,12 @@ fun post_process_expr_visitor_vtable cast () =
             in
               #visit_expr vtable this env $ subst0_e_e e1 e2
             end
+          | EState _ =>
+            let
+              val (_, e2) = unBind bind
+            in
+              #visit_expr vtable this env $ subst0_e_e e1 e2
+            end
           | _ =>
             let
               fun visit_ebind this = visit_bind_simp (#extend_e (cast this) this)

@@ -144,124 +144,136 @@ fun blowup_time_t (j : idx) = j %* ConstIT (TimeType.fromInt 888, dummy)
 fun blowup_time_i (j : idx) = j %* ConstIT (TimeType.fromInt 777, dummy)
 
 (* CPS conversion on types *)
-fun cps_t t =
+fun cps_ty_visitor_vtable cast () =
   let
-    (* val () = println $ "cps_t() on: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
-    (* val t = whnf t *)
-    (* [[ \\a.t ]] = \\a. \\j F. {F, ({F, [[t]]} --j--> void)} -- blowup_time_t(j) --> void *)
-    fun cps_Forall t =
+    val vtable =
+        default_ty_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_ty this env t =
       let
-        val t = cps_t t
-        val j = fresh_ivar ()
-        val F = fresh_ivar ()
-        val t = TArrow ((IV F, t), IV j, Void)
-        val t = TArrow ((IV F, t), IV j %+ T_1, Void)
-        val t = TForallICloseMany ([(j, "j", STime), (F, "F", SState)], t)
+        (* val () = println $ "cps_t() on: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
+        fun cps_t t = #visit_ty (cast this) this env t
+        (* [[ \\a.t ]] = \\a. \\j F. {F, ({F, [[t]]} --j--> void)} -- blowup_time_t(j) --> void *)
+        fun cps_Forall t =
+          let
+            val t = cps_t t
+            val j = fresh_ivar ()
+            val F = fresh_ivar ()
+            val t = TArrow ((IV F, t), IV j, Void)
+            val t = TArrow ((IV F, t), IV j %+ T_1, Void)
+            val t = TForallICloseMany ([(j, "j", STime), (F, "F", SState)], t)
+          in
+            t
+          end
+        (* val t = whnf t *)
+        val t =                                         
+            case whnf t of
+                TArrow ((st1, t1), i, (st2, t2)) =>
+                (* [[ {st1, t1} --i--> {st2, t2} ]] = \\j F. {st1+F, [[t1]]*(st2+F, {[[t2]]} --j--> void)} -- blowup_time(i, j) --> void *)
+                let
+                  val t1 = cps_t t1
+                  val t2 = cps_t t2
+                  val j = fresh_ivar ()
+                  val F = fresh_ivar ()
+                  val t = TProd (t1, TArrow ((st2 %++ IV F, t2), IV j, Void))
+                  val t = TArrow ((st1 %++ IV F, t), blowup_time (i, IV j), Void)
+                in
+                  TForallICloseMany ([(j, "j", STime), (F, "F", SState)], t)
+                end
+              | TQuan (Forall, bind) =>
+                let
+                  val ((name_a, kd_a), t) = unBindAnno2 bind
+                  val a = fresh_tvar ()
+                  val t = open0_t_t a t
+                  val t = cps_Forall t
+                in
+                  TForall $ close0_t_t_anno ((a, name_a, kd_a), t)
+                end
+              | TQuanI (Forall, bind) =>
+                let
+                  val ((name_a, s_a), t) = unBindAnno2 bind
+                  val a = fresh_ivar ()
+                  (* val () = println $ "a=" ^ str_int (unFree_i a) *)
+                  (* val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
+                  val t = open0_i_t a t
+                  (* val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
+                  val t = cps_Forall t
+                in
+                  TForallI $ close0_i_t_anno ((a, name_a, s_a), t)
+                end
+              | TQuan (Exists ex, bind) => 
+                let
+                  val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
+                  val alpha = fresh_tvar ()
+                  val t = open0_t_t alpha t
+                  val t = cps_t t
+                  val t = close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
+                in
+                  TQuan (Exists ex, t)
+                end
+              | TQuanI (Exists ex, bind) => 
+                let
+                  val ((name_a, s_a), t) = unBindAnno2 bind
+                  val a = fresh_ivar ()
+                  val t = open0_i_t a t
+                  val t = cps_t t
+                  val t = close0_i_t_anno ((a, name_a, s_a), t)
+                in
+                  TQuanI (Exists ex, t)
+                end
+              | TRec bind => 
+                let
+                  val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
+                  val alpha = fresh_tvar ()
+                  val t = open0_t_t alpha t
+                  val t = cps_t t
+                  val t = close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
+                in
+                  TRec t
+                end
+              | TAbsT bind => 
+                let
+                  val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
+                  val alpha = fresh_tvar ()
+                  val t = open0_t_t alpha t
+                  val t = cps_t t
+                  val t = close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
+                in
+                  TAbsT t
+                end
+              | TAbsI bind => 
+                let
+                  val ((name_a, s_a), t) = unBindAnno2 bind
+                  val a = fresh_ivar ()
+                  val t = open0_i_t a t
+                  val t = cps_t t
+                  val t = close0_i_t_anno ((a, name_a, s_a), t)
+                in
+                  TAbsI t
+                end
+              | _ => #visit_ty vtable this env t (* call super *)
+        (* val () = println $ "cps_t() result: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
       in
         t
       end
-    val t =                                         
-    case whnf t of
-      TArrow ((st1, t1), i, (st2, t2)) =>
-      (* [[ {st1, t1} --i--> {st2, t2} ]] = \\j F. {st1+F, [[t1]]*(st2+F, {[[t2]]} --j--> void)} -- blowup_time(i, j) --> void *)
-      let
-        val t1 = cps_t t1
-        val t2 = cps_t t2
-        val j = fresh_ivar ()
-        val F = fresh_ivar ()
-        val t = TProd (t1, TArrow ((st2 %++ IV F, t2), IV j, Void))
-        val t = TArrow ((st1 %++ IV F, t), blowup_time (i, IV j), Void)
-      in
-        TForallICloseMany ([(j, "j", STime), (F, "F", SState)], t)
-      end
-    | TQuan (Forall, bind) =>
-      let
-        val ((name_a, kd_a), t) = unBindAnno2 bind
-        val a = fresh_tvar ()
-        val t = open0_t_t a t
-        val t = cps_Forall t
-      in
-        TForall $ close0_t_t_anno ((a, name_a, kd_a), t)
-      end
-    | TQuanI (Forall, bind) =>
-      let
-        val ((name_a, s_a), t) = unBindAnno2 bind
-        val a = fresh_ivar ()
-        (* val () = println $ "a=" ^ str_int (unFree_i a) *)
-        (* val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
-        val t = open0_i_t a t
-        (* val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
-        val t = cps_Forall t
-      in
-        TForallI $ close0_i_t_anno ((a, name_a, s_a), t)
-      end
-    | TVar _ => t
-    | TConst _ => t
-    | TNat _ => t
-    | TiBool _ => t
-    | TBinOp (opr, t1, t2) => TBinOp (opr, cps_t t1, cps_t t2)
-    | TArr (t, i) => TArr (cps_t t, i)
-    | TQuan (Exists ex, bind) => 
-      let
-        val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
-        val alpha = fresh_tvar ()
-        val t = open0_t_t alpha t
-        val t = cps_t t
-        val t = close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
-      in
-        TQuan (Exists ex, t)
-      end
-    | TQuanI (Exists ex, bind) => 
-      let
-        val ((name_a, s_a), t) = unBindAnno2 bind
-        val a = fresh_ivar ()
-        val t = open0_i_t a t
-        val t = cps_t t
-        val t = close0_i_t_anno ((a, name_a, s_a), t)
-      in
-        TQuanI (Exists ex, t)
-      end
-    | TRec bind => 
-      let
-        val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
-        val alpha = fresh_tvar ()
-        val t = open0_t_t alpha t
-        val t = cps_t t
-        val t = close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
-      in
-        TRec t
-      end
-    | TAbsT bind => 
-      let
-        val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
-        val alpha = fresh_tvar ()
-        val t = open0_t_t alpha t
-        val t = cps_t t
-        val t = close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
-      in
-        TAbsT t
-      end
-    | TAbsI bind => 
-      let
-        val ((name_a, s_a), t) = unBindAnno2 bind
-        val a = fresh_ivar ()
-        val t = open0_i_t a t
-        val t = cps_t t
-        val t = close0_i_t_anno ((a, name_a, s_a), t)
-      in
-        TAbsI t
-      end
-    | TAppT (t1, t2) => TAppT (cps_t t1, cps_t t2)
-    | TAppI (t, i) => TAppI (cps_t t, i)
-    | _ =>
-      let
-        val s = (* substr 0 100 $  *)ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t
-      in
-        raise Impossible $ "cps_t() on: " ^ s
-      end
-    (* val () = println $ "cps_t() result: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
+    val vtable = override_visit_ty vtable visit_ty
   in
-    t
+    vtable
+  end
+
+fun new_cps_ty_visitor a = new_ty_visitor cps_ty_visitor_vtable a
+    
+fun cps_t t =
+  let
+    val visitor as (TyVisitor vtable) = new_cps_ty_visitor ()
+  in
+    #visit_ty vtable visitor () t
   end
 
 (* CPS conversion on terms *)
