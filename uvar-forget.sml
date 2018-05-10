@@ -36,7 +36,7 @@ fun forget_i_i x n b =
       let
         val body = b
         val forget = forget_i_i x n
-        val ((uvar, r), args) = is_IApp_UVarI body !! (fn () => raise AppUVarFailed)
+        val ((uvar, r), args) = is_IApp_IUVar body !! (fn () => raise AppUVarFailed)
         val (name, ctx, bsort) = get_uvar_info uvar !! (fn () => raise Impossible "should be fresh")
         val bsort = update_bs bsort
         (* val () = println $ sprintf "  for uvar ?$" [str_int name] *)
@@ -44,7 +44,7 @@ fun forget_i_i x n b =
         val args = List.mapPartial is_inl results
         val () =
             if length args = length results then
-              raise AppUVarSucceeded $ IApps (UVarI (uvar, r)) args
+              raise AppUVarSucceeded $ IApps (IUVar (uvar, r)) args
             else ()
         val locs = List.mapPartial is_inr results
         val () = assert (fn () => not (null locs)) "not (null locs)"
@@ -71,7 +71,7 @@ fun forget_i_i x n b =
         val locs = map (fn n => length_ctx - 1 - n) locs
         val locs = to_set locs
         val ctx' = remove_at_locs locs ctx
-        val new_uvar = UVarI (fresh_uvar_i ctx' bsort, r)
+        val new_uvar = IUVar (fresh_uvar_i ctx' bsort, r)
         val ret = IApps new_uvar args
         val inner_args = range length_ctx
         val inner_args = remove_at_locs locs inner_args
@@ -89,14 +89,14 @@ fun forget_i_i x n b =
         val on_v = forget_v
       in
         case b of
-	    VarI (y, anno) => VarI (on_v_long_id on_v x n y, [])
+	    IVar (y, anno) => IVar (on_v_long_id on_v x n y, [])
           | IConst _ => b
-          | UnOpI (opr, i, r) => UnOpI (opr, f x n i, r)
-	  | BinOpI (opr, i1, i2) => BinOpI (opr, f x n i1, f x n i2)
-          | Ite (i1, i2, i3, r) => Ite (f x n i1, f x n i2, f x n i3, r)
+          | IUnOp (opr, i, r) => IUnOp (opr, f x n i, r)
+	  | IBinOp (opr, i1, i2) => IBinOp (opr, f x n i1, f x n i2)
+          | IIte (i1, i2, i3, r) => IIte (f x n i1, f x n i2, f x n i3, r)
           | IAbs (b, bind, r) => IAbs (b, on_i_ibind f x n bind, r)
           | IState st => IState $ StMap.map (f x n) st
-          | UVarI a => b (* uvars are closed, so no need to deal with *)
+          | IUVar a => b (* uvars are closed, so no need to deal with *)
       end
     val ret =
         on_App_UVar ()
@@ -147,8 +147,8 @@ fun forget_i_mt x n b =
       let
         val body = b
         val forget = forget_i_mt x n
-        val ((uvar, r), i_args, t_args) = is_MtApp_UVar body !! (fn () => raise AppUVarFailed)
-        val (uvar_name, ctx as (sctx : (string * bsort) list, kctx)) = get_uvar_info uvar !! (fn () => raise Impossible "should be fresh")
+        val ((uvar, r), i_args, t_args) = is_TApp_TUVar body !! (fn () => raise AppUVarFailed)
+        val (uvar_name, ctx as (sctx : (string * basic_sort) list, kctx)) = get_uvar_info uvar !! (fn () => raise Impossible "should be fresh")
         (* val () = println $ sprintf "  for uvar ?$" [str_int uvar_name] *)
         val i_results = mapi (try_forget (forget_i_i x n)) i_args
         val t_results = mapi (try_forget forget) t_args
@@ -156,7 +156,7 @@ fun forget_i_mt x n b =
         val t_args = List.mapPartial is_inl t_results
         val () =
             if length i_args = length i_results andalso length t_args = length t_results then
-              raise AppUVarSucceeded $ MtApps (MtAppIs (UVar (uvar, r)) i_args) t_args
+              raise AppUVarSucceeded $ TApps (TAppIs (TUVar (uvar, r)) i_args) t_args
             else ()
         val i_locs = List.mapPartial is_inr i_results
         val t_locs = List.mapPartial is_inr t_results
@@ -170,18 +170,18 @@ fun forget_i_mt x n b =
         val sctx' = remove_at_locs i_locs sctx
         (* val () = println $ "sctx'=" ^ str_ls fst sctx' *)
         val kctx' = remove_at_locs t_locs kctx
-        val new_uvar = UVar (fresh_uvar_mt (sctx', kctx'), r)
+        val new_uvar = TUVar (fresh_uvar_mt (sctx', kctx'), r)
         (* val () = println $ "forget_i_mt() created new uvar " ^ str_mt empty ([], []) new_uvar *)
-        val ret = MtApps (MtAppIs new_uvar i_args) t_args
+        val ret = TApps (TAppIs new_uvar i_args) t_args
         val inner_i_args = range length_sctx
         val inner_t_args = range length_kctx
         val inner_i_args = remove_at_locs i_locs inner_i_args
         val inner_t_args = remove_at_locs t_locs inner_t_args
         val ins = new_uvar
-        val ins = MtAppIs ins (map (V r) $ rev inner_i_args)
-        val ins = MtApps ins (map (TV r) $ rev inner_t_args)
-        val ins = MtAbs_Many (rev kctx, ins, r)
-        val ins = MtAbsI_Many (rev sctx, ins, r)
+        val ins = TAppIs ins (map (V r) $ rev inner_i_args)
+        val ins = TApps ins (map (TV r) $ rev inner_t_args)
+        val ins = TAbs_Many (rev kctx, ins, r)
+        val ins = TAbsI_Many (rev sctx, ins, r)
         (* val () = println $ sprintf "forget_i_mt(): refine ?$ to be $" [str_int uvar_name, str_mt empty ([], []) ins] *)
         val () = refine uvar ins
       in
@@ -194,21 +194,21 @@ fun forget_i_mt x n b =
         val on_i_s = forget_i_s
       in
         case b of
-	    Arrow ((st1, t1), d, (st2, t2)) => Arrow ((StMap.map (on_i_i x n) st1, f x n t1), on_i_i x n d, (StMap.map (on_i_i x n) st2, f x n t2))
-          | TyNat (i, r) => TyNat (on_i_i x n i, r)
+	    TArrow ((st1, t1), d, (st2, t2)) => TArrow ((StMap.map (on_i_i x n) st1, f x n t1), on_i_i x n d, (StMap.map (on_i_i x n) st2, f x n t2))
+          | TNat (i, r) => TNat (on_i_i x n i, r)
           | TiBool (i, r) => TiBool (on_i_i x n i, r)
-          | TyArray (t, i) => TyArray (f x n t, on_i_i x n i)
-          | Unit r => Unit r
-	  | Prod (t1, t2) => Prod (f x n t1, f x n t2)
-	  | UniI (s, bind, r) => UniI (on_i_s x n s, on_i_ibind f x n bind, r)
+          | TArray (t, i) => TArray (f x n t, on_i_i x n i)
+          | TUnit r => TUnit r
+	  | TProd (t1, t2) => TProd (f x n t1, f x n t2)
+	  | TUniI (s, bind, r) => TUniI (on_i_s x n s, on_i_ibind f x n bind, r)
           | TSumbool (s1, s2) => TSumbool (on_i_s x n s1, on_i_s x n s2)
-          | MtVar y => MtVar y
-          | MtApp (t1, t2) => MtApp (f x n t1, f x n t2)
-          | MtAbs (k, bind, r) => MtAbs (k, on_i_tbind f x n bind, r)
-          | MtAppI (t, i) => MtAppI (f x n t, on_i_i x n i)
-          | MtAbsI (b, bind, r) => MtAbsI (b, on_i_ibind f x n bind, r)
-	  | BaseType a => BaseType a
-          | UVar a => b
+          | TVar y => TVar y
+          | TApp (t1, t2) => TApp (f x n t1, f x n t2)
+          | TAbs (k, bind, r) => TAbs (k, on_i_tbind f x n bind, r)
+          | TAppI (t, i) => TAppI (f x n t, on_i_i x n i)
+          | TAbsI (b, bind, r) => TAbsI (b, on_i_ibind f x n bind, r)
+	  | TBase a => TBase a
+          | TUVar a => b
           | TDatatype _ => raise Unimpl "uvar_forget/forget_i_mt()/TDatatype"
           | TMap t => TMap $ f x n t
           | TState _ => b

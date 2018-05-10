@@ -31,7 +31,7 @@ datatype sort =
          | SBigO of string * bsort * idx * region
 
 datatype quan =
-	 QForall
+	 Forall
 
 datatype abs = 
 	 AbsFn

@@ -22,16 +22,16 @@ local
       handle
       Error e => Failed e
 
-  val un_ops = [ToReal, Log2, Log10, Ceil, Floor, B2n, Neg]
+  val un_ops = [IUToReal, IULog2, IULog10, IUCeil, IUFloor, IUB2n, IUNeg]
   val un_op_names = zip (un_ops, map str_idx_un_op un_ops)
   fun is_un_op (opr, i1) =
       case (opr, i1) of
-          (IApp, S.VarI (NONE, (x, r1))) => find_by_snd_eq op= x un_op_names
+          (IBApp, S.IVar (NONE, (x, r1))) => find_by_snd_eq op= x un_op_names
         | _ => NONE
 
   fun is_ite i =
       case i of
-          S.BinOpI (IApp, S.BinOpI (IApp, S.BinOpI (IApp, S.VarI (NONE, (x, _)), i1, _), i2, _), i3, _) =>
+          S.IBinOp (IBApp, S.IBinOp (IBApp, S.IBinOp (IBApp, S.IVar (NONE, (x, _)), i1, _), i2, _), i3, _) =>
           if x = "ite" then SOME (i1, i2, i3)
           else NONE
         | _ => NONE
@@ -43,102 +43,102 @@ local
         
   fun elab_i i =
       case i of
-	  S.VarI (id as (m, (x, r))) =>
+	  S.IVar (id as (m, (x, r))) =>
           (case m of
                NONE =>
 	       if x = "true" then
-		 TrueI r
+		 ITrue r
 	       else if x = "false" then
-		 FalseI r
+		 IFalse r
                else if x = "admit" then
-                 AdmitI r
+                 IAdmit r
                else if x = "_" then
-                 UVarI ((), r)
+                 IUVar ((), r)
 	       else
-		 VarI (to_long_id id, [])
-             | SOME _ => VarI (to_long_id id, [])
+		 IVar (to_long_id id, [])
+             | SOME _ => IVar (to_long_id id, [])
           )
-	| S.ConstIN n =>
-	  ConstIN n
-	| S.ConstIT (x, r) =>
+	| S.INat n =>
+	  INat n
+	| S.ITime (x, r) =>
           let
             infixr 0 !!
             val x = TimeType.fromString x !! (fn () => raise Error (r, sprintf "Wrong time literal: $" [x]))
           in
-	    ConstIT (x, r)
+	    ITime (x, r)
           end
-        (* | S.UnOpI (opr, i, r) => UnOpI (opr, elab_i i, r) *)
-        | S.DivI (i1, n2, _) => DivI (elab_i i1, n2)
-	| S.BinOpI (opr, i1, i2, r) =>
+        (* | S.IUnOp (opr, i, r) => IUnOp (opr, elab_i i, r) *)
+        | S.IDiv (i1, n2, _) => IDiv (elab_i i1, n2)
+	| S.IBinOp (opr, i1, i2, r) =>
           (case is_un_op (opr, i1) of
-               SOME opr => UnOpI (opr, elab_i i2, r)
+               SOME opr => IUnOp (opr, elab_i i2, r)
              | NONE =>
                case is_ite i of
-                   SOME (i1, i2, i3) => Ite (elab_i i1, elab_i i2, elab_i i3, r)
-	         | NONE =>BinOpI (opr, elab_i i1, elab_i i2)
+                   SOME (i1, i2, i3) => IIte (elab_i i1, elab_i i2, elab_i i3, r)
+	         | NONE =>IBinOp (opr, elab_i i1, elab_i i2)
           )
-	| S.TTI r =>
-	  TTI r
+	| S.ITT r =>
+	  ITT r
         | S.IAbs (names, i, r) =>
-          foldr (fn (name, i) => IAbs (UVarBS (), Bind (name, i), r)) (elab_i i) names
+          foldr (fn (name, i) => IAbs (BSUVar (), Bind (name, i), r)) (elab_i i) names
 
   fun elab_p p =
       case p of
-	  ConstP (name, r) =>
+	  PConst (name, r) =>
 	  if name = "True" then
-	    True r
+	    PTrue r
 	  else if name = "False" then
-	    False r
+	    PFalse r
 	  else raise Error (r, sprintf "Unrecognized proposition: $" [name])
-        | S.Not (p, r) => Not (elab_p p, r)
-	| S.BinConn (opr, p1, p2, _) => BinConn (opr, elab_p p1, elab_p p2)
-	| S.BinPred (opr, i1, i2, _) => BinPred (opr, elab_i i1, elab_i i2)
+        | S.PNot (p, r) => PNot (elab_p p, r)
+	| S.PBinConn (opr, p1, p2, _) => PBinConn (opr, elab_p p1, elab_p p2)
+	| S.PBinPred (opr, i1, i2, _) => PBinPred (opr, elab_i i1, elab_i i2)
 
   fun TimeFun n =
-    if n <= 0 then Base Time
-    else BSArrow (Base Nat, TimeFun (n-1))
+    if n <= 0 then BSTime
+    else BSArrow (BSNat, TimeFun (n-1))
 
   fun elab_b b =
       case b of
-          S.Base (name, r) =>
+          S.BSId (name, r) =>
 	  if name = "Time" then
-	    (Base Time, r)
+	    (BSBase BSSTime, r)
 	  else if name = "Nat" then
-	    (Base Nat, r)
+	    (BSBase BSSNat, r)
 	  else if name = "Bool" then
-	    (Base BoolSort, r)
+	    (BSBase BSSBool, r)
 	  else if name = "Unit" then
-	    (Base UnitSort, r)
+	    (BSBase BSSUnit, r)
           else if name = "_" then
-            (UVarBS (), r)
+            (BSUVar (), r)
 	  else raise Error (r, sprintf "Unrecognized base sort: $" [name])
 
   fun elab_s s =
       case s of
-	  S.Basic b =>
+	  S.SBasic b =>
           (case elab_b b of
-               (UVarBS (), r) => UVarS ((), r)
-             | b => Basic b
+               (BSUVar (), r) => SUVar ((), r)
+             | b => SBasic b
           )
-	| S.Subset (b, name, p, r) => Subset (elab_b b, Bind (name, elab_p p), r)
-        | S.BigOSort (name, b, i, r) =>
+	| S.SSubset (b, name, p, r) => SSubset (elab_b b, Bind (name, elab_p p), r)
+        | S.SBigO (name, b, i, r) =>
           let
-            fun SortBigO (bs, i, r) =
+            fun SBigO (bs, i, r) =
               let
                 val name = "__f"
               in
-                Subset (bs, Bind ((name, r), BinPred (BigO, VarI (ID (name, r), []), i)), r)
+                SSubset (bs, Bind ((name, r), PBinPred (BPBigO, IVar (ID (name, r), []), i)), r)
               end
           in
             if name = "BigO" then
-              SortBigO (elab_b b, elab_i i, r)
+              SBigO (elab_b b, elab_i i, r)
             else
               raise Error (r, sprintf "Unrecognized sort: $" [name])
           end
 
   fun get_is t =
       case t of 
-	  AppTI (t, i, _) =>
+	  S.TAppI (t, i, _) =>
 	  let val (t, is) = get_is t in
 	    (t, is @ [i])
 	  end
@@ -146,7 +146,7 @@ local
 
   fun get_ts t =
       case t of 
-	  AppTT (t, t2, _) =>
+	  S.TAppT (t, t2, _) =>
 	  let val (t, ts) = get_ts t in
 	    (t, ts @ [t2])
 	  end
@@ -155,60 +155,60 @@ local
   fun is_var_app_ts t = 
       let val (t, ts) = get_ts t in
 	case t of
-	    S.VarT x => SOME (x, ts)
+	    S.TVar x => SOME (x, ts)
 	  | _ => NONE
       end
 
   fun elab_mt t =
       case t of
-	  S.VarT (id as (m, (x, r))) =>
+	  S.TVar (id as (m, (x, r))) =>
           let
-            fun def () = AppV (to_long_id id, [], [], r)
+            fun def () = TAppV (to_long_id id, [], [], r)
           in
             case m of
                 NONE =>
                 if x = "unit" then
-                  Unit r
+                  TUnit r
                 else if x = "int" then
-                  BaseType (Int, r)
+                  TInt r
                 else if x = "bool" then
-                  BaseType (Bool, r)
+                  TBool r
                 else if x = "byte" then
-                  BaseType (Byte, r)
+                  TByte r
                 (* else if x = "string" then *)
                 (*   BaseType (String, r) *)
                 else if x = "_" then
-                  UVar ((), r)
+                  TUVar ((), r)
                 else
                   def ()
               | SOME _ => def ()
           end
-	| S.Arrow (t1, d, t2, _) => PureArrow (elab_mt t1, elab_i d, elab_mt t2)
-	| S.Prod (t1, t2, _) => Prod (elab_mt t1, elab_mt t2)
-	| S.Quan (quan, binds, t, r) =>
+	| S.TArrow (t1, d, t2, _) => TPureArrow (elab_mt t1, elab_i d, elab_mt t2)
+	| S.TProd (t1, t2, _) => TProd (elab_mt t1, elab_mt t2)
+	| S.TQuan (quan, binds, t, r) =>
 	  let fun f ((x, s, _), t) =
 		case quan of
-		    S.Forall => UniI (elab_s s, Bind (x, t), r)
+		    S.Forall => TUniI (elab_s s, Bind (x, t), r)
 	  in
 	    foldr f (elab_mt t) binds
 	  end
-	| S.AppTT (t1, t2, r) =>
+	| S.TAppT (t1, t2, r) =>
 	  (case is_var_app_ts t1 of
-	       SOME (x, ts) => AppV (to_long_id x, map elab_mt (ts @ [t2]), [], r)
+	       SOME (x, ts) => TAppV (to_long_id x, map elab_mt (ts @ [t2]), [], r)
 	     | NONE => raise Error (r, "Head of type-type application must be a variable"))
-	| S.AppTI (t, i, r) =>
+	| S.TAppI (t, i, r) =>
 	  let val (t, is) = get_is t 
 	      val is = is @ [i]
 	  in
 	    case is_var_app_ts t of
-		SOME (x, ts) => AppV (to_long_id x, map elab_mt ts, map elab_i is, r)
+		SOME (x, ts) => TAppV (to_long_id x, map elab_mt ts, map elab_i is, r)
 	      | NONE => raise Error (r, "The form of type-index application can only be [Variable Types Indices]")
 	  end
 	| S.TAbs (binds, t, r) =>
 	  let fun f (bind, t) =
                 case bind of
-                    inr (x, b, _) => MtAbsI (fst $ elab_b b, Bind (x, t), r)
-                  | inl x => MtAbs (Type, Bind (x, t), r)
+                    inr (x, b, _) => TAbsI (fst $ elab_b b, Bind (x, t), r)
+                  | inl x => TAbs (Type, Bind (x, t), r)
 	  in
 	    foldr f (elab_mt t) binds
 	  end
@@ -217,19 +217,19 @@ local
                                    
   fun elab_pn pn =
       case pn of
-          S.ConstrP ((name, eia), inames, pn, r) =>
+          S.PnConstr ((name, eia), inames, pn, r) =>
           if isNone (fst name) andalso not eia andalso null inames andalso isNone pn then
-            VarP $ Binder $ EName (snd name)
+            PnVar $ Binder $ EName (snd name)
           else
-            ConstrP (Outer ((to_long_id name, ()), eia), map str2ibinder inames, default (TTP r) $ Option.map elab_pn pn, r)
-        | S.TupleP (pns, r) =>
+            PnConstr (Outer ((to_long_id name, ()), eia), map str2ibinder inames, default (PnTT r) $ Option.map elab_pn pn, r)
+        | S.PnTuple (pns, r) =>
           (case pns of
-               [] => TTP r
-             | pn :: pns => foldl (fn (pn2, pn1) => PairP (pn1, elab_pn pn2)) (elab_pn pn) pns)
-        | S.AliasP (name, pn, r) =>
-          AliasP (Binder $ EName name, elab_pn pn, r)
-        | S.AnnoP (pn, t, r) =>
-          AnnoP (elab_pn pn, Outer $ elab_mt t)
+               [] => PnTT r
+             | pn :: pns => foldl (fn (pn2, pn1) => PnPair (pn1, elab_pn pn2)) (elab_pn pn) pns)
+        | S.PnAlias (name, pn, r) =>
+          PnAlias (Binder $ EName name, elab_pn pn, r)
+        | S.PnAnno (pn, t, r) =>
+          PnAnno (elab_pn pn, Outer $ elab_mt t)
   (*                                                              
     and copy_anno (t, d) =
         let
@@ -257,22 +257,22 @@ local
   fun elab_datatype ((name, tnames, top_sortings, sorts, constrs, r) : S.datatype_def) : mtype datatype_def * region =
       let
         val sorts = map (fst o elab_b) (map (fn (_, s, _) => s) top_sortings @ sorts)
-        fun default_t2 r = foldl (fn (arg, f) => S.AppTT (f, S.VarT (NONE, (arg, r)), r)) (S.VarT (NONE, (name, r))) tnames
+        fun default_t2 r = foldl (fn (arg, f) => S.TAppT (f, S.TVar (NONE, (arg, r)), r)) (S.TVar (NONE, (name, r))) tnames
         fun elab_constr ((cname, binds, core, r) : S.constr_decl) : mtype constr_decl =
             let
-              (* val (t1, t2) = default (S.VarT ("unit", r), SOME (default_t2 r)) core *)
+              (* val (t1, t2) = default (S.TVar ("unit", r), SOME (default_t2 r)) core *)
               (* val t2 = default (default_t2 r) t2 *)
               val (t1, t2) =
                   case core of
-                      NONE => (S.VarT (NONE, ("unit", r)), default_t2 r)
-                    | SOME (t1, NONE) => (S.VarT (NONE, ("unit", r)), t1)
+                      NONE => (S.TVar (NONE, ("unit", r)), default_t2 r)
+                    | SOME (t1, NONE) => (S.TVar (NONE, ("unit", r)), t1)
                     | SOME (t1, SOME t2) => (t1, t2)
               fun f (name, sort, r) = (name, elab_s sort)
-              val binds = map f (map (fn (name, b, r) => (name, S.Basic b, r)) top_sortings @ binds)
+              val binds = map f (map (fn (name, b, r) => (name, S.SBasic b, r)) top_sortings @ binds)
               val t2_orig = t2
               val (t2, is) = get_is t2
               val (t2, ts) = get_ts t2
-              val () = if case t2 of S.VarT (NONE, (x, _)) => x = name | _ => false then
+              val () = if case t2 of S.TVar (NONE, (x, _)) => x = name | _ => false then
                          ()
                        else
                          raise Error (S.get_region_t t2, sprintf "Result type of constructor must be $ (did you use -> when you should you --> ?)" [name])
@@ -282,7 +282,7 @@ local
                     val targ_mismatch = "This type argument must be " ^ tname
                   in
                     case t of
-                        S.VarT (NONE, (x, r)) => if x = tname then () else raise Error (r, targ_mismatch)
+                        S.TVar (NONE, (x, r)) => if x = tname then () else raise Error (r, targ_mismatch)
                       | _ => raise Error (S.get_region_t t, targ_mismatch)
                   end
               val () = app f (zip (ts, tnames))
@@ -306,7 +306,7 @@ local
       
   fun elab e =
       case e of
-	  S.Var (id as (m, (x, r)), eia) =>
+	  S.EVar (id as (m, (x, r)), eia) =>
           let
             fun def () = EVar (to_long_id id, eia)
           in
@@ -321,45 +321,45 @@ local
                 else if x = "__&ifalse" andalso eia = false then
                   EConst (ECiBool false, r)
                 (* else if x = "never" andalso eia = false then *)
-                (*   ENever (elab_mt (S.VarT (NONE, ("_", r))), r) *)
+                (*   ENever (elab_mt (S.TVar (NONE, ("_", r))), r) *)
                 else if x = "__&empty_array" andalso eia = false then
-                  EEmptyArray (elab_mt (S.VarT (NONE, ("_", r))), r)
+                  EEmptyArray (elab_mt (S.TVar (NONE, ("_", r))), r)
                 else if x = "__&builtin" then raise Error (r, "should be '__&builtin \"name\"'")
                 else
                   def ()
               | SOME _ => def ()
           end
-	| S.Tuple (es, r) =>
+	| S.ETuple (es, r) =>
 	  (case es of
 	       [] => ETT r
 	     | e :: es => foldl (fn (e2, e1) => EPair (e1, elab e2)) (elab e) es)
-	| S.Abs (binds, (t, d), e, r) =>
+	| S.EAbs (binds, (t, d), e, r) =>
 	  let 
             fun f (b, e) =
 		case b of
-		    Typing pn => EAbs (StMap.empty, Unbound.Bind (elab_pn pn, e))
-		  | BindSort (name, s, _) => EAbsI (BindAnno ((IName name, elab_s s), e), r)
+		    BindTyping pn => EAbs (StMap.empty, Unbound.Bind (elab_pn pn, e))
+		  | BindSorting (name, s, _) => EAbsI (BindAnno ((IName name, elab_s s), e), r)
             val e = elab e
             val e = case d of SOME d => EAscTime (e, elab_i d) | _ => e
             val e = case t of SOME t => EAsc (e, elab_mt t) | _ => e
 	  in
 	    foldr f e binds
 	  end
-	| S.AppI (e, i, _) =>
+	| S.EAppI (e, i, _) =>
 	  EAppI (elab e, elab_i i)
-	| S.Case (e, return, rules, r) =>
+	| S.ECase (e, return, rules, r) =>
 	  let
             (* val rules = map (mapSnd (copy_anno return)) rules *)
 	  in
 	    ECase (elab e, elab_return return, map (fn (pn, e) => Unbound.Bind (elab_pn pn, elab e)) rules, r)
 	  end
-	| S.Asc (e, t, _) =>
+	| S.EAsc (e, t, _) =>
 	  EAsc (elab e, elab_mt t)
-	| S.AscTime (e, i, _) =>
+	| S.EAscTime (e, i, _) =>
 	  EAscTime (elab e, elab_i i)
-	| S.Let (return, decs, e, r) =>
+	| S.ELet (return, decs, e, r) =>
           ELet (elab_return return, Unbound.Bind (Teles $ map elab_decl decs, elab e), r)
-	| S.Const (c, r) =>
+	| S.EConst (c, r) =>
             (case c of
                 S.ECInt n => EConstInt (n, r)
 	      | S.ECNat n => EConstNat (n, r)
@@ -378,17 +378,17 @@ local
                       String.implode $ rev $ loop (ls, [])
                     end
                   val s = unescape s
-                  val e = ENewArrayValues (BaseType (Byte, r), map (fn c => EByte (c, r)) $ String.explode s, r)
+                  val e = ENewArrayValues (TByte r, map (fn c => EByte (c, r)) $ String.explode s, r)
                   (* val e = EApp (EVar (QID $ qid_add_r r $ CSTR_STRING_NAMEFUL, false), e) *)
                 in
                   e
                 end)
-	| S.BinOp (EBApp, e1, e2, r) =>
+	| S.EBinOp (EBApp, e1, e2, r) =>
 	  let 
 	    fun default () = EApp (elab e1, elab e2)
 	  in
 	    case e1 of
-		S.Var ((m, (x, _)), false) =>
+		S.EVar ((m, (x, _)), false) =>
                 (case m of
                      NONE =>
 		     if x = "__&fst" then EFst (elab e2, r)
@@ -402,33 +402,33 @@ local
 		     else if x = "__&array_length" then EUnOp (EUArrayLen, elab e2, r)
 		     (* else if x = "__&print" then EUnOp (EUPrint, elab e2, r) *)
 		     else if x = "__&printc" then EUnOp (EUPrintc, elab e2, r)
-		     else if x = "__&halt" then EET (EETHalt, elab e2, elab_mt (S.VarT (NONE, ("_", r))))
+		     else if x = "__&halt" then EET (EETHalt, elab e2, elab_mt (S.TVar (NONE, ("_", r))))
                      else if x = "__&builtin" then
                        (case e2 of
-                            S.Const (S.ECString s, _) =>
-                            EBuiltin (s, elab_mt (S.VarT (NONE, ("_", r))), r)
+                            S.EConst (S.ECString s, _) =>
+                            EBuiltin (s, elab_mt (S.TVar (NONE, ("_", r))), r)
                           | _ => raise Error (r, "should be '__&builtin \"name\"'"))
 		     else if x = "__&array" then
                        (case e2 of
-                            S.Tuple ([e1, e2], _) =>
+                            S.ETuple ([e1, e2], _) =>
                             ENew (elab e1, elab e2)
                           | _ => raise Error (r, "should be '__&array (_, _)'")
                        )
 		     else if x = "__&sub" then
                        (case e2 of
-                            S.Tuple ([e1, e2], _) =>
+                            S.ETuple ([e1, e2], _) =>
                             ERead (elab e1, elab e2)
                           | _ => raise Error (r, "should be '__&sub (_, _)'")
                        )
 		     else if x = "push_back" then
                        (case e2 of
-                            S.Tuple ([e1, e2], _) =>
+                            S.ETuple ([e1, e2], _) =>
                             EVectorPushBack (elab e1, elab e2)
                           | _ => raise Error (r, "should be 'push_back (_, _)'")
                        )
 		     else if x = "__&update" then
                        (case e2 of
-                            S.Tuple ([e1, e2, e3], _) =>
+                            S.ETuple ([e1, e2, e3], _) =>
                             EWrite (elab e1, elab e2, elab e3)
                           | _ => raise Error (r, "should be '__&update (_, _, _)'")
                        )
@@ -437,24 +437,24 @@ local
                 )
 	      | _ => default ()
 	  end
-        | S.BinOp (opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
+        | S.EBinOp (opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
         | S.EUnOp (opr, e, r) => EUnOp (opr, elab e, r)
         | S.ETriOp (S.ETIte, e1, e2, e3, _) => ETriOp (ETIte, elab e1, elab e2, elab e3)
         | S.ETriOp (S.ETIfDec, e, e1, e2, r) => ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.EIfi (e, e1, e2, r) => EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
-        | S.ENever r => ENever (elab_mt (S.VarT (NONE, ("_", r))), r)
+        | S.ENever r => ENever (elab_mt (S.TVar (NONE, ("_", r))), r)
         | S.EStrConcat (e1, e2, r) => EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, false), EPair (elab e1, elab e2))
         | S.ESetModify (is_modify, (x, offsets), e, r) => ESetModify (is_modify, fst x, map elab offsets, elab e, r)
         | S.EGet ((x, offsets), r) => EGet (fst x, map elab offsets, r)
 
   and elab_decl decl =
       case decl of
-	  S.Val (tnames, pn, e, r) =>
+	  S.DVal (tnames, pn, e, r) =>
           let
             val pn = elab_pn pn
           in
             case pn of
-                VarP name =>
+                PnVar name =>
                 DVal (name, Outer $ Unbound.Bind (map (Binder o TName) tnames, elab e), r)
               | _ =>
                 if null tnames then
@@ -462,55 +462,55 @@ local
                 else
                   raise Error (r, "compound pattern can't be generalized, so can't have explicit type variables")
           end
-	| S.Rec (tnames, name, binds, pre, post, (t, d), e, r) =>
+	| S.DRec (tnames, name, binds, pre, post, (t, d), e, r) =>
           let
             val post = default pre post
             fun f bind =
                 case bind of
-		    Typing pn => TypingST (elab_pn pn)
-		  | BindSort (nm, s, _) => SortingST (Binder $ IName nm, Outer $ elab_s s)
+		    BindTyping pn => TypingST (elab_pn pn)
+		  | BindSorting (nm, s, _) => SortingST (Binder $ IName nm, Outer $ elab_s s)
             val binds = map f binds
             (* if the function body is a [case] without annotations, copy the return clause from the function signature to the [case] *)
             (* val e = copy_anno (t, d) e *)
-            val t = default (UVar ((), r)) (Option.map elab_mt t)
-            val d = default (UVarI ((), r)) (Option.map elab_i d)
+            val t = default (TUVar ((), r)) (Option.map elab_mt t)
+            val d = default (IUVar ((), r)) (Option.map elab_i d)
             val e = elab e
           in
 	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((elab_state r pre, elab_state r post), (t, d), e)), r)
           end
-        | S.IdxDef ((name, r), s, i) =>
+        | S.DIdxDef ((name, r), s, i) =>
           let
-            val s = default (UVarS ((), r)) $ Option.map elab_s s
+            val s = default (SUVar ((), r)) $ Option.map elab_s s
           in
             DIdxDef (Binder $ IName (name, r), Outer $ SOME s, Outer $ elab_i i)
           end
-        | S.AbsIdx2 ((name, r), s, i) =>
+        | S.DAbsIdx2 ((name, r), s, i) =>
           let
-            val s = default (UVarS ((), r)) $ Option.map elab_s s
+            val s = default (SUVar ((), r)) $ Option.map elab_s s
           in
             DAbsIdx2 (Binder $ IName (name, r), Outer s, Outer $ elab_i i)
           end
-        | S.AbsIdx ((name, r1), s, i, decls, r) =>
+        | S.DAbsIdx ((name, r1), s, i, decls, r) =>
           let
-            val s = default (UVarS ((), r1)) $ Option.map elab_s s
+            val s = default (SUVar ((), r1)) $ Option.map elab_s s
             val i = case i of
                         SOME i => elab_i i
-                      | NONE => UVarI ((), r1)
+                      | NONE => IUVar ((), r1)
           in
             DAbsIdx ((Binder $ IName (name, r1), Outer s, Outer i), Rebind $ Teles $ map elab_decl decls, r)
           end
-        | S.Datatype a =>
+        | S.DDatatype a =>
           let
             val (dt, r) = elab_datatype a
           in
             DTypeDef (Binder $ TName $ fst $ unBind dt, Outer $ TDatatype (dt, r))
           end
-        | S.TypeDef (name, t) => DTypeDef (Binder $ TName name, Outer $ elab_mt t)
-        | S.Open name => DOpen (Inner name, NONE)
+        | S.DTypeDef (name, t) => DTypeDef (Binder $ TName name, Outer $ elab_mt t)
+        | S.DOpen name => DOpen (Inner name, NONE)
 
   fun elab_spec spec =
       case spec of
-          S.SpecVal (name, tnames, t, r) => SpecVal (name, foldr (fn (tname, t) => Uni (Bind (tname, t), combine_region (snd tname) r)) (Mono $ elab_mt t) tnames)
+          S.SpecVal (name, tnames, t, r) => SpecVal (name, foldr (fn (tname, t) => PTUni (Bind (tname, t), combine_region (snd tname) r)) (PTMono $ elab_mt t) tnames)
         | S.SpecIdx (name, sort) => SpecIdx (name, elab_s sort)
         | S.SpecType (tnames, sorts, r) =>
           (case tnames of
@@ -537,14 +537,14 @@ local
 
   fun is_vector t =
     case t of
-        S.AppTT (S.VarT (NONE, (x, _)), t2, _) =>
+        S.TAppT (S.TVar (NONE, (x, _)), t2, _) =>
         if x = "vector" then SOME $ elab_mt t2
         else NONE
       | _ => NONE
 
   fun is_map t =
     case t of
-        S.AppTT (S.VarT (NONE, (x, _)), t2, _) =>
+        S.TAppT (S.TVar (NONE, (x, _)), t2, _) =>
         if x = "map" then
           case is_map t2 of
               SOME t => SOME $ TCell $ TMap t
@@ -554,9 +554,9 @@ local
                                                                          
   fun elab_top_bind bind =
       case bind of
-          S.TopModBind (name, m) => (name, TopModBind (elab_mod m))
-        | S.TopFunctorBind (name, (arg_name, arg), body) => (name, TopFunctorBind ((arg_name, elab_sig arg), elab_mod body))
-        | S.TopFunctorApp (name, f, arg) => (name, TopFunctorApp (f, arg))
+          S.TBMod (name, m) => (name, TBMod (elab_mod m))
+        | S.TBFunctor (name, (arg_name, arg), body) => (name, TBFunctor ((arg_name, elab_sig arg), elab_mod body))
+        | S.TBFunctorApp (name, f, arg) => (name, TBFunctorApp (f, arg))
         | S.TBState (name, t) =>
           case is_vector t of
               SOME t => (name, TBState (false, t))

@@ -117,7 +117,7 @@ fun constr_type (t_var : int LongId.long_id -> mtype) shiftx_long_id ((family, t
     val tnames = map fst tname_kinds
     val (ns, (t, is)) = unfold_binds ibinds
     val ts = map (fn x => t_var (ID (x, dummy))) $ rev $ range $ length tnames
-    val t2 = AppV (shiftx_long_id 0 (length tnames) family, ts, is, dummy)
+    val t2 = TAppV (shiftx_long_id 0 (length tnames) family, ts, is, dummy)
     val t = TPureArrow (t, T0 dummy, t2)
     val t = foldr (fn ((name, s), t) => TUniI (s, Bind (name, t), dummy)) t ns
     val t = PTMono t

@@ -1,8 +1,8 @@
 functor UniquefyIdxFn (
   structure Idx : IDX where type name = string * Region.region
-  val map_uvar_bs : ('bsort -> 'bsort2) -> 'bsort Idx.uvar_bs -> 'bsort2 Idx.uvar_bs
-  val map_uvar_i : ('bsort -> 'bsort2) * ('idx -> 'idx2) -> ('bsort, 'idx) Idx.uvar_i -> ('bsort2, 'idx2) Idx.uvar_i
-  val map_uvar_s : ('bsort -> 'bsort2) * ('sort -> 'sort2) -> ('bsort, 'sort) Idx.uvar_s -> ('bsort2, 'sort2) Idx.uvar_s
+  val map_uvar_bs : ('basic_sort -> 'basic_sort2) -> 'basic_sort Idx.uvar_bs -> 'basic_sort2 Idx.uvar_bs
+  val map_uvar_i : ('basic_sort -> 'basic_sort2) * ('idx -> 'idx2) -> ('basic_sort, 'idx) Idx.uvar_i -> ('basic_sort2, 'idx2) Idx.uvar_i
+  val map_uvar_s : ('basic_sort -> 'basic_sort2) * ('sort -> 'sort2) -> ('basic_sort, 'sort) Idx.uvar_s -> ('basic_sort2, 'sort2) Idx.uvar_s
 ) = struct
 
 open Gctx
@@ -34,19 +34,19 @@ fun uniquefy_idx_visitor_vtable cast () =
       let
         val vtable = cast this
       in
-        map_uvar_bs (#visit_bsort vtable this []) u
+        map_uvar_bs (#visit_basic_sort vtable this []) u
       end
     fun visit_uvar_i this ctx (u, r) =
       let
         val vtable = cast this
-        val u = map_uvar_i (#visit_bsort vtable this [], #visit_idx vtable this []) u
+        val u = map_uvar_i (#visit_basic_sort vtable this [], #visit_idx vtable this []) u
       in
         (u, r)
       end
     fun visit_uvar_s this ctx (u, r) =
       let
         val vtable = cast this
-        val u = map_uvar_s (#visit_bsort vtable this [], #visit_sort vtable this []) u
+        val u = map_uvar_s (#visit_basic_sort vtable this [], #visit_sort vtable this []) u
       in
         (u, r)
       end

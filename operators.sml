@@ -19,8 +19,8 @@ datatype idx_un_op =
          | IULog of string
          (* | IUExp of string *)
 
-val Log2 = IULog "2"
-val Log10 = IULog "10"
+val IULog2 = IULog "2"
+val IULog10 = IULog "10"
                
 datatype idx_bin_op =
 	 IBAdd

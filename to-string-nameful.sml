@@ -35,7 +35,7 @@ open IdxUtil
        
 fun strn_bs s =
   case s of
-      Base s => str_b s
+      BSBase s => str_b s
     | BSArrow (s1, s2) =>
       let
         fun default () = sprintf "($ => $)" [strn_bs s1, strn_bs s2]
@@ -44,7 +44,7 @@ fun strn_bs s =
             SOME n => if n = 0 then "Time" else sprintf "(Fun $)" [str_int n]
           | NONE => default ()
       end
-    | UVarBS u =>
+    | BSUVar u =>
       str_uvar_bs strn_bs u
 
 fun strn_i i =
@@ -52,32 +52,32 @@ fun strn_i i =
   (*     SOME ((x, _), args) => sprintf "($ ...)" [str_uvar_i (str_bs, str_i []) x] *)
   (*   | NONE => *)
   case i of
-      VarI (x, sorts) => x (* ^ sprintf "[$]" [str_int $ length sorts] *)
+      IVar (x, sorts) => x (* ^ sprintf "[$]" [str_int $ length sorts] *)
     | IConst (c, _) => str_idx_const c
-    | UnOpI (opr, i, _) =>
+    | IUnOp (opr, i, _) =>
       (case opr of
            IUDiv n => sprintf "($ / $)" [strn_i i, str_int n]
          (* | IUExp s => sprintf "($ ^ $)" [strn_i i, s] *)
          | _ => sprintf "($ $)" [str_idx_un_op opr, strn_i i]
       )
-    | BinOpI (opr, i1, i2) =>
+    | IBinOp (opr, i1, i2) =>
       (case opr of
-           IApp =>
+           IBApp =>
            let
              val (f, is) = collect_IApp i
              val is = f :: is
            in
              sprintf "($)" [join " " $ map strn_i is]
            end
-         | AddI =>
+         | IBAdd =>
            let
-             val is = collect_AddI_left i
+             val is = collect_IAdd_left i
            in
              sprintf "($)" [join " + " $ map strn_i is]
            end
          | _ => sprintf "($ $ $)" [strn_i i1, str_idx_bin_op opr, strn_i i2]
       )
-    | Ite (i1, i2, i3, _) => sprintf "(ite $ $ $)" [strn_i i1, strn_i i2, strn_i i3]
+    | IIte (i1, i2, i3, _) => sprintf "(ite $ $ $)" [strn_i i1, strn_i i2, strn_i i3]
     | IAbs _ =>
       let
         val (bs_names, i) = collect_IAbs i
@@ -85,38 +85,38 @@ fun strn_i i =
         sprintf "(fn $ => $)" [join " " $ map (fn (b, name) => sprintf "($ : $)" [name, strn_bs b]) bs_names, strn_i i]
       end
     (* | IAbs ((name, _), i, _) => sprintf "(fn $ => $)" [name, strn_i (name :: ctx) i] *)
-    | UVarI (u, _) =>
+    | IUVar (u, _) =>
       str_uvar_i (strn_bs, strn_i) u
     | IState st => StMapU.str_map (id, strn_i) st
                                  
 fun strn_p p =
   case p of
       PTrueFalse (b, _) => str_bool b
-    | Not (p, _) => sprintf "(~ $)" [strn_p p]
-    | BinConn (opr, p1, p2) => sprintf "($ $ $)" [strn_p p1, str_bin_conn opr, strn_p p2]
+    | PNot (p, _) => sprintf "(~ $)" [strn_p p]
+    | PBinConn (opr, p1, p2) => sprintf "($ $ $)" [strn_p p1, str_bin_conn opr, strn_p p2]
     (* | BinPred (BigO, i1, i2) => sprintf "($ $ $)" [strn_bin_pred BigO, strn_i ctx i1, strn_i ctx i2] *)
-    | BinPred (opr, i1, i2) => sprintf "($ $ $)" [strn_i i1, str_bin_pred opr, strn_i i2]
-    | Quan (q, bs, Bind ((name, _), p), _) => sprintf "($ ($ : $) $)" [str_quan q, name, strn_bs bs, strn_p p]
+    | PBinPred (opr, i1, i2) => sprintf "($ $ $)" [strn_i i1, str_bin_pred opr, strn_i i2]
+    | PQuan (q, bs, Bind ((name, _), p), _) => sprintf "($ ($ : $) $)" [str_quan q, name, strn_bs bs, strn_p p]
 
 fun strn_s s =
   (* case is_SApp_UVarS s of *)
   (*     SOME ((x, _), args) => sprintf "($ ...)" [str_uvar_s (strn_s []) x] *)
   (*   | NONE => *)
   case s of
-      Basic (bs, _) => strn_bs bs
-    | Subset ((bs, _), Bind ((name, _), p), _) =>
+      SBasic (bs, _) => strn_bs bs
+    | SSubset ((bs, _), Bind ((name, _), p), _) =>
       let
         fun default () = sprintf "{ $ : $ | $ }" [name, strn_bs bs, strn_p p]
       in
         case (is_time_fun bs, p) of
-            (SOME arity, BinPred (BigO, VarI (x, _), i2)) =>
+            (SOME arity, PBinPred (BPBigO, IVar (x, _), i2)) =>
             if x = name then
               sprintf "BigO $ $" [str_int arity, strn_i i2]
             else
               default ()
           | _ => default ()
       end
-    | UVarS (u, _) =>
+    | SUVar (u, _) =>
       str_uvar_s strn_s u
     | SAbs (s1, Bind ((name, _), s), _) =>
       sprintf "(fn $ : $ => $)" [name, strn_bs s1, strn_s s]
@@ -148,11 +148,11 @@ fun strn_tbinds binds =
 structure TypeUtil = TypeUtilFn (Type)
 open TypeUtil
        
-fun collect_Uni_UniI t =
+fun collect_PTUni_TUniI t =
   let
-    val (tnames, t) = collect_Uni t
+    val (tnames, t) = collect_PTUni t
     val tnames = map fst tnames
-    val (binds, t) = collect_UniI t
+    val (binds, t) = collect_TUniI t
     val binds = map (mapFst fst) binds
   in
     (map KindingT tnames @ map SortingT binds, t)
@@ -163,17 +163,17 @@ fun strn_state st = if StMap.numItems st = 0 then ""
                                       
 fun strn_mt t =
   let
-    fun collect_MtAppI_or_MtApp t =
+    fun collect_TAppI_or_TApp t =
       case t of
-          MtAppI (t, i) =>
+          TAppI (t, i) =>
           let 
-            val (f, args) = collect_MtAppI_or_MtApp t
+            val (f, args) = collect_TAppI_or_TApp t
           in
             (f, args @ [inl i])
           end
-        | MtApp (t, arg) =>
+        | TApp (t, arg) =>
           let 
-            val (f, args) = collect_MtAppI_or_MtApp t
+            val (f, args) = collect_TAppI_or_TApp t
           in
             (f, args @ [inr arg])
           end
@@ -184,28 +184,28 @@ fun strn_mt t =
         | inr v => f_r v
     fun strn_apps t = 
       let
-        val (f, args) = collect_MtAppI_or_MtApp t
+        val (f, args) = collect_TAppI_or_TApp t
       in
         sprintf "($$)" [strn_mt f, join_prefix " " $ map (map_sum (strn_i, strn_mt)) $ args]
       end
-    fun collect_MtAbsI_or_MtAbs t =
+    fun collect_TAbsI_or_TAbs t =
       case t of
-          MtAbsI (s, Bind ((name, _), t), _) =>
+          TAbsI (s, Bind ((name, _), t), _) =>
           let
-            val (binds, t) = collect_MtAbsI_or_MtAbs t
+            val (binds, t) = collect_TAbsI_or_TAbs t
           in
             ((inl s, name) :: binds, t)
           end
-        | MtAbs (k, Bind ((name, _), t), _) =>
+        | TAbs (k, Bind ((name, _), t), _) =>
           let
-            val (binds, t) = collect_MtAbsI_or_MtAbs t
+            val (binds, t) = collect_TAbsI_or_TAbs t
           in
             ((inr k, name) :: binds, t)
           end
         | _ => ([], t)
     fun strn_abs t =
       let
-        val (binds, t) = collect_MtAbsI_or_MtAbs t
+        val (binds, t) = collect_TAbsI_or_TAbs t
         (* val () = println $ strn_int (length binds) *)
         fun strn_bind (c, name) =
           case c of
@@ -218,43 +218,43 @@ fun strn_mt t =
         sprintf "(fn$ => $)" [join_prefix " " binds, t]
       end
   in
-    (* case is_MtApp_UVar t of *)
+    (* case is_TApp_UVar t of *)
     (*     SOME ((x, _), i_args, t_args) => sprintf "($ ...)" [strn_uvar_mt (strn_raw_bs, strn_raw_k, strn_mt ([], [])) x] *)
     (*   | NONE => *)
     case t of
-        Arrow ((st1, t1), d, (st2, t2)) =>
+        TArrow ((st1, t1), d, (st2, t2)) =>
         if is_T0 d then
           sprintf "($$ -> $$)" [strn_state st1, strn_mt t1, strn_state st2, strn_mt t2]
         else
           sprintf "($$ -- $ --> $$)" [strn_state st1, strn_mt t1, strn_i d, strn_state st2, strn_mt t2]
-      | TyNat (i, _) => sprintf "(nat $)" [strn_i i]
+      | TNat (i, _) => sprintf "(nat $)" [strn_i i]
       | TiBool (i, _) => sprintf "(ibool $)" [strn_i i]
-      | TyArray (t, i) => sprintf "(array $ $)" [strn_mt t, strn_i i]
-      | Unit _ => "unit"
-      | Prod (t1, t2) => sprintf "($ * $)" [strn_mt t1, strn_mt t2]
-      | UniI _ =>
+      | TArray (t, i) => sprintf "(array $ $)" [strn_mt t, strn_i i]
+      | TUnit _ => "unit"
+      | TProd (t1, t2) => sprintf "($ * $)" [strn_mt t1, strn_mt t2]
+      | TUniI _ =>
         let
-          val (binds, t) = collect_UniI t
+          val (binds, t) = collect_TUniI t
           val binds = map (mapFst fst) binds
         in
           strn_uni (map SortingT binds, t)
         end
-      | MtVar x => x
-      | MtApp (t1, t2) =>
+      | TVar x => x
+      | TApp (t1, t2) =>
         (* sprintf "($ $)" [strn_mt ctx t1, strn_mt ctx t2] *)
         strn_apps t
-      | MtAbs _ =>
+      | TAbs _ =>
         (* sprintf "(fn [$ : $] => $)" [name, strn_k gctx sctx k, strn_mt (sctx, name :: kctx) t] *)
         strn_abs t
-      | MtAppI _ =>
+      | TAppI _ =>
         (* sprintf "($ {$})" [strn_mt ctx t, strn_i gctx sctx i] *)
         strn_apps t
-      | MtAbsI _ =>
+      | TAbsI _ =>
         (* sprintf "(fn {$ : $} => $)" [name, strn_s gctx sctx s, strn_mt (name :: sctx, kctx) t] *)
         strn_abs t
       | TSumbool (s1, s2) => sprintf "(sumbool s1 s2)" [strn_s s1, strn_s s2]
-      | BaseType (bt, _) => str_bt bt
-      | UVar (u, r) =>
+      | TBase (bt, _) => str_bt bt
+      | TUVar (u, r) =>
         let
           (* fun str_region ((left, right) : region) = sprintf "($,$)-($,$)" [str_int (#line left), str_int (#col left), str_int (#line right), str_int (max (#col right) 0)] *)
         in
@@ -300,19 +300,19 @@ and strn_uni (binds, t) =
       
 fun strn_t t =
   case t of
-      Mono t => strn_mt t
-    | Uni _ => strn_uni (collect_Uni_UniI t)
+      PTMono t => strn_mt t
+    | PTUni _ => strn_uni (collect_PTUni_TUniI t)
 
 fun decorate_var eia s = (if eia then "@" else "") ^ s
     
 fun strn_pn pn =
   case pn of
-      ConstrP (Outer ((x, _), eia), inames, pn, _) => sprintf "$$$" [decorate_var eia x, join_prefix " " $ map (surround "{" "}" o binder2str) inames, " " ^ strn_pn pn]
-    | VarP name => binder2str name
-    | PairP (pn1, pn2) => sprintf "($, $)" [strn_pn pn1, strn_pn pn2]
-    | TTP _ => "()"
-    | AliasP (name, pn, _) => sprintf "$ as $" [binder2str name, strn_pn pn]
-    | AnnoP (pn, Outer t) => sprintf "($ : $)" [strn_pn pn, strn_mt t]
+      PnConstr (Outer ((x, _), eia), inames, pn, _) => sprintf "$$$" [decorate_var eia x, join_prefix " " $ map (surround "{" "}" o binder2str) inames, " " ^ strn_pn pn]
+    | PnVar name => binder2str name
+    | PnPair (pn1, pn2) => sprintf "($, $)" [strn_pn pn1, strn_pn pn2]
+    | PnTT _ => "()"
+    | PnAlias (name, pn, _) => sprintf "$ as $" [binder2str name, strn_pn pn]
+    | PnAnno (pn, Outer t) => sprintf "($ : $)" [strn_pn pn, strn_mt t]
 
 fun strn_return return =
   case return of
@@ -423,7 +423,7 @@ and strn_decl decl =
     case decl of
         DVal (name, Outer bind, _) =>
         let
-          val pn = VarP name
+          val pn = PnVar name
           val (tnames, e) = Unbound.unBind bind
           val tnames = map binder2str tnames
           val tnames = (join "" o map (fn nm => sprintf " [$]" [nm])) tnames

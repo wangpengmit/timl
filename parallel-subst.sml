@@ -18,14 +18,14 @@ fun psubst_long_id d x get_v default y =
       SOME (n, _) => get_v n
     | NONE => default
 
-fun visit_VarI (d, x, v) visit_sort env (y, anno) =
+fun visit_IVar (d, x, v) visit_sort env (y, anno) =
   let
     val d = d + env
   in
-    psubst_long_id d x (fn n => shiftx_i_i 0 d (List.nth (v, n))) (VarI (y, map visit_sort anno)) y
+    psubst_long_id d x (fn n => shiftx_i_i 0 d (List.nth (v, n))) (IVar (y, map visit_sort anno)) y
   end
     
-val subst_i_params = visit_VarI
+val subst_i_params = visit_IVar
                      
 fun psubst_aux_is_i d x v = IdxSubstVisitor.subst_i_i_fn (subst_i_params (d, x, v))
 fun psubst_aux_is_s d x v = IdxSubstVisitor.subst_i_s_fn (subst_i_params (d, x, v))
@@ -41,17 +41,17 @@ fun subst_i_params params = (visit_idx params, visit_sort params)
 fun psubst_aux_is_mt d x v = TypeSubstVisitor.subst_i_mt_fn $ subst_i_params (d, x, v)
 fun psubst_is_mt a = psubst_aux_is_mt 0 a
 
-fun visit_MtVar (d, x, v) env y =
+fun visit_TVar (d, x, v) env y =
   let
     fun add_depth (di, dt) (di', dt') = (idepth_add (di, di'), tdepth_add (dt, dt'))
     fun get_di (di, dt) = di
     fun get_dt (di, dt) = dt
     val (di, dt) = add_depth d env
   in
-    psubst_long_id (unTDepth dt) x (fn n => shiftx_i_mt 0 (unIDepth di) (shiftx_t_mt 0 (unTDepth dt) (List.nth (v, n)))) (MtVar y) y
+    psubst_long_id (unTDepth dt) x (fn n => shiftx_i_mt 0 (unIDepth di) (shiftx_t_mt 0 (unTDepth dt) (List.nth (v, n)))) (TVar y) y
   end
                                     
-val subst_t_params = visit_MtVar
+val subst_t_params = visit_TVar
 
 fun psubst_aux_ts_mt d x v = TypeSubstVisitor.subst_t_mt_fn $ subst_t_params (IDepth_TDepth d, x, v)
 fun psubst_ts_mt a = psubst_aux_ts_mt (0, 0) a
@@ -65,13 +65,13 @@ fun psubst_ts_mt a = psubst_aux_ts_mt (0, 0) a
 (* local *)
 (*   fun f d x v b = *)
 (*     case b of *)
-(* 	VarI y => psubst_long_id d x (fn n => shiftx_i_i 0 d (List.nth (v, n))) b y *)
+(* 	IVar y => psubst_long_id d x (fn n => shiftx_i_i 0 d (List.nth (v, n))) b y *)
 (*       | IConst _ => b *)
 (*       | UnOpI (opr, i, r) => UnOpI (opr, f d x v i, r) *)
 (*       | BinOpI (opr, d1, d2) => BinOpI (opr, f d x v d1, f d x v d2) *)
 (*       | Ite (i1, i2, i3, r) => Ite (f d x v i1, f d x v i2, f d x v i3, r) *)
 (*       | IAbs (b, bind, r) => IAbs (b, psubst_aux_is_ibind f d x v bind, r) *)
-(*       | UVarI a => b *)
+(*       | IUVar a => b *)
 (* in *)
 (* val psubst_aux_is_i = f  *)
 (* fun psubst_is_i x v b = f 0 x v b *)
@@ -116,11 +116,11 @@ fun psubst_ts_mt a = psubst_aux_ts_mt (0, 0) a
 (*       | Unit r => Unit r *)
 (*       | Prod (t1, t2) => Prod (f d x v t1, f d x v t2) *)
 (*       | UniI (s, bind, r) => UniI (psubst_aux_is_s d x v s, psubst_aux_is_ibind f d x v bind, r) *)
-(*       | MtVar y => MtVar y *)
-(*       | MtApp (t1, t2) => MtApp (f d x v t1, f d x v t2) *)
-(*       | MtAbs (k, bind, r) => MtAbs (k, psubst_aux_is_tbind f d x v bind, r) *)
-(*       | MtAppI (t, i) => MtAppI (f d x v t, psubst_aux_is_i d x v i) *)
-(*       | MtAbsI (b, bind, r) => MtAbsI (b, psubst_aux_is_ibind f d x v bind, r) *)
+(*       | TVar y => TVar y *)
+(*       | TApp (t1, t2) => TApp (f d x v t1, f d x v t2) *)
+(*       | TAbs (k, bind, r) => TAbs (k, psubst_aux_is_tbind f d x v bind, r) *)
+(*       | TAppI (t, i) => TAppI (f d x v t, psubst_aux_is_i d x v i) *)
+(*       | TAbsI (b, bind, r) => TAbsI (b, psubst_aux_is_ibind f d x v bind, r) *)
 (*       | BaseType a => BaseType a *)
 (*       | UVar a => b *)
 (*       | TDatatype _ => raise Unimpl "psubst_aux_is_mt()/TDatatype" *)
@@ -142,11 +142,11 @@ fun psubst_ts_mt a = psubst_aux_ts_mt (0, 0) a
 (*       | Unit r => Unit r *)
 (*       | Prod (t1, t2) => Prod (f d x v t1, f d x v t2) *)
 (*       | UniI (s, bind, r) => UniI (s, psubst_aux_ts_ibind f d x v bind, r) *)
-(*       | MtVar y => psubst_long_id (snd d) x (fn n => shiftx_i_mt 0 (fst d) (shiftx_t_mt 0 (snd d) (List.nth (v, n)))) b y *)
-(*       | MtAbs (k, bind, r) => MtAbs (k, psubst_aux_ts_tbind f d x v bind, r) *)
-(*       | MtApp (t1, t2) => MtApp (f d x v t1, f d x v t2) *)
-(*       | MtAbsI (s, bind, r) => MtAbsI (s, psubst_aux_ts_ibind f d x v bind, r) *)
-(*       | MtAppI (t, i) => MtAppI (f d x v t, i) *)
+(*       | TVar y => psubst_long_id (snd d) x (fn n => shiftx_i_mt 0 (fst d) (shiftx_t_mt 0 (snd d) (List.nth (v, n)))) b y *)
+(*       | TAbs (k, bind, r) => TAbs (k, psubst_aux_ts_tbind f d x v bind, r) *)
+(*       | TApp (t1, t2) => TApp (f d x v t1, f d x v t2) *)
+(*       | TAbsI (s, bind, r) => TAbsI (s, psubst_aux_ts_ibind f d x v bind, r) *)
+(*       | TAppI (t, i) => TAppI (f d x v t, i) *)
 (*       | BaseType a => BaseType a *)
 (*       | UVar a => b *)
 (*       | TDatatype _ => raise Unimpl "psubst_aux_ts_mt()/TDatatype" *)

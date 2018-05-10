@@ -5,13 +5,13 @@ signature CAN_TO_STRING = sig
   include UVAR_T
   val str_var : (ToStringUtil.context -> string list) -> ToStringUtil.global_context -> string list -> var -> string
   val lookup_module : ToStringUtil.global_context -> string -> string * ToStringUtil.context
-  val map_uvar_bs : ('bsort -> 'bsort2) -> 'bsort uvar_bs -> 'bsort2 uvar_bs
-  val map_uvar_i : ('bsort -> 'bsort2) * ('idx -> 'idx2) -> ('bsort, 'idx) uvar_i -> ('bsort2, 'idx2) uvar_i
-  val map_uvar_s : ('bsort -> 'bsort2) * ('sort -> 'sort2) -> ('bsort, 'sort) uvar_s -> ('bsort2, 'sort2) uvar_s
-  val map_uvar_mt : ('bsort -> 'bsort2) * ('kind -> 'kind2) * ('mtype -> 'mtype2) -> ('bsort, 'kind, 'mtype) uvar_mt -> ('bsort2, 'kind2, 'mtype2) uvar_mt
+  val map_uvar_bs : ('basic_sort -> 'basic_sort2) -> 'basic_sort uvar_bs -> 'basic_sort2 uvar_bs
+  val map_uvar_i : ('basic_sort -> 'basic_sort2) * ('idx -> 'idx2) -> ('basic_sort, 'idx) uvar_i -> ('basic_sort2, 'idx2) uvar_i
+  val map_uvar_s : ('basic_sort -> 'basic_sort2) * ('sort -> 'sort2) -> ('basic_sort, 'sort) uvar_s -> ('basic_sort2, 'sort2) uvar_s
+  val map_uvar_mt : ('basic_sort -> 'basic_sort2) * ('kind -> 'kind2) * ('mtype -> 'mtype2) -> ('basic_sort, 'kind, 'mtype) uvar_mt -> ('basic_sort2, 'kind2, 'mtype2) uvar_mt
   val str_uvar_bs : ('a -> string) -> 'a uvar_bs -> string
-  val str_uvar_i : ('bsort -> string) * ('idx -> string) -> ('bsort, 'idx) uvar_i -> string
-  val str_uvar_s : ('sort -> string) -> ('bsort, 'sort) uvar_s -> string
+  val str_uvar_i : ('basic_sort -> string) * ('idx -> string) -> ('basic_sort, 'idx) uvar_i -> string
+  val str_uvar_s : ('sort -> string) -> ('basic_sort, 'sort) uvar_s -> string
   val str_uvar_mt : ('sort -> string) * ('kind -> string) * ('mtype -> string) -> ('sort, 'kind, 'mtype) uvar_mt -> string
 end
 
@@ -23,7 +23,7 @@ functor ToStringFn (structure Expr : IDX_TYPE_EXPR where type Idx.base_sort = Ba
                                                and type Type.region = Region.region
                                                and type mod_id = string * Region.region
                     structure CanToString : CAN_TO_STRING
-                    sharing type Expr.Type.bsort = Expr.Idx.bsort
+                    sharing type Expr.Type.basic_sort = Expr.Idx.basic_sort
                     sharing type CanToString.var = Expr.var
                     sharing type CanToString.idx = Expr.Idx.idx
                     sharing type CanToString.uvar_bs = Expr.Idx.uvar_bs
@@ -195,11 +195,11 @@ fun str_p gctx ctx b =
 
 (* fun new_import_idx_visitor a = new_idx_visitor import_idx_visitor_vtable a *)
     
-(* fun on_bsort b = *)
+(* fun on_basic_sort b = *)
 (*   let *)
 (*     val visitor as (IdxVisitor vtable) = new_import_idx_visitor empty *)
 (*   in *)
-(*     #visit_bsort vtable visitor [] b *)
+(*     #visit_basic_sort vtable visitor [] b *)
 (*   end *)
     
 (* fun on_idx gctx ctx b = *)
@@ -209,7 +209,7 @@ fun str_p gctx ctx b =
 (*     #visit_idx vtable visitor ctx b *)
 (*   end *)
     
-(* fun str_bs (s : bsort) = *)
+(* fun str_bs (s : basic_sort) = *)
 (*   case s of *)
 (*       Base s => str_b s *)
 (*     | BSArrow (s1, s2) => *)

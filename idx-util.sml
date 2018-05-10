@@ -27,7 +27,7 @@ fun IMod (a, b) = IBinOp (IBMod, a, b)
 fun ITrue r = IConst (ICBool true, r)
 fun IFalse r = IConst (ICBool false, r)
 fun ITT r = IConst (ICTT, r)
-fun AdmitI r = IConst (ICAdmit, r)
+fun IAdmit r = IConst (ICAdmit, r)
 fun PTrue r = PTrueFalse (true, r)
 fun PFalse r = PTrueFalse (false, r)
 

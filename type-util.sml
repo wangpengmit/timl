@@ -54,7 +54,7 @@ fun is_TApp_TUVar t =
       | _ => NONE
   end
     
-fun is_AppV t =
+fun is_TAppV t =
   let
     val (t, i_args) = collect_TAppI t
     val (t, t_args) = collect_TApp t
@@ -70,8 +70,8 @@ fun TApps f args = foldl (fn (arg, f) => TApp (f, arg)) f args
 fun TAbs_Many (ctx, t, r) = foldr (fn ((name, k), t) => TAbs (k, Bind ((name, r), t), r)) t ctx
 fun TAbsI_Many (ctx, t, r) = foldr (fn ((name, s), t) => TAbsI (s, Bind ((name, r), t), r)) t ctx
                                  
-fun AppVar (x, is) = TAppIs (TVar x) is
-fun AppV (x, ts, is, r) = TAppIs (TApps (TVar x) ts) is
+fun TAppVar (x, is) = TAppIs (TVar x) is
+fun TAppV (x, ts, is, r) = TAppIs (TApps (TVar x) ts) is
 
 fun get_constr_inames (core : mtype constr_core) =
   let

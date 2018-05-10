@@ -430,7 +430,7 @@ fun do_fetch_constr (ctx, (x, r)) =
 fun fetch_constr a = generic_fetch (package0_snd package0_c) do_fetch_constr #3 a
                                    
 fun fetch_constr_type gctx (ctx : ccontext, x) =
-  constr_type VarT LongIdSubst.shiftx_long_id $ snd $ fetch_constr gctx (ctx, x)
+  constr_type TVar LongIdSubst.shiftx_long_id $ snd $ fetch_constr gctx (ctx, x)
 
 fun get_family (c : mtype constr_info) = #1 c
 
@@ -439,7 +439,7 @@ fun package0_long_id b = package_long_id 0 b
 fun get_family_siblings gctx cctx cx =
   let
     val family = get_family $ snd $ fetch_constr gctx (cctx, cx)
-    (* val () = println $ sprintf "family: $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) (MtVar family)] *)
+    (* val () = println $ sprintf "family: $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) (TVar family)] *)
     fun do_fetch_family (cctx, (_, r)) =
       let
         fun long_id_get_id id =
@@ -447,7 +447,7 @@ fun get_family_siblings gctx cctx cx =
               ID x => x
             | QID (_, x) => x
         fun iter (n, (_, c)) =
-          ((* println (str_mt (gctx_names gctx) (sctx_names sctx, names kctx) (MtVar (get_family c)));  *)
+          ((* println (str_mt (gctx_names gctx) (sctx_names sctx, names kctx) (TVar (get_family c)));  *)
             (* println (str_raw_long_id $ get_family c);  *)
             if LongIdHasEqual.eq_id (long_id_get_id $ get_family c, long_id_get_id family) then SOME ((ID (n, r)), c) else NONE)
       in
@@ -471,7 +471,7 @@ fun fetch_constr_by_name gctx ctx id =
   end
     
 fun fetch_constr_type_by_name gctx ctx name =
-  mapSnd (constr_type VarT LongIdSubst.shiftx_long_id) $ fetch_constr_by_name gctx ctx name
+  mapSnd (constr_type TVar LongIdSubst.shiftx_long_id) $ fetch_constr_by_name gctx ctx name
 
 fun do_fetch_type (tctx, (x, r)) =
   case lookup_type x tctx of
@@ -492,13 +492,13 @@ fun fetch_type_by_name gctx ctx id =
     (long_id_change_id id x, t)
   end
 
-fun try_retrieve_MtVar ignore_dt f gctx kctx x =
+fun try_retrieve_TVar ignore_dt f gctx kctx x =
   let
     val k = fetch_kindext gctx (kctx, x)
     val alias = #2 k
     val alias = if ignore_dt andalso is_datatype k then NONE else alias
   in
-    default (MtVar x) $ Option.map f alias
+    default (TVar x) $ Option.map f alias
   end
 
 (* verification conditions written incrementally during typechecking *)

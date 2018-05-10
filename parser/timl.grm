@@ -498,7 +498,7 @@ id_star : id id_star (id :: id_star)
 	| ([])
 id_plus : id id_star (id :: id_star)
 
-quan : FORALL (QForall)
+quan : FORALL (Forall)
 
 decl_star : decl decl_star (decl :: decl_star)
 	 | ([])

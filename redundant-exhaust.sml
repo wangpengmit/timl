@@ -73,13 +73,13 @@ fun cover_neg gctx (ctx as (sctx, kctx, cctx)) (t : mtype) c =
       | TTC => FalseC
       | PairC (c1, c2) =>
         (case t of
-             Prod (t1, t2) =>
+             TProd (t1, t2) =>
              PairC (neg t1 c1, c2) \/
              PairC (c1, neg t2 c2) \/
              PairC (neg t1 c1, neg t2 c2)
            | _ => raise impossible "cover_neg()/PairC")
       | c_all as ConstrC (x, c) =>
-	(case is_AppV t of
+	(case is_TAppV t of
 	     SOME (family, ts, _) =>
 	     let
                val all = map fst $ get_family_siblings gctx cctx x
@@ -214,7 +214,7 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
               let
                 (* val () = println (sprintf "Empty constraints now. Now try to find any inhabitant of type $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) t]) *)
                 val ret =
-                    case is_AppV t of
+                    case is_TAppV t of
                         SOME (family, _, _) =>
                         if fetch_is_datatype gctx (kctx, family) then
 	                  let
@@ -229,8 +229,8 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                         else TrueH (* an abstract type is treated as an inhabited type *)
                       | NONE =>
                         (case t of
-                             Unit _ => TTH
-                           | Prod (t1, t2) => PairH (loop $ check_size (t1, []), loop $ check_size (t2, []))
+                             TUnit _ => TTH
+                           | TProd (t1, t2) => PairH (loop $ check_size (t1, []), loop $ check_size (t2, []))
                            | _ => TrueH
                         )
                 (* val () = println "Found" *)
@@ -255,7 +255,7 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                   case c of
                       TTC =>
                       (case t of
-                           Unit _ =>
+                           TUnit _ =>
                            (case allSome (fn c => case c of TTC => SOME () | _ => NONE) cs of
                                 OK _ => inl TTH
                               | Failed (i, dissident) =>
@@ -268,7 +268,7 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                       )
                     | PairC (c1, c2) =>
                       (case t of
-                           Prod (t1, t2) =>
+                           TProd (t1, t2) =>
                            (case allSome (fn c => case c of PairC p => SOME p | _ => NONE ) cs of
                                 OK cs =>
                                 let
@@ -287,7 +287,7 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                          | _ => default ()
                       )
                     | ConstrC (x, c') =>
-                      (case is_AppV t of
+                      (case is_TAppV t of
                            SOME (_, ts, _) =>
                            let
                              fun eq_constr_long_id ((name, family), (name', family')) =
@@ -301,13 +301,13 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                                  ret
                                end
                              val (name, (family, _)) = fetch_constr gctx (cctx, x)
-                             val family = normalize_mt true gctx kctx (MtVar family)
+                             val family = normalize_mt true gctx kctx (TVar family)
                              fun same_constr c =
                                case c of
                                    ConstrC (y, c) =>
                                    let
                                      val (name', (family', _)) = fetch_constr gctx (cctx, y)
-                                     val family' = normalize_mt true gctx kctx $ MtVar family'
+                                     val family' = normalize_mt true gctx kctx $ TVar family'
                                    in
                                      if eq_constr_long_id ((name', family'), (name, family)) then
                                        SOME c

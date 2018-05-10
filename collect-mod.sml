@@ -604,8 +604,8 @@ end
 
 fun on_top_bind acc b =
   case b of
-      TopModBind m => on_mod acc m
-    | TopFunctorBind (((arg_name, r2), arg), m) =>
+      TBMod m => on_mod acc m
+    | TBFunctor (((arg_name, r2), arg), m) =>
       let 
         val acc = on_sgn acc arg
         val acc2 = diff op= (on_mod [] m) [arg_name]
@@ -613,7 +613,7 @@ fun on_top_bind acc b =
       in
         acc
       end
-    | TopFunctorApp (functor_name, arg_name) =>
+    | TBFunctorApp (functor_name, arg_name) =>
       on_mod_id (on_mod_id acc functor_name) arg_name
     | TBState _ => acc
 

@@ -202,8 +202,8 @@ open Bind
     
 fun collect_uvar_t_t t =
   case t of
-      Mono t => collect_uvar_t_mt t
-    | Uni _ => [] (* fresh uvars in Uni should either have been generalized or in previous ctx *)
+      PTMono t => collect_uvar_t_mt t
+    | PTUni _ => [] (* fresh uvars in Uni should either have been generalized or in previous ctx *)
 
 open VC
                  

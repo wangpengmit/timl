@@ -24,7 +24,7 @@ exception ErrorClose of vc_entry list
 
 (* formulas transcribed from [vce]s *)
 datatype formula =
-         ForallF of string * bsort forall_type * formula list
+         ForallF of string * basic_sort forall_type * formula list
          | ImplyF of prop * formula list
          | AndF of formula list
          | PropF of prop * region
@@ -60,28 +60,28 @@ fun consume_close (s : vc_entry list) : vc_entry list =
       CloseParen :: s => s
     | _ => raise Impossible "consume_close ()"
 
-fun get_bsort_UVarS s =
+fun get_basic_sort_SUVar s =
   let
     val s = update_s s
   in
     case s of
-        UVarS (a, r) =>
+        SUVar (a, r) =>
         let
-          val def = Base UnitSort
-          val () = is_eqv_sort dummy empty [] (s, Basic (def, r))
+          val def = BSUnit
+          val () = is_eqv_sort dummy empty [] (s, SBasic (def, r))
         in
           def
         end
-      | _ => get_base (fn _ => raise Impossible "get_bsort_UVarS()/get_base()") s
+      | _ => get_base (fn _ => raise Impossible "get_basic_sort_SUVar()/get_base()") s
   end
                     
 fun get_base_and_refinement s =
   case s of
-      Subset ((bsort, _), Bind (_, p), _) =>
-      (bsort, SOME p)
-    | Basic (bsort, _) =>
-      (bsort, NONE)
-    | _ => (get_base refine_UVarS_to_Basic s, NONE)
+      SSubset ((basic_sort, _), Bind (_, p), _) =>
+      (basic_sort, SOME p)
+    | SBasic (basic_sort, _) =>
+      (basic_sort, NONE)
+    | _ => (get_base refine_SUVar_to_SBasic s, NONE)
              
 fun get_formula s(*vce sequence*) =
   case s of
@@ -140,7 +140,7 @@ and get_formulas (s : vc_entry list) =
 
 fun get_admits f =
   case f of
-      AdmitF (_, r) => ([f], PropF (True r, r))
+      AdmitF (_, r) => ([f], PropF (PTrue r, r))
     | PropF _ => ([], f)
     | AndF fs => mapSnd AndF $ get_admits_fs fs
     | ImplyF (p, fs) =>
@@ -169,7 +169,7 @@ and get_admits_fs fs =
 
 (* another formulation of formulas that won't talk about lists *)
 datatype formula2 =
-         ForallF2 of string * bsort forall_type * formula2
+         ForallF2 of string * basic_sort forall_type * formula2
          | BinConnF2 of bin_conn * formula2 * formula2
          | PropF2 of prop * region
 
@@ -191,15 +191,15 @@ fun str_f2 gctx ctx f =
 fun f_to_f2 f =
   case f of
       ForallF (name, ft, fs) => ForallF2 (name, ft, fs_to_f2 fs)
-    | ImplyF (p, fs) => BinConnF2 (Imply, PropF2 (p, get_region_p p), fs_to_f2 fs)
+    | ImplyF (p, fs) => BinConnF2 (BCImply, PropF2 (p, get_region_p p), fs_to_f2 fs)
     | AndF fs => fs_to_f2 fs
     | PropF p => PropF2 p
     | AdmitF p => PropF2 p (* drop admit info *)
 
 and fs_to_f2 fs =
     case fs of
-        [] => PropF2 (True dummy, dummy)
-      | f :: fs => BinConnF2 (And, f_to_f2 f, fs_to_f2 fs)
+        [] => PropF2 (PTrue dummy, dummy)
+      | f :: fs => BinConnF2 (BCAnd, f_to_f2 f, fs_to_f2 fs)
 
 (* remove all forall-module *)
                            
@@ -233,7 +233,7 @@ fun unpackage_f2 f =
                   val (b, p) = get_base_and_refinement s
                   val f =
                       case p of
-                          SOME p => BinConnF2 (Imply, PropF2 (p, get_region_p p), f)
+                          SOME p => BinConnF2 (BCImply, PropF2 (p, get_region_p p), f)
                         | NONE => f
                 in
                   ForallF2 (mod_name ^ "_" ^ name, FtSorting b, f)
@@ -264,9 +264,9 @@ fun f2_to_prop f : prop =
                    | FtModule _ => raise Impossible "f2_to_prop(): FtModule"
         val p = f2_to_prop f
       in
-        Quan (Forall, bs, Bind ((name, dummy), p), get_region_p p)
+        PQuan (Forall, bs, Bind ((name, dummy), p), get_region_p p)
       end
-    | BinConnF2 (opr, f1, f2) => BinConn(opr, f2_to_prop f1, f2_to_prop f2)
+    | BinConnF2 (opr, f1, f2) => PBinConn(opr, f2_to_prop f1, f2_to_prop f2)
     | PropF2 (p, r) => set_region_p p r
 
 fun vces_to_vcs vces =

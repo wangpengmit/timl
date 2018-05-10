@@ -25,31 +25,31 @@ fun update_idx_visitor_vtable cast () : ('this, unit) idx_visitor_vtable =
           cast
           extend_noop
           visit_noop
-          (visit_imposs "update/visit_UVarBS")
-          (visit_imposs "update/visit_UVarI")
-          (visit_imposs "update/visit_UVarS")
+          (visit_imposs "update/visit_BSUVar")
+          (visit_imposs "update/visit_IUVar")
+          (visit_imposs "update/visit_SUVar")
           visit_noop
-    fun visit_UVarBS this env x =
+    fun visit_BSUVar this env x =
       let
         val vtable = cast this
       in
-        load_uvar' (#visit_bsort vtable this env) (UVarBS x) x
+        load_uvar' (#visit_basic_sort vtable this env) (BSUVar x) x
       end
-    val vtable = override_visit_UVarBS vtable visit_UVarBS
-    fun visit_UVarI this env (data as (x, r)) =
+    val vtable = override_visit_BSUVar vtable visit_BSUVar
+    fun visit_IUVar this env (data as (x, r)) =
       let
         val vtable = cast this
       in
-        load_uvar' (#visit_idx vtable this env) (UVarI data) x
+        load_uvar' (#visit_idx vtable this env) (IUVar data) x
       end
-    val vtable = override_visit_UVarI vtable visit_UVarI
-    fun visit_UVarS this env (data as (x, r)) =
+    val vtable = override_visit_IUVar vtable visit_IUVar
+    fun visit_SUVar this env (data as (x, r)) =
       let
         val vtable = cast this
       in
-        load_uvar' (#visit_sort vtable this env) (UVarS data) x
+        load_uvar' (#visit_sort vtable this env) (SUVar data) x
       end
-    val vtable = override_visit_UVarS vtable visit_UVarS
+    val vtable = override_visit_SUVar vtable visit_SUVar
   in
     vtable
   end
@@ -60,7 +60,7 @@ fun update_bs b =
   let
     val visitor as (IdxVisitor vtable) = new_update_idx_visitor ()
   in
-    #visit_bsort vtable visitor () b
+    #visit_basic_sort vtable visitor () b
   end
     
 fun update_i b =
@@ -86,7 +86,7 @@ fun update_s b =
                    
 (* fun update_bs bs = *)
 (*   case bs of *)
-(*       UVarBS x => *)
+(*       BSUVar x => *)
 (*       (case !x of *)
 (*            Refined bs =>  *)
 (*            let  *)
@@ -102,11 +102,11 @@ fun update_s b =
 
 (* fun update_i i = *)
 (*   case i of *)
-(*       UVarI (x, r) => load_uvar' update_i i x *)
+(*       IUVar (x, r) => load_uvar' update_i i x *)
 (*     | IConst _ => i *)
-(*     | UnOpI (opr, i, r) => UnOpI (opr, update_i i, r) *)
-(*     | BinOpI (opr, i1, i2) => BinOpI (opr, update_i i1, update_i i2) *)
-(*     | Ite (i1, i2, i3, r) => Ite (update_i i1, update_i i2, update_i i3, r) *)
+(*     | IUnOp (opr, i, r) => IUnOp (opr, update_i i, r) *)
+(*     | IBinOp (opr, i1, i2) => IBinOp (opr, update_i i1, update_i i2) *)
+(*     | IIte (i1, i2, i3, r) => IIte (update_i i1, update_i i2, update_i i3, r) *)
 (*     | VarI _ => i *)
 (*     | IAbs (b, Bind (name, i), r) => IAbs (update_bs b, Bind (name, update_i i), r) *)
 
@@ -120,7 +120,7 @@ fun update_s b =
 
 (* fun update_s s = *)
 (*   case s of *)
-(*       UVarS (x, r) => load_uvar' update_s s x *)
+(*       SUVar (x, r) => load_uvar' update_s s x *)
 (*     | Basic _ => s *)
 (*     | Subset ((b, r1), Bind (name, p), r) => Subset ((update_bs b, r1), Bind (name, update_p p), r) *)
 (*     | SAbs (s1, Bind (name, s), r) => SAbs (update_bs s1, Bind (name, update_s s), r) *)
@@ -141,14 +141,14 @@ fun update_type_visitor_vtable cast (on_bs, on_i, on_s, on_k) : ('this, unit) ty
           (adapt on_i)
           (adapt on_s)
           (adapt on_k)
-          (visit_imposs "update/visit_UVar")
-    fun visit_UVar this env (data as (x, r)) =
+          (visit_imposs "update/visit_TUVar")
+    fun visit_TUVar this env (data as (x, r)) =
       let
         val vtable = cast this
       in
-        load_uvar' (#visit_mtype vtable this env) (UVar data) x
+        load_uvar' (#visit_mtype vtable this env) (TUVar data) x
       end
-    val vtable = override_visit_UVar vtable visit_UVar
+    val vtable = override_visit_TUVar vtable visit_TUVar
   in
     vtable
   end
@@ -178,23 +178,23 @@ fun update_c b =
     
 (* fun update_mt t = *)
 (*   case t of *)
-(*       UVar (x, r) => load_uvar' update_mt t x *)
+(*       TUVar (x, r) => load_uvar' update_mt t x *)
 (*     | Unit r => Unit r *)
 (*     | Arrow (t1, d, t2) => Arrow (update_mt t1, update_i d, update_mt t2) *)
 (*     | TyArray (t, i) => TyArray (update_mt t, update_i i) *)
 (*     | TyNat (i, r) => TyNat (update_i i, r) *)
 (*     | Prod (t1, t2) => Prod (update_mt t1, update_mt t2) *)
 (*     | UniI (s, Bind (name, t1), r) => UniI (update_s s, Bind (name, update_mt t1), r) *)
-(*     | MtVar x => MtVar x *)
-(*     | MtAbs (k, Bind (name, t), r) => MtAbs (update_k k, Bind (name, update_mt t), r) *)
-(*     | MtApp (t1, t2) => MtApp (update_mt t1, update_mt t2) *)
-(*     | MtAbsI (s, Bind (name, t), r) => MtAbsI (update_bs s, Bind (name, update_mt t), r) *)
-(*     | MtAppI (t, i) => MtAppI (update_mt t, update_i i) *)
+(*     | TVar x => TVar x *)
+(*     | TAbs (k, Bind (name, t), r) => TAbs (update_k k, Bind (name, update_mt t), r) *)
+(*     | TApp (t1, t2) => TApp (update_mt t1, update_mt t2) *)
+(*     | TAbsI (s, Bind (name, t), r) => TAbsI (update_bs s, Bind (name, update_mt t), r) *)
+(*     | TAppI (t, i) => TAppI (update_mt t, update_i i) *)
 (*     | BaseType a => BaseType a *)
 (*     | TDatatype (Bind (name, tbinds), r) => *)
 (*       let *)
-(*         val (tname_kinds, (bsorts, decls)) = unfold_binds tbinds *)
-(*         val bsorts = map update_bs bsorts *)
+(*         val (tname_kinds, (basic_sorts, decls)) = unfold_binds tbinds *)
+(*         val basic_sorts = map update_bs basic_sorts *)
 (*         fun update_constr_core ibinds = *)
 (*           let *)
 (*             val (name_sorts, (t, is)) = unfold_binds ibinds *)
@@ -205,7 +205,7 @@ fun update_c b =
 (*             fold_binds (name_sorts, (t, is)) *)
 (*           end *)
 (*         val decls = map (map2_3 update_constr_core) decls *)
-(*         val tbinds = fold_binds (tname_kinds, (bsorts, decls)) *)
+(*         val tbinds = fold_binds (tname_kinds, (basic_sorts, decls)) *)
 (*       in *)
 (*         TDatatype (Bind (name, tbinds), r) *)
 (*       end *)
@@ -254,17 +254,17 @@ open Bind
 (* Normalize to weak head normal form (WHNF) (i.e. only reveal head structure). Efficient for equivalence test. *)      
 fun whnf_i i =
   case i of
-      UVarI (x, r) => load_uvar' whnf_i i x
-    | BinOpI (opr, i1, i2) =>
+      IUVar (x, r) => load_uvar' whnf_i i x
+    | IBinOp (opr, i1, i2) =>
       let
         val i1 = whnf_i i1
         val i2 = whnf_i i2
       in
         case (opr, i1) of
             (IApp, IAbs (_, Bind (_, i1), _)) => whnf_i (subst_i_i i2 i1)
-          | _ => BinOpI (opr, i1, i2)
+          | _ => IBinOp (opr, i1, i2)
       end
-    | Ite (i1, i2, i3, r) =>
+    | IIte (i1, i2, i3, r) =>
       let
         val i1 = whnf_i i1
         val i2 = whnf_i i2
@@ -272,13 +272,13 @@ fun whnf_i i =
       in
         case i1 of
             IConst (ICBool b, _) => if b then i2 else i3
-          | _ => Ite (i1, i2, i3, r)
+          | _ => IIte (i1, i2, i3, r)
       end
     | _ => i
 
 fun whnf_s s =
   case s of
-      UVarS (x, r) => load_uvar' whnf_s s x
+      SUVar (x, r) => load_uvar' whnf_s s x
     | SApp (s, i) =>
       let
         val s = whnf_s s
@@ -295,25 +295,25 @@ fun whnf_mt ignore_dt gctx kctx (t : mtype) : mtype =
     val whnf_mt = whnf_mt ignore_dt gctx
   in
     case t of
-        UVar (x, r) => load_uvar' (whnf_mt kctx) t x
-      | MtVar x => try_retrieve_MtVar ignore_dt (whnf_mt kctx) gctx kctx x
-      | MtAppI (t, i) =>
+        TUVar (x, r) => load_uvar' (whnf_mt kctx) t x
+      | TVar x => try_retrieve_TVar ignore_dt (whnf_mt kctx) gctx kctx x
+      | TAppI (t, i) =>
         let
           val t = whnf_mt kctx t
           val i = whnf_i i
         in
           case t of
-              MtAbsI (_, Bind (_, t), _) => whnf_mt kctx (subst_i_mt i t)
-            | _ => MtAppI (t, i)
+              TAbsI (_, Bind (_, t), _) => whnf_mt kctx (subst_i_mt i t)
+            | _ => TAppI (t, i)
         end
-      | MtApp (t1, t2) =>
+      | TApp (t1, t2) =>
         let
           val t1 = whnf_mt kctx t1
           val t2 = whnf_mt kctx t2
         in
           case t1 of
-              MtAbs (_, Bind (_, t1), _) => whnf_mt kctx (subst_t_mt t2 t1)
-            | _ => MtApp (t1, t2)
+              TAbs (_, Bind (_, t1), _) => whnf_mt kctx (subst_t_mt t2 t1)
+            | _ => TApp (t1, t2)
         end
       | _ => t
   end
@@ -326,7 +326,7 @@ fun normalize_idx_visitor_vtable cast () : ('this, unit) idx_visitor_vtable =
         update_idx_visitor_vtable
           cast
           ()
-    fun visit_BinOpI this env (data as (opr, i1, i2)) =
+    fun visit_IBinOp this env (data as (opr, i1, i2)) =
       let
         val vtable = cast this
         fun normalize_i a = #visit_idx vtable this env a
@@ -335,10 +335,10 @@ fun normalize_idx_visitor_vtable cast () : ('this, unit) idx_visitor_vtable =
       in
         case (opr, i1) of
             (IApp, IAbs (_, Bind (_, i1), _)) => normalize_i (subst_i_i i2 i1)
-          | _ => BinOpI (opr, i1, i2)
+          | _ => IBinOp (opr, i1, i2)
       end
-    val vtable = override_visit_BinOpI vtable visit_BinOpI
-    fun visit_Ite this env (data as (i1, i2, i3, r)) =
+    val vtable = override_visit_IBinOp vtable visit_IBinOp
+    fun visit_IIte this env (data as (i1, i2, i3, r)) =
       let
         val vtable = cast this
         fun normalize_i a = #visit_idx vtable this env a
@@ -348,9 +348,9 @@ fun normalize_idx_visitor_vtable cast () : ('this, unit) idx_visitor_vtable =
       in
         case i1 of
             IConst (ICBool b, _) => if b then i2 else i3
-          | _ => Ite (i1, i2, i3, r)
+          | _ => IIte (i1, i2, i3, r)
       end
-    val vtable = override_visit_Ite vtable visit_Ite
+    val vtable = override_visit_IIte vtable visit_IIte
     fun visit_SApp this env (data as (s, i)) =
       let
         val vtable = cast this
@@ -374,7 +374,7 @@ fun normalize_bs b =
   let
     val visitor as (IdxVisitor vtable) = new_normalize_idx_visitor ()
   in
-    #visit_bsort vtable visitor () b
+    #visit_basic_sort vtable visitor () b
   end
     
 fun normalize_i b =
@@ -402,19 +402,19 @@ fun normalize_s b =
 
 (* fun normalize_i i = *)
 (*   case i of *)
-(*       UVarI (x, r) => load_uvar' normalize_i i x *)
+(*       IUVar (x, r) => load_uvar' normalize_i i x *)
 (*     | IConst _ => i *)
-(*     | UnOpI (opr, i, r) => UnOpI (opr, normalize_i i, r) *)
-(*     | BinOpI (opr, i1, i2) => *)
+(*     | IUnOp (opr, i, r) => IUnOp (opr, normalize_i i, r) *)
+(*     | IBinOp (opr, i1, i2) => *)
 (*       let *)
 (*         val i1 = normalize_i i1 *)
 (*         val i2 = normalize_i i2 *)
 (*       in *)
 (*         case (opr, i1) of *)
 (*             (IApp, IAbs (_, Bind (_, i1), _)) => normalize_i (subst_i_i i2 i1) *)
-(*           | _ => BinOpI (opr, i1, i2) *)
+(*           | _ => IBinOp (opr, i1, i2) *)
 (*       end *)
-(*     | Ite (i1, i2, i3, r) => *)
+(*     | IIte (i1, i2, i3, r) => *)
 (*       let *)
 (*         val i1 = normalize_i i1 *)
 (*         val i2 = normalize_i i2 *)
@@ -422,7 +422,7 @@ fun normalize_s b =
 (*       in *)
 (*         case i1 of *)
 (*             IConst (ICBool b, _) => if b then i2 else i3 *)
-(*           | _ => Ite (i1, i2, i3, r) *)
+(*           | _ => IIte (i1, i2, i3, r) *)
 (*       end *)
 (*     | VarI _ => i *)
 (*     | IAbs (b, Bind (name, i), r) => IAbs (normalize_bs b, Bind (name, normalize_i i), r) *)
@@ -437,7 +437,7 @@ fun normalize_s b =
                    
 (* fun normalize_s s = *)
 (*   case s of *)
-(*       UVarS (x, r) => load_uvar' normalize_s s x *)
+(*       SUVar (x, r) => load_uvar' normalize_s s x *)
 (*     | Basic _ => s *)
 (*     | Subset ((b, r1), Bind (name, p), r) => Subset ((normalize_bs b, r1), Bind (name, normalize_p p), r) *)
 (*     | SAbs (s_arg, Bind (name, s), r) => SAbs (normalize_bs s_arg, Bind (name, normalize_s s), r) *)
@@ -494,24 +494,24 @@ fun normalize_type_visitor_vtable cast (ignore_dt, gctx) : ('this, kcontext) typ
           (adapt normalize_i)
           (adapt normalize_s)
           (adapt normalize_k)
-          (visit_imposs "update/visit_UVar")
+          (visit_imposs "update/visit_TUVar")
     val vtable = override_extend_t_anno vtable extend_t_anno
-    fun visit_MtVar this kctx x =
+    fun visit_TVar this kctx x =
       let
         val vtable = cast this
         fun normalize_mt a = #visit_mtype vtable this kctx a
       in
-        try_retrieve_MtVar ignore_dt normalize_mt gctx kctx x
+        try_retrieve_TVar ignore_dt normalize_mt gctx kctx x
       end
-    val vtable = override_visit_MtVar vtable visit_MtVar
-    fun visit_UVar this env (data as (x, r)) =
+    val vtable = override_visit_TVar vtable visit_TVar
+    fun visit_TUVar this env (data as (x, r)) =
       let
         val vtable = cast this
       in
-        load_uvar' (#visit_mtype vtable this env) (UVar data) x
+        load_uvar' (#visit_mtype vtable this env) (TUVar data) x
       end
-    val vtable = override_visit_UVar vtable visit_UVar
-    fun visit_MtAppI this kctx (data as (t, i)) =
+    val vtable = override_visit_TUVar vtable visit_TUVar
+    fun visit_TAppI this kctx (data as (t, i)) =
       let
         val vtable = cast this
         fun normalize_mt a = #visit_mtype vtable this kctx a
@@ -520,11 +520,11 @@ fun normalize_type_visitor_vtable cast (ignore_dt, gctx) : ('this, kcontext) typ
         val i = normalize_i i
       in
         case t of
-            MtAbsI (_, Bind (_, t), _) => normalize_mt (subst_i_mt i t)
-          | _ => MtAppI (t, i)
+            TAbsI (_, Bind (_, t), _) => normalize_mt (subst_i_mt i t)
+          | _ => TAppI (t, i)
       end
-    val vtable = override_visit_MtAppI vtable visit_MtAppI
-    fun visit_MtApp this kctx (data as (t1, t2)) =
+    val vtable = override_visit_TAppI vtable visit_TAppI
+    fun visit_TApp this kctx (data as (t1, t2)) =
       let
         val vtable = cast this
         fun normalize_mt a = #visit_mtype vtable this kctx a
@@ -532,10 +532,10 @@ fun normalize_type_visitor_vtable cast (ignore_dt, gctx) : ('this, kcontext) typ
         val t2 = normalize_mt t2
       in
         case t1 of
-            MtAbs (_, Bind (_, t1), _) => normalize_mt (subst_t_mt t2 t1)
-          | _ => MtApp (t1, t2)
+            TAbs (_, Bind (_, t1), _) => normalize_mt (subst_t_mt t2 t1)
+          | _ => TApp (t1, t2)
       end
-    val vtable = override_visit_MtApp vtable visit_MtApp
+    val vtable = override_visit_TApp vtable visit_TApp
   in
     vtable
   end
@@ -576,51 +576,51 @@ fun normalize_c ignore_dt gctx kctx b =
 (*     (* val () = println $ "begin normalize_mt()" *) *)
 (*     val ret = *)
 (*         case t of *)
-(*             UVar (x, r) => load_uvar' (normalize_mt kctx) t x *)
+(*             TUVar (x, r) => load_uvar' (normalize_mt kctx) t x *)
 (*           | Unit r => Unit r *)
 (*           | Arrow (t1, d, t2) => Arrow (normalize_mt kctx t1, normalize_i d, normalize_mt kctx t2) *)
 (*           | TyArray (t, i) => TyArray (normalize_mt kctx t, normalize_i i) *)
 (*           | TyNat (i, r) => TyNat (normalize_i i, r) *)
 (*           | Prod (t1, t2) => Prod (normalize_mt kctx t1, normalize_mt kctx t2) *)
 (*           | UniI (s, bind, r) => UniI (normalize_s s, normalize_ibind normalize_mt kctx bind, r) *)
-(*           | MtVar x => try_retrieve_MtVar (normalize_mt kctx) gctx kctx x *)
-(*           | MtAbsI (s, bind, r) => MtAbsI (normalize_bs s, normalize_ibind normalize_mt kctx bind, r) *)
-(*           | MtAppI (t, i) => *)
+(*           | TVar x => try_retrieve_TVar (normalize_mt kctx) gctx kctx x *)
+(*           | TAbsI (s, bind, r) => TAbsI (normalize_bs s, normalize_ibind normalize_mt kctx bind, r) *)
+(*           | TAppI (t, i) => *)
 (*             let *)
 (*               val t = normalize_mt kctx t *)
 (*               val i = normalize_i i *)
 (*             in *)
 (*               case t of *)
-(*                   MtAbsI (_, Bind (_, t), _) => normalize_mt kctx (subst_i_mt i t) *)
-(*                 | _ => MtAppI (t, i) *)
+(*                   TAbsI (_, Bind (_, t), _) => normalize_mt kctx (subst_i_mt i t) *)
+(*                 | _ => TAppI (t, i) *)
 (*             end *)
-(*           | MtAbs (k, bind, r) => *)
+(*           | TAbs (k, bind, r) => *)
 (*             let *)
 (*               val k = normalize_k k *)
-(*               val t = MtAbs (k, normalize_tbind normalize_mt kctx k bind, r) *)
+(*               val t = TAbs (k, normalize_tbind normalize_mt kctx k bind, r) *)
 (*             in *)
 (*               t *)
 (*             end *)
-(*           | MtApp (t1, t2) => *)
+(*           | TApp (t1, t2) => *)
 (*             let *)
 (*               val t1 = normalize_mt kctx t1 *)
 (*               val t2 = normalize_mt kctx t2 *)
 (*             in *)
 (*               case t1 of *)
-(*                   MtAbs (_, Bind (_, t1), _) => normalize_mt kctx (subst_t_mt t2 t1) *)
-(*                 | _ => MtApp (t1, t2) *)
+(*                   TAbs (_, Bind (_, t1), _) => normalize_mt kctx (subst_t_mt t2 t1) *)
+(*                 | _ => TApp (t1, t2) *)
 (*             end *)
 (*           | BaseType a => BaseType a *)
 (*           | TDatatype (dt, r) => *)
 (*             let *)
 (*               fun get_kind (Bind dt) = *)
 (*                 let *)
-(*                   val (tname_kinds, (bsorts, _)) = unfold_binds $ snd dt *)
+(*                   val (tname_kinds, (basic_sorts, _)) = unfold_binds $ snd dt *)
 (*                 in *)
-(*                   (length tname_kinds, bsorts) *)
+(*                   (length tname_kinds, basic_sorts) *)
 (*                 end *)
-(*               fun on_body kctx (bsorts, constr_decls) = *)
-(*                 (bsorts, (map o map2_3) (normalize_constr_core gctx kctx) constr_decls) *)
+(*               fun on_body kctx (basic_sorts, constr_decls) = *)
+(*                 (basic_sorts, (map o map2_3) (normalize_constr_core gctx kctx) constr_decls) *)
 (*               val dt = normalize_tbind (normalize_tbinds (const_fun Type) id on_body) kctx (get_kind dt) $ dt *)
 (*             in *)
 (*               TDatatype (dt, r) *)

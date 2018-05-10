@@ -10,26 +10,26 @@ open ExprShift
 
 infixr 0 $
 
-fun visit_UVar x v env (data as (y, _)) =
+fun visit_TUVar x v env (data as (y, _)) =
   let
-    fun TV r n = MtVar (ID (n, r))
+    fun TV r n = TVar (ID (n, r))
   in
     if y = x then
       case !y of
-          Fresh (_, (sctx, kctx)) => MtAbsI_Many (rev sctx, MtAbs_Many (rev kctx, TV dummy (v + env + length kctx), dummy), dummy)
-        | Refined _ => raise Impossible "substu()/UVar: shouldn't be Refined"
+          Fresh (_, (sctx, kctx)) => TAbsI_Many (rev sctx, TAbs_Many (rev kctx, TV dummy (v + env + length kctx), dummy), dummy)
+        | Refined _ => raise Impossible "substu()/TUVar: shouldn't be Refined"
     else 
-      UVar data
+      TUVar data
   end
 
 open TypeShiftVisitor
                  
-fun new_on_t_type_visitor' visit_UVar =
+fun new_on_t_type_visitor' visit_TUVar =
   let
     (* don't need to consult type variable's definition *)
     fun visit_var _ x = x
     val (TypeVisitor vtable) = new_on_t_type_visitor visit_var
-    val vtable = override_visit_UVar vtable $ ignore_this visit_UVar
+    val vtable = override_visit_TUVar vtable $ ignore_this visit_TUVar
     val visitor = TypeVisitor vtable
   in
     visitor
@@ -49,7 +49,7 @@ fun on_t_t' params b =
     #visit_ty vtable visitor 0 b
   end
 
-val params = visit_UVar
+val params = visit_TUVar
                
 fun substu_t_mt x v = on_t_mt' $ params x v
 fun substu_t_t x v = on_t_t' $ params x v
@@ -62,11 +62,11 @@ fun substu_t_e x v = ExprShiftVisitor.on_t_e (adapt (substu_t_mt x) v, adapt (su
 (* fun substu_tbind f x v (Bind (name, b) : ('a * 'b) tbind) = Bind (name, f x (v + 1) b) *)
 (* fun substu x v (b : mtype) : mtype = *)
 (*   case b of *)
-(*       UVar (y, _) => *)
+(*       TUVar (y, _) => *)
 (*       if y = x then *)
 (*         case !y of *)
-(*             Fresh (_, (sctx, kctx)) => MtAbsIMany (sctx, MtAbsMany (kctx, TV dummy (v + length kctx), dummy), dummy) *)
-(*           | Refined _ => raise Impossible "substu()/UVar: shouldn't be Refined" *)
+(*             Fresh (_, (sctx, kctx)) => TAbsIMany (sctx, TAbsMany (kctx, TV dummy (v + length kctx), dummy), dummy) *)
+(*           | Refined _ => raise Impossible "substu()/TUVar: shouldn't be Refined" *)
 (*       else  *)
 (*         b *)
 (*     | Unit r => Unit r *)
@@ -76,11 +76,11 @@ fun substu_t_e x v = ExprShiftVisitor.on_t_e (adapt (substu_t_mt x) v, adapt (su
 (*     | Prod (t1, t2) => Prod (substu x v t1, substu x v t2) *)
 (*     | UniI (s, bind, r) => UniI (s, substu_ibind substu x v bind, r) *)
 (*     (* don't need to consult type variable's definition *) *)
-(*     | MtVar x => MtVar x *)
-(*     | MtAbs (k, bind, r) => MtAbs (k, substu_tbind substu x v bind, r) *)
-(*     | MtApp (t1, t2) => MtApp (substu x v t1, substu x v t2) *)
-(*     | MtAbsI (k, bind, r) => MtAbsI (k, substu_ibind substu x v bind, r) *)
-(*     | MtAppI (t, i) => MtAppI (substu x v t, i) *)
+(*     | TVar x => TVar x *)
+(*     | TAbs (k, bind, r) => TAbs (k, substu_tbind substu x v bind, r) *)
+(*     | TApp (t1, t2) => TApp (substu x v t1, substu x v t2) *)
+(*     | TAbsI (k, bind, r) => TAbsI (k, substu_ibind substu x v bind, r) *)
+(*     | TAppI (t, i) => TAppI (substu x v t, i) *)
 (*     | BaseType a => BaseType a *)
 (*     | TDatatype _ => raise Unimpl "check_decl()/substu()/TDatatype" *)
 

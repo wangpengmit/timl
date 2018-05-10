@@ -19,38 +19,38 @@ fun inc () =
     n
   end
 
-fun get_base (* r gctx ctx *) on_UVarS s =
+fun get_base (* r gctx ctx *) on_SUVar s =
   let
     val r = get_region_s s
     val s = normalize_s s
     exception OnSAppFailed
-    fun on_SApp_UVarS s =
+    fun on_SApp_SUVar s =
       let
-        val ((x, _), args) = is_SApp_UVarS s !! (fn () => raise OnSAppFailed)
+        val ((x, _), args) = is_SApp_SUVar s !! (fn () => raise OnSAppFailed)
         val info = get_uvar_info x !! (fn () => raise Impossible "check_sort()/unify_SApp_UVar(): x should be Fresh")
       in
-        on_UVarS (x, r, info, args)
+        on_SUVar (x, r, info, args)
       end
     fun main s =
       case s of
-          Basic (s, _) => s
-        | Subset ((s, _), _, _) => s
-        | UVarS _ => raise Impossible "get_base()/main(): shouldn't be UVarS"
+          SBasic (s, _) => s
+        | SSubset ((s, _), _, _) => s
+        | SUVar _ => raise Impossible "get_base()/main(): shouldn't be SUVar"
         | SAbs _ => raise Impossible "get_base()/main(): shouldn't be SAbs"
         | SApp _ => raise Impossible "get_base()/main(): shouldn't be SApp"
   in
-    on_SApp_UVarS s
+    on_SApp_SUVar s
     handle
     OnSAppFailed =>
     main s
   end
 
-fun fresh_bsort () = UVarBS (ref (Fresh (inc ())))
+fun fresh_basic_sort () = BSUVar (ref (Fresh (inc ())))
 
-fun refine_UVarS_to_Basic (x, r, info, args) =
+fun refine_SUVar_to_SBasic (x, r, info, args) =
   let
-    val b = fresh_bsort ()
-    val s = Basic (b, r)
+    val b = fresh_basic_sort ()
+    val s = SBasic (b, r)
     val (uvar_name, ctx) = info
     val s = SAbs_Many (rev ctx, s, r)
     val () = println $ sprintf "Warning: refining ?$ to $ (where $ is a base-sort) in order to get its base sort" [str_int uvar_name, str_s empty [] s, str_bs b]
@@ -59,15 +59,15 @@ fun refine_UVarS_to_Basic (x, r, info, args) =
     b
   end
 
-fun V r n = VarI (ID (n, r), [])
-fun TV r n = MtVar (ID (n, r))
+fun V r n = IVar (ID (n, r), [])
+fun TV r n = TVar (ID (n, r))
 
-fun fresh_uvar_i ctx bsort =
+fun fresh_uvar_i ctx basic_sort =
   let
     val n = inc ()
     (* val () = println $ "created uvar_i " ^ str_int n *)
   in
-    ref (Fresh (n, ctx, bsort))
+    ref (Fresh (n, ctx, basic_sort))
   end
 fun fresh_uvar_mt ctx = ref (Fresh (inc (), ctx))
 
@@ -94,15 +94,15 @@ fun get_ctx_and_args sel make_arg on_snd package gctx ctx_local r =
     (ctx_total, args_total)
   end
 
-fun get_sctx_and_args x = get_ctx_and_args #1 (fn y => VarI (y, [])) x
-fun get_kctx_and_args x = get_ctx_and_args #2 MtVar x
+fun get_sctx_and_args x = get_ctx_and_args #1 (fn y => IVar (y, [])) x
+fun get_kctx_and_args x = get_ctx_and_args #2 TVar x
 
-fun fresh_i gctx ctx bsort r = 
+fun fresh_i gctx ctx basic_sort r = 
   let
-    val get_base = get_base refine_UVarS_to_Basic
+    val get_base = get_base refine_SUVar_to_SBasic
     val (ctx, args) = get_sctx_and_args get_base return2 gctx ctx r
-    val x = fresh_uvar_i ctx bsort
-    val i = UVarI (x, r)
+    val x = fresh_uvar_i ctx basic_sort
+    val i = IUVar (x, r)
     val i = IApps i args
   in
     i
@@ -110,10 +110,10 @@ fun fresh_i gctx ctx bsort r =
 
 fun fresh_sort gctx ctx r =
   let
-    val get_base = get_base refine_UVarS_to_Basic
+    val get_base = get_base refine_SUVar_to_SBasic
     val (ctx, args) = get_sctx_and_args get_base return2 gctx ctx r
     val x = ref (Fresh (inc (), ctx))
-    val s = UVarS (x, r)
+    val s = SUVar (x, r)
     val s = SApps s args
   in
     s
@@ -142,13 +142,13 @@ fun uvar_i_ignore_args (x, info, r) =
 
 fun fresh_mt gctx (sctx, kctx) r : mtype =
   let
-    val get_base = get_base refine_UVarS_to_Basic
+    val get_base = get_base refine_SUVar_to_SBasic
     val (sctx, i_args) = get_sctx_and_args get_base return2 gctx sctx r
     val (kctx, t_args) = get_kctx_and_args get_ke_kind return2 gctx kctx r
     val x = fresh_uvar_mt (sctx, kctx)
-    val t = UVar (x, r)
-    val t = MtAppIs t i_args
-    val t = MtApps t t_args
+    val t = TUVar (x, r)
+    val t = TAppIs t i_args
+    val t = TApps t t_args
   in
     t
   end

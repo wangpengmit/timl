@@ -8,13 +8,13 @@ open Normalize
 fun solve (hyps, p) =
   List.exists (fn h => case h of PropH p' => eq_p p p' | _ => false) hyps orelse
   case p of
-      BinConn (Imply, p1, p2) => solve (PropH p1 :: hyps, p2)
-    | BinConn (Iff, p1, p2) => solve (hyps, BinConn (Imply, p1, p2)) andalso solve (hyps, BinConn (Imply, p2, p1))
-    | BinConn (And, p1, p2) => solve (hyps, p1) andalso solve (hyps, p1)
-    | BinConn (Or, p1, p2) => solve (hyps, p1) orelse solve (hyps, p1)
+      PBinConn (BCImply, p1, p2) => solve (PropH p1 :: hyps, p2)
+    | PBinConn (BCIff, p1, p2) => solve (hyps, PBinConn (BCImply, p1, p2)) andalso solve (hyps, PBinConn (BCImply, p2, p1))
+    | PBinConn (BCAnd, p1, p2) => solve (hyps, p1) andalso solve (hyps, p1)
+    | PBinConn (BCOr, p1, p2) => solve (hyps, p1) orelse solve (hyps, p1)
     | PTrueFalse (true, _) => true
-    | BinPred (EqP, i1, i2) => eq_i i1 i2
-    | BinPred (LeP, i1, i2) => eq_i i1 i2
+    | PBinPred (BPEq, i1, i2) => eq_i i1 i2
+    | PBinPred (BPLe, i1, i2) => eq_i i1 i2
     | _ => false
 
 fun filter_solve vcs = List.filter (fn vc => solve vc = false) vcs

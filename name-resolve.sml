@@ -117,11 +117,11 @@ fun import_idx_visitor_vtable cast gctx : ('this, scontext) IV.idx_visitor_vtabl
 
 fun new_import_idx_visitor a = IV.new_idx_visitor import_idx_visitor_vtable a
     
-fun on_bsort b =
+fun on_basic_sort b =
   let
     val visitor as (IV.IdxVisitor vtable) = new_import_idx_visitor empty
   in
-    #visit_bsort vtable visitor [] b
+    #visit_basic_sort vtable visitor [] b
   end
     
 fun on_idx gctx ctx b =
@@ -145,10 +145,10 @@ fun on_sort gctx ctx b =
     #visit_sort vtable visitor ctx b
   end
     
-(* fun on_bsort bs = *)
+(* fun on_basic_sort bs = *)
 (*     case bs of *)
 (*         S.Base b => Base b *)
-(*       | S.BSArrow (a, b) => BSArrow (on_bsort a, on_bsort b) *)
+(*       | S.BSArrow (a, b) => BSArrow (on_basic_sort a, on_basic_sort b) *)
 (*       | S.UVarBS u => UVarBS u *)
 
 (* fun on_idx (gctx : ns_sigcontext) ctx i = *)
@@ -161,7 +161,7 @@ fun on_sort gctx ctx b =
 (*         | S.UnOpI (opr, i, r) => UnOpI (opr, on_idx ctx i, r) *)
 (* 	| S.BinOpI (opr, i1, i2) => BinOpI (opr, on_idx ctx i1, on_idx ctx i2) *)
 (*         | S.Ite (i1, i2, i3, r) => Ite (on_idx ctx i1, on_idx ctx i2, on_idx ctx i3, r) *)
-(*         | S.IAbs (bs, bind, r) => IAbs (on_bsort bs, on_ibind on_idx ctx bind, r) *)
+(*         | S.IAbs (bs, bind, r) => IAbs (on_basic_sort bs, on_ibind on_idx ctx bind, r) *)
 (*         | S.UVarI u => UVarI u *)
 (*     end *)
       
@@ -174,18 +174,18 @@ fun on_sort gctx ctx b =
 (*         | S.Not (p, r) => Not (on_prop ctx p, r) *)
 (* 	| S.BinConn (opr, p1, p2) => BinConn (opr, on_prop ctx p1, on_prop ctx p2) *)
 (* 	| S.BinPred (opr, i1, i2) => BinPred (opr, on_idx gctx ctx i1, on_idx gctx ctx i2) *)
-(*         | S.Quan (q, bs, bind, r_all) => Quan (on_quan q, on_bsort bs, on_ibind on_prop ctx bind, r_all) *)
+(*         | S.Quan (q, bs, bind, r_all) => Quan (on_quan q, on_basic_sort bs, on_ibind on_prop ctx bind, r_all) *)
 (*     end *)
 
 (* fun on_sort gctx ctx s = *)
 (*     case s of *)
-(* 	S.Basic (b, r) => Basic (on_bsort b, r) *)
-(*       | S.Subset ((s, r1), bind, r_all) => Subset ((on_bsort s, r1), on_ibind (on_prop gctx) ctx bind, r_all) *)
+(* 	S.Basic (b, r) => Basic (on_basic_sort b, r) *)
+(*       | S.Subset ((s, r1), bind, r_all) => Subset ((on_basic_sort s, r1), on_ibind (on_prop gctx) ctx bind, r_all) *)
 (*       | S.UVarS u => UVarS u *)
-(*       | S.SAbs (b, bind, r) => SAbs (on_bsort b, on_ibind (on_sort gctx) ctx bind, r) *)
+(*       | S.SAbs (b, bind, r) => SAbs (on_basic_sort b, on_ibind (on_sort gctx) ctx bind, r) *)
 (*       | S.SApp (s, i) => SApp (on_sort gctx ctx s, on_idx gctx ctx i) *)
 
-fun on_kind k = mapSnd (map on_bsort) k
+fun on_kind k = mapSnd (map on_basic_sort) k
 
 open Bind
        
@@ -231,35 +231,35 @@ fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_vi
           extend_i
           extend_t
           visit_var
-          (ignore_this_env on_bsort)
+          (ignore_this_env on_basic_sort)
           (for_idx on_idx)
           (for_idx on_sort)
           (ignore_this_env on_kind)
           visit_noop
-    fun visit_MtAppI this ctx (data as (t1, i)) =
+    fun visit_TAppI this ctx (data as (t1, i)) =
       let
         val vtable = cast this
-        fun default () = MtAppI (#visit_mtype vtable this ctx t1, #visit_idx vtable this ctx i)
-        val t = S.MtAppI data
+        fun default () = TAppI (#visit_mtype vtable this ctx t1, #visit_idx vtable this ctx i)
+        val t = S.TAppI data
       in
-        case S.is_AppV t of
+        case S.is_TAppV t of
             SOME (x, ts, is) =>
             let
               val ts = map (#visit_mtype vtable this ctx) ts
               val is = map (#visit_idx vtable this ctx) is
             in
               if SE.eq_var (x, (ID ("nat", dummy))) andalso length ts = 0 andalso length is = 1 then
-                TyNat (hd is, S.get_region_mt t)
+                TNat (hd is, S.get_region_mt t)
               else if SE.eq_var (x, (ID ("ibool", dummy))) andalso length ts = 0 andalso length is = 1 then
                 TiBool (hd is, S.get_region_mt t)
               else if SE.eq_var (x, (ID ("array", dummy))) andalso length ts = 1 andalso length is = 1 then
-                TyArray (hd ts, hd is)
+                TArray (hd ts, hd is)
               else
                 default ()
             end
           | NONE => default ()         
       end
-    val vtable = TV.override_visit_MtAppI vtable visit_MtAppI
+    val vtable = TV.override_visit_TAppI vtable visit_TAppI
   in
     vtable
   end
@@ -305,14 +305,14 @@ fun on_constr_info gctx ctx b =
 (*         | S.Unit r => Unit r *)
 (* 	| S.Prod (t1, t2) => Prod (on_mtype ctx t1, on_mtype ctx t2) *)
 (* 	| S.UniI (s, bind, r_all) => UniI (on_sort gctx sctx s, on_ibind (fn sctx => on_mtype (sctx, kctx)) sctx bind, r_all) *)
-(*         | S.MtVar x => MtVar $ on_long_id gctx #2 kctx x *)
-(*         | S.MtApp (t1, t2) => MtApp (on_mtype ctx t1, on_mtype ctx t2) *)
-(*         | S.MtAbs (k, bind, r_all) => MtAbs (on_kind k, on_tbind (fn kctx => (on_mtype (sctx, kctx))) kctx bind, r_all) *)
-(*         | S.MtAppI (t1, i) => *)
+(*         | S.TVar x => TVar $ on_long_id gctx #2 kctx x *)
+(*         | S.TApp (t1, t2) => TApp (on_mtype ctx t1, on_mtype ctx t2) *)
+(*         | S.TAbs (k, bind, r_all) => TAbs (on_kind k, on_tbind (fn kctx => (on_mtype (sctx, kctx))) kctx bind, r_all) *)
+(*         | S.TAppI (t1, i) => *)
 (*           let *)
-(*             fun default () = MtAppI (on_mtype ctx t1, on_idx gctx sctx i) *)
+(*             fun default () = TAppI (on_mtype ctx t1, on_idx gctx sctx i) *)
 (*           in *)
-(*             case S.is_AppV t of *)
+(*             case S.is_TAppV t of *)
 (*                 SOME (x, ts, is) => *)
 (*                 let *)
 (*                   val ts = map (on_mtype ctx) ts *)
@@ -327,7 +327,7 @@ fun on_constr_info gctx ctx b =
 (*                 end *)
 (*               | NONE => default ()          *)
 (*           end *)
-(*         | S.MtAbsI (b, bind, r_all) => MtAbsI (on_bsort b, on_ibind (fn sctx => on_mtype (sctx, kctx)) sctx bind, r_all) *)
+(*         | S.TAbsI (b, bind, r_all) => TAbsI (on_basic_sort b, on_ibind (fn sctx => on_mtype (sctx, kctx)) sctx bind, r_all) *)
 (* 	| S.BaseType (bt, r) => BaseType (bt, r) *)
 (*         | S.UVar u => UVar u *)
 (*         | S.TDatatype (dt, r) => *)
@@ -343,7 +343,7 @@ fun on_constr_info gctx ctx b =
 (*       fun on_constr_decl kctx (cname, core, r) = *)
 (*         (cname, on_constr_core gctx (sctx, kctx) core, r) *)
 (*       fun on_constrs kctx (sorts, constr_decls) = *)
-(*         (map on_bsort sorts, map (on_constr_decl kctx) constr_decls) *)
+(*         (map on_basic_sort sorts, map (on_constr_decl kctx) constr_decls) *)
 (*       val dt = on_tbind (on_tbinds return2 on_constrs) kctx dt *)
 (*     in *)
 (*       dt *)
@@ -453,34 +453,34 @@ and copy_anno_rule gctx return bind =
       val (pn, e) = Unbound.unBind bind
       fun ptrn_names pn : string list * string list =
         case pn of
-            ConstrP (_, inames, pn, _) =>
+            PnConstr (_, inames, pn, _) =>
             let
               val inames = map binder2str inames
-              (* val () = println "ConstrP" *)
+              (* val () = println "PnConstr" *)
               val (inames', enames) = ptrn_names pn
             in
               (inames' @ rev inames, enames)
             end
-          | VarP name =>
+          | PnVar name =>
             let
-              (* val () = println $ sprintf "VarP: $" [name] *)
+              (* val () = println $ sprintf "PnVar: $" [name] *)
             in
               ([], [binder2str name])
             end
-          | PairP (pn1, pn2) =>
+          | PnPair (pn1, pn2) =>
             let val (inames1, enames1) = ptrn_names pn1
                 val (inames2, enames2) = ptrn_names pn2
             in
               (inames2 @ inames1, enames2 @ enames1)
             end
-          | TTP _ =>
+          | PnTT _ =>
             ([], [])
-          | AliasP (name, pn, _) =>
+          | PnAlias (name, pn, _) =>
             let val (inames, enames) = ptrn_names pn
             in
               (inames, enames @ [binder2str name])
             end
-          | AnnoP (pn, t) => ptrn_names pn
+          | PnAnno (pn, t) => ptrn_names pn
       val (sctx, _) = ptrn_names pn
       val offset = (length sctx, 0)
     in
@@ -498,11 +498,10 @@ fun get_datatype_names (Bind (name, tbinds)) =
 structure EV = ExprVisitorFn (structure S = S
                               structure T = T)
 
-structure StSet = StringBinarySet
-val st_ref = ref StSet.empty
-fun add_ref a = binop_ref (curry $ StSet.add) a
+val st_ref = ref SSet.empty
+fun add_ref a = binop_ref (curry $ SSet.add) a
 infix  9 @%!
-fun m @%! k = StSet.member (m, k)
+fun m @%! k = SSet.member (m, k)
       
 fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
   let
@@ -555,7 +554,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
       in
         name
       end
-    fun visit_ConstrP this env (Outer ((x, ()), eia), inames, pn, r) =
+    fun visit_PnConstr this env (Outer ((x, ()), eia), inames, pn, r) =
       let
         val vtable = cast this
         val (_, _, cctx, _) = #outer env
@@ -572,13 +571,13 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
               val inames = map (visit_ibinder this env) inames
               val pn = #visit_ptrn vtable this env pn
             in
-              ConstrP (Outer ((x, ()), true), inames, pn, r)
+              PnConstr (Outer ((x, ()), true), inames, pn, r)
             end
 	  | NONE =>
             raise Error (S.get_region_long_id x, "Unknown constructor " ^ SS.str_var #1 empty [] x)
       end
-    val vtable = EV.override_visit_ConstrP vtable visit_ConstrP
-    fun visit_VarP this env ename =
+    val vtable = EV.override_visit_PnConstr vtable visit_PnConstr
+    fun visit_PnVar this env ename =
       let
         val vtable = cast this
         val (_, _, cctx, _) = #outer env
@@ -591,12 +590,12 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
               val inames = map (str2ibinder o prefix "__") c_inames
               val inames = map (visit_ibinder this env) inames
             in
-              ConstrP (Outer ((x, ()), true), inames, TTP r, r)
+              PnConstr (Outer ((x, ()), true), inames, PnTT r, r)
             end
 	  | NONE =>
-            VarP $ visit_ebinder this env ename
+            PnVar $ visit_ebinder this env ename
       end
-    val vtable = EV.override_visit_VarP vtable visit_VarP
+    val vtable = EV.override_visit_PnVar vtable visit_PnVar
     fun visit_EVar this (_, _, cctx, tctx) (x, b) =
       let
         fun is_state_field x =
@@ -796,7 +795,7 @@ fun on_decls gctx env decls =
 (*       val on_ptrn = on_ptrn gctx *)
 (*     in *)
 (*       case pn of *)
-(* 	  S.ConstrP (Outer ((x, ()), eia), inames, pn, Outer r) => *)
+(* 	  S.PnConstr (Outer ((x, ()), eia), inames, pn, Outer r) => *)
 (*           (case find_constr gctx cctx x of *)
 (* 	       SOME (x, c_inames) => *)
 (*                let *)
@@ -807,12 +806,12 @@ fun on_decls gctx env decls =
 (*                        if length inames = 0 then map (str2ibinder o prefix "__") c_inames *)
 (*                        else raise Error (r, "Constructor pattern can't have explicit index pattern arguments. Use [@constructor_name] if you want to write explict index pattern arguments.") *)
 (*                in *)
-(*                  ConstrP (Outer ((x, ()), true), inames, on_ptrn ctx pn, Outer r) *)
+(*                  PnConstr (Outer ((x, ()), true), inames, on_ptrn ctx pn, Outer r) *)
 (*                end *)
 (* 	     | NONE => *)
 (*                raise Error (S.get_region_long_id x, "Unknown constructor " ^ S.str_long_id #1 empty [] x) *)
 (*           ) *)
-(*         | S.VarP ename => *)
+(*         | S.PnVar ename => *)
 (*           let *)
 (*             val name = unBinderName ename *)
 (*           in *)
@@ -822,15 +821,15 @@ fun on_decls gctx env decls =
 (*                   val r = snd name *)
 (*                   val inames = map (str2ibinder o prefix "__") c_inames *)
 (*                 in *)
-(*                   ConstrP (Outer ((x, ()), true), inames, TTP $ Outer r, Outer r) *)
+(*                   PnConstr (Outer ((x, ()), true), inames, PnTT $ Outer r, Outer r) *)
 (*                 end *)
 (* 	      | NONE => *)
-(*                 VarP ename *)
+(*                 PnVar ename *)
 (*           end *)
 (*         | S.PairP (pn1, pn2) => *)
 (*           PairP (on_ptrn ctx pn1, on_ptrn ctx pn2) *)
-(*         | S.TTP r => *)
-(*           TTP r *)
+(*         | S.PnTT r => *)
+(*           PnTT r *)
 (*         | S.AliasP (name, pn, r) => *)
 (*           AliasP (name, on_ptrn ctx pn, r) *)
 (*         | S.AnnoP (pn, Outer t) => *)
@@ -971,7 +970,7 @@ fun on_decls gctx env decls =
 (*           let *)
 (*             val (tnames, e) = Unbound.unBind bind *)
 (*             val tnames = map unBinderName tnames *)
-(*             val pn = VarP name *)
+(*             val pn = PnVar name *)
 (*             val ctx' as (sctx', kctx', cctx', _) = (sctx, (rev o map fst) tnames @ kctx, cctx, tctx) *)
 (*             val pn = on_ptrn gctx (sctx', kctx', cctx') pn *)
 (*             val e = on_expr gctx ctx' e *)
@@ -1177,11 +1176,11 @@ fun is_FunctorBind s =
 
 fun on_top_bind gctx (name, bind) = 
     case bind of
-        S.TopModBind m =>
+        S.TBMod m =>
         let
           val (m, ctx) = on_module gctx m
         in
-          (TopModBind m, [(name, Sig ctx)])
+          (TBMod m, [(name, Sig ctx)])
         end
       (* | S.TopModSpec ((name, r), sg) => *)
       (*   let *)
@@ -1190,15 +1189,15 @@ fun on_top_bind gctx (name, bind) =
       (*   in *)
       (*     [(name, Sig sg)] *)
       (*   end *)
-      | S.TopFunctorBind (((arg_name, r2), arg), m) =>
+      | S.TBFunctor (((arg_name, r2), arg), m) =>
         let
           val (arg, arg_ctx) = on_sig gctx arg
           val gctx = add (arg_name, Sig arg_ctx) gctx
           val (m, body_ctx) = on_module gctx m
         in
-          (TopFunctorBind (((arg_name, r2), arg), m), [(name, FunctorBind ((arg_name, arg_ctx), body_ctx))])
+          (TBFunctor (((arg_name, r2), arg), m), [(name, FunctorBind ((arg_name, arg_ctx), body_ctx))])
         end
-      | S.TopFunctorApp ((f, f_r), m) =>
+      | S.TBFunctorApp ((f, f_r), m) =>
         let
           fun lookup_functor (gctx : ns_sigcontext) m =
             opt_bind (Gctx.find (gctx, m)) is_FunctorBind
@@ -1208,7 +1207,7 @@ fun on_top_bind gctx (name, bind) =
                 | NONE => raise Error (r, "Unbound functor " ^ m)
           val ((formal_arg_name, formal_arg), body) = fetch_functor gctx (f, f_r)
         in
-          (TopFunctorApp ((f, f_r), m), [(name, Sig body), (formal_arg_name, Sig formal_arg)])
+          (TBFunctorApp ((f, f_r), m), [(name, Sig body), (formal_arg_name, Sig formal_arg)])
         end
       | S.TBState (b, t) =>
         let
