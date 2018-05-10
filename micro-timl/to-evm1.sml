@@ -877,16 +877,20 @@ fun test1 dirname =
     val e = trans_e e
     val st_name2ty = StMap.map (mapSnd trans_mt) st_name2ty
     val () = println "Finished translating"
-    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
+    open ExportPP
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
+    val () = write_file (join_dir_file' dirname $ "unit-test-after-translation.tmp", e_str)
+    (* val () = println e_str *)
     (* val () = println "" *)
                      
     open MicroTiMLTypecheck
     open TestUtil
+    val init_st = IState $ StMap.map (fn _ => INat 0) st_name2ty
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = println "Finished MicroTiML typechecking #1"
-    val () = println "Type:"
     open ExportPP
+    val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
     (* val () = println "Time:" *)
     (* val i = simp_i i *)
@@ -903,12 +907,12 @@ fun test1 dirname =
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
     (* val () = println "" *)
-    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (SOME 1, NONE) ToStringUtil.empty_ctx e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file (join_dir_file' dirname $ "unit-test-after-cps.tmp", e_str)
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
@@ -953,7 +957,7 @@ fun test1 dirname =
     (* val () = check_CPSed_expr e *)
     (* val () = println "Finished post-pair-allocation form checking" *)
     val () = println "Started MicroTiML typechecking #4 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = println "Finished MicroTiML typechecking #4"
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
@@ -963,7 +967,7 @@ fun test1 dirname =
                      
     open EVM1ExportPP
     val () = println "Started Code Generation ..."
-    val (prog, num_regs) = cg_prog (st_name2int, IEmptyState) e
+    val (prog, num_regs) = cg_prog (st_name2int, init_st) e
     val () = println "Finished Code Generation"
     val () = println $ "# of registers: " ^ str_int num_regs
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
@@ -985,7 +989,7 @@ fun test1 dirname =
     val () = println "Started EVM1 typechecking ..."
     fun invert_map m = StMap.foldli (fn (k, v, acc) => IMap.insert (acc, v, k)) IMap.empty m
     val st_int2name = invert_map st_name2int
-    val (i, vcs, admits) = evm1_typecheck (num_regs, st_name2ty, st_int2name, IEmptyState) prog
+    val (i, vcs, admits) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
     val () = println "Finished EVM1 typechecking"
     (* val () = println "Time:" *)
     (* val i = simp_i i *)

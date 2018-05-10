@@ -24,7 +24,7 @@ fun foo {len : Nat} () pre {TestState_v : len} post {TestState_v : len+1} =
     a + b + c
   end
 
-val a = foo (* {0} *) ()
+val a = foo ()
             
 val () = __&halt a
             

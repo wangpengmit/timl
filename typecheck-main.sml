@@ -111,11 +111,13 @@ fun check_sorts gctx (ctx, is : U.idx list, sorts, r) : idx list =
   (check_length r (is, sorts);
    ListPair.map (fn (i, s) => check_sort gctx (ctx, i, s)) (is, sorts))
 
-val st_types_ref = (ref StMap.empty, ref StMap.empty)
 fun add_ref a = binop_ref (curry $ swap StMap.insert') a
+val st_types_ref = (ref StMap.empty, ref StMap.empty)
+val st_ref = ref StMap.empty
 fun add_state (x, t) =
   (add_ref (#1 st_types_ref) (x, t);
-   add_ref (#2 st_types_ref) (x, StMap.numItems $ !(#2 st_types_ref)))
+   add_ref (#2 st_types_ref) (x, StMap.numItems $ !(#2 st_types_ref));
+   add_ref st_ref (x, N0 dummy))
 fun clear_st_types () =
   (#1 st_types_ref := StMap.empty;
    #2 st_types_ref := StMap.empty)
@@ -2411,7 +2413,9 @@ fun get_sig gctx m =
   case m of
       U.ModComponents (decls, r) =>
       let
-        val (decls, ctxd, nps, ds, _, _) = check_decls gctx (empty_ctx, StMap.empty) decls
+        val (decls, ctxd, nps, ds, _, st) = check_decls gctx (empty_ctx, !st_ref) decls
+        val () = StMap.app (fn i => ignore $ forget_above_i_i 0 i handle _ => raise Error (r, ["state can't mention index variables"])) st
+        val () = st_ref := st
         val () = close_n nps
         val () = close_ctx ctxd
       in
