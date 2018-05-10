@@ -13,16 +13,16 @@ signature HAS_EQUAL = sig
   include UVAR_T
   val eq_var : var * var -> bool
   val eq_name : name * name -> bool
-  val eq_uvar_bs : 'bsort uvar_bs * 'bsort uvar_bs -> bool
-  val eq_uvar_i : ('bsort, 'idx) uvar_i * ('bsort, 'idx) uvar_i -> bool
-  val eq_uvar_s : ('bsort, 'sort) uvar_s * ('bsort, 'sort) uvar_s -> bool
+  val eq_uvar_bs : 'basic_sort uvar_bs * 'basic_sort uvar_bs -> bool
+  val eq_uvar_i : ('basic_sort, 'idx) uvar_i * ('basic_sort, 'idx) uvar_i -> bool
+  val eq_uvar_s : ('basic_sort, 'sort) uvar_s * ('basic_sort, 'sort) uvar_s -> bool
   val eq_uvar_mt : ('sort, 'kind, 'mtype) uvar_mt * ('sort, 'kind, 'mtype) uvar_mt -> bool
 end
                         
 functor EqualFn (structure IdxType : IDX_TYPE where type Idx.base_sort = BaseSorts.base_sort
                                                 and type Type.base_type = BaseTypes.base_type
                  structure HasEqual : HAS_EQUAL
-                 sharing type IdxType.Type.bsort = IdxType.Idx.bsort
+                 sharing type IdxType.Type.basic_sort = IdxType.Idx.basic_sort
                  sharing type HasEqual.var = IdxType.Idx.var
                  sharing type HasEqual.name = IdxType.Type.name
                  sharing type HasEqual.uvar_bs = IdxType.Idx.uvar_bs
@@ -54,14 +54,14 @@ fun eq_option eq (a, a') =
 
 fun eq_bs bs bs' =
   case bs of
-      Base b =>
-      (case bs' of Base b' => b = b' | _ => false)
+      BSBase b =>
+      (case bs' of BSBase b' => b = b' | _ => false)
     | BSArrow (s1, s2) =>
       (case bs' of
            BSArrow (s1', s2') => eq_bs s1 s1' andalso eq_bs s2 s2'
          | _ => false
       )
-    | UVarBS u => (case bs' of UVarBS u' => eq_uvar_bs (u, u') | _ => false)
+    | BSUVar u => (case bs' of BSUVar u' => eq_uvar_bs (u, u') | _ => false)
 
 fun eq_idx_const c c' =
   case c of
@@ -75,14 +75,14 @@ fun eq_i i i' =
   let
     fun loop i i' =
       case i of
-          VarI (x, _) => (case i' of VarI (x', _) => eq_var (x, x') | _ => false)
+          IVar (x, _) => (case i' of IVar (x', _) => eq_var (x, x') | _ => false)
         | IConst (c, _) => (case i' of IConst (c', _) => eq_idx_const c c' | _ => false)
-        | UnOpI (opr, i, _) => (case i' of UnOpI (opr', i', _) => opr = opr' andalso loop i i' | _ => false)
-        | BinOpI (opr, i1, i2) => (case i' of BinOpI (opr', i1', i2') => opr = opr' andalso loop i1 i1' andalso loop i2 i2' | _ => false)
-        | Ite (i1, i2, i3, _) => (case i' of Ite (i1', i2', i3', _) => loop i1 i1' andalso loop i2 i2' andalso loop i3 i3' | _ => false)
+        | IUnOp (opr, i, _) => (case i' of IUnOp (opr', i', _) => opr = opr' andalso loop i i' | _ => false)
+        | IBinOp (opr, i1, i2) => (case i' of IBinOp (opr', i1', i2') => opr = opr' andalso loop i1 i1' andalso loop i2 i2' | _ => false)
+        | IIte (i1, i2, i3, _) => (case i' of IIte (i1', i2', i3', _) => loop i1 i1' andalso loop i2 i2' andalso loop i3 i3' | _ => false)
         | IAbs (b, Bind (_, i), _) => (case i' of IAbs (b', Bind (_, i'), _) => eq_bs b b' andalso loop i i'
                                                 | _ => false)
-        | UVarI (u, _) => (case i' of UVarI (u', _) => eq_uvar_i (u, u') | _ => false)
+        | IUVar (u, _) => (case i' of IUVar (u', _) => eq_uvar_i (u, u') | _ => false)
         | IState st => (case i' of IState st' => eq_state st st' | _ => false)
   in
     loop i i'
@@ -98,26 +98,26 @@ fun eq_quan q q' =
 fun eq_p p p' =
   case p of
       PTrueFalse (b, _) => (case p' of PTrueFalse (b', _) => b = b' | _ => false)
-    | BinConn (opr, p1, p2) => (case p' of BinConn (opr', p1', p2') => opr = opr' andalso eq_p p1 p1' andalso eq_p p2 p2' | _ => false)
-    | BinPred (opr, i1, i2) => (case p' of BinPred (opr', i1', i2') => opr = opr' andalso eq_i i1 i1' andalso eq_i i2 i2' | _ => false)
-    | Not (p, _) => (case p' of Not (p', _) => eq_p p p' | _ => false)
-    | Quan (q, bs, Bind (_, p), _) => (case p' of Quan (q', bs', Bind (_, p'), _) => eq_quan q q' andalso eq_bs bs bs' andalso eq_p p p' | _ => false)
+    | PBinConn (opr, p1, p2) => (case p' of PBinConn (opr', p1', p2') => opr = opr' andalso eq_p p1 p1' andalso eq_p p2 p2' | _ => false)
+    | PBinPred (opr, i1, i2) => (case p' of PBinPred (opr', i1', i2') => opr = opr' andalso eq_i i1 i1' andalso eq_i i2 i2' | _ => false)
+    | PNot (p, _) => (case p' of PNot (p', _) => eq_p p p' | _ => false)
+    | PQuan (q, bs, Bind (_, p), _) => (case p' of PQuan (q', bs', Bind (_, p'), _) => eq_quan q q' andalso eq_bs bs bs' andalso eq_p p p' | _ => false)
 
 fun eq_s s s' =
   case s of
-      Basic (b, _) =>
+      SBasic (b, _) =>
       (case s' of
-           Basic (b', _) => eq_bs b b'
+           SBasic (b', _) => eq_bs b b'
          | _ => false
       )
-    | Subset ((b, _), Bind (_, p), _) =>
+    | SSubset ((b, _), Bind (_, p), _) =>
       (case s' of
-           Subset ((b', _), Bind (_, p'), _) => eq_bs b b' andalso eq_p p p'
+           SSubset ((b', _), Bind (_, p'), _) => eq_bs b b' andalso eq_p p p'
          | _ => false
       )
-    | UVarS (x, _) =>
+    | SUVar (x, _) =>
       (case s' of
-           UVarS (x', _) => eq_uvar_s (x, x')
+           SUVar (x', _) => eq_uvar_s (x, x')
          | _ => false
       )
     | SAbs (s1, Bind (_, s), _) =>
@@ -138,14 +138,14 @@ fun eq_k ((n, sorts) : kind) (n', sorts') =
 
 fun eq_mt t t' = 
     case t of
-	Arrow ((st1, t1), i, (st2, t2)) =>
+	TArrow ((st1, t1), i, (st2, t2)) =>
         (case t' of
-	     Arrow ((st1', t1'), i', (st2', t2')) => eq_state st1 st1' andalso eq_mt t1 t1' andalso eq_i i i' andalso eq_state st2 st2' andalso eq_mt t2 t2'
+	     TArrow ((st1', t1'), i', (st2', t2')) => eq_state st1 st1' andalso eq_mt t1 t1' andalso eq_i i i' andalso eq_state st2 st2' andalso eq_mt t2 t2'
            | _ => false
         )
-      | TyNat (i, r) =>
+      | TNat (i, r) =>
         (case t' of
-             TyNat (i', _) => eq_i i i'
+             TNat (i', _) => eq_i i i'
            | _ => false
         )
       | TiBool (i, r) =>
@@ -153,24 +153,24 @@ fun eq_mt t t' =
              TiBool (i', _) => eq_i i i'
            | _ => false
         )
-      | TyArray (t, i) =>
+      | TArray (t, i) =>
         (case t' of
-             TyArray (t', i') => eq_mt t t' andalso eq_i i i'
+             TArray (t', i') => eq_mt t t' andalso eq_i i i'
            | _ => false
         )
-      | Unit r =>
+      | TUnit r =>
         (case t' of
-             Unit _ => true
+             TUnit _ => true
            | _ => false
         )
-      | Prod (t1, t2) =>
+      | TProd (t1, t2) =>
         (case t' of
-             Prod (t1', t2') => eq_mt t1 t1' andalso eq_mt t2 t2'
+             TProd (t1', t2') => eq_mt t1 t1' andalso eq_mt t2 t2'
            | _ => false
         )
-      | UniI (s, Bind (_, t), r) =>
+      | TUniI (s, Bind (_, t), r) =>
         (case t' of
-             UniI (s', Bind (_, t'), _) => eq_s s s' andalso eq_mt t t'
+             TUniI (s', Bind (_, t'), _) => eq_s s s' andalso eq_mt t t'
            | _ => false
         )
       | TSumbool (s1, s2) =>
@@ -178,39 +178,39 @@ fun eq_mt t t' =
              TSumbool (s1', s2') => eq_s s1 s1' andalso eq_s s2 s2'
            | _ => false
         )
-      | MtVar x =>
+      | TVar x =>
         (case t' of
-             MtVar x' => eq_var (x, x')
+             TVar x' => eq_var (x, x')
            | _ => false
         )
-      | MtAbs (k, Bind (_, t), r) =>
+      | TAbs (k, Bind (_, t), r) =>
         (case t' of
-             MtAbs (k', Bind (_, t'), _) => eq_k k k' andalso eq_mt t t'
+             TAbs (k', Bind (_, t'), _) => eq_k k k' andalso eq_mt t t'
            | _ => false
         )
-      | MtApp (t1, t2) =>
+      | TApp (t1, t2) =>
         (case t' of
-             MtApp (t1', t2') => eq_mt t1 t1' andalso eq_mt t2 t2'
+             TApp (t1', t2') => eq_mt t1 t1' andalso eq_mt t2 t2'
            | _ => false
         )
-      | MtAbsI (s, Bind (_, t), r) =>
+      | TAbsI (s, Bind (_, t), r) =>
         (case t' of
-             MtAbsI (s', Bind (_, t'), _) => eq_bs s s' andalso eq_mt t t'
+             TAbsI (s', Bind (_, t'), _) => eq_bs s s' andalso eq_mt t t'
            | _ => false
         )
-      | MtAppI (t, i) =>
+      | TAppI (t, i) =>
         (case t' of
-             MtAppI (t', i') => eq_mt t t' andalso eq_i i i'
+             TAppI (t', i') => eq_mt t t' andalso eq_i i i'
            | _ => false
         )
-      | BaseType (a : base_type, r) =>
+      | TBase (a : base_type, r) =>
         (case t' of
-             BaseType (a' : base_type, _)  => eq_base_type (a, a')
+             TBase (a' : base_type, _)  => eq_base_type (a, a')
            | _ => false
         )
-      | UVar (x, _) =>
+      | TUVar (x, _) =>
         (case t' of
-             UVar (x', _) => eq_uvar_mt (x, x')
+             TUVar (x', _) => eq_uvar_mt (x, x')
            | _ => false
         )
       (* | TDatatype _ => raise Unimpl "eq_mt()/TDatatype" *)

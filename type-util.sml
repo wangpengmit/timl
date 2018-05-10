@@ -6,72 +6,72 @@ open Bind
        
 infixr 0 $
 
-fun collect_UniI t =
+fun collect_TUniI t =
   case t of
-      UniI (s, Bind (name, t), _) =>
-      let val (binds, t) = collect_UniI t
+      TUniI (s, Bind (name, t), _) =>
+      let val (binds, t) = collect_TUniI t
       in
         ((name, s) :: binds, t)
       end
     | _ => ([], t)
 
-fun collect_Uni t =
+fun collect_PTUni t =
   case t of
-      Uni (Bind (name, t), _) =>
-      let val (names, t) = collect_Uni t
+      PTUni (Bind (name, t), _) =>
+      let val (names, t) = collect_PTUni t
       in
         (name :: names, t)
       end
-    | Mono t => ([], t)
+    | PTMono t => ([], t)
 
-fun collect_MtAppI t =
+fun collect_TAppI t =
   case t of
-      MtAppI (t, i) =>
+      TAppI (t, i) =>
       let 
-        val (f, args) = collect_MtAppI t
+        val (f, args) = collect_TAppI t
       in
         (f, args @ [i])
       end
     | _ => (t, [])
              
-fun collect_MtApp t =
+fun collect_TApp t =
   case t of
-      MtApp (t1, t2) =>
+      TApp (t1, t2) =>
       let 
-        val (f, args) = collect_MtApp t1
+        val (f, args) = collect_TApp t1
       in
         (f, args @ [t2])
       end
     | _ => (t, [])
              
-fun is_MtApp_UVar t =
+fun is_TApp_TUVar t =
   let
-    val (t, t_args) = collect_MtApp t
-    val (t, i_args) = collect_MtAppI t
+    val (t, t_args) = collect_TApp t
+    val (t, i_args) = collect_TAppI t
   in
     case t of
-        UVar (x, r) => SOME ((x, r), i_args, t_args)
+        TUVar (x, r) => SOME ((x, r), i_args, t_args)
       | _ => NONE
   end
     
 fun is_AppV t =
   let
-    val (t, i_args) = collect_MtAppI t
-    val (t, t_args) = collect_MtApp t
+    val (t, i_args) = collect_TAppI t
+    val (t, t_args) = collect_TApp t
   in
     case t of
-        MtVar x => SOME (x, t_args, i_args)
+        TVar x => SOME (x, t_args, i_args)
       | _ => NONE
   end
     
-fun MtAppIs f args = foldl (fn (arg, f) => MtAppI (f, arg)) f args
-fun MtApps f args = foldl (fn (arg, f) => MtApp (f, arg)) f args
+fun TAppIs f args = foldl (fn (arg, f) => TAppI (f, arg)) f args
+fun TApps f args = foldl (fn (arg, f) => TApp (f, arg)) f args
                           
-fun MtAbs_Many (ctx, t, r) = foldr (fn ((name, k), t) => MtAbs (k, Bind ((name, r), t), r)) t ctx
-fun MtAbsI_Many (ctx, t, r) = foldr (fn ((name, s), t) => MtAbsI (s, Bind ((name, r), t), r)) t ctx
+fun TAbs_Many (ctx, t, r) = foldr (fn ((name, k), t) => TAbs (k, Bind ((name, r), t), r)) t ctx
+fun TAbsI_Many (ctx, t, r) = foldr (fn ((name, s), t) => TAbsI (s, Bind ((name, r), t), r)) t ctx
                                  
-fun AppVar (x, is) = MtAppIs (MtVar x) is
-fun AppV (x, ts, is, r) = MtAppIs (MtApps (MtVar x) ts) is
+fun AppVar (x, is) = TAppIs (TVar x) is
+fun AppV (x, ts, is, r) = TAppIs (TApps (TVar x) ts) is
 
 fun get_constr_inames (core : mtype constr_core) =
   let
@@ -91,10 +91,10 @@ fun get_constr_names t =
       end
     | _ => []
 
-fun Uni_Many (names, t, r) = foldr (fn (name, t) => (Uni (Bind (name, t), r))) t names
+fun PTUni_Many (names, t, r) = foldr (fn (name, t) => (PTUni (Bind (name, t), r))) t names
 
-fun MakeUniI (s, name, t, r) = UniI (s, Bind.Bind (name, t), r)
+fun MakeTUniI (s, name, t, r) = TUniI (s, Bind.Bind (name, t), r)
 
-fun PureArrow (t1, i, t2) = Arrow ((StMap.empty, t1), i, (StMap.empty, t2))
+fun TPureArrow (t1, i, t2) = TArrow ((StMap.empty, t1), i, (StMap.empty, t2))
                          
 end

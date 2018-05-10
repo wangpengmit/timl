@@ -3,9 +3,9 @@ functor ExportIdxFn (
                                           and type T.var = string
                                           and type 'a T.exists_anno = unit
   val str_var : (ToStringUtil.context -> string list) -> ToStringUtil.global_context -> string list -> Params.S.var -> string
-  val map_uvar_bs : ('bsort -> 'bsort2) -> 'bsort Params.S.uvar_bs -> 'bsort2 Params.T.uvar_bs
-  val map_uvar_i : ('bsort -> 'bsort2) * ('idx -> 'idx2) -> ('bsort, 'idx) Params.S.uvar_i -> ('bsort2, 'idx2) Params.T.uvar_i
-  val map_uvar_s : ('bsort -> 'bsort2) * ('sort -> 'sort2) -> ('bsort, 'sort) Params.S.uvar_s -> ('bsort2, 'sort2) Params.T.uvar_s
+  val map_uvar_bs : ('basic_sort -> 'basic_sort2) -> 'basic_sort Params.S.uvar_bs -> 'basic_sort2 Params.T.uvar_bs
+  val map_uvar_i : ('basic_sort -> 'basic_sort2) * ('idx -> 'idx2) -> ('basic_sort, 'idx) Params.S.uvar_i -> ('basic_sort2, 'idx2) Params.T.uvar_i
+  val map_uvar_s : ('basic_sort -> 'basic_sort2) * ('sort -> 'sort2) -> ('basic_sort, 'sort) Params.S.uvar_s -> ('basic_sort2, 'sort2) Params.T.uvar_s
 ) = struct
 
 open Params
@@ -29,19 +29,19 @@ fun export_idx_visitor_vtable cast gctx (* : ((* 'this *)string list IV.idx_visi
       let
         val vtable = cast this
       in
-        map_uvar_bs (#visit_bsort vtable this []) u
+        map_uvar_bs (#visit_basic_sort vtable this []) u
       end
     fun visit_uvar_i this ctx (u, r) =
       let
         val vtable = cast this
-        val u = map_uvar_i (#visit_bsort vtable this [], #visit_idx vtable this []) u
+        val u = map_uvar_i (#visit_basic_sort vtable this [], #visit_idx vtable this []) u
       in
         (u, r)
       end
     fun visit_uvar_s this ctx (u, r) =
       let
         val vtable = cast this
-        val u = map_uvar_s (#visit_bsort vtable this [], #visit_sort vtable this []) u
+        val u = map_uvar_s (#visit_basic_sort vtable this [], #visit_sort vtable this []) u
       in
         (u, r)       
       end
@@ -62,7 +62,7 @@ fun export_bs b =
   let
     val visitor as (IV.IdxVisitor vtable) = new_export_idx_visitor empty
   in
-    #visit_bsort vtable visitor [] b
+    #visit_basic_sort vtable visitor [] b
   end
 
 fun export_i gctx ctx b =
@@ -92,10 +92,10 @@ functor ExportTypeFn (
   structure Params : TYPE_VISITOR_PARAMS where type S.name = string * Region.region
                                            and type T.var = string
   val str_var : (ToStringUtil.context -> string list) -> ToStringUtil.global_context -> string list -> Params.S.var -> string
-  val export_bs : Params.S.bsort -> Params.T.bsort
+  val export_bs : Params.S.basic_sort -> Params.T.basic_sort
   val export_i : ToStringUtil.global_context -> string list -> Params.S.idx -> Params.T.idx
   val export_s : ToStringUtil.global_context -> string list -> Params.S.sort -> Params.T.sort
-  val map_uvar_mt : ('bsort -> 'bsort2) * ('kind -> 'kind2) * ('mtype -> 'mtype2) -> ('bsort, 'kind, 'mtype) Params.S.uvar_mt -> ('bsort2, 'kind2, 'mtype2) Params.T.uvar_mt
+  val map_uvar_mt : ('basic_sort -> 'basic_sort2) * ('kind -> 'kind2) * ('mtype -> 'mtype2) -> ('basic_sort, 'kind, 'mtype) Params.S.uvar_mt -> ('basic_sort2, 'kind2, 'mtype2) Params.T.uvar_mt
 ) = struct
 
 open Params
@@ -119,7 +119,7 @@ fun export_type_visitor_vtable cast gctx (* : ((string list * string list) TV.ty
         val vtable = cast this
         val empty_ctx = ([], [])
         val u = 
-            map_uvar_mt (#visit_bsort vtable this empty_ctx, #visit_kind vtable this empty_ctx, #visit_mtype vtable this empty_ctx) u
+            map_uvar_mt (#visit_basic_sort vtable this empty_ctx, #visit_kind vtable this empty_ctx, #visit_mtype vtable this empty_ctx) u
       in
         (u, r)
       end

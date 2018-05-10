@@ -22,7 +22,7 @@ fun T1 r = ITime (TimeType.one, r)
 fun N0 r = INat (0, r)
 fun N1 r = INat (1, r)
 fun IDiv (i, (n, r)) = IUnOp (IUDiv n, i, r)
-(* fun ExpI (i, (s, r)) = UnOpI (IUExp s, i, r) *)
+(* fun ExpI (i, (s, r)) = IUnOp (IUExp s, i, r) *)
 fun IMod (a, b) = IBinOp (IBMod, a, b)
 fun ITrue r = IConst (ICBool true, r)
 fun IFalse r = IConst (ICBool false, r)
@@ -56,26 +56,26 @@ infixr 2 \/?
 infixr 1 -->
 infix 1 <->
 
-fun a %@ b = IBinOp (IApp, a, b)
-fun a %^ b = IBinOp (ExpNI, a, b)
-fun a %* b = IBinOp (MultI, a, b)
-fun a %+ b = IBinOp (AddI, a, b)
-fun a %< b = BinPred (LtP, a, b)
-fun a %> b = BinPred (GtP, a, b)
-fun a %<= b = BinPred (LeP, a, b)
-fun a %>= b = BinPred (GeP, a, b)
+fun a %@ b = IBinOp (IBApp, a, b)
+fun a %^ b = IBinOp (IBExpN, a, b)
+fun a %* b = IBinOp (IBMult, a, b)
+fun a %+ b = IBinOp (IBAdd, a, b)
+fun a %< b = PBinPred (BPLt, a, b)
+fun a %> b = PBinPred (BPGt, a, b)
+fun a %<= b = PBinPred (BPLe, a, b)
+fun a %>= b = PBinPred (BPGe, a, b)
 fun a %= b = PEq (a, b)
-fun a %<? b = IBinOp (LtI, a, b)
-fun a %>? b = IBinOp (GtI, a, b)
-fun a %<=? b = IBinOp (LeI, a, b)
-fun a %>=? b = IBinOp (GeI, a, b)
-fun a %=? b = IBinOp (EqI, a, b)
-fun a /\ b = BinConn (And, a, b)
-fun a \/ b = BinConn (Or, a, b)
-fun a /\? b = IBinOp (AndI, a, b)
-fun a \/? b = IBinOp (OrI, a, b)
-fun a --> b = BinConn (Imply, a, b)
-fun a <-> b = BinConn (Iff, a, b)
+fun a %<? b = IBinOp (IBLt, a, b)
+fun a %>? b = IBinOp (IBGt, a, b)
+fun a %<=? b = IBinOp (IBLe, a, b)
+fun a %>=? b = IBinOp (IBGe, a, b)
+fun a %=? b = IBinOp (IBEq, a, b)
+fun a /\ b = PBinConn (BCAnd, a, b)
+fun a \/ b = PBinConn (BCOr, a, b)
+fun a /\? b = IBinOp (IBAnd, a, b)
+fun a \/? b = IBinOp (IBOr, a, b)
+fun a --> b = PBinConn (BCImply, a, b)
+fun a <-> b = PBinConn (BCIff, a, b)
                       
 fun combine_And ps = foldl' (fn (p, acc) => acc /\ p) (PTrue dummy) ps
                             
@@ -95,28 +95,28 @@ fun collect_IBinOp_left opr i =
       else [i]
     | _ => [i]
              
-val collect_AddI = collect_IBinOp AddI
-val collect_AddI_left = collect_IBinOp_left AddI
-val collect_MultI = collect_IBinOp MultI
+val collect_IAdd = collect_IBinOp IBAdd
+val collect_IAdd_left = collect_IBinOp_left IBAdd
+val collect_MultI = collect_IBinOp IBMult
                                    
-fun combine_AddI zero is = foldl' (fn (i, acc) => acc %+ i) zero is
-fun combine_AddI_Time is = combine_AddI (T0 dummy) is
-fun combine_AddI_Nat is = combine_AddI (N0 dummy) is
-fun combine_AddI_nonempty i is = combine_AddI_Time (i :: is)
-fun combine_MultI is = foldl' (fn (i, acc) => acc %* i) (T1 dummy) is
+fun combine_IAdd zero is = foldl' (fn (i, acc) => acc %+ i) zero is
+fun combine_IAdd_Time is = combine_IAdd (T0 dummy) is
+fun combine_IAdd_Nat is = combine_IAdd (N0 dummy) is
+fun combine_IAdd_nonempty i is = combine_IAdd_Time (i :: is)
+fun combine_IMult is = foldl' (fn (i, acc) => acc %* i) (T1 dummy) is
                                             
-fun collect_BinConn opr i =
+fun collect_PBinConn opr i =
   case i of
-      BinConn (opr', i1, i2) =>
+      PBinConn (opr', i1, i2) =>
       if opr' = opr then
-        collect_BinConn opr i1 @ collect_BinConn opr i2
+        collect_PBinConn opr i1 @ collect_PBinConn opr i2
       else [i]
     | _ => [i]
              
-val collect_And = collect_BinConn And
+val collect_PAnd = collect_PBinConn BCAnd
 
 fun collect_IApp i =
-  case collect_IBinOp_left IApp i of
+  case collect_IBinOp_left IBApp i of
       f :: args => (f, args)
     | [] => raise Impossible "collect_IApp(): null"
 
@@ -134,30 +134,30 @@ fun collect_IAbs i =
 
 fun is_time_fun b =
   case b of
-      Base Time => SOME 0
-    | BSArrow (Base Nat, b) =>
+      BSBase Time => SOME 0
+    | BSArrow (BSBase Nat, b) =>
       opt_bind (is_time_fun b) (fn n => opt_return $ 1 + n)
     | _ => NONE
              
 fun collect_BSArrow b =
   case b of
-      Base _ => ([], b)
+      BSBase _ => ([], b)
     | BSArrow (a, b) =>
       let
         val (args, ret) = collect_BSArrow b
       in
         (a :: args, ret)
       end
-    | UVarBS u => ([], b)
+    | BSUVar u => ([], b)
 
 fun combine_BSArrow (args, b) = foldr BSArrow b args
                     
-fun is_IApp_UVarI i =
+fun is_IApp_IUVar i =
   let
     val (f, args) = collect_IApp i
   in
     case f of
-        UVarI (x, r) => SOME ((x, r), args)
+        IUVar (x, r) => SOME ((x, r), args)
       | _ => NONE
   end
     
@@ -171,36 +171,36 @@ fun collect_SApp s =
       end
     | _ => (s, [])
              
-fun is_SApp_UVarS s =
+fun is_SApp_SUVar s =
   let
     val (f, args) = collect_SApp s
   in
     case f of
-        UVarS (x, r) => SOME ((x, r), args)
+        SUVar (x, r) => SOME ((x, r), args)
       | _ => NONE
   end
     
-fun IApps f args = foldl (fn (arg, f) => IBinOp (IApp, f, arg)) f args
+fun IApps f args = foldl (fn (arg, f) => IBinOp (IBApp, f, arg)) f args
 fun SApps f args = foldl (fn (arg, f) => SApp (f, arg)) f args
                          
 fun SAbs_Many (ctx, s, r) = foldr (fn ((name, s_arg), s) => SAbs (s_arg, Bind ((name, r), s), r)) s ctx
 fun IAbs_Many (ctx, i, r) = foldr (fn ((name, b), i) => IAbs (b, Bind ((name, r), i), r)) i ctx
                                  
-fun IMax (i1, i2) = IBinOp (MaxI, i1, i2)
+fun IMax (i1, i2) = IBinOp (IBMax, i1, i2)
                            
 fun interp_nat_expr_bin_op opr (i1, i2) err =
   case opr of
       EBNAdd => i1 %+ i2
-    | EBNBoundedMinus => IBinOp (BoundedMinusI, i1, i2)
+    | EBNBoundedMinus => IBinOp (IBBoundedMinus, i1, i2)
     | EBNMult => i1 %* i2
     | EBNDiv =>
       case i2 of
-          IConst (ICNat n, r) => UnOpI (Floor, UnOpI (IUDiv n, UnOpI (ToReal, i1, r), r), r)
+          IConst (ICNat n, r) => IUnOp (IUFloor, IUnOp (IUDiv n, IUnOp (IUToReal, i1, r), r), r)
         | _ => err ()
          
 fun interp_nat_cmp r opr =
   let
-    fun neq (a, b) = UnOpI (Neg, a %=? b, r)
+    fun neq (a, b) = IUnOp (IUNeg, a %=? b, r)
   in
   case opr of
       NCLt => op%<?

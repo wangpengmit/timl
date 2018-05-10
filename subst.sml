@@ -32,20 +32,20 @@ fun forget_above_i_i x b = forget_i_i x 100000000 b
 
 exception Error of string
 
-fun visit_VarI (d, x, v) visit_sort env (y, anno) =
+fun visit_IVar (d, x, v) visit_sort env (y, anno) =
   let
     val x = x + env
     val d = d + env
   in
-    substx_var (fn y => VarI (y, map visit_sort anno)) x (fn () => shiftx_i_i 0 d v) y
+    substx_var (fn y => IVar (y, map visit_sort anno)) x (fn () => shiftx_i_i 0 d v) y
   end
 
 structure IdxSubst = IdxSubstFn (structure Idx = Idx
-                                 val visit_VarI = visit_VarI
+                                 val visit_IVar = visit_IVar
                                 )
 open IdxSubst
                                         
-fun visit_MtVar (d, x, v) env y =
+fun visit_TVar (d, x, v) env y =
   let
     fun add_depth (di, dt) (di', dt') = (idepth_add (di, di'), tdepth_add (dt, dt'))
     fun get_di (di, dt) = di
@@ -53,11 +53,11 @@ fun visit_MtVar (d, x, v) env y =
     val x = x + unTDepth (get_dt env)
     val (di, dt) = add_depth d env
   in
-    substx_var MtVar x (fn () => shiftx_i_mt 0 (unIDepth di) $ shiftx_t_mt 0 (unTDepth dt) v) y
+    substx_var TVar x (fn () => shiftx_i_mt 0 (unIDepth di) $ shiftx_t_mt 0 (unTDepth dt) v) y
   end
     
 structure TypeSubst = TypeSubstFn (structure Type = Type
-                                   val visit_MtVar = visit_MtVar
+                                   val visit_TVar = visit_TVar
                                    val substx_i_i = substx_i_i
                                    val substx_i_s = substx_i_s
                                   )

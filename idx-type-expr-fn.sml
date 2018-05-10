@@ -72,24 +72,24 @@ open ExprUtil
        
 (* some shorthands *)
 
-val BSTime = Base Time
-val BSNat = Base Nat
-val BSBool = Base BoolSort
-val BSUnit = Base UnitSort
+val BSTime = BSBase BSSTime
+val BSNat = BSBase BSSNat
+val BSBool = BSBase BSSBool
+val BSUnit = BSBase BSSUnit
                  
-fun STime r = Basic (Base Time, r)
-fun SNat r = Basic (Base Nat, r)
-fun SBool r = Basic (Base BoolSort, r)
-fun SUnit r = Basic (Base UnitSort, r)
+fun STime r = SBasic (BSTime, r)
+fun SNat r = SBasic (BSNat, r)
+fun SBool r = SBasic (BSBool, r)
+fun SUnit r = SBasic (BSUnit, r)
                   
-(* val STime = Basic (Base Time, dummy) *)
-(* val SNat = Basic (Base Nat, dummy) *)
-(* val SBool = Basic (Base BoolSort, dummy) *)
-(* val SUnit = Basic (Base UnitSort, dummy) *)
+(* val STime = SBasic (BSBase Time, dummy) *)
+(* val SNat = SBasic (BSBase Nat, dummy) *)
+(* val SBool = SBasic (BSBase BoolSort, dummy) *)
+(* val SUnit = SBasic (BSBase UnitSort, dummy) *)
 
-fun TInt r = BaseType (Int, r)
-fun TBool r = BaseType (Bool, r)
-fun TByte r = BaseType (Byte, r)
+fun TInt r = TBase (BTInt, r)
+fun TBool r = TBase (BTBool, r)
+fun TByte r = TBase (BTByte, r)
 
 val Type = (0, [])
 
@@ -111,18 +111,17 @@ infix 1 <->
 
 open Bind
        
-val VarT = MtVar
-fun constr_type (VarT : int LongId.long_id -> mtype) shiftx_long_id ((family, tbinds) : mtype constr_info) = 
+fun constr_type (t_var : int LongId.long_id -> mtype) shiftx_long_id ((family, tbinds) : mtype constr_info) = 
   let
     val (tname_kinds, ibinds) = unfold_binds tbinds
     val tnames = map fst tname_kinds
     val (ns, (t, is)) = unfold_binds ibinds
-    val ts = map (fn x => VarT (ID (x, dummy))) $ rev $ range $ length tnames
+    val ts = map (fn x => t_var (ID (x, dummy))) $ rev $ range $ length tnames
     val t2 = AppV (shiftx_long_id 0 (length tnames) family, ts, is, dummy)
-    val t = PureArrow (t, T0 dummy, t2)
-    val t = foldr (fn ((name, s), t) => UniI (s, Bind (name, t), dummy)) t ns
-    val t = Mono t
-    val t = foldr (fn (name, t) => Uni (Bind (name, t), dummy)) t tnames
+    val t = TPureArrow (t, T0 dummy, t2)
+    val t = foldr (fn ((name, s), t) => TUniI (s, Bind (name, t), dummy)) t ns
+    val t = PTMono t
+    val t = foldr (fn (name, t) => PTUni (Bind (name, t), dummy)) t tnames
   in
     t
   end

@@ -3,7 +3,7 @@ signature VC_PARAMS = sig
                                  and type region = Region.region
                                  (* and type var = int LongId.long_id *)
   val get_region_p : Idx.prop -> Region.region
-  val str_bs : Idx.bsort -> string
+  val str_bs : Idx.basic_sort -> string
   val str_p : ToStringUtil.global_context -> ToStringUtil.scontext -> Idx.prop -> string
   val simp_p : Idx.prop -> Idx.prop
 end
@@ -31,18 +31,18 @@ fun uniquefy_ls names = foldr (fn (name, acc) => find_unique acc name :: acc) []
                               
 fun uniquefy ctx p =
     case p of
-        Quan (q, bs, Bind ((name, r), p), r_all) =>
+        PQuan (q, bs, Bind ((name, r), p), r_all) =>
         let
             val name = find_unique ctx name
         in
-            Quan (q, bs, Bind ((name, r), uniquefy (name :: ctx) p), r_all)
+            PQuan (q, bs, Bind ((name, r), uniquefy (name :: ctx) p), r_all)
         end
-      | Not (p, r) => Not (uniquefy ctx p, r)
-      | BinConn (opr, p1, p2) => BinConn (opr, uniquefy ctx p1, uniquefy ctx p2)
-      | BinPred _ => p
+      | PNot (p, r) => PNot (uniquefy ctx p, r)
+      | PBinConn (opr, p1, p2) => PBinConn (opr, uniquefy ctx p1, uniquefy ctx p2)
+      | PBinPred _ => p
       | PTrueFalse _ => p
 
-type vc = (string * bsort, prop) hyp list * prop
+type vc = (string * basic_sort, prop) hyp list * prop
 
 fun str_vc show_region filename ((hyps, p) : vc) =
     let 
@@ -80,27 +80,27 @@ fun prop2vcs p : vc list =
     let
     in
         case p of
-            Quan (Forall, bs, Bind ((name, r), p), r_all) =>
+            PQuan (Forall, bs, Bind ((name, r), p), r_all) =>
             let
                 val ps = prop2vcs p
                 val ps = add_hyp (VarH (name, bs)) ps
             in
                 ps
             end
-          | BinConn (Imply, p1, p) =>
+          | PBinConn (Imply, p1, p) =>
             let
                 val ps = prop2vcs p
                 val ps = add_hyp (PropH p1) ps
             in
                 ps
             end
-          | BinConn (And, p1, p2) =>
+          | PBinConn (And, p1, p2) =>
             prop2vcs p1 @ prop2vcs p2
           | _ => [([], p)]
     end
 
 fun vc2prop ((hs, p) : vc) =
-    foldl (fn (h, p) => case h of VarH (name, b) => Quan (Forall, b, Bind ((name, dummy), p), get_region_p p) | PropH p1 => p1 --> p) p hs
+    foldl (fn (h, p) => case h of VarH (name, b) => PQuan (Forall, b, Bind ((name, dummy), p), get_region_p p) | PropH p1 => p1 --> p) p hs
 
 fun simp_vc_vcs (vc : vc) : vc list = prop2vcs $ simp_p $ vc2prop $ vc
           

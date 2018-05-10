@@ -59,8 +59,8 @@ datatype bin_pred =
                
 (* existential quantifier might carry other information such as a unification variable to update when this existential quantifier gets instantiated *)
 datatype 'a quan =
-         QForall
-         | QExists of 'a
+         Forall
+         | Exists of 'a
 
 type nat = int
 
@@ -353,13 +353,13 @@ fun str_bin_pred opr =
 
 fun strip_quan q =
   case q of
-      QForall => QForall
-    | QExists _ => QExists ()
+      Forall => Forall
+    | Exists _ => Exists ()
                          
 fun str_quan q =
     case q of
-        QForall => "forall"
-      | QExists _ => "exists"
+        Forall => "forall"
+      | Exists _ => "exists"
 
 fun str_expr_EI opr =
   case opr of

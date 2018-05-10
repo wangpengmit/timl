@@ -14,7 +14,7 @@ fun str_b (s : base_sort) : string =
     | Time => "Time"
     | BoolSort => "Bool"
     | UnitSort => "Unit"
-    | BSState => "State"
+    | BSSState => "State"
                   
 end
 

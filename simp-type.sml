@@ -13,27 +13,27 @@ infixr 0 $
          
 fun simp_mt t =
   case t of
-      Arrow ((st1, t1), d, (st2, t2)) => Arrow ((StMap.map simp_i st1, simp_mt t1), simp_i d, (StMap.map simp_i st2, simp_mt t2))
-    | TyNat (i, r) => TyNat (simp_i i, r)
+      TArrow ((st1, t1), d, (st2, t2)) => TArrow ((StMap.map simp_i st1, simp_mt t1), simp_i d, (StMap.map simp_i st2, simp_mt t2))
+    | TNat (i, r) => TNat (simp_i i, r)
     | TiBool (i, r) => TiBool (simp_i i, r)
-    | TyArray (t, i) => TyArray (simp_mt t, simp_i i)
-    | Unit r => Unit r
-    | Prod (t1, t2) => Prod (simp_mt t1, simp_mt t2)
-    | UniI (s, bind, r) => UniI (simp_s s, simp_bind simp_mt bind, r)
-    | BaseType a => BaseType a
-    | UVar u => UVar u
-    | MtVar x => MtVar x
-    | MtAbs (k, bind, r) => MtAbs (k, simp_bind simp_mt bind, r)
-    | MtApp (t1, t2) => MtApp (simp_mt t1, simp_mt t2)
-    | MtAbsI (b, bind, r) => MtAbsI (b, simp_bind simp_mt bind, r)
-    | MtAppI (t, i) =>
+    | TArray (t, i) => TArray (simp_mt t, simp_i i)
+    | TUnit r => TUnit r
+    | TProd (t1, t2) => TProd (simp_mt t1, simp_mt t2)
+    | TUniI (s, bind, r) => TUniI (simp_s s, simp_bind simp_mt bind, r)
+    | TBase a => TBase a
+    | TUVar u => TUVar u
+    | TVar x => TVar x
+    | TAbs (k, bind, r) => TAbs (k, simp_bind simp_mt bind, r)
+    | TApp (t1, t2) => TApp (simp_mt t1, simp_mt t2)
+    | TAbsI (b, bind, r) => TAbsI (b, simp_bind simp_mt bind, r)
+    | TAppI (t, i) =>
       let
         val t = simp_mt t
         val i = simp_i i
       in
         case t of
-            MtAbsI (_, Bind (_, t), _) => simp_mt (subst_i_mt i t)
-          | _ => MtAppI (t, i)
+            TAbsI (_, Bind (_, t), _) => simp_mt (subst_i_mt i t)
+          | _ => TAppI (t, i)
       end
     | TDatatype (dt, r) =>
       let
@@ -50,7 +50,7 @@ fun simp_mt t =
 
 fun simp_t t =
   case t of
-      Mono t => Mono (simp_mt t)
-    | Uni (Bind (name, t), r) => Uni (Bind (name, simp_t t), r)
+      PTMono t => PTMono (simp_mt t)
+    | PTUni (Bind (name, t), r) => PTUni (Bind (name, simp_t t), r)
 
 end

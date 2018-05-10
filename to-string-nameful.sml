@@ -7,10 +7,10 @@ functor ToStringNamefulFn (structure Expr : IDX_TYPE_EXPR
                                               and type Type.name = string * Region.region
                                               and type Idx.var = string
                                               and type mod_id = string
-                         sharing type Expr.Type.bsort = Expr.Idx.bsort
+                         sharing type Expr.Type.basic_sort = Expr.Idx.basic_sort
                          val str_uvar_bs : ('a -> string) -> 'a Expr.Idx.uvar_bs -> string
-                         val str_uvar_i : ('bsort -> string) * ('idx -> string) -> ('bsort, 'idx) Expr.Idx.uvar_i -> string
-                         val str_uvar_s : ('sort -> string) -> ('bsort, 'sort) Expr.Idx.uvar_s -> string
+                         val str_uvar_i : ('basic_sort -> string) * ('idx -> string) -> ('basic_sort, 'idx) Expr.Idx.uvar_i -> string
+                         val str_uvar_s : ('sort -> string) -> ('basic_sort, 'sort) Expr.Idx.uvar_s -> string
                          val str_uvar_mt : ('sort -> string) * ('kind -> string) * ('mtype -> string) -> ('sort, 'kind, 'mtype) Expr.Type.uvar_mt -> string
                         ) = struct
 
@@ -262,12 +262,12 @@ fun strn_mt t =
         end
       | TDatatype (Bind (name, tbinds), _) =>
         let
-          val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
+          val (tname_kinds, (basic_sorts, constr_decls)) = unfold_binds tbinds
           val tnames = map (fst o fst) tname_kinds
           val tnames = join_prefix " " tnames
-          val bsorts = map strn_bs bsorts
-          val bsorts = if null bsorts then ""
-                       else surround " {" "}" $ join " " bsorts
+          val basic_sorts = map strn_bs basic_sorts
+          val basic_sorts = if null basic_sorts then ""
+                       else surround " {" "}" $ join " " basic_sorts
           fun strn_constr_decl family_name tnames (name, core, _) =
             let
               val (iname_sorts, (t, is)) = unfold_binds core
@@ -279,7 +279,7 @@ fun strn_mt t =
             end
           val constr_decls = join " | " $ map (strn_constr_decl (fst name) tnames) constr_decls
         in
-          sprintf "(datatype $$$ = $)" [fst name, tnames, bsorts, constr_decls]
+          sprintf "(datatype $$$ = $)" [fst name, tnames, basic_sorts, constr_decls]
         end
       | TMap t => sprintf "(map $)" [strn_mt t]
       | TState (x, _) => "typeof " ^ x

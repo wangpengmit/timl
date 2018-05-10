@@ -14,10 +14,10 @@ fun get_region_i i =
       IVar (x, _) => get_region_var x
     | IConst (_, r) => r
     | IUnOp (_, _, r) => r
-    | BinOpI (_, i1, i2) => combine_region (get_region_i i1) (get_region_i i2)
-    | Ite (_, _, _, r) => r
+    | IBinOp (_, i1, i2) => combine_region (get_region_i i1) (get_region_i i2)
+    | IIte (_, _, _, r) => r
     | IAbs (_, _, r) => r
-    | UIVar (_, r) => r
+    | IUVar (_, r) => r
     | IState _ => dummy
 
 fun set_region_i i r =
@@ -25,33 +25,33 @@ fun set_region_i i r =
       IVar (x, anno) => IVar (set_region_var x r, anno)
     | IConst (a, _) => IConst (a, r)
     | IUnOp (opr, i, _) => IUnOp (opr, i, r)
-    | BinOpI (opr, i1, i2) => BinOpI (opr, set_region_i i1 r, set_region_i i2 r)
-    | Ite (i1, i2, i3, _) => Ite (i1, i2, i3, r)
+    | IBinOp (opr, i1, i2) => IBinOp (opr, set_region_i i1 r, set_region_i i2 r)
+    | IIte (i1, i2, i3, _) => IIte (i1, i2, i3, r)
     | IAbs (name, i, _) => IAbs (name, i, r)
-    | UIVar (a, _) => UIVar (a, r)
+    | IUVar (a, _) => IUVar (a, r)
     | IState _ => i
 
 fun get_region_p p = 
   case p of
       PTrueFalse (_, r) => r
-    | Not (_, r) => r
-    | BinConn (_, p1, p2) => combine_region (get_region_p p1) (get_region_p p2)
-    | BinPred (_, i1, i2) => combine_region (get_region_i i1) (get_region_i i2)
-    | Quan (_, _, _, r) => r
+    | PNot (_, r) => r
+    | PBinConn (_, p1, p2) => combine_region (get_region_p p1) (get_region_p p2)
+    | PBinPred (_, i1, i2) => combine_region (get_region_i i1) (get_region_i i2)
+    | PQuan (_, _, _, r) => r
 
 fun set_region_p p r = 
   case p of
       PTrueFalse (b, _) => PTrueFalse (b, r)
-    | Not (p, _) => Not (p, r)
-    | BinConn (opr, p1, p2) => BinConn (opr, set_region_p p1 r, set_region_p p2 r)
-    | BinPred (opr, i1, i2) => BinPred (opr, set_region_i i1 r, set_region_i i2 r)
-    | Quan (q, bs, bind, _) => Quan (q, bs, bind, r)
+    | PNot (p, _) => PNot (p, r)
+    | PBinConn (opr, p1, p2) => PBinConn (opr, set_region_p p1 r, set_region_p p2 r)
+    | PBinPred (opr, i1, i2) => PBinPred (opr, set_region_i i1 r, set_region_i i2 r)
+    | PQuan (q, bs, bind, _) => PQuan (q, bs, bind, r)
 
 fun get_region_s s = 
   case s of
-      Basic (_, r) => r
-    | Subset (_, _, r) => r
-    | UVarS (_, r) => r
+      SBasic (_, r) => r
+    | SSubset (_, _, r) => r
+    | SUVar (_, r) => r
     | SAbs (_, _, r) => r
     | SApp (s, i) => combine_region (get_region_s s) (get_region_i i)
 
@@ -71,20 +71,20 @@ infixr 0 $
          
 fun get_region_mt t = 
   case t of
-      Arrow ((_, t1), d, (_, t2)) => combine_region (get_region_mt t1) (get_region_mt t2)
-    | TyNat (_, r) => r
+      TArrow ((_, t1), d, (_, t2)) => combine_region (get_region_mt t1) (get_region_mt t2)
+    | TNat (_, r) => r
     | TiBool (_, r) => r
-    | TyArray (t, i) => combine_region (get_region_mt t) (get_region_i i)
-    | Unit r => r
-    | Prod (t1, t2) => combine_region (get_region_mt t1) (get_region_mt t2)
-    | UniI (_, _, r) => r
-    | MtVar y => get_region_var y
-    | MtApp (t1, t2) => combine_region (get_region_mt t1) (get_region_mt t2)
-    | MtAbs (_, _, r) => r
-    | MtAppI (t, i) => combine_region (get_region_mt t) (get_region_i i)
-    | MtAbsI (_, _, r) => r
-    | BaseType (_, r) => r
-    | UVar (_, r) => r
+    | TArray (t, i) => combine_region (get_region_mt t) (get_region_i i)
+    | TUnit r => r
+    | TProd (t1, t2) => combine_region (get_region_mt t1) (get_region_mt t2)
+    | TUniI (_, _, r) => r
+    | TVar y => get_region_var y
+    | TApp (t1, t2) => combine_region (get_region_mt t1) (get_region_mt t2)
+    | TAbs (_, _, r) => r
+    | TAppI (t, i) => combine_region (get_region_mt t) (get_region_i i)
+    | TAbsI (_, _, r) => r
+    | TBase (_, r) => r
+    | TUVar (_, r) => r
     | TDatatype (_, r) => r
     | TSumbool (s1, s2) => combine_region (get_region_s s1) (get_region_s s2)
     | TMap t => get_region_mt t
@@ -93,8 +93,8 @@ fun get_region_mt t =
 
 fun get_region_t t = 
   case t of
-      Mono t => get_region_mt t
-    | Uni (_, r) => r
+      PTMono t => get_region_mt t
+    | PTUni (_, r) => r
 
 end
 
@@ -116,12 +116,12 @@ fun get_region_binder (Binder (_, (_, r))) = r
                                              
 fun get_region_pn pn = 
   case pn of
-      ConstrP (_, _, _, r) => r
-    | VarP name => get_region_binder name
-    | PairP (pn1, pn2) => combine_region (get_region_pn pn1) (get_region_pn pn2)
-    | TTP r => r
-    | AliasP (_, _, r) => r
-    | AnnoP (pn, Outer t) => combine_region (get_region_pn pn) (get_region_mt t)
+      PnConstr (_, _, _, r) => r
+    | PnVar name => get_region_binder name
+    | PnPair (pn1, pn2) => combine_region (get_region_pn pn1) (get_region_pn pn2)
+    | PnTT r => r
+    | PnAlias (_, _, r) => r
+    | PnAnno (pn, Outer t) => combine_region (get_region_pn pn) (get_region_mt t)
 
 fun get_region_bind fp ft bind =
   let
