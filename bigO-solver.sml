@@ -25,10 +25,10 @@ infix 1 <->
 infix 4 ==
 
 fun TimeFun n =
-  if n <= 0 then Base Time
-  else BSArrow (Base Nat, TimeFun (n-1))
+  if n <= 0 then BSTime
+  else BSArrow (BSNat, TimeFun (n-1))
 
-fun TimeAbs (name, i, r) = IAbs (Base Nat, Bind (name, i), r)
+fun TimeAbs (name, i, r) = IAbs (BSNat, Bind (name, i), r)
                                 
 fun forget_i_vc x n (hs, p) = let
   fun f (h, (hs, x)) = 
@@ -42,7 +42,7 @@ end
 
 fun match_bigO f hyps hyp =
   case hyp of
-      PropH (BinPred (BigO, f', g)) =>
+      PropH (PBinPred (BPBigO, f', g)) =>
       if eq_i f' f then SOME g else NONE
     | _ => NONE
              
@@ -113,11 +113,11 @@ fun find_bigO_hyp f_i hyps =
            
 (* if [i] is [f m_1 ... m_k n] where [f m_1 ... m_i]'s bigO spec is known (i <= k), replace [f m1 ... m_i] with its bigO spec *)
 fun use_bigO_hyp hs i =
-  case is_IApp_UVarI i of
+  case is_IBApp_IUVar i of
       SOME _ => i
     | NONE =>
       let
-        val (f, args) = collect_IApp i
+        val (f, args) = collect_IBApp i
         fun iter (arg, f) =
           let
             val f = default f $ Option.map fst $ find_bigO_hyp f hs
@@ -181,25 +181,25 @@ fun summarize (is_outer, on_error) i =
           M.empty
         | IConst (ICNat _, _) =>
           M.empty
-        | VarI (x, _) =>
+        | IVar (x, _) =>
           if is_outer x then
             M.empty
           else
             M.insert (M.empty, x, (1, 0))
-        | UnOpI (B2n, i, _) =>
+        | IUnOp (IUB2n, i, _) =>
           M.empty
-        | UnOpI (ToReal, i, _) =>
+        | IUnOp (IUToReal, i, _) =>
           loop i
-        | UnOpI (Ceil, i, _) =>
+        | IUnOp (IUCeil, i, _) =>
           loop i
-        | UnOpI (Floor, i, _) =>
+        | IUnOp (IUFloor, i, _) =>
           loop i
-        | UnOpI (IUDiv _, i, _) =>
+        | IUnOp (IUDiv _, i, _) =>
           loop i
-        | UnOpI (Log2, i, _) =>
+        | IUnOp (IULog2, i, _) =>
           let
             (* val () = println "summarize/Log2" *)
-            val is = collect_MultI i
+            val is = collect_IBMult i
             val classes = map loop is
             val cls = add_classes classes
             (* val () = println $ str_cls cls *)
@@ -213,13 +213,13 @@ fun summarize (is_outer, on_error) i =
           in
             cls
           end
-        | BinOpI (MultI, a, b) =>
+        | IBinOp (IBMult, a, b) =>
           mult_class (loop a, loop b)
-        | BinOpI (AddI, a, b) =>
+        | IBinOp (IBAdd, a, b) =>
           add_class (loop a, loop b)
-        | BinOpI (BoundedMinusI, a, b) =>
+        | IBinOp (IBBoundedMinus, a, b) =>
           loop a
-        | BinOpI (MaxI, a, b) =>
+        | IBinOp (IBMax, a, b) =>
           add_class (loop a, loop b)
         | _ => err i
   in
@@ -252,14 +252,14 @@ fun timefun_le is_outer hs a b =
     (* another version of [use_bigO_hyp] that substitute with all big-O premises *)
     fun match_bigO () hyps hyp =
       case hyp of
-          PropH (BinPred (BigO, f', g)) =>
+          PropH (PBinPred (BPBigO, f', g)) =>
           SOME (f', g)
         | _ => NONE
     fun find_bigO_hyp f_i hyps =
       find_hyp id (fn (a, b) => (shift_i_i a, shift_i_i b)) match_bigO () hyps
     fun use_bigO_hyp hyps i =
       case find_bigO_hyp i hyps of
-          SOME ((VarI (ID (f', _), _), g), _) =>
+          SOME ((IVar (ID (f', _), _), g), _) =>
           let
             val g = simp_i g
             val i' = simp_i $ ParaSubst.psubst_is_i [(ID (f', dummy))] [g] i
@@ -305,9 +305,9 @@ fun timefun_le is_outer hs a b =
 
 fun timefun_eq is_outer hs a b = timefun_le is_outer hs a b andalso timefun_le is_outer hs b a
 
-fun is_VarI i =
+fun is_IVar i =
   case i of
-      VarI (x, _) => SOME x
+      IVar (x, _) => SOME x
     | _ => NONE
 
 fun somes ls = List.mapPartial id ls
@@ -324,8 +324,8 @@ fun by_master_theorem uvar (hs, p) =
     val (uvar_name, uvar_ctx, b) = get_uvar_info uvar !! (fn () => raise Error "not fresh uvar")
     (* val () = println $ sprintf "Running bigO inference for ?$" [str_int uvar_name] *)
     fun ask_smt p = ask_smt_vc (hs, p)
-    fun V n = VarI (ID (n, dummy), [])
-    fun to_real i = UnOpI (ToReal, i, dummy)
+    fun V n = IVar (ID (n, dummy), [])
+    fun to_real i = IUnOp (IUToReal, i, dummy)
     val rV = to_real o V
     val use_bigO_hyp = use_bigO_hyp hs
     fun simp_i_max set i =
@@ -333,41 +333,41 @@ fun by_master_theorem uvar (hs, p) =
         fun mark a = (set (); a)
         fun loop i =
           case i of
-              BinOpI (opr, i1, i2) =>
+              IBinOp (opr, i1, i2) =>
               let
-                fun def () = BinOpI (opr, loop i1, loop i2)
+                fun def () = IBinOp (opr, loop i1, loop i2)
                 fun remove_uvar i =
                   let
-                    val is = collect_AddI $ simp_i i
-                    val is = List.filter (isNone o is_IApp_UVarI) is
+                    val is = collect_IBAdd $ simp_i i
+                    val is = List.filter (isNone o is_IBApp_IUVar) is
                   in
                     case is of
-                        i :: is => combine_AddI_nonempty i is
+                        i :: is => combine_IBAdd_nonempty i is
                       | [] => i
                   end
               in
                 case opr of
-                    MaxI =>
+                    IBMax =>
                     if ask_smt (remove_uvar i1 %>= i2) then
                       mark i1
                     else if ask_smt (i1 %<= remove_uvar i2) then
                       mark i2
                     else def ()
-                  | MultI =>
+                  | IBMult =>
                     let
-                      val i2s = collect_AddI i2
+                      val i2s = collect_IBAdd i2
                       val () = if length i2s >= 2 then set () else ()
                     in
-                      combine_AddI_Time (*i2s won't be empty*) $ map (fn i2 => i1 %* i2) i2s
+                      combine_IBAdd_Time (*i2s won't be empty*) $ map (fn i2 => i1 %* i2) i2s
                     end
                   | _ => def ()
               end
-            | UnOpI (opr, i, r) => UnOpI (opr, loop i, r)
+            | IUnOp (opr, i, r) => IUnOp (opr, loop i, r)
             | IConst _ => i
-            | Ite (i1, i2, i3, r) => Ite (loop i1, loop i2, loop i3, r)
+            | IIte (i1, i2, i3, r) => IIte (loop i1, loop i2, loop i3, r)
             | IAbs _ => i
-            | VarI _ => i
-            | UVarI _ => i
+            | IVar _ => i
+            | IUVar _ => i
             | IState st => IState $ StMap.map loop st
       in
         loop i
@@ -376,11 +376,11 @@ fun by_master_theorem uvar (hs, p) =
       let
         fun loop p =
           case p of
-              BinPred (opr, i1, i2) => BinPred (opr, simp_i_max set i1, simp_i_max set i2)
-            | BinConn (opr, p1, p2) => BinConn (opr, loop p1, loop p2)
-            | Not (p, r) => Not (loop p, r)
+              PBinPred (opr, i1, i2) => PBinPred (opr, simp_i_max set i1, simp_i_max set i2)
+            | PBinConn (opr, p1, p2) => PBinConn (opr, loop p1, loop p2)
+            | PNot (p, r) => PNot (loop p, r)
             | PTrueFalse _ => p
-            | Quan _ => p
+            | PQuan _ => p
       in
         loop p
       end
@@ -392,9 +392,9 @@ fun by_master_theorem uvar (hs, p) =
     (* [main_arg] is the main argument; [args] are the passive arguments *)
     val (lhs, main_fun, main_arg) =
         case p of
-            BinPred (LeP, i1, BinOpI (IApp, g, n_i)) => (i1, g, n_i)
+            PBinPred (LeP, i1, IBinOp (IBApp, g, n_i)) => (i1, g, n_i)
           | _ => raise Error "wrong pattern for by_master_theorem"
-    val ((uvar', _), args) = is_IApp_UVarI main_fun !! (fn () => raise Error "RHS not [uvar arg1 ...]")
+    val ((uvar', _), args) = is_IBApp_IUVar main_fun !! (fn () => raise Error "RHS not [uvar arg1 ...]")
     val () = if uvar = uvar' then () else raise Error "uvar <> uvar'"
     val b = update_bs b
     val arity = is_time_fun b !! (fn () => raise Error $ sprintf "bsort $ not time fun" [str_raw_bs b])
@@ -404,16 +404,16 @@ fun by_master_theorem uvar (hs, p) =
     (* else if n = 1 then "m" *)
     (* else *)
     (*   "m" ^ str_int n *)
-    val ext_ctx = Range.map (fn n => (time_fun_var_name n, Base Nat)) $ Range.zero_to arity
+    val ext_ctx = Range.map (fn n => (time_fun_var_name n, BSNat)) $ Range.zero_to arity
     val uvar_ctx = ext_ctx @ uvar_ctx
     (* val () = println "  to solve this: " *)
     (* val () = app println $ str_vc false "" (hs, p) *)
     val () = if length args + 1 = length uvar_ctx then () else raise Error "length args + 1 <> length uvar_ctx"
-    val args_v = map is_VarI args
+    val args_v = map is_IVar args
     fun filter_arg_v ((v, b), vset) =
       case v of
           SOME x =>
-          if not (eq_bs (update_bs b) (Base Nat)) orelse contains main_arg x orelse mem eq_var x vset then
+          if not (eq_bs (update_bs b) (BSNat)) orelse contains main_arg x orelse mem eq_var x vset then
             (NONE, vset)
           else
             (v, x :: vset)
@@ -423,15 +423,15 @@ fun by_master_theorem uvar (hs, p) =
     (* later arguments have priority *)
     val args_v = rev $ mapWithState filter_arg_v [] $ rev $ zip (args_v, args_bsorts)
     val n_ = to_real main_arg
-    val is = collect_AddI lhs
+    val is = collect_IBAdd lhs
     fun get_class m k = default (0, 0) $ M.find (m, k)
     fun get_class_or_0 m k = default (0, 0) $ Option.map (get_class m) k
-    fun exp n i = combine_MultI (repeat n i)
+    fun exp n i = combine_IBMult (repeat n i)
     fun class2term (c, k) n =
-      exp c n %* exp k (UnOpI (Log2, n, dummy))
+      exp c n %* exp k (IUnOp (IULog2, n, dummy))
     (* is a variable appears as an argument to [uvar] but not among the last [arity] arguments, then it is seen as an "outer" parameter  *)
     fun is_outer x =
-      case findi (eq_i (VarI (x, []))) (main_arg :: rev args) of
+      case findi (eq_i (IVar (x, []))) (main_arg :: rev args) of
           SOME (n, _) => n >= arity andalso not (contains main_arg x)
         | NONE => false
     val summarize = summarize (is_outer, fn s => raise Error s)
@@ -439,7 +439,7 @@ fun by_master_theorem uvar (hs, p) =
     fun get_main_arg_class classes =
       let
         val uncovered = diff eq_var (domain classes) $ somes args_v
-        val () = app (fn x => if ask_smt (VarI (x, []) %<= main_arg) then () else raise Error $ sprintf "not_covered > main_arg, not_covered=$, main_arg=$, is_outer(not_covered)=$" [str_i empty hs_ctx (VarI (x, [])), str_i empty hs_ctx main_arg, str_bool (is_outer x)]) uncovered
+        val () = app (fn x => if ask_smt (IVar (x, []) %<= main_arg) then () else raise Error $ sprintf "not_covered > main_arg, not_covered=$, main_arg=$, is_outer(not_covered)=$" [str_i empty hs_ctx (IVar (x, [])), str_i empty hs_ctx main_arg, str_bool (is_outer x)]) uncovered
         val main_arg_class = mult_class_entries $ map (get_class classes) uncovered
       in
         main_arg_class
@@ -452,11 +452,11 @@ fun by_master_theorem uvar (hs, p) =
             let
               val int_add = op+
               open Real
-              fun ExpI (a, b) = BinOpI (ExpNI, a, b)
+              fun ExpI (a, b) = IBinOp (IBExpN, a, b)
               val log_b_a = Math.ln (fromInt a) / Math.ln (fromInt b)
               val T =
                   if fromInt c < log_b_a then
-                    ExpI (n, ConstIT (log_b_a, dummy))
+                    ExpI (n, ITime (log_b_a, dummy))
                   else if fromInt c == log_b_a then
                     class2term (c, int_add (k, 1)) n
                   else if fromInt c > log_b_a then
@@ -479,7 +479,7 @@ fun by_master_theorem uvar (hs, p) =
             let
               fun infer_b_i i =
                 case i of
-                    UnOpI (opr, i, _) =>
+                    IUnOp (opr, i, _) =>
                     (case opr of
                          IUDiv b => [b]
                        (* | IUExp _ => [] *)
@@ -488,7 +488,7 @@ fun by_master_theorem uvar (hs, p) =
                   | _ => []
               fun infer_b_p p =
                 case p of
-                    BinPred (EqP, i1, i2) => infer_b_i i1 @ infer_b_i i2
+                    PBinPred (EqP, i1, i2) => infer_b_i i1 @ infer_b_i i2
                   | _ => []
               fun infer_b_hyp h =
                 case h of
@@ -497,7 +497,7 @@ fun by_master_theorem uvar (hs, p) =
               val bs = infer_b_i n' @ concatMap infer_b_hyp hs
               fun good_b b =
                 ((* println (str_int b); *)
-                  if ask_smt (n' %<= UnOpI (Ceil, DivI (n_, (b, dummy)), dummy)) then
+                  if ask_smt (n' %<= IUnOp (IUCeil, IDiv (n_, (b, dummy)), dummy)) then
                     SOME b
                   else NONE)
             in
@@ -506,7 +506,7 @@ fun by_master_theorem uvar (hs, p) =
           fun is_sub_problem i =
             ((* println (str_raw_i i); *)
               case i of
-                  BinOpI (IApp, g, n') =>
+                  IBinOp (IBApp, g, n') =>
                   if eq_i g main_fun then
                     ((* println (str_i [] hs_ctx n');  *)infer_b n_ n')
                   else NONE
@@ -540,7 +540,7 @@ fun by_master_theorem uvar (hs, p) =
           (* val () = println $ sprintf "main_fun=$   g=$" [str_int main_fun, str_int g] *)
           fun par i =
             case i of
-                BinOpI (IApp, g, n') =>
+                IBinOp (IBApp, g, n') =>
                 let
                   (* val () = println $ sprintf "main_fun=$   g=$  g'=$" [str_int main_fun, str_int g, str_int g'] *)
 
@@ -553,10 +553,10 @@ fun by_master_theorem uvar (hs, p) =
           val (n's, others) = partitionOption par is
           val () = if null n's then raise Error "n's is null" else ()
           (* val () = println $ sprintf "length n's = $" [str_int $ length n's] *)
-          val n' = combine_AddI_Nat n's
-          val N1 = ConstIN (1, dummy)
+          val n' = combine_IBAdd_Nat n's
+          val N1 = INat (1, dummy)
           val () = if ask_smt (n' %+ N1 %<= main_arg) then () else raise Error $ sprintf "n' + 1 > n_i, n'=$, main_arg=$" [str_i empty hs_ctx n', str_i empty hs_ctx main_arg]
-          val others = concatMap (collect_AddI o simp_i_with_plugin simp_i_max) $ map use_bigO_hyp others
+          val others = concatMap (collect_IBAdd o simp_i_with_plugin simp_i_max) $ map use_bigO_hyp others
           val classes_of_terms = map summarize others
           (* val () = app (fn (i, cls) => (println (str_i empty hs_ctx i); println (str_cls cls))) $ zip (others, classes_of_terms) *)
           val main_arg_classes = map get_main_arg_class classes_of_terms
@@ -582,7 +582,7 @@ fun by_master_theorem uvar (hs, p) =
         let
           val () = println "Trying [f n <= T n] case ..."
           val () = if not $ contains_uvar lhs uvar then () else raise Error "[lhs] contains [uvar]"
-          val is = concatMap collect_AddI $ map use_bigO_hyp is
+          val is = concatMap collect_IBAdd $ map use_bigO_hyp is
           val classes_of_terms = map summarize is
           val main_arg_classes = map get_main_arg_class classes_of_terms
           val classes = add_classes classes_of_terms
@@ -660,10 +660,10 @@ fun solve_exists (vc as (hs, p), vcs) =
           val () = println "Trying case [_ <== spec] ..."
           val (f, spec) =
               case p of
-                  BinPred (BigO, f, spec) =>
+                  PBinPred (BPBigO, f, spec) =>
                   (f, spec)
                 | _ => raise SolveExistsError "wrong pattern"
-          val ((uvar, _), args) = is_IApp_UVarI f !! (fn () => raise SolveExistsError "not [uvar arg1 ...]")
+          val ((uvar, _), args) = is_IBApp_IUVar f !! (fn () => raise SolveExistsError "not [uvar arg1 ...]")
           val (_, uvar_ctx, b) = get_uvar_info uvar !! (fn () => raise SolveExistsError "not fresh uvar")
           val b = update_bs b
           val arity = is_time_fun b !! (fn () => raise SolveExistsError $ sprintf "bsort $ not time fun" [str_raw_bs b])
@@ -704,7 +704,7 @@ fun solve_exists (vc as (hs, p), vcs) =
           val () = println $ sprintf "Inferred. Now check inferred complexity $ against specified complexity $" [str_i empty hs_ctx inferred, str_i empty hs_ctx spec]
           val () = 
               if timefun_le is_outer hs inferred spec then ()
-              else Unify.unify_IApp dummy spec inferred
+              else Unify.unify_IBApp dummy spec inferred
                    handle
                    Unify.UnifyAppUVarFailed _ => 
                    raise curry MasterTheoremCheckFail (get_region_i spec) $ [sprintf "Can't prove that the inferred big-O class $ is bounded by the given big-O class $" [str_i empty hs_ctx inferred, str_i empty hs_ctx spec]]
@@ -721,7 +721,7 @@ fun solve_exists (vc as (hs, p), vcs) =
     fun unify (uvar_side, value_side) =
       let
         val () = println $ sprintf "try to unify $ with $" [str_i empty hs_ctx uvar_side, str_i empty hs_ctx value_side]
-        val ((x, _), args) = is_IApp_UVarI uvar_side !! (fn () => raise SolveExistsError "not [uvar arg1 ...]")
+        val ((x, _), args) = is_IBApp_IUVar uvar_side !! (fn () => raise SolveExistsError "not [uvar arg1 ...]")
         val (name, _, _) = get_uvar_info x !! (fn () => raise SolveExistsError "uvar not fresh")
         val value_side = normalize_i value_side
         val () = if mem op= x (map #1 $ CollectUVar.collect_uvar_i_i value_side) then raise SolveExistsError "uvar appears in value_side" else ()
@@ -730,7 +730,7 @@ fun solve_exists (vc as (hs, p), vcs) =
         val args = map normalize_i args
         open CollectVar
         val vars = dedup eq_var $ collect_var_i_i value_side
-        val uncovered = List.filter (fn var => not (List.exists (fn arg => eq_i (VarI (var, [])) arg) args)) vars
+        val uncovered = List.filter (fn var => not (List.exists (fn arg => eq_i (IVar (var, [])) arg) args)) vars
         fun forget_nonconsuming (var : var) b =
           let
             val x = case var of
@@ -738,7 +738,7 @@ fun solve_exists (vc as (hs, p), vcs) =
                       | QID _ =>
                         raise SolveExistsError "can't forget decorated variable"
             open UVarForget
-            val () = println $ sprintf "forgeting $ in $" [str_i empty hs_ctx (VarI (var, [])), str_i empty hs_ctx b]
+            val () = println $ sprintf "forgeting $ in $" [str_i empty hs_ctx (IVar (var, [])), str_i empty hs_ctx b]
             val b = forget_i_i x 1 b
             val b = shiftx_i_i x 1 b
           in
@@ -751,10 +751,10 @@ fun solve_exists (vc as (hs, p), vcs) =
 
                                     
         val () = println $ sprintf "Forgetting succeeded. Now try to unify $ with $" [str_i empty hs_ctx uvar_side, str_i empty hs_ctx value_side]
-        val () =  Unify.unify_IApp dummy uvar_side value_side
+        val () =  Unify.unify_IBApp dummy uvar_side value_side
                   handle
-                  Unify.UnifyAppUVarFailed _ => raise SolveExistsError "unify_IApp() failed"
-        val () = println $ sprintf "?$ is instantiated to $" [str_int name, str_i empty [] (UVarI (x, dummy))]
+                  Unify.UnifyAppUVarFailed _ => raise SolveExistsError "unify_IBApp() failed"
+        val () = println $ sprintf "?$ is instantiated to $" [str_int name, str_i empty [] (IUVar (x, dummy))]
       in
         ()
       end
@@ -763,7 +763,7 @@ fun solve_exists (vc as (hs, p), vcs) =
           val () = println "Try case [_ <= uvar arg1 ...] (just to infer a Time)"
           val (lhs, rhs) =
               case p of
-                  BinPred (Le, lhs, rhs) => (lhs, rhs)
+                  PBinPred (Le, lhs, rhs) => (lhs, rhs)
                 | _ => raise SolveExistsError "wrong pattern"
           val () = unify (rhs, lhs)
         in
@@ -786,13 +786,13 @@ fun solve_exists (vc as (hs, p), vcs) =
               if arity1 = 0 then
                 (* just to infer a Time *)
                 (case p of
-                     BinPred (Le, i1 as (ConstIT _), VarI (_, (x, _))) =>
+                     PBinPred (Le, i1 as (ITime _), IVar (_, (x, _))) =>
                      if x = 0 then SOME (i1, []) else NONE
                    | _ => NONE
                 )
               else
                 case p of
-                  | BinPred (BigO, VarI (_, (x, _)), f) =>
+                  | PBinPred (BPBigO, IVar (_, (x, _)), f) =>
                     if x = 0 then
                       let
                         val () = println "No other constraint on function"
@@ -847,7 +847,7 @@ end
 
 fun solve_bigO_compare (vc as (hs, p)) =
   case normalize_p p of
-      BinPred (BigO, i1, i2) =>
+      PBinPred (BPBigO, i1, i2) =>
       let
         (* val () = println "BigO-compare-solver to solve this: " *)
         val () = app println $ str_vc false "" vc @ [""]
@@ -866,18 +866,18 @@ fun solve_bigO_compare (vc as (hs, p)) =
 (* relying on monoticity of functions *)             
 fun solve_fun_compare (vc as (hs, p)) =
   case p of
-      BinPred (Le, i1, i2) =>
+      PBinPred (Le, i1, i2) =>
       let
         fun find_apps i =
           let
-            val is = collect_AddI i
+            val is = collect_IBAdd i
             fun par i =
               case i of
-                  BinOpI (IApp, VarI (ID (f, _), _), n) =>
+                  IBinOp (IBApp, IVar (ID (f, _), _), n) =>
                   SOME (f, n)
                 | _ => NONE
             val (apps, rest) = partitionOption par is
-            val rest = combine_AddI_Time rest
+            val rest = combine_IBAdd_Time rest
           in
             (apps, rest)
           end
@@ -932,8 +932,8 @@ fun infer_numbers vcs0 =
     (* val uvars = dedup (fn (a, b) => #1 a = #1 b) $ concatMap collect_uvar_i_vc vcs *)
     fun is_number (x as (_, (_, _, b), _)) =
       case update_bs b of
-          Base Nat => SOME (x, true)
-        | Base Time => SOME (x, false)
+          BSBase BSSNat => SOME (x, true)
+        | BSBase BSSTime => SOME (x, false)
         | _ => NONE
     val uvars = List.mapPartial is_number uvars
     (* val () = println $ str_int $ length uvars *)
@@ -953,8 +953,8 @@ fun infer_numbers vcs0 =
       let
         fun set_value (((x, (_, ctx, _), r), is_nat), value) =
           let
-            fun to_real i = UnOpI (ToReal, i, r)
-            val value = ConstIN (value, r)
+            fun to_real i = IUnOp (IUToReal, i, r)
+            val value = INat (value, r)
             val value = if is_nat then value else to_real value
             val value = IAbs_Many (rev ctx, value, r)
           in
@@ -972,7 +972,7 @@ fun infer_numbers vcs0 =
     val succeeded = enumerate_until maximum_number (length uvars) try
     (* val succeeded = enumerate_until 5 3 (fn vals => (println (str_ls str_int vals); vals = [1,3,1])) *)
     (* val () = println $ str_bool succeeded *)
-    val () = if succeeded then println $ "Numbers inferred:\n" ^ (join_lines $ map (fn ((x, (name, _, _), r), _) => sprintf "?$ := $" [str_int name, str_i empty [] (UVarI (x, r))]) uvars)
+    val () = if succeeded then println $ "Numbers inferred:\n" ^ (join_lines $ map (fn ((x, (name, _, _), r), _) => sprintf "?$ := $" [str_int name, str_i empty [] (IUVar (x, r))]) uvars)
              else () 
     val ret = if succeeded then []
               else (restore uvars; vcs0)

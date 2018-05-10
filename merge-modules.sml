@@ -53,13 +53,13 @@ fun spec2decl mid (sctx, kctx, cctx, tctx) spec =
         let
           val n = indexOf (curry op= $ fst iname) sctx !! (fn () => raise Impossible "spec2decl/SpecIdx")
         in
-          MakeDIdxDef (iname, SOME s, VarI (V n, []))
+          MakeDIdxDef (iname, SOME s, IVar (V n, []))
         end
       | SpecType (tname, k) =>
         let
           val n = indexOf (curry op= $ fst tname) kctx !! (fn () => raise Impossible "spec2decl/SpecType")
         in
-          MakeDTypeDef (tname, MtVar $ V n)
+          MakeDTypeDef (tname, TVar $ V n)
         end
       | SpecTypeDef (tname, t) =>
         (* we don't allow [datatype] in signature for now, so no special treatment of [TDatatype] *)
@@ -156,22 +156,22 @@ fun collect_names_top_name rev_p name =
     val bind = lookup_top_bind rev_p name !! (fn () => raise Impossible "collect_names_top_name")
   in
     case bind of
-        TopModBind m => collect_names_mod m
-      | TopFunctorBind (_, body) => collect_names_mod body
-      | TopFunctorApp (name1, name2) => collect_names_top_name rev_p name1
+        TBMod m => collect_names_mod m
+      | TBFunctor (_, body) => collect_names_mod body
+      | TBFunctorApp (name1, name2) => collect_names_top_name rev_p name1
       | TBState _ => ([], [], [], [])
   end
 
 fun top_bind_to_mod rev_p (name, bind) =
   case bind of
-      TopModBind m => [(fst name, m)]
-    | TopFunctorBind _ => []
-    | TopFunctorApp (name1, name2) =>
+      TBMod m => [(fst name, m)]
+    | TBFunctor _ => []
+    | TBFunctorApp (name1, name2) =>
       let
         val bind1 = lookup_top_bind rev_p name1 !! (fn () => raise Impossible "top_bind_to_mod/lookup")
         val ((arg_name, arg_sig), body) =
             case bind1 of
-                TopFunctorBind data => data
+                TBFunctor data => data
               | _ => raise Impossible "top_bind_to_mod/bind1"
         val names = collect_names_top_name rev_p name2
         val m1 = (fst arg_name, sgn2mod (fst name2, names) arg_sig)

@@ -143,7 +143,7 @@ and is_wf_prop gctx (ctx, p) =
 	  PBinConn (opr,
                    is_wf_prop (ctx, p1),
 	           is_wf_prop (ctx, p2))
-        | U.PBinPred (EqP, i1, i2) =>
+        | U.PBinPred (BPEq, i1, i2) =>
 	  let 
             val (i1, bs1) = get_basic_sort (ctx, i1)
 	    val (i2, bs2) = get_basic_sort (ctx, i2)
@@ -162,7 +162,7 @@ and is_wf_prop gctx (ctx, p) =
               Error (U_get_region_p p, sprintf "Sorts of operands of $ must be both $:" [str_bin_pred opr, expected] :: indent ["left: " ^ str_bs bs1, "right: " ^ str_bs bs2])
             val () =
                 case opr of
-                    BigO =>
+                    BPBigO =>
                     let
                       val (args, ret) = collect_BSArrow bs
                       val r = U_get_region_p p
@@ -176,8 +176,8 @@ and is_wf_prop gctx (ctx, p) =
                     end
                   | _ =>
                     (case bs of
-                         BSBase Nat => ()
-                       | BSBase Time => ()
+                         BSBase BSSNat => ()
+                       | BSBase BSSTime => ()
                        | _ => raise error "Nat or Time"
                     )
 	  in
@@ -308,7 +308,7 @@ and get_basic_sort gctx (ctx, i) =
                 end
               fun idx_bin_op_type opr =
                 case opr of
-                    IBAndI => (BSSBool, BSSBool, BSSBool)
+                    IBAnd => (BSSBool, BSSBool, BSSBool)
                   | IBOr => (BSSBool, BSSBool, BSSBool)
                   | IBExpN => raise Impossible "idx_bin_op_type ()"
                   | IBMax => raise Impossible "idx_bin_op_type ()"

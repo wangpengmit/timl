@@ -14,6 +14,8 @@ open Namespaces
 open Binders
 open Unbound
 
+structure S = Pattern
+
 val IName = fn s => IName (s, dummy)
        
 infixr 0 $
@@ -41,16 +43,16 @@ datatype ('mtype, 'expr) ptrn =
 
 fun from_TiML_ptrn p =
   let
-    open Pattern
+    (* open Pattern *)
     val f = from_TiML_ptrn
   in
     case p of
-        VarP name => PnVar name
-      | TTP r => PnTT r
-      | PairP (p1, p2) => PnPair (f p1, f p2)
-      | AnnoP (p, t) => PnAnno (f p, t)
-      | AliasP (name, p, r) => PnAlias (name, f p, r)
-      | ConstrP (Outer ((_, inj), _), inames, p, r) => PnConstr (Outer inj, inames, f p, r)
+        S.PnVar name => PnVar name
+      | S.PnTT r => PnTT r
+      | S.PnPair (p1, p2) => PnPair (f p1, f p2)
+      | S.PnAnno (p, t) => PnAnno (f p, t)
+      | S.PnAlias (name, p, r) => PnAlias (name, f p, r)
+      | S.PnConstr (Outer ((_, inj), _), inames, p, r) => PnConstr (Outer inj, inames, f p, r)
   end
 
 local
@@ -801,89 +803,89 @@ fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e)) matchee bra
 
 end
 
-structure PatternExUnitTest = struct
-open Util
-open PatternEx
+(* structure PatternExUnitTest = struct *)
+(* open Util *)
+(* open PatternEx *)
 
-infixr 0 $
+(* infixr 0 $ *)
          
-val shift_var = ShiftUtil.shiftx_int  
-fun compare_var y x =
-  let
-    open MicroTiML
-  in
-    if y = x then CmpEq
-    else if y > x then
-      CmpGreater (y - 1)
-    else CmpOther
-  end
+(* val shift_var = ShiftUtil.shiftx_int   *)
+(* fun compare_var y x = *)
+(*   let *)
+(*     open MicroTiML *)
+(*   in *)
+(*     if y = x then CmpEq *)
+(*     else if y > x then *)
+(*       CmpGreater (y - 1) *)
+(*     else CmpOther *)
+(*   end *)
 
-fun pp_e_to_string e = "<E>"
+(* fun pp_e_to_string e = "<E>" *)
                       
-fun test () =
-  let
-    open Expr
-    open MicroTiMLVisitor
-    open MicroTiML
-    open Subst
+(* fun test () = *)
+(*   let *)
+(*     open Expr *)
+(*     open Subst *)
+(*     open MicroTiMLVisitor *)
+(*     open MicroTiML *)
            
-    fun shift_i_e a = shift_i_e_fn (shiftx_i_i, shiftx_i_s, shiftx_i_mt) a
+(*     fun shift_i_e a = shift_i_e_fn (shiftx_i_i, shiftx_i_s, shiftx_i_mt) a *)
                                       
-    val IName = fn s => IName (s, dummy)
+(*     val IName = fn s => IName (s, dummy) *)
                               
-    fun IVar n = VarI (ID (n, dummy), [])
+(*     fun IVar n = IVar (ID (n, dummy), []) *)
                       
-    val p = PnAnno (PnPair (PnAnno (PnTT dummy, Outer ()), PnAnno (PnTT dummy, Outer ())), Outer ())
-    val p1 = remove_anno p
-    val p2 = PnConstr (Outer (5,1), [Binder $ IName "a", Binder $ IName "b"], PnPair (PnTT dummy, PnExpr $ Inner (EAppI (EVar 0, IVar 2))), dummy)
-    val p3 = remove_constr (shift_i_e, pp_e_to_string) p2
-    val p4 = PnPair (PnConstr (Outer (5,1), [Binder $ IName "a", Binder $ IName "b"], PnTT dummy, dummy), PnExpr $ Inner (EAppI (EVar 0, IVar 2)))
-    val p5 = remove_constr (shift_i_e, pp_e_to_string) p4
-  in
-    (p, p1, p3, p5)
-  end
+(*     val p = PnAnno (PnPair (PnAnno (PnTT dummy, Outer ()), PnAnno (PnTT dummy, Outer ())), Outer ()) *)
+(*     val p1 = remove_anno p *)
+(*     val p2 = PnConstr (Outer (5,1), [Binder $ IName "a", Binder $ IName "b"], PnPair (PnTT dummy, PnExpr $ Inner (EAppI (EVar 0, IVar 2))), dummy) *)
+(*     val p3 = remove_constr (shift_i_e, pp_e_to_string) p2 *)
+(*     val p4 = PnPair (PnConstr (Outer (5,1), [Binder $ IName "a", Binder $ IName "b"], PnTT dummy, dummy), PnExpr $ Inner (EAppI (EVar 0, IVar 2))) *)
+(*     val p5 = remove_constr (shift_i_e, pp_e_to_string) p4 *)
+(*   in *)
+(*     (p, p1, p3, p5) *)
+(*   end *)
     
-fun test2 () =
-  let
-    open Expr
-    open Subst
-    fun IVar n = VarI (ID (n, dummy), [])
+(* fun test2 () = *)
+(*   let *)
+(*     open Expr *)
+(*     open Subst *)
+(*     fun IVar n = IVar (ID (n, dummy), []) *)
                       
-    open MicroTiMLVisitor
-    open MicroTiML
-    open MicroTiMLPP
+(*     open MicroTiMLVisitor *)
+(*     open MicroTiML *)
+(*     open MicroTiMLPP *)
            
-    val IName = fn s => IName (s, dummy)
-    val EName = fn s => EName (s, dummy)
-    fun EV n = EVar n
+(*     val IName = fn s => IName (s, dummy) *)
+(*     val EName = fn s => EName (s, dummy) *)
+(*     fun EV n = EVar n *)
 
-    fun shift_i_e a = shift_i_e_fn (shiftx_i_i, shiftx_i_s, shiftx_i_mt) a
-    fun shift_e_e a = shift_e_e_fn shift_var a
-    fun subst_e_e a = subst_e_e_fn (compare_var, shift_var, shiftx_i_i, shiftx_i_s, shiftx_i_mt, shiftx_t_mt) a
+(*     fun shift_i_e a = shift_i_e_fn (shiftx_i_i, shiftx_i_s, shiftx_i_mt) a *)
+(*     fun shift_e_e a = shift_e_e_fn shift_var a *)
+(*     fun subst_e_e a = subst_e_e_fn (compare_var, shift_var, shiftx_i_i, shiftx_i_s, shiftx_i_mt, shiftx_t_mt) a *)
                                       
-    val branches =
-        [
-          (PnConstr (Outer (2, 0), [], PnTT dummy, dummy), EAppI (EV 0, IVar 0)),
-          (PnConstr (Outer (2, 1), [Binder $ IName "n"], PnPair (PnVar $ Binder $ EName "x", PnVar $ Binder $ EName "xs"), dummy), EAppI (EV 2, IVar 0))
-        ]
-    val branches = map PnBind branches
-    val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, pp_e_to_string) (EV 0) branches
-    open ToStringRaw
-    open ToString
-    fun str2pp f s _ t = PP.string s $ f t
-    val pp_e = pp_e_fn (str_int, str_raw_i, str_raw_s, str_raw_k, str2pp str_raw_mt)
-    val () = pp_e (NONE, NONE) e
+(*     val branches = *)
+(*         [ *)
+(*           (PnConstr (Outer (2, 0), [], PnTT dummy, dummy), EAppI (EV 0, IVar 0)), *)
+(*           (PnConstr (Outer (2, 1), [Binder $ IName "n"], PnPair (PnVar $ Binder $ EName "x", PnVar $ Binder $ EName "xs"), dummy), EAppI (EV 2, IVar 0)) *)
+(*         ] *)
+(*     val branches = map PnBind branches *)
+(*     val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, pp_e_to_string) (EV 0) branches *)
+(*     open ToStringRaw *)
+(*     open ToString *)
+(*     fun str2pp f s _ t = PP.string s $ f t *)
+(*     val pp_e = pp_e_fn (str_int, str_raw_i, str_raw_s, str_raw_k, str2pp str_raw_mt) *)
+(*     val () = pp_e (NONE, NONE) e *)
                   
-    (* val branches = map remove_anno branches *)
-    (* val branches = map (remove_constr shift_i_e) branches *)
-    (* (* val () = app (fn p => println $ PatternEx.str_pn p) branches *) *)
-    (* val branches = map remove_var branches *)
-    (* val e = remove_deep (shift_var, compare_var) (EV 0) branches *)
-    (* (* val () = println $ str_e str_int str_raw_i e *) *)
-    (* val () = pp_e str_int str_raw_i e *)
-  in
-    ()
-  end
-  (* handle Util.Impossible msg => (Util.println ("Impossible: " ^ msg); raise Impossible "") *)
+(*     (* val branches = map remove_anno branches *) *)
+(*     (* val branches = map (remove_constr shift_i_e) branches *) *)
+(*     (* (* val () = app (fn p => println $ PatternEx.str_pn p) branches *) *) *)
+(*     (* val branches = map remove_var branches *) *)
+(*     (* val e = remove_deep (shift_var, compare_var) (EV 0) branches *) *)
+(*     (* (* val () = println $ str_e str_int str_raw_i e *) *) *)
+(*     (* val () = pp_e str_int str_raw_i e *) *)
+(*   in *)
+(*     () *)
+(*   end *)
+(*   (* handle Util.Impossible msg => (Util.println ("Impossible: " ^ msg); raise Impossible "") *) *)
                                   
-end
+(* end *)

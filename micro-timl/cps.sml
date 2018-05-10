@@ -27,7 +27,7 @@ infix 1 <->
 
 fun a %++ b = IUnion (a, b)
   
-fun IV x = VarI (make_Free_i x, [])
+fun IV x = IVar (make_Free_i x, [])
                 
 val STime = STime dummy
 val SNat = SNat dummy
@@ -139,9 +139,9 @@ fun assert_and_reduce_letxx e =
 
 val whnf = fn t => whnf ([], []) t
                        
-fun blowup_time (i : idx, j : idx) = i %* ConstIT (TimeType.fromInt 999, dummy) %+ j
-fun blowup_time_t (j : idx) = j %* ConstIT (TimeType.fromInt 888, dummy)
-fun blowup_time_i (j : idx) = j %* ConstIT (TimeType.fromInt 777, dummy)
+fun blowup_time (i : idx, j : idx) = i %* ITime (TimeType.fromInt 999) %+ j
+fun blowup_time_t (j : idx) = j %* ITime (TimeType.fromInt 888)
+fun blowup_time_i (j : idx) = j %* ITime (TimeType.fromInt 777)
 
 (* CPS conversion on types *)
 fun cps_ty_visitor_vtable cast () =
@@ -1196,6 +1196,7 @@ fun test1 dirname =
     val () = println ""
                      
     val () = println "Started CPS conversion ..."
+    open MicroTiMLUtil
     val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion ..."

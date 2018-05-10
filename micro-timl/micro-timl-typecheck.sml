@@ -45,13 +45,13 @@ infix 6 @%++
 infix 6 @%!!
 infix  6 @%+
          
-fun is_wf_bsort_UVarBS data = UVarBS data
+fun is_wf_basic_sort_BSUVar data = BSUVar data
     
-fun get_bsort_UVarI gctx ctx (data as (x, r)) =
+fun get_basic_sort_IUVar gctx ctx (data as (x, r)) =
   let
-    val (_, ctx, bs_ret) = get_uvar_info x !! (fn () => raise Impossible "get_bsort_UVarI")
+    val (_, ctx, bs_ret) = get_uvar_info x !! (fn () => raise Impossible "get_basic_sort_IUVar")
   in
-    (UVarI data, foldl (fn ((_, bs_arg), acc) => BSArrow (bs_arg, acc)) bs_ret ctx)
+    (IUVar data, foldl (fn ((_, bs_arg), acc) => BSArrow (bs_arg, acc)) bs_ret ctx)
   end
 
 fun match_BSArrow gctx ctx r bs =
@@ -59,7 +59,7 @@ fun match_BSArrow gctx ctx r bs =
       BSArrow data => data
     | _ => raise Impossible $ "match_BSArrow: " ^ str_bs bs
 
-fun get_sort_type_UVarS gctx ctx data = UVarS data
+fun get_sort_type_SUVar gctx ctx data = SUVar data
 
 fun open_close add ns ctx f = f $ add ns ctx
 
@@ -82,10 +82,10 @@ structure Sortcheck = SortcheckFn (structure U = Expr
                                    val str_s = str_s
                                    val U_str_i = str_i
                                    val fetch_sort = fetch_sort
-                                   val is_wf_bsort_UVarBS = is_wf_bsort_UVarBS
-                                   val get_bsort_UVarI = get_bsort_UVarI
+                                   val is_wf_basic_sort_BSUVar = is_wf_basic_sort_BSUVar
+                                   val get_basic_sort_IUVar = get_basic_sort_IUVar
                                    val match_BSArrow = match_BSArrow
-                                   val get_sort_type_UVarS = get_sort_type_UVarS
+                                   val get_sort_type_SUVar = get_sort_type_SUVar
                                    val unify_bs = unify_bs
                                    val get_region_i = get_region_i
                                    val get_region_s = get_region_s
@@ -111,7 +111,7 @@ open MicroTiMLUtilTiML
 open MicroTiMLUtil
 open MicroTiML
 
-fun sc ctx i = get_bsort Gctx.empty (ctx, i)
+fun sc ctx i = get_basic_sort Gctx.empty (ctx, i)
 fun sc_against_sort ctx (i, s) = check_sort Gctx.empty (ctx, i, s)
 
 fun is_wf_sort ctx s = Sortcheck.is_wf_sort Gctx.empty (ctx, s)
@@ -121,7 +121,6 @@ val SNat = SNat dummy
 val SBool = SBool dummy
 val SUnit = SUnit dummy
 
-fun INat n = ConstIN (n, dummy)
 val TInt = TConst TCInt
 val unTQuan = unBindAnnoName
 val unTQuanI = unBindAnnoName
@@ -147,9 +146,9 @@ fun unECase (e, bind1, bind2) =
     (e, (unName name1, e1), (unName name2, e2))
   end
                
-fun is_eq_bsort x = unify_bs dummy x
+fun is_eq_basic_sort x = unify_bs dummy x
   
-fun BasicSort b = Basic (b, dummy)
+fun BasicSort b = SBasic (b, dummy)
                         
 fun is_eq_idx ctx (i, i') = check_prop ctx (i %= i')
 
@@ -157,24 +156,24 @@ open Bind
        
 fun is_eq_sort ctx (s, s') =
   case (s, s') of
-      (Basic (bs, _), Basic (bs', _)) =>
-      is_eq_bsort (bs, bs')
-    | (Subset ((bs, r1), Bind ((name, _), p), _), Subset ((bs', _), Bind (_, p'), _)) =>
+      (SBasic (bs, _), SBasic (bs', _)) =>
+      is_eq_basic_sort (bs, bs')
+    | (SSubset ((bs, r1), Bind ((name, _), p), _), SSubset ((bs', _), Bind (_, p'), _)) =>
       let
-	val () = is_eq_bsort (bs, bs')
+	val () = is_eq_basic_sort (bs, bs')
 	val () = check_prop (add_sorting (name, BasicSort bs) ctx) (p --> p')
       in
         ()
       end
-    | (Subset ((bs, r1), Bind ((name, _), p), _), Basic (bs', _)) =>
+    | (SSubset ((bs, r1), Bind ((name, _), p), _), SBasic (bs', _)) =>
       let
-	val () = is_eq_bsort (bs, bs')
+	val () = is_eq_basic_sort (bs, bs')
       in
         ()
       end
-    | (Basic (bs, r1), Subset ((bs', _), Bind ((name, _), p), _)) =>
+    | (SBasic (bs, r1), SSubset ((bs', _), Bind ((name, _), p), _)) =>
       let
-	val () = is_eq_bsort (bs, bs')
+	val () = is_eq_basic_sort (bs, bs')
 	val () = check_prop (add_sorting (name, BasicSort bs) ctx) p
       in
         ()
@@ -186,7 +185,7 @@ fun is_eq_kind (k, k') =
       (KType, KType) => ()
     | (KArrow (b, k), KArrow (b', k')) =>
       let
-        val () = is_eq_bsort (b, b')
+        val () = is_eq_basic_sort (b, b')
         val () = is_eq_kind (k, k')
       in
         ()
@@ -228,7 +227,7 @@ fun nth_error_local ls x =
     | QID _ => raise MTCError "nth_error QID"
                       
 type icontext = (string * sort) list
-type tcontext = (string * bsort kind) list
+type tcontext = (string * basic_sort kind) list
                             
 fun add_sorting_it new (ictx, tctx) = (new :: ictx, tctx)
 fun add_kinding_it new (ictx, tctx) = (ictx, new :: tctx)
@@ -444,7 +443,7 @@ and kc_against_KType ctx t = kc_against_kind ctx (t, KType)
                                              
 (* (***************** the "subst_i_t" visitor  **********************)     *)
 
-(* fun subst_i_ty_visitor_vtable cast ((subst_i_i, subst_i_s), d, x, v) : ('this, int, 'var, 'bsort, 'idx, 'sort, 'var, 'bsort, 'idx2, 'sort2) ty_visitor_vtable = *)
+(* fun subst_i_ty_visitor_vtable cast ((subst_i_i, subst_i_s), d, x, v) : ('this, int, 'var, 'basic_sort, 'idx, 'sort, 'var, 'basic_sort, 'idx2, 'sort2) ty_visitor_vtable = *)
 (*   let *)
 (*     fun extend_i this env _ = env + 1 *)
 (*     fun visit_idx this env b = subst_i_i (d + env) (x + env) v b *)
@@ -613,7 +612,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           let
             val (b, (name, t)) = unTAbsI data
             val (b', (_, t')) = unTAbsI data'
-            val () = is_eq_bsort (b, b')
+            val () = is_eq_basic_sort (b, b')
             val () = is_eq_ty (add_sorting_it (fst name, BasicSort b) ctx) (t, t')
           in
             ()
@@ -783,7 +782,7 @@ val N1 = N1 dummy
 (* structure IntMap = IntBinaryMap *)
 (* structure HeapMap = IntMap *)
 
-type mtiml_ty = (Expr.var, bsort, idx, sort) ty
+type mtiml_ty = (Expr.var, basic_sort, idx, sort) ty
 type lazy_ty = int ref * int ref * mtiml_ty ref
                                      
 type econtext = (string * lazy_ty) list
@@ -1450,8 +1449,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e, t_e, j, st) = tc (ctx, st) e
           val i = assert_TiBool $ whnf itctx t_e
           val make_exists = make_exists "__p"
-          val t1 = make_exists (Subset_from_prop dummy $ i %= Itrue)
-          val t2 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
+          val t1 = make_exists (SSubset_from_prop dummy $ i %= Itrue)
+          val t2 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
           val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
           val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
           val e2 = if !anno_ECase_e2_time then e2 |> i2 else e2
@@ -1681,7 +1680,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 val (e1, t1, i1, st) = tc (ctx, st) e1
                 val st_e1 = st
                 val e2 = EAscTypes (e2, ts)
-                val e2 = EAscTime (e2, BinOpI (MinusI, i, i1))
+                val e2 = EAscTime (e2, IBinOp (IBMinus, i, i1))
                 val (e2, t2, _, st) = tc (add_typing_full (fst name, t1) ctx, st) e2
                 val e1 = if !anno_ELet then e1 %: t1 else e1
                 val e1 = if !anno_ELet_state then e1 %~ st_e1 else e1
@@ -1705,9 +1704,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 val i = sc_against_sort ictx (i, STime)
                 fun check_le_with_subtractions ictx (i, i') =
                   let
-                    val collect_MinusI_left = collect_BinOpI_left MinusI
+                    val collect_MinusI_left = collect_IBinOp_left IBMinus
                     val (i', is) = assert_cons $ collect_MinusI_left i'
-                    val i = combine_AddI_nonempty i is
+                    val i = combine_IBAdd_nonempty i is
                     val () = check_prop ictx (i %<= i')
                   in
                     ()
@@ -1739,7 +1738,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       | ENever t =>
         let
           val t = kc_against_kind itctx (t, KType)
-          val () = check_prop ictx (False dummy)
+          val () = check_prop ictx (PFalse dummy)
         in
           (ENever t, t, T0, st)
         end
@@ -1776,7 +1775,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (decls, is) = unzip decls 
           val (e, t, i, st) = tc (ctx, st) e
           val e = ELets (decls, e)
-          val is = uncurry combine_AddI_nonempty $ assert_cons is
+          val is = uncurry combine_IBAdd_nonempty $ assert_cons is
         in
           (e, t, is %+ i, st)
         end
@@ -1856,9 +1855,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                           ((e, i) :: eis, st)
                         end) ([], st) es
           val (es, is) = unzip $ rev eis
-          val i = combine_AddI_Time is
+          val i = combine_IBAdd_Time is
         in
-          (ENewArrayValues (t, es), TArr (t, ConstIN (length es, dummy)), i, st)
+          (ENewArrayValues (t, es), TArr (t, INat $ length es), i, st)
         end
       | EHalt (e, t) =>
         let
@@ -1951,8 +1950,8 @@ and tc_against_ty_time st_types (ctx as (ictx, tctx, _), st) (e, t, i) =
 
 fun sort_to_hyps (name, s) =
   case s of
-      Basic (b, r) => [VarH (name, b)]
-    | Subset ((b, _), Bind.Bind (_, p), _) => [PropH p, VarH (name, b)]
+      SBasic (b, r) => [VarH (name, b)]
+    | SSubset ((b, _), Bind.Bind (_, p), _) => [PropH p, VarH (name, b)]
     | _ => raise Impossible "sort_to_hyps"
       
 fun to_vc (ctx, p) = (concatMap sort_to_hyps ctx, p)

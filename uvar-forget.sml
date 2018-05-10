@@ -36,7 +36,7 @@ fun forget_i_i x n b =
       let
         val body = b
         val forget = forget_i_i x n
-        val ((uvar, r), args) = is_IApp_IUVar body !! (fn () => raise AppUVarFailed)
+        val ((uvar, r), args) = is_IBApp_IUVar body !! (fn () => raise AppUVarFailed)
         val (name, ctx, bsort) = get_uvar_info uvar !! (fn () => raise Impossible "should be fresh")
         val bsort = update_bs bsort
         (* val () = println $ sprintf "  for uvar ?$" [str_int name] *)

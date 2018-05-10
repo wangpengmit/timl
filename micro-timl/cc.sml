@@ -27,7 +27,7 @@ open MicroTiML
        
 fun free_ivars_with_anno_idx_visitor_vtable cast output =
   let
-    fun visit_VarI this env (data as (var, sorts)) =
+    fun visit_IVar this env (data as (var, sorts)) =
         let
           val sorts = visit_list (#visit_sort (cast this) this) env sorts
           val () = 
@@ -35,11 +35,11 @@ fun free_ivars_with_anno_idx_visitor_vtable cast output =
                   QID (_, (x, _)) =>
                   (case sorts of
                        s :: _ => output (Free_i x, s)
-                     | [] => raise Impossible $ "free_ivars_with_anno_i/VarI/QID/sorts=[]: " ^ str_int x
+                     | [] => raise Impossible $ "free_ivars_with_anno_i/IVar/QID/sorts=[]: " ^ str_int x
                   )
                 | _ => ()
         in
-          VarI data
+          IVar data
         end
     val vtable = 
         default_idx_visitor_vtable
@@ -50,7 +50,7 @@ fun free_ivars_with_anno_idx_visitor_vtable cast output =
           visit_noop
           visit_noop
           visit_noop
-    val vtable = override_visit_VarI vtable visit_VarI
+    val vtable = override_visit_IVar vtable visit_IVar
   in
     vtable
   end
@@ -114,14 +114,14 @@ fun free_ivars_with_anno_e_fn output b =
 
 fun free_ivars_idx_visitor_vtable cast output =
   let
-    fun visit_VarI this env (data as (var, sorts)) =
+    fun visit_IVar this env (data as (var, sorts)) =
         let
           val () =
               case var of
                   QID (_, (x, _)) => output $ Free_i x
                 | _ => ()
         in
-          VarI data
+          IVar data
         end
     val vtable = 
         default_idx_visitor_vtable
@@ -132,7 +132,7 @@ fun free_ivars_idx_visitor_vtable cast output =
           visit_noop
           visit_noop
           visit_noop
-    val vtable = override_visit_VarI vtable visit_VarI
+    val vtable = override_visit_IVar vtable visit_IVar
   in
     vtable
   end
@@ -185,7 +185,7 @@ fun free_ivars_with_anno_e e =
       vars_anno
     end
 
-fun free_tvars_with_anno_ty_visitor_vtable cast output (* : ('this, unit, 'var, 'bsort, 'idx, 'sort, 'var, 'bsort, 'idx, 'sort) ty_visitor_vtable *) =
+fun free_tvars_with_anno_ty_visitor_vtable cast output (* : ('this, unit, 'var, 'basic_sort, 'idx, 'sort, 'var, 'basic_sort, 'idx, 'sort) ty_visitor_vtable *) =
   let
     fun visit_TVar this env (data as (var, ks)) =
         case var of
@@ -244,7 +244,7 @@ fun free_tvars_with_anno_e_fn output b =
 
 fun free_tvars_with_anno_e a = free_vars_with_anno_0 free_tvars_with_anno_e_fn a
 
-val code_blocks = ref ([] : (free_e * string * (var, idx, sort, bsort kind, (var, bsort, idx, sort) ty) expr) list)
+val code_blocks = ref ([] : (free_e * string * (var, idx, sort, basic_sort kind, (var, basic_sort, idx, sort) ty) expr) list)
 val code_labels = ref IntBinarySet.empty
 fun add_code_block (decl as (x, _, _)) =
     (push_ref code_blocks decl;
@@ -303,7 +303,7 @@ fun free_evars_with_anno_fn excluded output b =
 
 fun free_evars_with_anno excluded a = free_vars_with_anno_0 (free_evars_with_anno_fn excluded) a
       
-fun IV (x, s) = VarI (make_Free_i x, [s])
+fun IV (x, s) = IVar (make_Free_i x, [s])
 fun TV (x, k) = TVar (make_Free_t x, [k])
 
 fun TExists bind = TQuan (Exists (), bind)
@@ -791,8 +791,8 @@ fun convert_EAbs_to_ERec b =
 
 fun remove_var_anno_idx_visitor_vtable cast () =
   let
-    fun visit_VarI this env (var, sorts) =
-      VarI (var, [])
+    fun visit_IVar this env (var, sorts) =
+      IVar (var, [])
     val vtable = 
         default_idx_visitor_vtable
           cast
@@ -802,7 +802,7 @@ fun remove_var_anno_idx_visitor_vtable cast () =
           visit_noop
           visit_noop
           visit_noop
-    val vtable = override_visit_VarI vtable visit_VarI
+    val vtable = override_visit_IVar vtable visit_IVar
   in
     vtable
   end
@@ -1057,6 +1057,7 @@ fun test1 dirname =
     (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
+    open MicroTiMLUtil
     val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"

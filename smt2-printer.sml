@@ -16,28 +16,28 @@ fun evar_name n = "!!" ^ str_int n
 
 fun print_idx_bin_op opr =
     case opr of
-        AddI => "+"
-      | BoundedMinusI => "-"
-      | MultI => "*"
-      | ModI => "mod"
-      | EqI => "="
-      | AndI => "and"
-      | OrI => "or"
-      | ExpNI => "exp_i_i"
+        IBAdd => "+"
+      | IBBoundedMinus => "-"
+      | IBMult => "*"
+      | IBMod => "mod"
+      | IBEq => "="
+      | IBAnd => "and"
+      | IBOr => "or"
+      | IBExpN => "exp_i_i"
       (* | ExpNI => "^" *)
-      | LtI => "<"
-      | GtI => ">"
-      | LeI => "<="
-      | GeI => ">="
-      | MaxI => raise Impossible "print_idx_bin_op ()"
-      | MinI => raise Impossible "print_idx_bin_op ()"
-      | IApp => raise Impossible "print_idx_bin_op ()"
-      | MinusI => raise Impossible "print_idx_bin_op ()"
+      | IBLt => "<"
+      | IBGt => ">"
+      | IBLe => "<="
+      | IBGe => ">="
+      | IBMax => raise Impossible "print_idx_bin_op ()"
+      | IBMin => raise Impossible "print_idx_bin_op ()"
+      | IBApp => raise Impossible "print_idx_bin_op ()"
+      | IBMinus => raise Impossible "print_idx_bin_op ()"
       | IBUnion => raise Impossible "print_idx_bin_op ()"
         
 fun print_i ctx i =
   case i of
-      VarI (id, _) =>
+      IVar (id, _) =>
       (case id of
            ID (n, _) =>
            (List.nth (ctx, n) handle Subscript => raise SMTError $ "Unbound variable: " ^ str_int n)
@@ -52,45 +52,45 @@ fun print_i ctx i =
          | ICTT => "TT"
          | ICAdmit => "TT"
       )
-    | UnOpI (opr, i, _) => 
+    | IUnOp (opr, i, _) => 
       (case opr of
-           ToReal => sprintf "(to_real $)" [print_i ctx i]
-         | Log base =>
+           IUToReal => sprintf "(to_real $)" [print_i ctx i]
+         | IULog base =>
            sprintf "(log $ $)" [base, print_i ctx i]
            (* raise SMTError "can't handle log2" *)
-         | Ceil => sprintf "(ceil $)" [print_i ctx i]
-         | Floor => sprintf "(floor $)" [print_i ctx i]
-         | B2n => sprintf "(b2i $)" [print_i ctx i]
-         | Neg => sprintf "(not $)" [print_i ctx i]
+         | IUCeil => sprintf "(ceil $)" [print_i ctx i]
+         | IUFloor => sprintf "(floor $)" [print_i ctx i]
+         | IUB2n => sprintf "(b2i $)" [print_i ctx i]
+         | IUNeg => sprintf "(not $)" [print_i ctx i]
          | IUDiv n => sprintf "(/ $ $)" [print_i ctx i, str_int n]
          (* | IUExp s => sprintf "(^ $ $)" [print_i ctx i, s] *)
       )
-    | BinOpI (opr, i1, i2) => 
+    | IBinOp (opr, i1, i2) => 
       (case opr of
-           MaxI =>
+           IBMax =>
            let
                fun max a b =
                    sprintf "(ite (>= $ $) $ $)" [a, b, a, b]
            in
                max (print_i ctx i1) (print_i ctx i2)
            end
-         | MinI =>
+         | IBMin =>
            let
                fun min a b =
                    sprintf "(ite (<= $ $) $ $)" [a, b, a, b]
            in
                min (print_i ctx i1) (print_i ctx i2)
            end
-         | BoundedMinusI =>
+         | IBBoundedMinus =>
            let
              fun bounded_minus a b =
                  sprintf "(ite (< $ $) 0 (- $ $))" [a, b, a, b]
            in
              bounded_minus (print_i ctx i1) (print_i ctx i2)
            end
-         | IApp =>
+         | IBApp =>
            let
-             val (f, is) = collect_IApp i1 
+             val (f, is) = collect_IBApp i1 
              val is = f :: is
              val is = is @ [i2]
            in
@@ -101,10 +101,10 @@ fun print_i ctx i =
          | _ => 
            sprintf "($ $ $)" [print_idx_bin_op opr, print_i ctx i1, print_i ctx i2]
       )
-    | Ite (i1, i2, i3, _) => sprintf "(ite $ $ $)" [print_i ctx i1, print_i ctx i2, print_i ctx i3]
+    | IIte (i1, i2, i3, _) => sprintf "(ite $ $ $)" [print_i ctx i1, print_i ctx i2, print_i ctx i3]
     | IAbs _ => raise SMTError "can't handle abstraction"
     | IState _ => raise SMTError "can't handle IState"
-    | UVarI (x, _) =>
+    | IUVar (x, _) =>
       case !x of
           Refined i => print_i ctx i
         | Fresh _ => raise SMTError "index contains uvar"
@@ -113,17 +113,17 @@ fun negate s = sprintf "(not $)" [s]
 
 fun print_base_sort b =
   case b of
-      UnitSort => "Unit"
-    | BoolSort => "Bool"
-    | Nat => "Int"
-    | Time => "Real"
-    | BSState => "Unit"
+      BSSUnit => "Unit"
+    | BSSBool => "Bool"
+    | BSSNat => "Int"
+    | BSSTime => "Real"
+    | BSSState => "Unit"
 
 fun print_bsort bsort =
   case bsort of
-      Base b => print_base_sort b
+      BSBase b => print_base_sort b
     | BSArrow _ => raise SMTError "can't handle higher-order sorts"
-    | UVarBS x =>
+    | BSUVar x =>
       case !x of
           Refined b => print_bsort b
         | Fresh _ => raise SMTError "bsort contains uvar"
@@ -132,28 +132,28 @@ fun print_p ctx p =
   let
       fun str_conn opr =
         case opr of
-            And => "and"
-          | Or => "or"
-          | Imply => "=>"
-          | Iff => "="
+            BCAnd => "and"
+          | BCOr => "or"
+          | BCImply => "=>"
+          | BCIff => "="
       fun str_pred opr =
         case opr of
-            EqP => "="
-          | LeP => "<="
-          | LtP => "<"
-          | GeP => ">="
-          | GtP => ">"
-          | BigO => raise SMTError "can't handle big-O"
+            BPEq => "="
+          | BPLe => "<="
+          | BPLt => "<"
+          | BPGe => ">="
+          | BPGt => ">"
+          | BPBigO => raise SMTError "can't handle big-O"
       fun f p =
         case p of
             PTrueFalse (b, _) => str_bool b
-          | Not (p, _) => negate (f p)
-          | BinConn (opr, p1, p2) => sprintf "($ $ $)" [str_conn opr, f p1, f p2]
+          | PNot (p, _) => negate (f p)
+          | PBinConn (opr, p1, p2) => sprintf "($ $ $)" [str_conn opr, f p1, f p2]
           (* | BinPred (BigO, i1, i2) => sprintf "(bigO $ $)" [print_i ctx i1, print_i ctx i2] *)
           (* | BinPred (BigO, i1, i2) => "true" *)
-          | BinPred (opr, i1, i2) => sprintf "($ $ $)" [str_pred opr, print_i ctx i1, print_i ctx i2]
-          | Quan (Exists _, bs, Bind ((name, _), p), _) => raise SMTError "Don't trust SMT solver to solve existentials"
-          | Quan (q, bs, Bind ((name, _), p), _) => sprintf "($ (($ $)) $)" [str_quan q, name, print_bsort bs, print_p (name :: ctx) p]
+          | PBinPred (opr, i1, i2) => sprintf "($ $ $)" [str_pred opr, print_i ctx i1, print_i ctx i2]
+          | PQuan (Exists _, bs, Bind ((name, _), p), _) => raise SMTError "Don't trust SMT solver to solve existentials"
+          | PQuan (q, bs, Bind ((name, _), p), _) => sprintf "($ (($ $)) $)" [str_quan q, name, print_bsort bs, print_p (name :: ctx) p]
   in
       f p
   end
@@ -172,7 +172,7 @@ fun print_hyp ctx h =
     case h of
         VarH (name, bs) =>
         (case update_bs bs of
-             Base b =>
+             BSBase b =>
              (declare_const name (print_base_sort b), name :: ctx)
            | BSArrow _ =>
              let
@@ -180,7 +180,7 @@ fun print_hyp ctx h =
              in
                (sprintf "(declare-fun $ ($) $)" [name, join " " $ map print_bsort args, print_bsort ret], name :: ctx)
              end
-           | UVarBS x => raise SMTError "hypothesis contains uvar"
+           | BSUVar x => raise SMTError "hypothesis contains uvar"
         )
       | PropH p =>
         let
@@ -251,29 +251,29 @@ fun check get_ce = [
 (* convert to Z3's types and naming conventions *)
 fun conv_base_sort b =
       case b of
-          UnitSort => (UnitSort, NONE)
-        | BoolSort => (BoolSort, NONE)
-        | Nat => (Nat, SOME (BinPred (LeP, ConstIN (0, dummy), VarI (ID (0, dummy), []))))
-        | Time => (Time, SOME (BinPred (LeP, ConstIT (TimeType.zero, dummy), VarI (ID (0, dummy), []))))
-        | BSState => (UnitSort, NONE)
+          BSSUnit => (BSSUnit, NONE)
+        | BSSBool => (BSSBool, NONE)
+        | BSSNat => (BSSNat, SOME (PBinPred (BPLe, INat (0, dummy), IVar (ID (0, dummy), []))))
+        | BSSTime => (BSSTime, SOME (PBinPred (BPLe, ITime (TimeType.zero, dummy), IVar (ID (0, dummy), []))))
+        | BSSState => (BSSUnit, NONE)
 
 fun conv_bsort bsort =
   case bsort of
-      Base b =>
+      BSBase b =>
       let
         val (b, p) = conv_base_sort b
       in
-        (Base b, p)
+        (BSBase b, p)
       end
     | BSArrow _ => (bsort, NONE)
-    | UVarBS x =>
+    | BSUVar x =>
       case !x of
           Refined b => conv_bsort b
         | Fresh _ => raise SMTError "bsort contains uvar"
 
 fun conv_p p =
     case p of
-        Quan (q, bs, Bind ((name, r), p), r_all) => 
+        PQuan (q, bs, Bind ((name, r), p), r_all) => 
         let 
             val (bs, p1) = conv_bsort bs
             val p = conv_p p
@@ -281,11 +281,11 @@ fun conv_p p =
                         NONE => p
                       | SOME p1 => (p1 --> p)
         in
-            Quan (q, bs, Bind ((escape name, r), p), r_all)
+            PQuan (q, bs, Bind ((escape name, r), p), r_all)
         end
-      | Not (p, r) => Not (conv_p p, r)
-      | BinConn (opr, p1, p2) => BinConn (opr, conv_p p1, conv_p p2)
-      | BinPred _ => p
+      | PNot (p, r) => PNot (conv_p p, r)
+      | PBinConn (opr, p1, p2) => PBinConn (opr, conv_p p1, conv_p p2)
+      | PBinPred _ => p
       | PTrueFalse _ => p
 
 fun conv_hyp h =

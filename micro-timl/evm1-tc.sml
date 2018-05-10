@@ -39,10 +39,10 @@ infix 6 %%-
 
 fun a %/ b =
   case simp_i b of
-      IConst (ICNat b, r) => DivI (a, (b, r))
+      IConst (ICNat b, r) => IDiv (a, (b, r))
     | _ => raise Impossible "a %/ b: b must be IConst"
 
-fun INeg i = UnOpI (Neg, i, dummy)
+fun INeg i = IUnOp (IUNeg, i, dummy)
 fun a %<>? b = INeg $ a %=? b
                      
 infixr 5 @::
@@ -120,9 +120,9 @@ fun assert_base_storage_ty t =
            | TCEmpty => ()
            | TCTiML c =>
              case c of
-                 Int => ()
-               | Bool => ()
-               | Byte => ())
+                 BTInt => ()
+               | BTBool => ()
+               | BTByte => ())
       | _ => raise Impossible "not a base storage type"
         
 fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, tctx), rctx, sctx, st : idx)) inst =
@@ -134,7 +134,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, t1, sctx) = assert_cons2 sctx
         val t =
             case (t0, t1) of
-                (TConst (TCTiML Int), TConst (TCTiML Int)) => int_result
+                (TConst (TCTiML BTInt), TConst (TCTiML BTInt)) => int_result
               | (TNat i0, TNat i1) => nat_result $ f (i0, i1)
               | _ => raise Impossible $ sprintf "$: can't operate on operands of types ($) and ($)" [name, str_t t0, str_t t1]
       in
@@ -147,7 +147,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, t1, sctx) = assert_cons2 sctx
         val t =
             case (whnf itctx t0, whnf itctx t1) of
-                (TConst (TCTiML Bool), TConst (TCTiML Bool)) => TBool
+                (TConst (TCTiML BTBool), TConst (TCTiML BTBool)) => TBool
               | (TiBool i0, TiBool i1) => TiBool $ f (i0, i1)
               | _ => raise Impossible $ sprintf "$: can't operate on operands of types ($) and ($)" [name, str_t t0, str_t t1]
       in
@@ -161,7 +161,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, t1, sctx) = assert_cons2 sctx
         val t =
             case (t0, t1) of
-                (TConst (TCTiML Int), TConst (TCTiML Int)) => TInt
+                (TConst (TCTiML BTInt), TConst (TCTiML BTInt)) => TInt
               | (TNat i0, TNat i1) => TNat $ i1 %+ i0
               | (TNat i, TTuplePtr (ts, offset, b)) => TTuplePtr (ts, offset %+ i, b)
               | (TTuplePtr (ts, offset, b), TNat i) => TTuplePtr (ts, offset %+ i, b)
@@ -180,7 +180,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         fun a %%- b = (check_prop ictx (a %>= b); a %- b)
         val t =
             case (t0, t1) of
-                (TConst (TCTiML Int), TConst (TCTiML Int)) => TInt
+                (TConst (TCTiML BTInt), TConst (TCTiML BTInt)) => TInt
               | (TNat i0, TNat i1) => TNat $ i0 %%- i1
               | (TTuplePtr (ts, offset, b), TNat i) => TTuplePtr (ts, offset %%- i, b)
               | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset %%- i, inited)
@@ -204,8 +204,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, sctx) = assert_cons sctx
         val t =
             case t0 of
-                TConst (TCTiML Bool) => TBool
-              | TConst (TCTiML Int) => TBool
+                TConst (TCTiML BTBool) => TBool
+              | TConst (TCTiML BTInt) => TBool
               | TiBool i => TiBool $ INeg i
               | TNat i => TiBool $ i %=? N0
               | _ => raise Impossible $ sprintf "ISZERO: can't operate on operand of type ($)" [str_t t0]
@@ -708,8 +708,8 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                     val (st', rctx', sctx', i2) = assert_TArrowEVM t0
                     val () = is_sub_rctx itctx (rctx, rctx')
                     val make_exists = make_exists "__p"
-                    val t1 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
-                    val t2 = make_exists (Subset_from_prop dummy $ i %= Itrue)
+                    val t1 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
+                    val t2 = make_exists (SSubset_from_prop dummy $ i %= Itrue)
                     val () = is_eq_stack itctx (t1 :: sctx, sctx')
                     val () = is_eq_st ictx (st, st')
                     val i1 = tc_insts (itctx, rctx, t2 :: sctx, st) I

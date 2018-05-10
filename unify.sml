@@ -69,10 +69,10 @@ fun find_injection (eq : 'a -> 'a -> bool) (xs : 'a list) (ys : 'a list) : int l
 
 exception UnifyAppUVarFailed of string
 (* Try to see whether [i']'s variables are covered by the arguments applied to [x]. If so, then refine [x] with [i'], with the latter's variables replaced by the former's arguments. This may not be the most general instantiation, because [i']'s constants will be fixed for [x], although those constants may be arguments in a more instantiation. For example, unifying [x y 5] with [y+5] will refine [x] to be [fun y z => y+5], but a more general instantiation is [fun y z => y+z]. This less-general instantiation may cause later unifications to fail. *)
-fun unify_IApp r i i' =
+fun unify_IBApp r i i' =
   let
     val i = normalize_i i
-    val ((x, _), args) = is_IApp_IUVar i !! (fn () => raise UnifyAppUVarFailed "")
+    val ((x, _), args) = is_IBApp_IUVar i !! (fn () => raise UnifyAppUVarFailed "")
     val i' = normalize_i i'
     open CollectUVar
     val () = if mem op= x (map #1 $ collect_uvar_i_i i') then raise UnifyAppUVarFailed "" else ()
@@ -97,7 +97,7 @@ fun unify_IApp r i i' =
                          
     val inj = find_injection eq_i (map (fn y => IVar (y, [])) vars') (rev args) !! (fn () => raise UnifyAppUVarFailed "")
     val i' = psubst_is_i vars' (map (V r) inj) i'
-    val (name, ctx, b) = get_uvar_info x !! (fn () => raise Impossible "unify_IApp(): shouldn't be [Refined]")
+    val (name, ctx, b) = get_uvar_info x !! (fn () => raise Impossible "unify_IBApp(): shouldn't be [Refined]")
     val b = update_bs b
     (* val () = println $ str_bs b *)
     (* val () = println $ sprintf "unifying ?$" [str_int name] *)
@@ -107,7 +107,7 @@ fun unify_IApp r i i' =
     (* val () = println $ str_ls str_bs bsorts *)
     val ext_ctx = mapi (mapFst var_name) bsorts
     val ctx = ext_ctx @ ctx
-    val () = if length args <= length ctx then () else raise Impossible "unify_IApp(): #args shouldn't be larger than #ctx"
+    val () = if length args <= length ctx then () else raise Impossible "unify_IBApp(): #args shouldn't be larger than #ctx"
     (* #args could be < #ctx because of partial application *)
     val ctx = lastn (length args) ctx
     fun IAbsMany (ctx, i, r) = foldl (fn ((name, b), i) => IAbs (b, Bind ((name, r), i), r)) i ctx
@@ -128,7 +128,7 @@ fun unify_i r gctxn ctxn (i, i') =
       in
         if eq_i i i' then ()
         (* if one-side is not in a normal form because of uvar, we can't do structural comparison *)
-        else if isSome (is_IApp_IUVar i) orelse isSome (is_IApp_IUVar i') then
+        else if isSome (is_IBApp_IUVar i) orelse isSome (is_IBApp_IUVar i') then
           default ()
         else
         case (i, i') of
@@ -142,10 +142,10 @@ fun unify_i r gctxn ctxn (i, i') =
     (* val () = println $ sprintf "Unifying indices $ and $" [str_i gctxn ctxn i, str_i gctxn ctxn i'] *)
     val () =
         (* first try unifying applications of uvars with the other index; if unsuccessful in both directions, then try ordinary structural unification *)
-        unify_IApp r i i'
+        unify_IBApp r i i'
         handle
         UnifyAppUVarFailed _ =>
-        (unify_IApp r i' i
+        (unify_IBApp r i' i
          handle
          UnifyAppUVarFailed _ =>
          structural_compare (i, i'))

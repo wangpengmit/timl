@@ -649,7 +649,7 @@ fun smart_write_le gctx ctx (i1, i2, r) =
     (*   case i of *)
     (*       IUVar (x, _) => is_fresh x *)
     (*     | _ => false *)
-    fun is_fresh_i i = isSome $ is_IApp_IUVar i
+    fun is_fresh_i i = isSome $ is_IBApp_IUVar i
   in
     if is_fresh_i i1 orelse is_fresh_i i2 then unify_i r gctx ctx (i1, i2)
     else
@@ -1571,7 +1571,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (es, ds, st) = foldl (fn (e, (es, ds, st)) => let val (e, d, st) = check_mtype (ctx, st) (e, t) in (e :: es, d :: ds, st) end) ([], [], st) es
             val es = rev es
             val ds = rev ds
-            val d = combine_IAdd_Time ds
+            val d = combine_IBAdd_Time ds
           in
             (ENewArrayValues (t, es, r), TArray (t, INat (length es, r)), d, st)
           end
@@ -1603,7 +1603,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (decls, ctxd as (sctxd, kctxd, _, _), nps, ds, ctx, st) = check_decls (ctx, st) decls
 	    val (e, t, d, st) = get_mtype (ctx, st) e
             val ds = rev (d :: ds)
-            val d = combine_IAdd_Time ds
+            val d = combine_IBAdd_Time ds
             (* val d = foldl' (fn (d, acc) => acc %+ d) (T0 dummy) ds *)
 	    (* val t = forget_ctx_mt r ctx ctxd t  *)
             (* val ds = map (forget_ctx_d r ctx ctxd) ds *)
@@ -1669,10 +1669,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                         ITime (x - one, r)
                       end
                     | _ => wrong_d ()
-                val is = collect_IAdd d
+                val is = collect_IBAdd d
                 val pos = indexOf find_const is !! wrong_d
                 val is = update pos const_minus_one is
-                val d = combine_IAdd_Time is
+                val d = combine_IBAdd_Time is
                 val d = simp_i d
                 (* val d = *)
                 (*     case d of *)
@@ -2444,9 +2444,9 @@ fun is_base_storage_ty t =
       | TiBool _ => ()
       | TBase (t, _) =>
         (case t of
-             Int => ()
-           | Bool => ()
-           | Byte => ())
+             BTInt => ()
+           | BTBool => ()
+           | BTByte => ())
       | TUnit _ => ()
       | _ => raise Error (get_region_mt t, ["not a base storage type"])
         

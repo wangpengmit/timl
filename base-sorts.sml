@@ -10,10 +10,10 @@ datatype base_sort =
 
 fun str_b (s : base_sort) : string = 
   case s of
-      Nat => "Nat"
-    | Time => "Time"
-    | BoolSort => "Bool"
-    | UnitSort => "Unit"
+      BSSNat => "Nat"
+    | BSSTime => "Time"
+    | BSSBool => "Bool"
+    | BSSUnit => "Unit"
     | BSSState => "State"
                   
 end

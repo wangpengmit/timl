@@ -23,7 +23,7 @@ infixr 1 -->
 infix 1 <->
 
 infix 8 %**
-fun a %** b = BinOpI (ExpNI, a, b)
+fun a %** b = IBinOp (IBExpN, a, b)
                    
 val unTAbsT = unBindAnnoName
                 
@@ -58,25 +58,25 @@ fun whnf ctx t =
       | TVar x => TVar x (* todo: look up type aliasing in ctx *)
       | _ => t
 
-fun MakeSubset (name, s, p) = Subset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
+fun MakeSubset (name, s, p) = SSubset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
 local
-  fun IV n = VarI (ID (n, dummy), [])
+  fun IV n = IVar (ID (n, dummy), [])
 in
-fun TSomeNat_packed () = TExistsI $ IBindAnno ((("__VC", dummy), MakeSubset ("__VC", BSUnit, True dummy)), TNat $ IV 1)
-fun TSomeNat_packed2 () = TExistsI $ IBindAnno ((("n", dummy), MakeSubset ("n", BSNat, IV 0 %< ConstIN (2, dummy) %** ConstIN (256, dummy))), TSomeNat_packed ())
+fun TSomeNat_packed () = TExistsI $ IBindAnno ((("__VC", dummy), MakeSubset ("__VC", BSUnit, PTrue dummy)), TNat $ IV 1)
+fun TSomeNat_packed2 () = TExistsI $ IBindAnno ((("n", dummy), MakeSubset ("n", BSNat, IV 0 %< INat (2, dummy) %** INat (256, dummy))), TSomeNat_packed ())
 fun TSomeNat () = TRec $ TBindAnno ((("some_nat", dummy), KType), TSomeNat_packed2 ())
 end
            
-val Itrue = TrueI dummy
-val Ifalse = FalseI dummy
+val Itrue = ITrue dummy
+val Ifalse = IFalse dummy
                  
-fun INat c = ConstIN (c, dummy)
-fun ITime c = ConstIT (c, dummy)
+val INat = fn c => INat (c, dummy)
+val ITime = fn c => ITime (c, dummy)
 fun IBool c = IConst (ICBool c, dummy)
                      
 fun TiBoolConst b = TiBool $ IBool b
                            
-val SState = Basic (Base BSState, dummy)
+val SState = SBasic (BSBase BSSState, dummy)
                                 
 fun assert_TArrow t =
   case t of
@@ -118,7 +118,7 @@ fun decompose_state i =
     val (vars_info, maps) = partitionSum
                               (fn i =>
                                   case i of
-                                      VarI (ID (n, _), ls) => inl (n, ls)
+                                      IVar (ID (n, _), ls) => inl (n, ls)
                                     | IState m => inr m
                                     | _ => raise Impossible $ "decompose_state: wrong idx: " ^ (ExportPP.str_i $ ExportPP.export_i [] i)
                               ) is
@@ -130,7 +130,7 @@ fun decompose_state i =
   end
     
 fun compose_state (vars, vars_info, m) =
-  combine_IUnion (IState m) $ map (fn n => VarI (ID (n, dummy), IMapU.must_find vars_info n)) $ ISetU.to_list vars
+  combine_IUnion (IState m) $ map (fn n => IVar (ID (n, dummy), IMapU.must_find vars_info n)) $ ISetU.to_list vars
                  
 fun IUnion_simp (i1, i2) =
   let

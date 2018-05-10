@@ -76,7 +76,7 @@ local
             fun def () = IBinOp (opr, passi i1, passi i2)
           in
             case opr of
-	        MaxI =>
+	        IBMax =>
 	        if eq_i i1 i2 then
                   mark i1
 	        else if eq_i i1 (T0 dummy) orelse eq_i i1 (INat (0, dummy)) then
@@ -89,19 +89,19 @@ local
                        if opr = opr' then
                          if opr = IBAdd orelse opr = IBMult then
                            if eq_i i1 i1' then
-                             mark $ IBinOp (opr, i1, IBinOp (MaxI, i2, i2'))
+                             mark $ IBinOp (opr, i1, IBinOp (IBMax, i2, i2'))
                            else if eq_i i2 i2' then
-                             mark $ IBinOp (opr, IBinOp (MaxI, i1, i1'), i2)
+                             mark $ IBinOp (opr, IBinOp (IBMax, i1, i1'), i2)
                            else def ()
                          else if opr = IBApp then
                            if eq_i i1 i1' then
-                             mark $ IBinOp (opr, i1, IBinOp (MaxI, i2, i2'))
+                             mark $ IBinOp (opr, i1, IBinOp (IBMax, i2, i2'))
                            else def ()
                          else def ()
                        else def ()
                      | _ => def ()
                   )
-	      | MinI =>
+	      | IBMin =>
 	        if eq_i i1 i2 then
                   mark i1
 	        else
@@ -123,11 +123,11 @@ local
                        mark $ INat (n1 + n2, r ())
                      | _ =>
                        let
-                         val is = collect_IAdd i
+                         val is = collect_IBAdd i
                          val (i', is) = case is of
                                             i :: is => (i, is)
                                           | [] => raise Impossible "passi/IBAdd"
-                         val i' = combine_IAdd_nonempty i' is
+                         val i' = combine_IBAdd_nonempty i' is
                        in
 		         if eq_i i' i then
                            def ()
@@ -150,7 +150,7 @@ local
                        mark $ INat (n1 * n2, r ())
                      | _ =>
                        let
-                         val i2s = collect_IAdd i2
+                         val i2s = collect_IBAdd i2
                          fun pred i =
                            case i of
                                IConst (ICNat _, _) => SOME i
@@ -164,7 +164,7 @@ local
                                val ret =
                                    case rest of
                                        [] => ret
-                                     | hd :: rest => ret %+ i1 %* combine_IAdd_nonempty hd rest
+                                     | hd :: rest => ret %+ i1 %* combine_IBAdd_nonempty hd rest
                              in
                                if eq_i ret i then
                                  def ()
@@ -174,17 +174,17 @@ local
                            | NONE => def ()
                        end
                   )
-              | IApp =>
+              | IBApp =>
                 (case (* passi *) i1 of
                      IAbs (_, Bind (_, body), _) =>
                      (* passi $ *) mark $ subst_i_i (passi i2) body
 		   | _ => def ()
                 )
-              | EqI =>
+              | IBEq =>
                 if eq_i i1 i2 then
                   mark $ ITrue $ r ()
                 else def ()
-              | AndI =>
+              | IBAnd =>
                 if eq_i i1 (ITrue dummy) then
                   mark i2
                 else if eq_i i2 (ITrue dummy) then
@@ -195,7 +195,7 @@ local
                   mark $ IFalse $ r ()
                 else
                   def ()
-              | OrI =>
+              | IBOr =>
                 if eq_i i1 (IFalse dummy) then
                   mark i2
                 else if eq_i i2 (IFalse dummy) then
@@ -206,7 +206,7 @@ local
                   mark $ ITrue $ r ()
                 else
                   def ()
-              | ExpNI =>
+              | IBExpN =>
                 let
                   val r = r ()
                   fun exp i n =
@@ -220,7 +220,7 @@ local
                     | IUnOp (B2n, i, _) => IIte (i, i1, N1 r, r)
                     | _ =>
                       let
-                        val i2s = collect_IAdd i2
+                        val i2s = collect_IBAdd i2
                         fun pred i =
                           case i of
                               IConst (ICNat _, _) => SOME i
@@ -228,21 +228,21 @@ local
                             | _ => NONE
                       in
                         case partitionOptionFirst pred i2s of
-                            SOME (i2, rest) => mark $ i1 %^ i2 %* i1 %^ combine_IAdd_Nat rest
+                            SOME (i2, rest) => mark $ i1 %^ i2 %* i1 %^ combine_IBAdd_Nat rest
                           | NONE => def ()
                       end
                 end
-              | ModI => def ()
-              | LtI => def ()
-              | GtI => def ()
-              | LeI => def ()
-              | GeI => def ()
-              | BoundedMinusI =>
+              | IBMod => def ()
+              | IBLt => def ()
+              | IBGt => def ()
+              | IBLe => def ()
+              | IBGe => def ()
+              | IBBoundedMinus =>
                 (case (i1, i2) of
                      (IConst (ICNat n1, _), IConst (ICNat n2, _)) =>
                      mark $ INat (bounded_minus n1 n2, r ())
                    | _ => def ())
-              | MinusI => raise Impossible "simp_p()/MinusI"
+              | IBMinus => raise Impossible "simp_p()/MinusI"
               | IBUnion => def ()
           end
         | IIte (i, i1, i2, r) =>
@@ -259,22 +259,22 @@ local
             case opr of
                 IUDiv n => IDiv (passi i, (n, r))
               (* | IUExp s => ExpI (passi i, (s, r)) *)
-              | ToReal =>
+              | IUToReal =>
                 (case i of
                      IBinOp (IBAdd, i1, i2) =>
-                     mark $ IBinOp (IBAdd, IUnOp (ToReal, i1, r), IUnOp (ToReal, i2, r))
+                     mark $ IBinOp (IBAdd, IUnOp (IUToReal, i1, r), IUnOp (IUToReal, i2, r))
                    | IBinOp (IBMult, i1, i2) =>
-                     mark $ IBinOp (IBMult, IUnOp (ToReal, i1, r), IUnOp (ToReal, i2, r))
+                     mark $ IBinOp (IBMult, IUnOp (IUToReal, i1, r), IUnOp (IUToReal, i2, r))
                    | IConst (ICNat n, _) =>
                      mark $ ITime (TimeType.fromInt n, r)
                    | _ => default ()
                 )
-              | Neg =>
+              | IUNeg =>
                 (case i of
                      IConst (ICBool b, r) => mark $ IConst (ICBool (not b), r)
                    | _ => default ()
                 )
-              | B2n =>
+              | IUB2n =>
                 (case i of
                      IConst (ICBool b, r) => mark $ IConst (ICNat (b2i b), r)
                    | _ => default ()
@@ -300,21 +300,21 @@ local
             fun def () = PBinConn (opr, passp p1, passp p2) 
           in
             case opr of
-                And =>
+                BCAnd =>
 	        if eq_p p1 (PTrue dummy) then
                   mark p2
 	        else if eq_p p2 (PTrue dummy) then
                   mark p1
 	        else
 	          def ()
-              | Or =>
+              | BCOr =>
 	        if eq_p p1 (PFalse dummy) then
                   mark p2
 	        else if eq_p p2 (PFalse dummy) then
                   mark p1
 	        else
 	          def ()
-              | Imply =>
+              | BCImply =>
 	        if eq_p p1 (PTrue dummy) then
                   mark p2
                 else if eq_p p2 (PTrue dummy) then
@@ -332,10 +332,10 @@ local
             fun def () = PBinPred (opr, passi i1, passi i2)
           in
             case opr of 
-                EqP => if eq_i i1 i2 then
+                BPEq => if eq_i i1 i2 then
                          mark $ PTrue $ r ()
                        else def ()
-              | LeP => if eq_i i1 i2 orelse eq_i i1 (T0 dummy) then
+              | BPLe => if eq_i i1 i2 orelse eq_i i1 (T0 dummy) then
                          mark $ PTrue $ r ()
                        else def ()
               | _ => def ()
@@ -349,7 +349,7 @@ local
                 fun def () = try_forget (forget_i_p 0 1) p
               in
                 case p of
-                    PBinConn (Imply, PBinPred (BigO, IVar (ID (x, _), _), f), p) =>
+                    PBinConn (Imply, PBinPred (BPBigO, IVar (ID (x, _), _), f), p) =>
                     if x = 0 then
                       (* ignore this variable if the only thing mentioning it is a BigO premise *)
                       (case (try_forget (forget_i_p 0 1) p, try_forget (forget_i_i 0 1) f) of

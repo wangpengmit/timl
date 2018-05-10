@@ -143,8 +143,8 @@ fun test1 dirname =
       val SNat = SNat dummy
       val SBool = SBool dummy
       val SUnit = SUnit dummy
-      val t = TNat $ VarI (ID (1, dummy), [])
-      val s = Subset ((Base Nat, dummy), Bind.Bind (("_VC", dummy), ConstIN (0, dummy) %= VarI (ID (1, dummy), [])), dummy)
+      val t = TNat $ IVar (ID (1, dummy), [])
+      val s = SSubset ((BSNat, dummy), Bind.Bind (("_VC", dummy), INat (0, dummy) %= IVar (ID (1, dummy), [])), dummy)
       val t = MakeTForallI (s, ("_VC", dummy), t)
       val t = MakeTForallI (SNat, ("_i0", dummy), t)
       (* val t0 = t *)

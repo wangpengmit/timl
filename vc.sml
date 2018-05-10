@@ -87,14 +87,14 @@ fun prop2vcs p : vc list =
             in
                 ps
             end
-          | PBinConn (Imply, p1, p) =>
+          | PBinConn (BCImply, p1, p) =>
             let
                 val ps = prop2vcs p
                 val ps = add_hyp (PropH p1) ps
             in
                 ps
             end
-          | PBinConn (And, p1, p2) =>
+          | PBinConn (BCAnd, p1, p2) =>
             prop2vcs p1 @ prop2vcs p2
           | _ => [([], p)]
     end

@@ -23,9 +23,9 @@ fun TUniKind (name, t) = MakeTUni (name, KType, t)
 fun TUniKind_Many (names, t) = foldr TUniKind t names
 
 (* val TCString = TCTiML BaseTypes.String *)
-val TCInt = TCTiML BaseTypes.Int
-val TCBool = TCTiML BaseTypes.Bool
-val TCByte = TCTiML BaseTypes.Byte
+val TCInt = TCTiML BaseTypes.BTInt
+val TCBool = TCTiML BaseTypes.BTBool
+val TCByte = TCTiML BaseTypes.BTByte
 val TUnit = TConst TCUnit
 val TEmpty = TConst TCEmpty
 (* val TString = TConst TCString *)

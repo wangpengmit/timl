@@ -48,7 +48,7 @@ fun strn_bs s =
       str_uvar_bs strn_bs u
 
 fun strn_i i =
-  (* case is_IApp_UVarI i of *)
+  (* case is_IBApp_UVarI i of *)
   (*     SOME ((x, _), args) => sprintf "($ ...)" [str_uvar_i (str_bs, str_i []) x] *)
   (*   | NONE => *)
   case i of
@@ -64,14 +64,14 @@ fun strn_i i =
       (case opr of
            IBApp =>
            let
-             val (f, is) = collect_IApp i
+             val (f, is) = collect_IBApp i
              val is = f :: is
            in
              sprintf "($)" [join " " $ map strn_i is]
            end
          | IBAdd =>
            let
-             val is = collect_IAdd_left i
+             val is = collect_IBAdd_left i
            in
              sprintf "($)" [join " + " $ map strn_i is]
            end

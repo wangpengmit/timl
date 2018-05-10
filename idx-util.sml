@@ -95,15 +95,15 @@ fun collect_IBinOp_left opr i =
       else [i]
     | _ => [i]
              
-val collect_IAdd = collect_IBinOp IBAdd
-val collect_IAdd_left = collect_IBinOp_left IBAdd
-val collect_MultI = collect_IBinOp IBMult
+val collect_IBAdd = collect_IBinOp IBAdd
+val collect_IBAdd_left = collect_IBinOp_left IBAdd
+val collect_IBMult = collect_IBinOp IBMult
                                    
-fun combine_IAdd zero is = foldl' (fn (i, acc) => acc %+ i) zero is
-fun combine_IAdd_Time is = combine_IAdd (T0 dummy) is
-fun combine_IAdd_Nat is = combine_IAdd (N0 dummy) is
-fun combine_IAdd_nonempty i is = combine_IAdd_Time (i :: is)
-fun combine_IMult is = foldl' (fn (i, acc) => acc %* i) (T1 dummy) is
+fun combine_IBAdd zero is = foldl' (fn (i, acc) => acc %+ i) zero is
+fun combine_IBAdd_Time is = combine_IBAdd (T0 dummy) is
+fun combine_IBAdd_Nat is = combine_IBAdd (N0 dummy) is
+fun combine_IBAdd_nonempty i is = combine_IBAdd_Time (i :: is)
+fun combine_IBMult is = foldl' (fn (i, acc) => acc %* i) (T1 dummy) is
                                             
 fun collect_PBinConn opr i =
   case i of
@@ -115,10 +115,10 @@ fun collect_PBinConn opr i =
              
 val collect_PAnd = collect_PBinConn BCAnd
 
-fun collect_IApp i =
+fun collect_IBApp i =
   case collect_IBinOp_left IBApp i of
       f :: args => (f, args)
-    | [] => raise Impossible "collect_IApp(): null"
+    | [] => raise Impossible "collect_IBApp(): null"
 
 open Bind
        
@@ -152,9 +152,9 @@ fun collect_BSArrow b =
 
 fun combine_BSArrow (args, b) = foldr BSArrow b args
                     
-fun is_IApp_IUVar i =
+fun is_IBApp_IUVar i =
   let
-    val (f, args) = collect_IApp i
+    val (f, args) = collect_IBApp i
   in
     case f of
         IUVar (x, r) => SOME ((x, r), args)

@@ -261,7 +261,7 @@ fun whnf_i i =
         val i2 = whnf_i i2
       in
         case (opr, i1) of
-            (IApp, IAbs (_, Bind (_, i1), _)) => whnf_i (subst_i_i i2 i1)
+            (IBApp, IAbs (_, Bind (_, i1), _)) => whnf_i (subst_i_i i2 i1)
           | _ => IBinOp (opr, i1, i2)
       end
     | IIte (i1, i2, i3, r) =>
@@ -334,7 +334,7 @@ fun normalize_idx_visitor_vtable cast () : ('this, unit) idx_visitor_vtable =
         val i2 = normalize_i i2
       in
         case (opr, i1) of
-            (IApp, IAbs (_, Bind (_, i1), _)) => normalize_i (subst_i_i i2 i1)
+            (IBApp, IAbs (_, Bind (_, i1), _)) => normalize_i (subst_i_i i2 i1)
           | _ => IBinOp (opr, i1, i2)
       end
     val vtable = override_visit_IBinOp vtable visit_IBinOp
@@ -411,7 +411,7 @@ fun normalize_s b =
 (*         val i2 = normalize_i i2 *)
 (*       in *)
 (*         case (opr, i1) of *)
-(*             (IApp, IAbs (_, Bind (_, i1), _)) => normalize_i (subst_i_i i2 i1) *)
+(*             (IBApp, IAbs (_, Bind (_, i1), _)) => normalize_i (subst_i_i i2 i1) *)
 (*           | _ => IBinOp (opr, i1, i2) *)
 (*       end *)
 (*     | IIte (i1, i2, i3, r) => *)

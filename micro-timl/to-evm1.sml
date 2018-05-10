@@ -151,17 +151,17 @@ fun fresh_label () =
   end
 
 type idx = Expr.idx
-type bsort = Expr.bsort
+type basic_sort = Expr.basic_sort
 type sort = Expr.sort
-type ty = (Expr.var, bsort, idx, sort) ty
-type kind = bsort kind
+type ty = (Expr.var, basic_sort, idx, sort) ty
+type kind = basic_sort kind
                   
 val heap_ref = ref ([] : ((label * string) * (idx, sort, kind, ty) hval) list)
 fun output_heap pair = push_ref heap_ref pair
 
-fun IV n = VarI (ID (n, dummy), [])
+fun IV n = IVar (ID (n, dummy), [])
 fun TV n = TVar (ID (n, dummy), [])
-fun FIV x = VarI (make_Free_i x, [])
+fun FIV x = IVar (make_Free_i x, [])
 val T0 = T0 dummy
 val T1 = T1 dummy
 val N0 = N0 dummy
@@ -529,8 +529,8 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
               (*     end *)
               val loop_block =
                   let
-                    fun MakeSubset (name, s, p) = Subset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
-                    fun IToReal i = UnOpI (ToReal, i, dummy)
+                    fun MakeSubset (name, s, p) = SSubset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
+                    fun IToReal i = IUnOp (IUToReal, i, dummy)
                     val s = MakeSubset ("i", BSNat, IV 0 %<= shift01_i_i len)
                     val i = fresh_ivar ()
                     val loop_code =
@@ -542,7 +542,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
                         array_init_assign @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
                         JUMP)
-                    val block = ((st, rctx, [TNat (ConstIN (32, dummy) %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], IToReal (FIV i %* ConstIN (8, dummy)) %+ T1 %+ i_e), loop_code)
+                    val block = ((st, rctx, [TNat (INat 32 %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], IToReal (FIV i %* INat 8) %+ T1 %+ i_e), loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -558,7 +558,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
                         [POP, POP, SWAP1, POP, MARK_PreArray2ArrayPtr] @@
                         set_reg r @@
                         cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len)), st) e)
-                    val t_ex = make_exists "__p" $ Subset_from_prop dummy $ (FIV i %* N32 %=? N0) %= Itrue
+                    val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N32 %=? N0) %= Itrue
                     val block = ((st, rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], T1 %+ i_e), post_loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
@@ -655,8 +655,8 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         val t = cg_t t
         val i = assert_TiBool t
         val make_exists = make_exists "__p"
-        val t1 = make_exists (Subset_from_prop dummy $ i %= Itrue)
-        val t2 = make_exists (Subset_from_prop dummy $ i %= Ifalse)
+        val t1 = make_exists (SSubset_from_prop dummy $ i %= Itrue)
+        val t2 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
         val (name1, e1) = unBindSimpName bind1
         val (name2, e2) = unBindSimpName bind2
         val (e2, i_e2) = assert_EAscTime e2
@@ -902,6 +902,7 @@ fun test1 dirname =
     (* val () = println "" *)
                      
     val () = println "Started CPS conversion ..."
+    open MicroTiMLUtil
     val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"

@@ -21,7 +21,7 @@ exception T2MTError of string
 open MicroTiMLUtilTiML
 open MicroTiMLUtil
        
-fun on_k ((n, bs) : S.kind) : bsort kind = KArrowTypes n $ KArrows bs KType
+fun on_k ((n, bs) : S.kind) : basic_sort kind = KArrowTypes n $ KArrows bs KType
 
 fun foldr' f init xs = foldl' f init $ rev xs
 
@@ -49,24 +49,24 @@ fun int2var x = ID (x, dummy)
 
 fun PEqs pairs = combine_And $ map PEq pairs
   
-val BSUnit = Base UnitSort
+val BSUnit = BSBase BSSUnit
 
 fun on_mt (t : S.mtype) =
   case t of
-      S.Arrow ((i1, t1), i, (i2, t2)) => TArrow ((IState i1, on_mt t1), i, (IState i2, on_mt t2))
-    | S.TyNat (i, _) => TNat i
+      S.TArrow ((i1, t1), i, (i2, t2)) => TArrow ((IState i1, on_mt t1), i, (IState i2, on_mt t2))
+    | S.TNat (i, _) => TNat i
     | S.TiBool (i, _) => TiBool i
-    | S.TyArray (t, i) => TArr (on_mt t, i)
-    | S.Unit _ => TUnit
-    | S.Prod (t1, t2) => TProd (on_mt t1, on_mt t2)
-    | S.UniI (s, Bind.Bind (name, t), r) => TQuanI (Forall, IBindAnno ((name, s), on_mt t))
-    | S.MtVar x => TVar (x, [])
-    | S.MtApp (t1, t2) => TAppT (on_mt t1, on_mt t2)
-    | S.MtAbs (k, Bind.Bind (name, t), _) => TAbsT $ TBindAnno ((name, on_k k), on_mt t)
-    | S.MtAppI (t, i) => TAppI (on_mt t, i)
-    | S.MtAbsI (b, Bind.Bind (name, t), _) => TAbsI $ IBindAnno ((name, b), on_mt t)
-    | S.BaseType (t, r) => TConst (TCTiML t)
-    | S.UVar (x, _) =>
+    | S.TArray (t, i) => TArr (on_mt t, i)
+    | S.TUnit _ => TUnit
+    | S.TProd (t1, t2) => TProd (on_mt t1, on_mt t2)
+    | S.TUniI (s, Bind.Bind (name, t), r) => TQuanI (Forall, IBindAnno ((name, s), on_mt t))
+    | S.TVar x => TVar (x, [])
+    | S.TApp (t1, t2) => TAppT (on_mt t1, on_mt t2)
+    | S.TAbs (k, Bind.Bind (name, t), _) => TAbsT $ TBindAnno ((name, on_k k), on_mt t)
+    | S.TAppI (t, i) => TAppI (on_mt t, i)
+    | S.TAbsI (b, Bind.Bind (name, t), _) => TAbsI $ IBindAnno ((name, b), on_mt t)
+    | S.TBase (t, r) => TConst (TCTiML t)
+    | S.TUVar (x, _) =>
       (* exfalso x *)
       raise Impossible "to-micro-timl/on_mt/UVar"
     | S.TSumbool (s1, s2) => TSumbool (s1, s2)
@@ -80,14 +80,14 @@ fun on_mt (t : S.mtype) =
             val ibinds = on_i_ibinds shiftx_i_s (on_pair (shiftx_i_mt, on_list shiftx_i_i)) 0 len_bsorts ibinds
             val (name_sorts, (t, is)) = unfold_binds ibinds
             val () = assert (fn () => length is = len_bsorts) "length is = len_bsorts"
-            val formal_iargs = map (fn x => VarI (int2var x, [])) $ rev $ range $ len_bsorts
+            val formal_iargs = map (fn x => IVar (int2var x, [])) $ rev $ range $ len_bsorts
             val t = shiftx_i_mt 0 1 t
             val is = map (shiftx_i_i 0 1) is
             val formal_iargs = map (shiftx_i_i 0 (length name_sorts + 1)) formal_iargs
             val prop = PEqs $ zip (is, formal_iargs)
             (* val extra_sort_name = "__datatype_constraint" *)
             val extra_sort_name = "__VC"
-            val extra_sort = Subset ((BSUnit, dummy), Bind.Bind ((extra_sort_name, dummy), prop), dummy)
+            val extra_sort = SSubset ((BSUnit, dummy), Bind.Bind ((extra_sort_name, dummy), prop), dummy)
             val t = on_mt t
             val t = TExistsI_Many (rev $ map (mapFst IName) $ ((extra_sort_name, dummy), extra_sort) :: rev name_sorts, t)
           in
@@ -234,7 +234,7 @@ fun on_e (e : S.expr) =
       (* delegate to ECase *)
       let
         val (pn, e) = unBind bind
-        val (pn, Outer t) = case pn of S.AnnoP a => a | _ => raise Impossible "to-micro-timl/EAbs: must be AnnoP"
+        val (pn, Outer t) = case pn of S.PnAnno a => a | _ => raise Impossible "to-micro-timl/EAbs: must be AnnoP"
         val name = default (EName ("__x", dummy)) $ get_pn_alias $ from_TiML_ptrn pn
         val t = on_mt t
         fun shift_e_rule a = DerivedTrans.for_rule SS.shift_e_e a
@@ -295,8 +295,8 @@ and add_constr_decls (dt, e_body) =
           val (name_sorts, _) = unfold_binds core
           val inames = map fst name_sorts
           val ilen = length name_sorts
-          fun IV n = S.VarI (ID (n, dummy), [])
-          fun TV n = S.MtVar $ ID (n, dummy)
+          fun IV n = S.IVar (ID (n, dummy), [])
+          fun TV n = S.TVar $ ID (n, dummy)
           val ts = rev $ Range.map TV (0, tlen)
           val is = rev $ Range.map IV (0, ilen)
           fun shiftx_i_dt x n = DerivedTrans.for_dt $ shiftx_i_mt x n
@@ -317,8 +317,8 @@ and add_constr_decls (dt, e_body) =
       
 and make_constr (pos, ts, is, e, dt) =
     let
-      open ToStringRaw
-      open ToString
+      (* open ToStringRaw *)
+      (* open ToString *)
       (* fun str_var (_, (x, _)) = str_int x *)
       (* fun str_var x = LongId.str_raw_long_id str_int x *)
       (* val pp_t = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_raw_i, str_raw_s, const_fun "<kind>") *)
@@ -382,7 +382,7 @@ and make_constr (pos, ts, is, e, dt) =
       (* val () = println $ sprintf "$, $" [str_int $ length inj_anno, str_int pos] *)
       val pack_anno = nth_error inj_anno pos !! (fn () => raise Impossible $ sprintf "to-micro-timl/AppConstr: nth_error inj_anno: $, $" [str_int $ length inj_anno, str_int pos])
       (* val exists = peel_exists (length is + 1) pack_anno *)
-      val is = is @ [TTI dummy]
+      val is = is @ [ITT dummy]
       val e = on_e e
       val e = EPackIs (pack_anno, is, e)
       val e = EInj (inj_anno, pos, e)
@@ -565,15 +565,15 @@ and on_DRec (name, bind, _) =
       val e = on_e e
       fun on_bind_t (bind, t) =
         case bind of
-            S.SortingST (name, Outer s) => S.MakeUniI (s, unBinderName name, t, dummy)
+            S.SortingST (name, Outer s) => S.MakeTUniI (s, unBinderName name, t, dummy)
           | S.TypingST pn =>
             case pn of
-                AnnoP (_, Outer t1) => S.Arrow ((StMap.empty, t1), T0 dummy, (StMap.empty, t))
+                S.PnAnno (_, Outer t1) => S.TArrow ((StMap.empty, t1), T0 dummy, (StMap.empty, t))
               | _ => raise Impossible "to-micro-timl/DRec: must be AnnoP"
       val t = 
           case rev binds of
-              S.TypingST (AnnoP (_, Outer t1)) :: binds =>
-              foldl on_bind_t (S.Arrow ((pre, t1), i, (post, t))) binds
+              S.TypingST (S.PnAnno (_, Outer t1)) :: binds =>
+              foldl on_bind_t (S.TArrow ((pre, t1), i, (post, t))) binds
             | [] => t
             | _ => raise Impossible "to-micro-timl/DRec: Recursion must have an annotated typing bind as the last bind"
       val t = on_mt t
