@@ -1288,7 +1288,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                      if StMap.numItems pre_st_minus_st = 0 then ()
                      else raise Error (r1, ["these state fields are required by the function by missing in current state:", str_ls str_st_key $ StMapU.domain pre_st_minus_st])
                    end
-                 val () = app (fn k => unify_i r1 gctxn sctxn (st @!! k, pre_st @!! k)) $ StMapU.domain pre_st
+                 val () = check_submap pre_st st
+                 val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
                  val st = st @++ post_st
                in
                  (EApp (e1, e2), t, d1 %+ d2 %+ T1 r1 %+ d, st) 

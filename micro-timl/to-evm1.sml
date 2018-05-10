@@ -850,8 +850,8 @@ fun test1 dirname =
     val (prog, _, _) = resolve_prog empty prog
                                     
     open TypeCheck
-    val () = TypeCheck.turn_on_builtin ()
     val () = println "Started TiML typechecking ..."
+    val () = TypeCheck.turn_on_builtin ()
     val () = TypeCheck.clear_st_types ()
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
     val (st_name2ty, st_name2int) = TypeCheck.get_st_types ()
