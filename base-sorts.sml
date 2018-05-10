@@ -2,11 +2,11 @@ structure BaseSorts = struct
 open Util
 (* basic index sort *)
 datatype base_sort =
-         Nat
-         | Time
-	 | BoolSort
-	 | UnitSort
-         | BSState
+         BSSNat
+         | BSSTime
+	 | BSSBool
+	 | BSSUnit
+         | BSSState
 
 fun str_b (s : base_sort) : string = 
   case s of

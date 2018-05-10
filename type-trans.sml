@@ -199,7 +199,7 @@ fun subst_i_t_fn params b =
     #visit_ty vtable visitor 0 b
   end
 
-fun subst_t_type_visitor_vtable cast visit_MtVar : ('this, idepth * tdepth) type_visitor_vtable =
+fun subst_t_type_visitor_vtable cast visit_TVar : ('this, idepth * tdepth) type_visitor_vtable =
   let
     fun extend_i this (di, dt) name = ((idepth_inc di, dt), name)
     fun extend_t this (di, dt) name = ((di, tdepth_inc dt), name)
@@ -214,7 +214,7 @@ fun subst_t_type_visitor_vtable cast visit_MtVar : ('this, idepth * tdepth) type
           visit_noop
           visit_noop
           visit_noop
-    val vtable = override_visit_MtVar vtable (ignore_this visit_MtVar)
+    val vtable = override_visit_TVar vtable (ignore_this visit_TVar)
   in
     vtable
   end
@@ -238,7 +238,7 @@ fun subst_t_t_fn params b =
 end
                                   
 functor TypeSubstFn (structure Type : TYPE
-                     val visit_MtVar : (Namespaces.idepth * Namespaces.tdepth) * int * Type.mtype -> Namespaces.idepth * Namespaces.tdepth -> Type.var -> Type.mtype
+                     val visit_TVar : (Namespaces.idepth * Namespaces.tdepth) * int * Type.mtype -> Namespaces.idepth * Namespaces.tdepth -> Type.var -> Type.mtype
                      val substx_i_i : int -> int -> Type.idx -> Type.idx -> Type.idx
                      val substx_i_s : int -> int -> Type.idx -> Type.sort -> Type.sort
                     ) = struct
@@ -262,7 +262,7 @@ fun substx_i_t d x v = subst_i_t_fn $ subst_i_params (d, x, v)
 fun subst_i_mt (v : idx) (b : mtype) : mtype = substx_i_mt 0 0 v b
 fun subst_i_t (v : idx) (b : ty) : ty = substx_i_t 0 0 v b
 
-val subst_t_params = visit_MtVar
+val subst_t_params = visit_TVar
 
 fun substx_t_mt d x v = subst_t_mt_fn $ subst_t_params (IDepth_TDepth d, x, v)
 fun substx_t_t d x v = subst_t_t_fn $ subst_t_params (IDepth_TDepth d, x, v)

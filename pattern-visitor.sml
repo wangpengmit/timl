@@ -7,12 +7,12 @@ infixr 0 $
 type ('this, 'env, 'cvar, 'mtype, 'cvar2, 'mtype2) ptrn_visitor_vtable =
      {
        visit_ptrn : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn -> ('cvar2, 'mtype2) ptrn,
-       visit_VarP : 'this -> 'env ctx -> ename binder -> ('cvar2, 'mtype2) ptrn,
-       visit_TTP : 'this -> 'env ctx -> region -> ('cvar2, 'mtype2) ptrn,
-       visit_PairP : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * ('cvar, 'mtype) ptrn -> ('cvar2, 'mtype2) ptrn,
-       visit_AliasP : 'this -> 'env ctx -> ename binder * ('cvar, 'mtype) ptrn * region -> ('cvar2, 'mtype2) ptrn,
-       visit_ConstrP : 'this -> 'env ctx -> ('cvar * bool) outer * iname binder list * ('cvar, 'mtype) ptrn * region -> ('cvar2, 'mtype2) ptrn,
-       visit_AnnoP : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * 'mtype outer -> ('cvar2, 'mtype2) ptrn,
+       visit_PnVar : 'this -> 'env ctx -> ename binder -> ('cvar2, 'mtype2) ptrn,
+       visit_PnTT : 'this -> 'env ctx -> region -> ('cvar2, 'mtype2) ptrn,
+       visit_PnPair : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * ('cvar, 'mtype) ptrn -> ('cvar2, 'mtype2) ptrn,
+       visit_PnAlias : 'this -> 'env ctx -> ename binder * ('cvar, 'mtype) ptrn * region -> ('cvar2, 'mtype2) ptrn,
+       visit_PnConstr : 'this -> 'env ctx -> ('cvar * bool) outer * iname binder list * ('cvar, 'mtype) ptrn * region -> ('cvar2, 'mtype2) ptrn,
+       visit_PnAnno : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * 'mtype outer -> ('cvar2, 'mtype2) ptrn,
        visit_cvar : 'this -> 'env -> 'cvar -> 'cvar2,
        visit_mtype : 'this -> 'env -> 'mtype -> 'mtype2,
        extend_i : 'this -> 'env -> iname -> 'env * iname,
@@ -53,49 +53,49 @@ fun default_ptrn_visitor_vtable
         val vtable = cast this
       in
         case data of
-            VarP data => #visit_VarP vtable this env data
-          | TTP data => #visit_TTP vtable this env data
-          | PairP data => #visit_PairP vtable this env data
-          | AliasP data => #visit_AliasP vtable this env data
-          | ConstrP data => #visit_ConstrP vtable this env data
-          | AnnoP data => #visit_AnnoP vtable this env data
+            PnVar data => #visit_PnVar vtable this env data
+          | PnTT data => #visit_PnTT vtable this env data
+          | PnPair data => #visit_PnPair vtable this env data
+          | PnAlias data => #visit_PnAlias vtable this env data
+          | PnConstr data => #visit_PnConstr vtable this env data
+          | PnAnno data => #visit_PnAnno vtable this env data
       end
-    fun visit_VarP this env data =
+    fun visit_PnVar this env data =
       let
         val vtable = cast this
       in
-        VarP $ visit_ebinder this env data
+        PnVar $ visit_ebinder this env data
       end
-    fun visit_TTP this env data =
-      TTP data
-    fun visit_PairP this env data = 
+    fun visit_PnTT this env data =
+      PnTT data
+    fun visit_PnPair this env data = 
       let
         val vtable = cast this
         val (p1, p2) = data
         val p1 = #visit_ptrn vtable this env p1
         val p2 = #visit_ptrn vtable this env p2
       in
-        PairP (p1, p2)
+        PnPair (p1, p2)
       end
-    fun visit_AliasP this env data =
+    fun visit_PnAlias this env data =
       let
         val vtable = cast this
         val (name, p, r) = data
         val name = visit_ebinder this env name
         val p = #visit_ptrn vtable this env p
       in
-        AliasP (name, p, r)
+        PnAlias (name, p, r)
       end
-    fun visit_AnnoP this env data = 
+    fun visit_PnAnno this env data = 
       let
         val vtable = cast this
         val (p, t) = data
         val p = #visit_ptrn vtable this env p
         val t = visit_outer (#visit_mtype vtable this) env t
       in
-        AnnoP (p, t)
+        PnAnno (p, t)
       end
-    fun visit_ConstrP this env data =
+    fun visit_PnConstr this env data =
       let
         val vtable = cast this
         val (x, inames, p, r) = data
@@ -103,17 +103,17 @@ fun default_ptrn_visitor_vtable
         val inames = map (visit_ibinder this env) inames
         val p = #visit_ptrn vtable this env p
       in
-        ConstrP (x, inames, p, r)
+        PnConstr (x, inames, p, r)
       end
   in
     {
       visit_ptrn = visit_ptrn,
-      visit_VarP = visit_VarP,
-      visit_TTP = visit_TTP,
-      visit_PairP = visit_PairP,
-      visit_AliasP = visit_AliasP,
-      visit_AnnoP = visit_AnnoP,
-      visit_ConstrP = visit_ConstrP,
+      visit_PnVar = visit_PnVar,
+      visit_PnTT = visit_PnTT,
+      visit_PnPair = visit_PnPair,
+      visit_PnAlias = visit_PnAlias,
+      visit_PnAnno = visit_PnAnno,
+      visit_PnConstr = visit_PnConstr,
       visit_cvar = visit_cvar,
       visit_mtype = visit_mtype,
       extend_i = extend_i,

@@ -88,11 +88,11 @@ signature EXPR = sig
   (* | McModBind of name * mod *)
 
   datatype top_bind =
-           TopModBind of mod
+           TBMod of mod
            (* | TopSigBind of name * sgn *)
            (* | TopModSpec of name * sgn *)
-           | TopFunctorBind of (name * sgn) (* list *) * mod
-           | TopFunctorApp of mod_id * mod_id (* list *)
+           | TBFunctor of (name * sgn) (* list *) * mod
+           | TBFunctorApp of mod_id * mod_id (* list *)
            | TBState of bool * mtype
 
   type prog = (name * top_bind) list

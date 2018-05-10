@@ -10,57 +10,57 @@ datatype idx_const =
          | ICTime of TimeType.time
 
 datatype idx_un_op =
-         ToReal
-         | Ceil
-         | Floor
-         | B2n
-         | Neg
+         IUToReal
+         | IUCeil
+         | IUFloor
+         | IUB2n
+         | IUNeg
          | IUDiv of int
-         | Log of string
+         | IULog of string
          (* | IUExp of string *)
 
-val Log2 = Log "2"
-val Log10 = Log "10"
+val Log2 = IULog "2"
+val Log10 = IULog "10"
                
 datatype idx_bin_op =
-	 AddI
-	 | MultI
-         | ModI
-	 | MaxI
-	 | MinI
-         | IApp 
-         | EqI
-         | AndI
-         | OrI
-         | ExpNI
-         | LtI
-         | GtI
-         | LeI
-         | GeI
-         | BoundedMinusI
-         | MinusI (* only used internally for annotation propagation *)
+	 IBAdd
+	 | IBMult
+         | IBMod
+	 | IBMax
+	 | IBMin
+         | IBApp 
+         | IBEq
+         | IBAnd
+         | IBOr
+         | IBExpN
+         | IBLt
+         | IBGt
+         | IBLe
+         | IBGe
+         | IBBoundedMinus
+         | IBMinus (* only used internally for annotation propagation *)
          | IBUnion
 
 (* binary logical connectives *)
 datatype bin_conn =
-	 And
-	 | Or
-	 | Imply
-	 | Iff
+	 BCAnd
+	 | BCOr
+	 | BCImply
+	 | BCIff
 
 (* binary predicates on indices *)
 datatype bin_pred =
-         EqP
-         | LeP
-         | LtP
-         | GeP
-         | GtP
-         | BigO
+         BPEq
+         | BPLe
+         | BPLt
+         | BPGe
+         | BPGt
+         | BPBigO
                
 (* existential quantifier might carry other information such as a unification variable to update when this existential quantifier gets instantiated *)
 datatype 'a quan =
-         Forall
-         | Exists of 'a
+         QForall
+         | QExists of 'a
 
 type nat = int
 
@@ -306,60 +306,60 @@ fun str_idx_const c =
 
 fun str_idx_un_op opr =
   case opr of
-      ToReal => "$"
-    | Log base => sprintf "log$" [base]
-    | Ceil => "ceil"
-    | Floor => "floor"
-    | B2n => "b2n"
-    | Neg => "not"
+      IUToReal => "$"
+    | IULog base => sprintf "log$" [base]
+    | IUCeil => "ceil"
+    | IUFloor => "floor"
+    | IUB2n => "b2n"
+    | IUNeg => "not"
     | IUDiv d => sprintf "(/ $)" [str_int d]
     (* | IUExp s => sprintf "( ** $)" [s] *)
 
 fun str_idx_bin_op opr =
   case opr of
-      AddI => "+"
-    | MultI => " *"
-    | ModI => "mod"
-    | MaxI => "max"
-    | MinI => "min"
-    | IApp => "app"
-    | AndI => "&&"
-    | OrI => "||"
-    | ExpNI => "**"
-    | EqI => "=?"
-    | LtI => "<?"
-    | GtI => ">?"
-    | LeI => "<=?"
-    | GeI => ">=?"
-    | BoundedMinusI => "-"
-    | MinusI => "MinusI"
+      IBAdd => "+"
+    | IBMult => " *"
+    | IBMod => "mod"
+    | IBMax => "max"
+    | IBMin => "min"
+    | IBApp => "app"
+    | IBAnd => "&&"
+    | IBOr => "||"
+    | IBExpN => "**"
+    | IBEq => "=?"
+    | IBLt => "<?"
+    | IBGt => ">?"
+    | IBLe => "<=?"
+    | IBGe => ">=?"
+    | IBBoundedMinus => "-"
+    | IBMinus => "MinusI"
     | IBUnion => "++"
 
 fun str_bin_conn opr =
   case opr of
-      And => "/\\"
-    | Or => "\\/"
-    | Imply => "->"
-    | Iff => "<->"
+      BCAnd => "/\\"
+    | BCOr => "\\/"
+    | BCImply => "->"
+    | BCIff => "<->"
 
 fun str_bin_pred opr =
   case opr of
-      EqP => "="
-    | LeP => "<="
-    | LtP => "<"
-    | GeP => ">="
-    | GtP => ">"
-    | BigO => "<=="
+      BPEq => "="
+    | BPLe => "<="
+    | BPLt => "<"
+    | BPGe => ">="
+    | BPGt => ">"
+    | BPBigO => "<=="
 
 fun strip_quan q =
   case q of
-      Forall => Forall
-    | Exists _ => Exists ()
+      QForall => QForall
+    | QExists _ => QExists ()
                          
 fun str_quan q =
     case q of
-        Forall => "forall"
-      | Exists _ => "exists"
+        QForall => "forall"
+      | QExists _ => "exists"
 
 fun str_expr_EI opr =
   case opr of

@@ -11,24 +11,24 @@ infixr 0 $
          
 fun get_region_i i =
   case i of
-      VarI (x, _) => get_region_var x
+      IVar (x, _) => get_region_var x
     | IConst (_, r) => r
-    | UnOpI (_, _, r) => r
+    | IUnOp (_, _, r) => r
     | BinOpI (_, i1, i2) => combine_region (get_region_i i1) (get_region_i i2)
     | Ite (_, _, _, r) => r
     | IAbs (_, _, r) => r
-    | UVarI (_, r) => r
+    | UIVar (_, r) => r
     | IState _ => dummy
 
 fun set_region_i i r =
   case i of
-      VarI (x, anno) => VarI (set_region_var x r, anno)
+      IVar (x, anno) => IVar (set_region_var x r, anno)
     | IConst (a, _) => IConst (a, r)
-    | UnOpI (opr, i, _) => UnOpI (opr, i, r)
+    | IUnOp (opr, i, _) => IUnOp (opr, i, r)
     | BinOpI (opr, i1, i2) => BinOpI (opr, set_region_i i1 r, set_region_i i2 r)
     | Ite (i1, i2, i3, _) => Ite (i1, i2, i3, r)
     | IAbs (name, i, _) => IAbs (name, i, r)
-    | UVarI (a, _) => UVarI (a, r)
+    | UIVar (a, _) => UIVar (a, r)
     | IState _ => i
 
 fun get_region_p p = 

@@ -7,35 +7,35 @@ type id = string * region
 type long_id = id option * id
                              
 datatype idx = 
-	 VarI of long_id
-	 | ConstIN of int * region
-	 | ConstIT of string * region
+	 IVar of long_id
+	 | INat of int * region
+	 | ITime of string * region
          (* | UnOpI of idx_un_op * idx * region *)
-	 | BinOpI of idx_bin_op * idx * idx * region
-	 | TTI of region
+	 | IBinOp of idx_bin_op * idx * idx * region
+	 | ITT of region
          | IAbs of id list * idx * region
-         | DivI of idx * (int * region) * region
+         | IDiv of idx * (int * region) * region
 
 datatype prop =
-	 ConstP of string * region
-         | Not of prop * region
-	 | BinConn of bin_conn * prop * prop * region
-	 | BinPred of bin_pred * idx * idx * region
+	 PConst of string * region
+         | PNot of prop * region
+	 | PBinConn of bin_conn * prop * prop * region
+	 | PBinPred of bin_pred * idx * idx * region
 
 datatype bsort =
-         Base of id
+         BSId of id
 
 datatype sort =
-	 Basic of bsort
-	 | Subset of bsort * id * prop * region
-         | BigOSort of string * bsort * idx * region
+	 SBasic of bsort
+	 | SSubset of bsort * id * prop * region
+         | SBigO of string * bsort * idx * region
 
 datatype quan =
-	 Forall
+	 QForall
 
 datatype abs = 
-	 Fn
-	 | Rec
+	 AbsFn
+	 | AbsRec
 
 type sort_bind = id * sort * region
 type bsort_bind = id * bsort * region
@@ -46,12 +46,12 @@ fun bsortings (ids, b, r) = map (fn id => (id, b, r)) ids
 type id_or_bsort_bind = (id, bsort_bind) sum 
                                
 datatype ty =
-	 VarT of long_id
-	 | Arrow of ty * idx * ty * region
-	 | Prod of ty * ty * region
-	 | Quan of quan * sort_bind list * ty * region
-	 | AppTT of ty * ty * region
-	 | AppTI of ty * idx * region
+	 TVar of long_id
+	 | TArrow of ty * idx * ty * region
+	 | TProd of ty * ty * region
+	 | TQuan of quan * sort_bind list * ty * region
+	 | TAppT of ty * ty * region
+	 | TAppI of ty * idx * region
 	 | TAbs of id_or_bsort_bind list * ty * region
 
 fun get_region_long_id (m, (_, r)) =
@@ -61,33 +61,33 @@ fun get_region_long_id (m, (_, r)) =
 
 fun get_region_t t =
     case t of
-        VarT x => get_region_long_id x
-      | Arrow (_, _, _, r) => r
-      | Prod (_, _, r) => r
-      | Quan (_, _, _, r) => r
-      | AppTT (_, _, r) => r
-      | AppTI (_, _, r) => r
+        TVar x => get_region_long_id x
+      | TArrow (_, _, _, r) => r
+      | TProd (_, _, r) => r
+      | TQuan (_, _, _, r) => r
+      | TAppT (_, _, r) => r
+      | TAppI (_, _, r) => r
       | TAbs (_, _, r) => r
 
 type constr_core = ty * ty option
 type constr_decl = id * sort_bind list * constr_core option * region
 
 datatype ptrn =
-	 ConstrP of (long_id * bool) * string list * ptrn option * region
-         | TupleP of ptrn list * region
-         | AliasP of id * ptrn * region
-         | AnnoP of ptrn * ty * region
+	 PnConstr of (long_id * bool) * string list * ptrn option * region
+         | PnTuple of ptrn list * region
+         | PnAlias of id * ptrn * region
+         | PnAnno of ptrn * ty * region
 
 fun get_region_pn pn =
     case pn of
-        ConstrP (_, _, _, r) => r
-      | TupleP (_, r) => r
-      | AliasP (_, _, r) => r
-      | AnnoP (_, _, r) => r
+        PnConstr (_, _, _, r) => r
+      | PnTuple (_, r) => r
+      | PnAlias (_, _, r) => r
+      | PnAnno (_, _, r) => r
 
 datatype bind =
-	 Typing of ptrn
-	 | BindSort of sort_bind
+	 BindTyping of ptrn
+	 | BindSorting of sort_bind
 
 type return = ty option * idx option
 
@@ -106,18 +106,18 @@ datatype expr_tri_op =
 type state = (id * idx) list
      
 datatype exp = 
-	 Var of long_id * bool
-         | Tuple of exp list * region
-         | Abs of bind list * return * exp * region
+	 EVar of long_id * bool
+         | ETuple of exp list * region
+         | EAbs of bind list * return * exp * region
          (* | App of exp * exp * region *)
-         | AppI of exp * idx * region
-         | Case of exp * return * (ptrn * exp) list * region
-         | Asc of exp * ty * region
-         | AscTime of exp * idx * region
-         | Let of return * decl list * exp * region
-         | Const of exp_const * region
+         | EAppI of exp * idx * region
+         | ECase of exp * return * (ptrn * exp) list * region
+         | EAsc of exp * ty * region
+         | EAscTime of exp * idx * region
+         | ELet of return * decl list * exp * region
+         | EConst of exp_const * region
          | EUnOp of expr_un_op * exp * region
-         | BinOp of expr_bin_op * exp * exp * region
+         | EBinOp of expr_bin_op * exp * exp * region
          | ETriOp of expr_tri_op * exp * exp * exp * region
          | EIfi of exp * exp * exp * region
          | ENever of region
@@ -126,29 +126,29 @@ datatype exp =
          | EGet of (id * exp list) * region
 
      and decl =
-         Val of id list * ptrn * exp * region
-         | Rec of id list * id * bind list * state * state option * return * exp * region
-         | Datatype of datatype_def
-         | IdxDef of id * sort option * idx
-         | AbsIdx2 of id * sort option * idx
-         | AbsIdx of id * sort option * idx option * decl list * region
-         | TypeDef of id * ty
-         | Open of id
+         DVal of id list * ptrn * exp * region
+         | DRec of id list * id * bind list * state * state option * return * exp * region
+         | DDatatype of datatype_def
+         | DIdxDef of id * sort option * idx
+         | DAbsIdx2 of id * sort option * idx
+         | DAbsIdx of id * sort option * idx option * decl list * region
+         | DTypeDef of id * ty
+         | DOpen of id
 
 fun EIte (e1, e2, e3, r) = ETriOp (ETIte, e1, e2, e3, r)
 (* fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r) *)
-fun App (e1, e2, r) = BinOp (EBApp, e1, e2, r)
+fun EApp (e1, e2, r) = EBinOp (EBApp, e1, e2, r)
 fun short_id id = ((NONE, id), false)
-fun PShortVar (x, r) = ConstrP (short_id (x, r), [], NONE, r)
+fun PnShortVar (x, r) = PnConstr (short_id (x, r), [], NONE, r)
 (* fun EIte (e, e1, e2, r) = Case (e, (NONE, NONE), [(PShortVar ("true", r), e1), (PShortVar ("false", r), e2)], r) *)
-fun EShortVar id = Var (short_id id)
-fun ECons (e1, e2, r) = App (EShortVar ("Cons", r), Tuple ([e1, e2], r), r)
-fun PCons (pn1, pn2, r) = ConstrP (short_id ("Cons", r), [], SOME (TupleP ([pn1, pn2], r)), r)
+fun EShortVar id = EVar (short_id id)
+fun ECons (e1, e2, r) = EApp (EShortVar ("Cons", r), ETuple ([e1, e2], r), r)
+fun PnCons (pn1, pn2, r) = PnConstr (short_id ("Cons", r), [], SOME (PnTuple ([pn1, pn2], r)), r)
 fun ENil r = EShortVar ("Nil", r)
 fun EList (es, r) = foldr (fn (e, acc) => ECons (e, acc, r)) (ENil r) es
-fun PNil r = PShortVar ("Nil", r)
-fun PList (pns, r) = foldr (fn (pn, acc) => PCons (pn, acc, r)) (PNil r) pns
-fun ESemiColon (e1, e2, r) = Let ((NONE, NONE), [Val ([], PShortVar ("_", r), e1, r)], e2, r)
+fun PnNil r = PnShortVar ("Nil", r)
+fun PnList (pns, r) = foldr (fn (pn, acc) => PnCons (pn, acc, r)) (PnNil r) pns
+fun ESemiColon (e1, e2, r) = ELet ((NONE, NONE), [DVal ([], PnShortVar ("_", r), e1, r)], e2, r)
 fun EInc r =EShortVar ("inc", r)
 fun EAdd r =EShortVar ("add", r)
                                
@@ -170,10 +170,10 @@ datatype mod =
          | ModTransparentAsc of mod * sgn
                                                
 datatype top_bind =
-         TopModBind of name * mod
-         | TopFunctorBind of name * (name * sgn) * mod
-         | TopFunctorApp of name * id * id
-       | TBState of name * ty
+         TBMod of name * mod
+         | TBFunctor of name * (name * sgn) * mod
+         | TBFunctorApp of name * id * id
+         | TBState of name * ty
 
 type prog = top_bind list
 
@@ -195,7 +195,7 @@ fun underscore r = (NONE, ("_", r))
 
 fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
 
-fun UnOpI (opr, i, r) = BinOpI (IApp, VarI (NONE, (str_idx_un_op opr, r)), i, r)
+fun IUnOp (opr, i, r) = IBinOp (IBApp, IVar (NONE, (str_idx_un_op opr, r)), i, r)
 
 val empty_state = []
 

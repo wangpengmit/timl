@@ -1,8 +1,8 @@
 structure BaseTypes = struct
 datatype base_type =
-         Int
-         | Bool
-         | Byte
+         BTInt
+         | BTBool
+         | BTByte
 (* | String *)
            
 fun eq_base_type (t : base_type, t') = t = t'

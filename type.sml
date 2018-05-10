@@ -12,31 +12,31 @@ open UVarT
 open Idx
 open Bind
                         
-type kind = int (*number of type arguments*) * bsort list
+type kind = int (*number of type arguments*) * basic_sort list
 
 type 'mtype constr_core = (sort, name, 'mtype * idx list) ibinds
 type 'mtype constr_decl = name * 'mtype constr_core * region
 (* to be used in typing context *)                                                          
 type 'mtype constr_info = var(*family*) * (unit, name, 'mtype constr_core) tbinds
 
-type 'mtype datatype_def = (name(*for datatype self-reference*) * (unit, name, Idx.bsort list * 'mtype constr_decl list) Bind.tbinds) Bind.tbind
+type 'mtype datatype_def = (name(*for datatype self-reference*) * (unit, name, Idx.basic_sort list * 'mtype constr_decl list) Bind.tbinds) Bind.tbind
 
 (* monotypes *)
 datatype mtype = 
-	 Arrow of (idx StMap.map * mtype) * (idx (* * idx *)) * (idx StMap.map * mtype)
-         | TyNat of idx * region
+	 TArrow of (idx StMap.map * mtype) * (idx (* * idx *)) * (idx StMap.map * mtype)
+         | TNat of idx * region
          | TiBool of idx * region
-         | TyArray of mtype * idx
-	 | BaseType of base_type * region
-         | Unit of region
-	 | Prod of mtype * mtype
-	 | UniI of sort * (name * mtype) ibind * region
-         | MtVar of var
-         | MtAbs of kind * (name * mtype) tbind * region
-         | MtApp of mtype * mtype
-         | MtAbsI of bsort * (name * mtype) ibind  * region
-         | MtAppI of mtype * idx
-         | UVar of (bsort, kind, mtype) uvar_mt * region
+         | TArray of mtype * idx
+	 | TBase of base_type * region
+         | TUnit of region
+	 | TProd of mtype * mtype
+	 | TUniI of sort * (name * mtype) ibind * region
+         | TVar of var
+         | TAbs of kind * (name * mtype) tbind * region
+         | TApp of mtype * mtype
+         | TAbsI of basic_sort * (name * mtype) ibind  * region
+         | TAppI of mtype * idx
+         | TUVar of (basic_sort, kind, mtype) uvar_mt * region
          | TDatatype of mtype datatype_def * region
          | TSumbool of sort * sort
          | TMap of mtype
@@ -44,8 +44,8 @@ datatype mtype =
          | TTuplePtr of mtype list * int * region
 
 datatype ty = 
-	 Mono of mtype
-	 | Uni of (name * ty) tbind * region
+	 PTMono of mtype
+	 | PTUni of (name * ty) tbind * region
 
 end
 

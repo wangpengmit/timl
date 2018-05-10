@@ -15,35 +15,35 @@ open UVarI
 open Bind
 open Operators
                         
-(* basic index sort with arrow and uvar *)
-datatype bsort = 
-         Base of base_sort 
-         | BSArrow of bsort * bsort
-         | UVarBS of bsort uvar_bs
-                           
+(* base sorts with arrow and uvar *)
+datatype basic_sort = 
+         BSBase of base_sort 
+         | BSArrow of basic_sort * basic_sort
+         | BSUVar of basic_sort uvar_bs
+                                 
 datatype idx =
-	 VarI of var * sort list
+	 IVar of var * sort list
          | IConst of idx_const * region
-         | UnOpI of idx_un_op * idx * region
-         | BinOpI of idx_bin_op * idx * idx
-         | Ite of idx * idx * idx * region
-         | IAbs of bsort * (name * idx) ibind * region
+         | IUnOp of idx_un_op * idx * region
+         | IBinOp of idx_bin_op * idx * idx
+         | IIte of idx * idx * idx * region
+         | IAbs of basic_sort * (name * idx) ibind * region
          | IState of idx StMap.map
-         | UVarI of (bsort, idx) uvar_i * region
+         | IUVar of (basic_sort, idx) uvar_i * region
 
 and prop =
 	 PTrueFalse of bool * region
-         | BinConn of bin_conn * prop * prop
-         | Not of prop * region
-	 | BinPred of bin_pred * idx * idx
-         | Quan of idx exists_anno (*for linking idx inferer with types*) quan * bsort * (name * prop) ibind * region
+         | PBinConn of bin_conn * prop * prop
+         | PNot of prop * region
+	 | PBinPred of bin_pred * idx * idx
+         | PQuan of idx exists_anno (*for linking idx inferer with types*) quan * basic_sort * (name * prop) ibind * region
 
 and sort =
-	 Basic of bsort * region
-	 | Subset of (bsort * region) * (name * prop) ibind * region
-         | UVarS of (bsort, sort) uvar_s * region
+	 SBasic of basic_sort * region
+	 | SSubset of (basic_sort * region) * (name * prop) ibind * region
+         | SUVar of (basic_sort, sort) uvar_s * region
          (* [SAbs] and [SApp] are just for higher-order unification *)
-         | SAbs of bsort * (name * sort) ibind * region
+         | SAbs of basic_sort * (name * sort) ibind * region
          | SApp of sort * idx
                             
 end

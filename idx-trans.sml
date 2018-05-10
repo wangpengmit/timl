@@ -68,13 +68,13 @@ open IdxShiftVisitor
 (*   let *)
 (*     fun f x n b = *)
 (*       case b of *)
-(* 	  VarI y => VarI $ on_v x n y *)
+(* 	  IVar y => IVar $ on_v x n y *)
 (*         | IConst c => IConst c *)
 (*         | UnOpI (opr, i, r) => UnOpI (opr, f x n i, r) *)
 (* 	| BinOpI (opr, i1, i2) => BinOpI (opr, f x n i1, f x n i2) *)
 (*         | Ite (i1, i2, i3, r) => Ite (f x n i1, f x n i2, f x n i3, r) *)
 (*         | IAbs (b, bind, r) => IAbs (b, on_i_ibind f x n bind, r) *)
-(*         | UVarI a => b (* uvars are closed, so no need to deal with *) *)
+(*         | IUVar a => b (* uvars are closed, so no need to deal with *) *)
 (*   in *)
 (*     f x n b *)
 (*   end *)
@@ -137,11 +137,11 @@ open IdxVisitor
 (* fun substx_list f d x v b = map (f d x v) b *)
 
 (* depth [d] is used for shifting value [v] *)
-fun subst_i_idx_visitor_vtable cast visit_VarI_param : ('this, int) idx_visitor_vtable =
+fun subst_i_idx_visitor_vtable cast visit_IVar_param : ('this, int) idx_visitor_vtable =
   let
     fun extend_i this d name = (d + 1, name)
-    fun visit_VarI this env (y, anno) =
-        visit_VarI_param (#visit_sort (cast this) this env) env (y, anno)
+    fun visit_IVar this env (y, anno) =
+        visit_IVar_param (#visit_sort (cast this) this env) env (y, anno)
     val vtable = 
         default_idx_visitor_vtable
           cast
@@ -151,7 +151,7 @@ fun subst_i_idx_visitor_vtable cast visit_VarI_param : ('this, int) idx_visitor_
           visit_noop
           visit_noop
           visit_noop
-    val vtable = override_visit_VarI vtable visit_VarI
+    val vtable = override_visit_IVar vtable visit_IVar
   in
     vtable
   end
@@ -182,7 +182,7 @@ fun subst_i_s_fn params b =
 end
                                  
 functor IdxSubstFn (structure Idx : IDX
-                    val visit_VarI : int * int * Idx.idx -> (Idx.sort -> Idx.sort) -> int -> Idx.var * Idx.sort list -> Idx.idx
+                    val visit_IVar : int * int * Idx.idx -> (Idx.sort -> Idx.sort) -> int -> Idx.var * Idx.sort list -> Idx.idx
                    ) = struct
 
 open Idx
@@ -193,7 +193,7 @@ infixr 0 $
 structure IdxSubstVisitor = IdxSubstVisitorFn (Idx)
 open IdxSubstVisitor
                                          
-val subst_i_params = visit_VarI
+val subst_i_params = visit_IVar
                      
 fun substx_i_i d x v = subst_i_i_fn $ subst_i_params (d, x, v)
 fun substx_i_p d x v = subst_i_p_fn $ subst_i_params (d, x, v)
