@@ -62,7 +62,7 @@ fun smt_solver filename use_batch vcs =
                                    
       val () = println (sprintf "SMT solver generated or left $ proof obligations unproved." [str_int $ length unsats])
       val () = println ""
-                       (* val () = print_unsats false filename unsats *)
+      (* val () = print_unsats false filename unsats *)
     in
       (* map fst unsats *)
       unsats

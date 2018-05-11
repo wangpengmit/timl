@@ -404,7 +404,7 @@ local
                              else NONE
                          in
                            case p of
-                               PBinPred (EqP, i1, i2) => firstSuccess find_var [(i1, i2), (i2, i1)]
+                               PBinPred (BPEq (), i1, i2) => firstSuccess find_var [(i1, i2), (i2, i1)]
                              | _ => NONE
                          end
                        fun foldr_hyps shift1 shift2 f init hyps =
@@ -549,7 +549,7 @@ fun simp_i i =
   in
     i
   end
-    
+
 fun simp_i_with_plugin plugin i =
   let
     fun iter i =

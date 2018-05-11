@@ -18,7 +18,7 @@ stdlib.pkg
                
 (* perversive-list.timl *)
 (* trivial.timl *)
-bigO-evolve.timl
+(* bigO-evolve.timl *)
 (* fold-evolve.timl *)
 (* single-var.timl *)
 (* bug.timl *)
@@ -35,7 +35,7 @@ bigO-evolve.timl
 (* functional-queue.timl *)
 (* array-bsearch.timl *)
 (* array-heap.timl *)
-(* array-msort.timl *)
+array-msort.timl
 (* array-msort-inplace.timl *)
 (* array-kmed.timl *)
 (* dlist.timl *)
