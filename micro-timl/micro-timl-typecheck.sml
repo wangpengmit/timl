@@ -182,7 +182,7 @@ fun is_eq_sort ctx (s, s') =
                                        
 fun is_eq_kind (k, k') =
   case (k, k') of
-      (KType, KType) => ()
+      (KType (), KType ()) => ()
     | (KArrow (b, k), KArrow (b', k')) =>
       let
         val () = is_eq_basic_sort (b, b')
@@ -199,7 +199,7 @@ fun is_eq_kind (k, k') =
       end
     | _ => raise MTCError "can't unify kinds" 
        
-fun get_ty_const_kind c = KType
+fun get_ty_const_kind c = KType ()
   (* case c of *)
   (*     TCUnit => KType *)
   (*   | TCEmpty => KType *)
@@ -208,18 +208,18 @@ fun get_ty_const_kind c = KType
 
 fun get_ty_bin_op_arg1_kind opr =
   case opr of
-      TBProd => KType
-    | TBSum => KType
+      TBProd () => KType ()
+    | TBSum () => KType ()
                  
 fun get_ty_bin_op_arg2_kind opr =
   case opr of
-      TBProd => KType
-    | TBSum => KType
+      TBProd () => KType ()
+    | TBSum () => KType ()
                  
 fun get_ty_bin_op_res_kind opr =
   case opr of
-      TBProd => KType
-    | TBSum => KType
+      TBProd () => KType ()
+    | TBSum () => KType ()
 
 fun nth_error_local ls x =
   case x of
@@ -267,12 +267,12 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
     | TArrow ((i1, t1), i, (i2, t2)) =>
       let
         val i1 = sc_against_sort ictx (i1, SState)
-        val t1 = kc_against_kind ctx (t1, KType)
+        val t1 = kc_against_kind ctx (t1, KType ())
         val i = sc_against_sort ictx (i, STime)
         val i2 = sc_against_sort ictx (i2, SState)
-        val t2 = kc_against_kind ctx (t2, KType)
+        val t2 = kc_against_kind ctx (t2, KType ())
       in
-        (TArrow ((i1, t1), i, (i2, t2)), KType)
+        (TArrow ((i1, t1), i, (i2, t2)), KType ())
       end
     | TAbsI data =>
       let
@@ -314,16 +314,16 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
         (* val  () = println "before is_wf_sort" *)
         val s = is_wf_sort ictx s
         (* val  () = println "after is_wf_sort" *)
-        val t = kc_against_kind (add_sorting_it (fst name, s) ctx) (t, KType)
+        val t = kc_against_kind (add_sorting_it (fst name, s) ctx) (t, KType ())
       in
-        (TQuanI (q, IBindAnno ((name, s), t)), KType)
+        (TQuanI (q, IBindAnno ((name, s), t)), KType ())
       end
     | TQuan (q, data) =>
       let
         val (k, (name, t)) = unTQuan data
-        val t = kc_against_kind (add_kinding_it (fst name, k) ctx) (t, KType)
+        val t = kc_against_kind (add_kinding_it (fst name, k) ctx) (t, KType ())
       in
-        (TQuan (q, TBindAnno ((name, k), t)), KType)
+        (TQuan (q, TBindAnno ((name, k), t)), KType ())
       end
     | TRec data =>
       let
@@ -336,43 +336,43 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       let
         val i = sc_against_sort ictx (i, SNat)
       in
-        (TNat i, KType)
+        (TNat i, KType ())
       end
     | TiBool i =>
       let
         val i = sc_against_sort ictx (i, SBool)
       in
-        (TiBool i, KType)
+        (TiBool i, KType ())
       end
     | TArr (t, i) =>
       let
-        val t = kc_against_kind ctx (t, KType)
+        val t = kc_against_kind ctx (t, KType ())
         val i = sc_against_sort ictx (i, SNat)
       in
-        (TArr (t, i), KType)
+        (TArr (t, i), KType ())
       end
     | TPreArray (t, len, i, b) =>
       let
-        val t = kc_against_kind ctx (t, KType)
+        val t = kc_against_kind ctx (t, KType ())
         val len = sc_against_sort ictx (len, SNat)
         val i = sc_against_sort ictx (i, SNat)
       in
-        (TPreArray (t, len, i, b), KType)
+        (TPreArray (t, len, i, b), KType ())
       end
     | TArrayPtr (t, len, i) =>
       let
-        val t = kc_against_kind ctx (t, KType)
+        val t = kc_against_kind ctx (t, KType ())
         val len = sc_against_sort ictx (len, SNat)
         val i = sc_against_sort ictx (i, SNat)
       in
-        (TArrayPtr (t, len, i), KType)
+        (TArrayPtr (t, len, i), KType ())
       end
     | TTuplePtr (ts, i, b) =>
       let
         val ts = map (kc_against_KType ctx) ts
         val i = sc_against_sort ictx (i, SNat)
       in
-        (TTuplePtr (ts, i, b), KType)
+        (TTuplePtr (ts, i, b), KType ())
       end
     | TPreTuple (ts, i, i2) =>
       let
@@ -380,44 +380,44 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
         val i = sc_against_sort ictx (i, SNat)
         val i2 = sc_against_sort ictx (i2, SNat)
       in
-        (TPreTuple (ts, i, i2), KType)
+        (TPreTuple (ts, i, i2), KType ())
       end
     | TProdEx ((t1, b1), (t2, b2)) =>
       let
-        val t1 = kc_against_kind ctx (t1, KType)
-        val t2 = kc_against_kind ctx (t2, KType)
+        val t1 = kc_against_kind ctx (t1, KType ())
+        val t2 = kc_against_kind ctx (t2, KType ())
       in
-        (TProdEx ((t1, b1), (t2, b2)), KType)
+        (TProdEx ((t1, b1), (t2, b2)), KType ())
       end
     | TArrowTAL (ts, i) =>
       let
-        val ts = Rctx.map (fn t => kc_against_kind ctx (t, KType)) ts
+        val ts = Rctx.map (fn t => kc_against_kind ctx (t, KType ())) ts
         val i = sc_against_sort ictx (i, STime)
       in
-        (TArrowTAL (ts, i), KType)
+        (TArrowTAL (ts, i), KType ())
       end
     | TArrowEVM (st, rctx, ts, i) =>
       let
         val st = sc_against_sort ictx (st, SState)
-        val rctx = Rctx.map (fn t => kc_against_kind ctx (t, KType)) rctx
+        val rctx = Rctx.map (fn t => kc_against_kind ctx (t, KType ())) rctx
         val ts = map (kc_against_KType ctx) ts
         val i = sc_against_sort ictx (i, STime)
       in
-        (TArrowEVM (st, rctx, ts, i), KType)
+        (TArrowEVM (st, rctx, ts, i), KType ())
       end
-    | TMap t => (TMap $ kc_against_KType ctx t, KType)
+    | TMap t => (TMap $ kc_against_KType ctx t, KType ())
     | TState x => 
       let
         (* val () = check_state_field x *)
       in
-	(TState x, KType)
+	(TState x, KType ())
       end
     | TVectorPtr (x, i) => 
       let
         (* val () = check_state_field x *)
         val i = sc_against_sort ictx (i, SNat)
       in
-	(TVectorPtr (x, i), KType)
+	(TVectorPtr (x, i), KType ())
       end
     fun extra_msg () = "\nwhen kindchecking: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t_input)
     val ret = main ()
@@ -439,7 +439,7 @@ and kc_against_kind ctx (t, k) =
     t
   end
 
-and kc_against_KType ctx t = kc_against_kind ctx (t, KType)
+and kc_against_KType ctx t = kc_against_kind ctx (t, KType ())
                                              
 (* (***************** the "subst_i_t" visitor  **********************)     *)
 
@@ -782,7 +782,6 @@ val N1 = N1 dummy
 (* structure IntMap = IntBinaryMap *)
 (* structure HeapMap = IntMap *)
 
-type mtiml_ty = (Expr.var, basic_sort, idx, sort) ty
 type lazy_ty = int ref * int ref * mtiml_ty ref
                                      
 type econtext = (string * lazy_ty) list
@@ -1037,7 +1036,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
           val (t1, t2) = case t_e of
-                             TBinOp (TBProd, t1, t2) => (t1, t2)
+                             TBinOp (TBProd (), t1, t2) => (t1, t2)
                            | _ => raise MTCError "EProj"
           val e = if !anno_EProj then e %: t_e else e
           val e = if !anno_EProj_state then e %~ st else e
@@ -1111,7 +1110,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
-          val t' = kc_against_kind itctx (t', KType)
+          val t' = kc_against_kind itctx (t', KType ())
           val (e, t, i, st) = tc (ctx, st) e
           val e = if !anno_EInj then e %: t else e
           val e = if !anno_EInj_state then e %~ st else e
@@ -1120,7 +1119,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | EUnOp (EUFold t', e) =>
         let
-          val t' = kc_against_kind itctx (t', KType)
+          val t' = kc_against_kind itctx (t', KType ())
           val t' = whnf itctx t'
           val (t, args) = collect_TAppIT t'
           val (k, (_, t1)) = case t of
@@ -1136,7 +1135,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EFold (t', e), t', i, st)
         end
-      | EUnOp (EUUnfold, e) =>
+      | EUnOp (EUUnfold (), e) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
@@ -1416,7 +1415,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
           val (t1, t2) = case t_e of
-                             TBinOp (TBSum, t1, t2) => (t1, t2)
+                             TBinOp (TBSum (), t1, t2) => (t1, t2)
                            | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
           val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
           val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
@@ -1465,7 +1464,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val pre_st = sc_against_sort ictx (pre_st, SState)
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind
-          val t1 = kc_against_kind itctx (t1, KType)
+          val t1 = kc_against_kind itctx (t1, KType ())
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
           val e = if !anno_EAbs then e %: t2 |> i else e
           val e = if !anno_EAbs_state then e %~ post_st else e
@@ -1479,7 +1478,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = case snd $ collect_EAbsIT e of
                        EAbs _ => ()
                      | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"
-          val t = kc_against_kind itctx (t, KType)
+          val t = kc_against_kind itctx (t, KType ())
           val (e, _) = tc_against_ty_time (add_typing_full (fst name, t) ctx, IEmptyState) (e, t, T0)
         in
           (MakeERec (name, t, e), t, T0, st)
@@ -1578,7 +1577,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | EPack (t', t1, e) =>
         let
-          val t' = kc_against_kind itctx (t', KType)
+          val t' = kc_against_kind itctx (t', KType ())
           val t' = whnf itctx t'
           val (k, (_, t)) = case t' of
                                 TQuan (Exists _, data) => unTQuan data
@@ -1593,7 +1592,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | EPackI (t', i, e) =>
         let
-          val t' = kc_against_kind itctx (t', KType)
+          val t' = kc_against_kind itctx (t', KType ())
           val t' = whnf itctx t'
           val (s, (_, t)) = case t' of
                                 TQuanI (Exists _, data) => unTQuanI data
@@ -1649,7 +1648,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | EPackIs (t, is, e) =>
         let
-          val t = kc_against_kind itctx (t, KType)
+          val t = kc_against_kind itctx (t, KType ())
         in
           case is of
               [] =>
@@ -1720,7 +1719,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           (* val () = println "tc() on EAscType" *)
           val (e, t1, i, st) = tc (ctx, st) e
-          val t2 = kc_against_kind itctx (t2, KType)
+          val t2 = kc_against_kind itctx (t2, KType ())
           (* val () = println "before tc()/EAscType/is_eq_ty()" *)
           val () = is_eq_ty itctx (t1, t2)
           (* val () = println "after tc()/EAscType/is_eq_ty()" *)
@@ -1737,14 +1736,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | ENever t =>
         let
-          val t = kc_against_kind itctx (t, KType)
+          val t = kc_against_kind itctx (t, KType ())
           val () = check_prop ictx (PFalse dummy)
         in
           (ENever t, t, T0, st)
         end
       | EBuiltin (name, t) =>
         let
-          val t = kc_against_kind itctx (t, KType)
+          val t = kc_against_kind itctx (t, KType ())
         in
           (EBuiltin (name, t), t, T0, st)
         end
@@ -1845,7 +1844,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | ENewArrayValues (t, es) =>
         let
-          val t = kc_against_kind itctx (t, KType)
+          val t = kc_against_kind itctx (t, KType ())
           val (eis, st) =
               foldl (fn (e, (eis, st)) =>
                         let
@@ -1861,7 +1860,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | EHalt (e, t) =>
         let
-          val t = kc_against_kind itctx (t, KType)
+          val t = kc_against_kind itctx (t, KType ())
           val (e, t_e, i_e, st) = tc (ctx, st) e
           val e = if !anno_EHalt then e %: t_e else e
           val e = if !anno_EHalt_state then e %~ st else e

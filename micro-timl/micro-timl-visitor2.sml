@@ -210,14 +210,14 @@ fun default_ty_visitor2_vtable
         val vtable = cast this
       in
         case data of
-            KType => #visit2_KType vtable this env () other
+            KType () => #visit2_KType vtable this env () other
           | KArrow data => #visit2_KArrow vtable this env data other
           | KArrowT data => #visit2_KArrowT vtable this env data other
       end
     fun visit2_KType this env () other =
         case other of
-            KType =>
-            KType
+            KType () =>
+            KType ()
           | _ => error_k KType other
     fun visit2_KArrow this env data other = 
       let
@@ -622,8 +622,8 @@ fun test1 dirname =
   let
     val () = println "MicroTiMLVisitor2.UnitTest started"
     fun eq_t a = eq_t_fn (curry op=, Equal.eq_bs, Equal.eq_i, Equal.eq_s) a
-    val t1 = TBinOp (TBProd, TV 0, TV 1)
-    val t2 = TBinOp (TBProd, TV 0, TV 2)
+    val t1 = TBinOp (TBProd (), TV 0, TV 1)
+    val t2 = TBinOp (TBProd (), TV 0, TV 2)
     val () = assert_b "" $ eq_t t1 t1
     val () = assert_b "" $ eq_t t2 t2
     val () = assert_b "" $ not $ eq_t t1 t2

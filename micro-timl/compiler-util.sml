@@ -23,11 +23,11 @@ fun assert_IBool a =
     | _ => raise assert_fail "assert_IBool"
 fun assert_TProd t =
   case t of
-      TBinOp (TBProd, t1, t2) => (t1, t2)
+      TBinOp (TBProd (), t1, t2) => (t1, t2)
     | _ => raise assert_fail "assert_TProd"
 fun assert_TSum t =
   case t of
-      TBinOp (TBSum, t1, t2) => (t1, t2)
+      TBinOp (TBSum (), t1, t2) => (t1, t2)
     | _ => raise assert_fail "assert_TSum"
 fun assert_TAbsT t =
   case t of
@@ -59,19 +59,19 @@ fun assert_TRec t =
     | _ => raise assert_fail $ "assert_TRec; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TUnit msg t =
   case t of
-      TConst TCUnit => ()
+      TConst (TCUnit ()) => ()
     | _ => raise assert_fail $ "assert_TUnit failed: " ^ msg
 fun assert_TInt t =
   case t of
-      TConst TCInt => ()
+      TConst (TCTiML (BTInt ())) => ()
     | _ => raise assert_fail "assert_TInt"
 fun assert_TByte t =
   case t of
-      TConst TCByte => ()
+      TConst (TCTiML (BTByte ())) => ()
     | _ => raise assert_fail "assert_TByte"
 fun assert_TBool t =
   case t of
-      TConst TCBool => ()
+      TConst (TCTiML (BTBool ())) => ()
     | _ => raise assert_fail "assert_TBool"
 fun assert_TProdEx t =
   case t of

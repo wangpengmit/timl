@@ -21,14 +21,14 @@ exception T2MTError of string
 open MicroTiMLUtilTiML
 open MicroTiMLUtil
        
-fun on_k ((n, bs) : S.kind) : basic_sort kind = KArrowTypes n $ KArrows bs KType
+fun on_k ((n, bs) : S.kind) : basic_sort kind = KArrowTypes n $ KArrows bs $ KType ()
 
 fun foldr' f init xs = foldl' f init $ rev xs
 
 fun TSums ts = foldr' TSum TEmpty ts
 fun unTSums t =
   case t of
-      TBinOp (TBSum, t1, t2) => t1 :: unTSums t2
+      TBinOp (TBSum (), t1, t2) => t1 :: unTSums t2
     | _ => [t]
 fun EInj (ts, n, e) =
   case ts of
@@ -94,12 +94,12 @@ fun on_mt (t : S.mtype) =
             t
           end
         val len_tnames = length tnames
-        val k = KArrowTypes len_tnames $ KArrows bsorts KType
+        val k = KArrowTypes len_tnames $ KArrows bsorts $ KType ()
         val ts = map (fn (_, c, _) => on_constr c) constrs
         val t = TSums ts
         fun attach_names namespace f ls = mapi (fn (n, b) => (namespace (f n, dummy), b)) ls
         val t = TAbsI_Many (rev $ attach_names IName (fn n => "_i" ^ str_int n) $ rev bsorts, t)
-        val t = TAbsT_Many (rev $ attach_names TName (fn n => "_t" ^ str_int n) $ repeat len_tnames KType, t)
+        val t = TAbsT_Many (rev $ attach_names TName (fn n => "_t" ^ str_int n) $ repeat len_tnames $ KType (), t)
       in
         TRec $ BindAnno ((TName dt_name, k), t)
       end
@@ -126,7 +126,7 @@ end
                  
 fun EV n = EVar (ID (n, dummy))
 
-fun on_e (e : S.expr) =
+fun on_e (e : S.expr) : mtiml_expr =
   let
     fun err () = raise Impossible $ "unknown case in tc: " ^ ToString.str_e Gctx.empty ToStringUtil.empty_ctx e
     fun main () = 

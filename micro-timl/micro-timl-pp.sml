@@ -16,14 +16,14 @@ fun get_bind_anno b =
 
 fun str_ty_const c =
   case c of
-      TCUnit => "unit"
-    | TCEmpty => "empty"
+      TCUnit () => "unit"
+    | TCEmpty () => "empty"
     | TCTiML t => BaseTypes.str_bt t
       
 fun str_ty_bin_op opr =
   case opr of
-      TBProd => "prod"
-    | TBSum => "sum"
+      TBProd () => "prod"
+    | TBSum () => "sum"
 
 (* depth=NONE means no depth limit *)
 fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
@@ -76,7 +76,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str $ str_var x (* ^ sprintf "[$]" [str_int $ length ks] *)(* ; *)
         (*   close_box () *)
         (* ) *)
-      | TConst TCUnit =>
+      | TConst (TCUnit ()) =>
         str "TUnit"
       | TConst c =>
         (
@@ -86,7 +86,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str $ str_ty_const c;
           close_box ()
         )
-      | TBinOp (TBProd, t1, t2) =>
+      | TBinOp (TBProd (), t1, t2) =>
         let
           val ts = collect_TProd_left t
           val (t, ts) = assert_cons ts
@@ -419,14 +419,14 @@ fun pp_t_to_string_fn params d t =
                               
 fun str_inj opr =
   case opr of
-      InjInl => "inl"
-    | InjInr => "inr"
+      InjInl () => "inl"
+    | InjInr () => "inr"
 
 fun str_expr_un_op str_t opr =
   case opr of
      EUInj (opr, t) => sprintf "($, $)" [str_inj opr, str_t t]
     | EUFold t => sprintf "(fold $)" [str_t t]
-    | EUUnfold => "unfold"
+    | EUUnfold () => "unfold"
     | EUTiML opr => Operators.str_expr_un_op opr
 
 fun get_bind b = mapFst binder2str $ unBind b
@@ -439,14 +439,14 @@ fun get_bind_anno b =
                  
 fun str_inj opr =
   case opr of
-      InjInl => "inl"
-    | InjInr => "inr"
+      InjInl () => "inl"
+    | InjInr () => "inr"
 
 fun str_expr_un_op str_t opr =
   case opr of
      EUInj (opr, t) => sprintf "($, $)" [str_inj opr, str_t t]
     | EUFold t => sprintf "(fold $)" [str_t t]
-    | EUUnfold => "unfold"
+    | EUUnfold () => "unfold"
     | EUTiML opr => Operators.str_expr_un_op opr
 
 fun str_expr_tri_op opr =

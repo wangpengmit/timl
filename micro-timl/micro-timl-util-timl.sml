@@ -64,7 +64,7 @@ local
 in
 fun TSomeNat_packed () = TExistsI $ IBindAnno ((("__VC", dummy), MakeSubset ("__VC", BSUnit, PTrue dummy)), TNat $ IV 1)
 fun TSomeNat_packed2 () = TExistsI $ IBindAnno ((("n", dummy), MakeSubset ("n", BSNat, IV 0 %< INat (2, dummy) %** INat (256, dummy))), TSomeNat_packed ())
-fun TSomeNat () = TRec $ TBindAnno ((("some_nat", dummy), KType), TSomeNat_packed2 ())
+fun TSomeNat () = TRec $ TBindAnno ((("some_nat", dummy), KType ()), TSomeNat_packed2 ())
 end
            
 val Itrue = ITrue dummy
@@ -154,4 +154,7 @@ fun a @%!! b = idx_st_must_find a b
 infix  6 @%+
 fun a @%+ b = idx_st_add a b
                                 
+type mtiml_ty = (Expr.var, basic_sort, idx, sort) ty
+type mtiml_expr = (Expr.var, idx, sort, basic_sort kind, mtiml_ty) expr
+
 end

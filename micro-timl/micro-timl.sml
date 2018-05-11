@@ -9,20 +9,20 @@ open Operators
 
 (* kind *)
 datatype 'bsort kind =
-         KType
+         KType of unit
          | KArrow of 'bsort * 'bsort kind
          | KArrowT of 'bsort kind * 'bsort kind
 
 (* type constants *)
 datatype ty_const =
-         TCUnit
-         | TCEmpty
+         TCUnit of unit
+         | TCEmpty of unit
          | TCTiML of BaseTypes.base_type
 
 (* binary type constructors *)
 datatype ty_bin_op =
-         TBProd
-         | TBSum
+         TBProd of unit
+         | TBSum of unit
 
 structure Rctx = IntBinaryMap
                    
@@ -59,14 +59,14 @@ type loc = int
              
 (* injector for sum type *)
 datatype injector =
-         InjInl
-         | InjInr
+         InjInl of unit
+         | InjInr of unit
 
 (* unary term operators *)
 datatype 'ty expr_un_op =
          EUInj of injector * 'ty
          | EUFold of 'ty
-         | EUUnfold
+         | EUUnfold of unit
          | EUTiML of Operators.expr_un_op
 
 (* term *)
@@ -124,7 +124,7 @@ fun collect_TBinOp_left opr t =
       else [t]
     | _ => [t]
              
-fun collect_TProd_left a = collect_TBinOp_left TBProd a
+fun collect_TProd_left a = collect_TBinOp_left (TBProd ()) a
                                             
 infixr 0 $
          
@@ -213,7 +213,7 @@ fun is_value e =
     | EBinOp (EBVectorPushBack (), _, _) => false
     | EBinOp (EBMapPtr (), _, _) => false
     | EBinOp (EBStorageSet (), _, _) => false
-    | EUnOp (EUUnfold, _) => false
+    | EUnOp (EUUnfold (), _) => false
     | EUnOp (EUTiML _, _) => false
     | ETriOp (ETWrite (), _, _, _) => false
     | ETriOp (ETIte (), _, _, _) => false

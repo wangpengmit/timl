@@ -455,10 +455,10 @@ and cc_t_arrow t =
       val t1 = cc_t t1
       val t2 = cc_t t2
       val alpha = fresh_tvar ()
-      val t = TArrow ((st1, TProd (TV (alpha, KType), t1)), i, (st2, t2))
+      val t = TArrow ((st1, TProd (TV (alpha, KType ()), t1)), i, (st2, t2))
       val t = close_TForallITs (binds, t)
-      val t = TProd (t, TV (alpha, KType))
-      val t = TExists $ close0_t_t_anno ((alpha, "'a", KType), t)
+      val t = TProd (t, TV (alpha, KType ()))
+      val t = TExists $ close0_t_t_anno ((alpha, "'a", KType ()), t)
     in
       t
     end
@@ -467,7 +467,7 @@ fun cc_expr_un_op opr =
     case opr of
         EUInj (inj, t) => EUInj (inj, cc_t t)
       | EUFold t => EUFold $ cc_t t
-      | EUUnfold => opr
+      | EUUnfold () => opr
       | EUTiML _ => opr
 
 fun apply_TForallIT b args =

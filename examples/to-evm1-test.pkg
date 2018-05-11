@@ -35,11 +35,11 @@ stdlib.pkg
 (* functional-queue.timl *)
 (* array-bsearch.timl *)
 (* array-heap.timl *)
-array-msort.timl
+(* array-msort.timl *)
 (* array-msort-inplace.timl *)
 (* array-kmed.timl *)
-(* dlist.timl *)
+dlist.timl
 (* qsort.timl *)
-(* dijkstra.timl *)
+dijkstra.timl
 
 (* dynamic-table.timl *)

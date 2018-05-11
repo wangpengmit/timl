@@ -71,7 +71,7 @@ fun add_stack t (itctx, rctx, sctx, st) = (itctx, rctx, t :: sctx, st)
 
 fun get_word_const_type (hctx, st_int2name) c =
   case c of
-      WCTT => TUnit
+      WCTT () => TUnit
     | WCNat n => TNat $ INat n
     | WCInt _ => TInt
     | WCBool _ => TBool
@@ -87,9 +87,9 @@ fun get_word_const_type (hctx, st_int2name) c =
 fun tc_w (hctx, st_int2name) (ctx as (itctx as (ictx, tctx))) w =
   case w of
       WConst c => get_word_const_type (hctx, st_int2name) c
-    | WUninit t => kc_against_kind itctx (t, KType)
-    | WBuiltin (name, t) => kc_against_kind itctx (t, KType)
-    | WNever t => kc_against_kind itctx (t, KType)
+    | WUninit t => kc_against_kind itctx (t, KType ())
+    | WBuiltin (name, t) => kc_against_kind itctx (t, KType ())
+    | WNever t => kc_against_kind itctx (t, KType ())
 
 fun is_mult32 n =
   if n mod 32 = 0 then SOME $ n div 32
@@ -116,8 +116,8 @@ fun assert_base_storage_ty t =
       | TiBool _ => ()
       | TConst c =>
         (case c of
-             TCUnit => ()
-           | TCEmpty => ()
+             TCUnit () => ()
+           | TCEmpty () => ()
            | TCTiML c =>
              case c of
                  BTInt () => ()
@@ -156,7 +156,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     fun err () = raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctx_names itctx) inst)
   in
   case inst of
-      ADD =>
+      ADD () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val t =
@@ -174,7 +174,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st), T_ADD)
       end
-    | SUB =>
+    | SUB () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         fun a %%- b = (check_prop ictx (a %>= b); a %- b)
@@ -190,16 +190,16 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st), T_SUB)
       end
-    | MUL => mul_div "MUL" op%* T_MUL
-    | DIV => mul_div "DIV" op%/ T_DIV
-    | SDIV => mul_div "SDIV" op%/ T_SDIV
-    | MOD => mul_div "MOD" IMod T_MOD
-    | LT => cmp "LT" op%<? T_LT
-    | GT => cmp "GT" op%>? T_GT
-    | SLT => cmp "LT" op%<=? T_SLT
-    | SGT => cmp "GT" op%>=? T_SGT
-    | EQ => cmp "EQ" op%=? T0
-    | ISZERO =>
+    | MUL () => mul_div "MUL" op%* T_MUL
+    | DIV () => mul_div "DIV" op%/ T_DIV
+    | SDIV () => mul_div "SDIV" op%/ T_SDIV
+    | MOD () => mul_div "MOD" IMod T_MOD
+    | LT () => cmp "LT" op%<? T_LT
+    | GT () => cmp "GT" op%>? T_GT
+    | SLT () => cmp "LT" op%<=? T_SLT
+    | SGT () => cmp "GT" op%>=? T_SGT
+    | EQ () => cmp "EQ" op%=? T0
+    | ISZERO () =>
       let
         val (t0, sctx) = assert_cons sctx
         val t =
@@ -212,15 +212,15 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st), T0)
       end
-    | AND => and_or "AND" op/\? T0
-    | OR => and_or "OR" op\/? T0
-    | POP =>
+    | AND () => and_or "AND" op/\? T0
+    | OR () => and_or "OR" op\/? T0
+    | POP () =>
       let
         val (t0, sctx) = assert_cons sctx
       in
         ((itctx, rctx, sctx, st), T0)
       end
-    | MLOAD => 
+    | MLOAD () => 
       let
         val (t0, sctx) = assert_cons sctx
         fun def () = raise Impossible $ sprintf "MLOAD: can't read from address of type ($)" [str_t t0]
@@ -257,7 +257,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st), T_MLOAD)
       end
-    | MSTORE => 
+    | MSTORE () => 
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         fun def () = raise Impossible $ sprintf "MSTORE: can't write to address of type ($)" [str_t t0]
@@ -279,7 +279,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, sctx, st), T_MSTORE)
       end
-    | JUMPDEST => (ctx, T0)
+    | JUMPDEST () => (ctx, T0)
     | PUSH (n, w) =>
       (assert_b "tc/PUSH/n" (1 <= n andalso n <= 32); ((itctx, rctx, tc_w (hctx, st_int2name) itctx (unInner w) :: sctx, st), T_PUSH))
     | DUP n => 
@@ -327,7 +327,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | VALUE_Pack (t_pack, t) =>
       let
-        val t_pack = kc_against_kind itctx (unInner t_pack, KType)
+        val t_pack = kc_against_kind itctx (unInner t_pack, KType ())
         val t_pack = whnf itctx t_pack
         val ((_, k), t') = assert_TExists t_pack
         val t = kc_against_kind itctx (unInner t, k)
@@ -339,7 +339,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | VALUE_PackI (t_pack, i) =>
       let
-        val t_pack = kc_against_kind itctx (unInner t_pack, KType)
+        val t_pack = kc_against_kind itctx (unInner t_pack, KType ())
         val t_pack = whnf itctx t_pack
         val ((_, s), t') = assert_TExistsI t_pack
         val i = sc_against_sort ictx (unInner i, s)
@@ -351,7 +351,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | VALUE_Fold t_fold =>
       let
-        val t_fold = kc_against_kind itctx (unInner t_fold, KType)
+        val t_fold = kc_against_kind itctx (unInner t_fold, KType ())
         val t_fold = whnf itctx t_fold
         val (t, args) = collect_TAppIT t_fold
         val ((_, k), t1) = assert_TRec t
@@ -363,7 +363,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | VALUE_AscType t =>
       let
-        val t = kc_against_kind itctx (unInner t, KType)
+        val t = kc_against_kind itctx (unInner t, KType ())
         val (t0, sctx) = assert_cons sctx
         val () = is_eq_ty itctx (t0, t)
       in
@@ -385,7 +385,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         (add_stack t $ add_sorting_full (binder2str name, s) (itctx, rctx, sctx, st), T0)
       end
-    | UNFOLD =>
+    | UNFOLD () =>
       let
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
@@ -395,35 +395,35 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st), T0)
       end
-    | NAT2INT =>
+    | NAT2INT () =>
       let
         val (t0, sctx) = assert_cons sctx
         val _ = assert_TNat $ whnf itctx t0
       in
         ((itctx, rctx, TInt :: sctx, st), T0)
       end
-    | INT2NAT =>
+    | INT2NAT () =>
       let
         val (t0, sctx) = assert_cons sctx
         val _ = assert_TInt $ whnf itctx t0
       in
         ((itctx, rctx, TSomeNat () :: sctx, st), T0)
       end
-    | BYTE2INT =>
+    | BYTE2INT () =>
       let
         val (t0, sctx) = assert_cons sctx
         val _ = assert_TByte $ whnf itctx t0
       in
         ((itctx, rctx, TInt :: sctx, st), T0)
       end
-    | MACRO_printc =>
+    | MACRO_printc () =>
       let
         val (t0, sctx) = assert_cons sctx
         val _ = assert_TByte $ whnf itctx t0
       in
         ((itctx, rctx, TUnit :: sctx, st), T0)
       end
-    | MACRO_int2byte =>
+    | MACRO_int2byte () =>
       let
         val (t0, sctx) = assert_cons sctx
         val _ = assert_TInt $ whnf itctx t0
@@ -433,14 +433,14 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | MACRO_init_free_ptr _ => (ctx, T0)
     | MACRO_array_malloc (t, is_upward) =>
       let
-        val t = kc_against_kind itctx (unInner t, KType)
+        val t = kc_against_kind itctx (unInner t, KType ())
         val (t0, sctx) = assert_cons sctx
         val len = assert_TNat $ whnf itctx t0
         val lowest = if is_upward then N0 else len
       in
         ((itctx, rctx, TPreArray (t, len, lowest, (false, is_upward)) :: sctx, st), T0)
       end
-    | MACRO_array_init_assign =>
+    | MACRO_array_init_assign () =>
       let
         val (t0, t1, t2, sctx) = assert_cons3 sctx
         val offset = assert_TNat $ whnf itctx t0
@@ -454,7 +454,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
           (check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest);
            ((itctx, rctx, TNat len :: TPreArray (t, len, lowest %- N1, (len_inited, is_upward)) :: t2 :: sctx, st), T0))
       end
-    | MACRO_array_init_len =>
+    | MACRO_array_init_len () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val len' = assert_TNat $ whnf itctx t0
@@ -463,7 +463,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, TPreArray (t, len, lowest_inited, (true, dir)) :: sctx, st), T0)
       end
-    | MARK_PreArray2ArrayPtr =>
+    | MARK_PreArray2ArrayPtr () =>
       let
         val (t0, sctx) = assert_cons sctx
         val (t, len, lowest, (len_inited, is_upward)) = assert_TPreArray $ whnf itctx t0
@@ -482,7 +482,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         (add_stack (TPreTuple (ts, N0, INat (length ts))) ctx, T0)
       end
-    | MACRO_tuple_assign =>
+    | MACRO_tuple_assign () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val (ts, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t1
@@ -492,7 +492,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, TPreTuple (ts, offset, lowest_inited %- N1) :: sctx, st), T0)
       end
-    | MARK_PreTuple2TuplePtr =>
+    | MARK_PreTuple2TuplePtr () =>
       let
         val (t0, sctx) = assert_cons sctx
         val (t, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t0
@@ -502,15 +502,15 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | MACRO_inj t_other =>
       let
-        val t_other = kc_against_kind itctx (unInner t_other, KType)
+        val t_other = kc_against_kind itctx (unInner t_other, KType ())
         val (t0, t1, sctx) = assert_cons2 sctx
         val b = assert_IBool $ simp_i $ assert_TiBool $ whnf itctx t0
-        val inj = if b then InjInr else InjInl
+        val inj = if b then InjInr () else InjInl ()
         val ts = choose_pair_inj (t1, t_other) inj
       in
         ((itctx, rctx, TSum ts :: sctx, st), T0)
       end
-    | MACRO_map_ptr =>
+    | MACRO_map_ptr () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val t1 = whnf itctx t1
@@ -521,7 +521,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st), T0)
       end
-    | MACRO_vector_ptr =>
+    | MACRO_vector_ptr () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val vec = assert_TState t0
@@ -529,7 +529,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, TVectorPtr (vec, offset) :: sctx, st), T0)
       end
-    | MACRO_vector_push_back =>
+    | MACRO_vector_push_back () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val vec = assert_TState t1
@@ -539,7 +539,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, sctx, st @%+ (vec, len %+ N1)), T0)
       end
-    | SLOAD => 
+    | SLOAD () => 
       let
         val (t0, sctx) = assert_cons sctx
         fun def () = raise Impossible $ sprintf "SLOAD: can't read from address of type ($)" [str_t t0]
@@ -571,7 +571,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st), T0)
       end
-    | SSTORE => 
+    | SSTORE () => 
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         fun def () = raise Impossible $ sprintf "SSTORE: can't read from address of type ($)" [str_t t0]
@@ -606,13 +606,13 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, sctx, st), T0)
       end
-    | BYTE => err ()
-    | SHA3 => err ()
-    | MSTORE8 => err ()
-    | JUMPI => err ()
+    | BYTE () => err ()
+    | SHA3 () => err ()
+    | MSTORE8 () => err ()
+    | JUMPI () => err ()
     | LOG _ => err ()
     | ASCTIME _ => err ()
-    | MACRO_br_sum => err ()
+    | MACRO_br_sum () => err ()
   end
       
 fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
@@ -651,7 +651,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
     fun err () = raise Impossible $ "unknown case in tc_insts(): " ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, NONE) (itctx_names itctx) insts)
     fun main () =
   case insts of
-      JUMP =>
+      JUMP () =>
       let
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
@@ -664,7 +664,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
       end
     (* | ISHalt t => *)
     (*   let *)
-    (*     val t = kc_against_kind itctx (t, KType) *)
+    (*     val t = kc_against_kind itctx (t, KType ()) *)
     (*     val () = tc_v_against_ty ctx (VReg 1, t) *)
     (*   in *)
     (*     T1 *)
@@ -677,13 +677,13 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         T0
       end
     | ISDummy _ => T0
-    | RETURN => err ()
+    | RETURN () => err ()
     | ISCons bind =>
       let
         val (inst, I) = unBind bind
       in
         case inst of
-            JUMPI =>
+            JUMPI () =>
             let
               val (t0, t1, sctx) = assert_cons2 sctx
             in
@@ -718,7 +718,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                   end
                 | t1 => raise Impossible $ "tc()/JUMPI wrong type of t1: " ^ str_t t1
             end
-          | MACRO_br_sum =>
+          | MACRO_br_sum () =>
             let
               val (t0, t1, sctx) = assert_cons2 sctx
               val (tl, tr) = assert_TSum $ whnf itctx t1
@@ -778,7 +778,7 @@ fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
                  (fn (r, t) =>
                      let
                        (* val () = println $ sprintf "checking r$: $" [str_int r, ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE itctxn t] *)
-                       val ret = kc_against_kind itctx (t, KType)
+                       val ret = kc_against_kind itctx (t, KType ())
                        (* val () = println "done" *)
                      in
                        ret

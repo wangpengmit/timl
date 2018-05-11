@@ -9,7 +9,7 @@ type nat = int
 type label = int
 
 datatype word_const =
-         WCTT
+         WCTT of unit
          | WCNat of nat
          | WCInt of int
          | WCBool of bool
@@ -26,31 +26,30 @@ datatype 'ty word =
          | WNever of 'ty
            
 datatype ('idx, 'ty) inst =
-         ADD
-         | MUL
-         | SUB
-         | DIV
-         | SDIV
-         | MOD
-         | LT
-         | GT
-         | SLT
-         | SGT
-         | EQ
-         | ISZERO
-         | AND
-         | OR
-         | BYTE
-         | SHA3
-         | POP
-         | MLOAD
-         | MSTORE
-         | MSTORE8
-         | SLOAD
-         | SSTORE
-         | JUMPI
-         (* | JUMPI_i *)
-         | JUMPDEST
+         ADD of unit
+         | MUL of unit
+         | SUB of unit
+         | DIV of unit
+         | SDIV of unit
+         | MOD of unit
+         | LT of unit
+         | GT of unit
+         | SLT of unit
+         | SGT of unit
+         | EQ of unit
+         | ISZERO of unit
+         | AND of unit
+         | OR of unit
+         | BYTE of unit
+         | SHA3 of unit
+         | POP of unit
+         | MLOAD of unit
+         | MSTORE of unit
+         | MSTORE8 of unit
+         | SLOAD of unit
+         | SSTORE of unit
+         | JUMPI of unit
+         | JUMPDEST of unit
          | PUSH of int * 'ty word inner
          | DUP of int
          | SWAP of int
@@ -64,34 +63,34 @@ datatype ('idx, 'ty) inst =
          | VALUE_AscType of 'ty inner
          | UNPACK of tbinder
          | UNPACKI of ibinder
-         | UNFOLD
-         | NAT2INT
-         | INT2NAT
-         | BYTE2INT
-         (* | PRINTC *)
+         | UNFOLD of unit
+         | NAT2INT of unit
+         | INT2NAT of unit
+         | BYTE2INT of unit
+         (* | PRINTC of unit *)
          (* | PACK_SUM of injector * 'ty inner *)
          | ASCTIME of 'idx inner
-         | MARK_PreArray2ArrayPtr
-         | MARK_PreTuple2TuplePtr
+         | MARK_PreArray2ArrayPtr of unit
+         | MARK_PreTuple2TuplePtr of unit
          (* | MARK_inj of 'ty inner *)
          | MACRO_init_free_ptr of int
          | MACRO_tuple_malloc of 'ty list inner
-         | MACRO_tuple_assign
-         | MACRO_printc
+         | MACRO_tuple_assign of unit
+         | MACRO_printc of unit
          | MACRO_array_malloc of 'ty inner * bool(* is init direction upward *)
-         | MACRO_array_init_assign
-         | MACRO_array_init_len
-         | MACRO_int2byte
+         | MACRO_array_init_assign of unit
+         | MACRO_array_init_len of unit
+         | MACRO_int2byte of unit
          | MACRO_inj of 'ty inner
-         | MACRO_br_sum
-         | MACRO_map_ptr
-         | MACRO_vector_ptr
-         | MACRO_vector_push_back
+         | MACRO_br_sum of unit
+         | MACRO_map_ptr of unit
+         | MACRO_vector_ptr of unit
+         | MACRO_vector_push_back of unit
 
 datatype ('idx, 'ty) insts =
          ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind
-         | JUMP
-         | RETURN
+         | JUMP of unit
+         | RETURN of unit
          (* only for debug/printing purpose *)
          | ISDummy of string
          | MACRO_halt of 'ty
@@ -106,7 +105,7 @@ fun WInt a = WConst $ WCInt a
 fun WNat a = WConst $ WCNat a
 fun WiBool a = WConst $ WCiBool a
 fun WLabel a = WConst $ WCLabel a
-val WTT = WConst WCTT
+val WTT = WConst (WCTT ())
       
 infixr 5 @::
 infixr 5 @@
@@ -119,7 +118,7 @@ fun m @+ a = Rctx.insert' (a, m)
 fun m @! k = Rctx.find (m, k)
                         
 fun HCode' (binds, body) =
-  Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, mapSnd (fn code => JUMPDEST @:: code) body)
+  Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, mapSnd (fn code => JUMPDEST () @:: code) body)
 
 fun PUSH1 w = PUSH (1, Inner w)
 fun PUSH1nat n = PUSH1 $ WNat n

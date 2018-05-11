@@ -8,7 +8,7 @@ infixr 0 $
 
 fun KArrows bs k = foldr KArrow k bs
 fun KArrowTs ks k = foldr KArrowT k ks
-fun KArrowTypes n k = KArrowTs (repeat n KType) k
+fun KArrowTypes n k = KArrowTs (repeat n $ KType ()) k
                           
 fun TForallI bind = TQuanI (Forall (), bind)
 fun TForall bind = TQuan (Forall (), bind)
@@ -19,21 +19,21 @@ fun TAbsI_Many (ctx, t) = foldr (TAbsI o BindAnno) t ctx
 fun TAbsT_Many (ctx, t) = foldr (TAbsT o BindAnno) t ctx
 fun TUni bind = TQuan (Forall (), bind)
 fun MakeTUni (name, k, t) = TUni $ TBindAnno ((name, k), t)
-fun TUniKind (name, t) = MakeTUni (name, KType, t)
+fun TUniKind (name, t) = MakeTUni (name, KType (), t)
 fun TUniKind_Many (names, t) = foldr TUniKind t names
 
 (* val TCString = TCTiML BaseTypes.String *)
 val TCInt = TCTiML (BaseTypes.BTInt ())
 val TCBool = TCTiML (BaseTypes.BTBool ())
 val TCByte = TCTiML (BaseTypes.BTByte ())
-val TUnit = TConst TCUnit
-val TEmpty = TConst TCEmpty
+val TUnit = TConst (TCUnit ())
+val TEmpty = TConst (TCEmpty ())
 (* val TString = TConst TCString *)
 val TInt = TConst TCInt
 val TBool = TConst TCBool
 val TByte = TConst TCByte
-fun TSum (t1, t2) = TBinOp (TBSum, t1, t2)
-fun TProd (t1, t2) = TBinOp (TBProd, t1, t2)
+fun TSum (t1, t2) = TBinOp (TBSum (), t1, t2)
+fun TProd (t1, t2) = TBinOp (TBProd (), t1, t2)
 fun TAppIs (t, is) = foldl (swap TAppI) t is
 fun TAppTs (t, ts) = foldl (swap TAppT) t ts
 fun TMemTuplePtr (ts, i) = TTuplePtr (ts, i, false)
@@ -44,10 +44,10 @@ fun EProj (proj, e) = EUnOp (EUTiML $ EUProj proj, e)
 fun EFst e = EProj (ProjFst (), e)
 fun ESnd e = EProj (ProjSnd (), e)
 fun EInj (inj, t, e) = EUnOp (EUInj (inj, t), e)
-fun EInl (t, e) = EInj (InjInl, t, e)
-fun EInr (t, e) = EInj (InjInr, t, e)
+fun EInl (t, e) = EInj (InjInl (), t, e)
+fun EInr (t, e) = EInj (InjInr (), t, e)
 fun EFold (t, e) = EUnOp (EUFold t, e)
-fun EUnfold e = EUnOp (EUUnfold, e)
+fun EUnfold e = EUnOp (EUUnfold (), e)
 fun EApp (e1, e2) = EBinOp (EBApp (), e1, e2)
 
 fun EBinOpPrim (opr, e1, e2) = EBinOp (EBPrim opr, e1, e2)
@@ -73,7 +73,7 @@ fun MakeTQuanI (q, s, name, t) = TQuanI (q, IBindAnno ((name, s), t))
 fun MakeTQuan (q, k, name, t) = TQuan (q, TBindAnno ((name, k), t))
 fun MakeTForallI (s, name, t) = MakeTQuanI (Forall (), s, name, t)
 fun MakeTForall (s, name, t) = MakeTQuan (Forall (), s, name, t)
-fun EAbsTKind (name, e) = MakeEAbsT (name, KType, e) 
+fun EAbsTKind (name, e) = MakeEAbsT (name, KType (), e) 
 fun EAbsTKind_Many (names, e) = foldr EAbsTKind e names
 
 fun choose_update (b1, b2) proj =
@@ -83,13 +83,13 @@ fun choose_update (b1, b2) proj =
                    
 fun choose_inj (t1, t2) inj =
   case inj of
-      InjInl => t1
-    | InjInr => t2
+      InjInl () => t1
+    | InjInr () => t2
                                  
 fun choose_pair_inj (t, t_other) inj =
   case inj of
-      InjInl => (t, t_other)
-    | InjInr => (t_other, t)
+      InjInl () => (t, t_other)
+    | InjInr () => (t_other, t)
                   
 fun collect_EAscType_rev e =
   let

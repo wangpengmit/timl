@@ -109,7 +109,7 @@ fun cg_ty_visitor_vtable cast () =
     val vtable = override_visit_TArrow vtable visit_TArrow
     fun visit_TBinOp this env (data as (opr, t1, t2)) =
       case opr of
-          TBProd =>
+          TBProd () =>
           let
             val cg_t = #visit_ty (cast this) this env
             val t1 = cg_t t1
@@ -183,41 +183,41 @@ fun PUSH_tuple_offset n = PUSH (2, Inner $ WNat n)
 fun PUSH_array_offset n = PUSH (32, Inner $ WNat n)
 fun PUSH_reg n = PUSH (2, Inner $ WNat n)
     
-fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD]
-fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE]
-val array_ptr = [PUSH1nat 32, MUL, ADD]
-val byte2int = [BYTE2INT]
+fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD ()]
+fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE ()]
+val array_ptr = [PUSH1nat 32, MUL (), ADD ()]
+val byte2int = [BYTE2INT ()]
                   
 fun init_free_ptr num_regs = [MACRO_init_free_ptr num_regs]
 fun tuple_malloc ts = [MACRO_tuple_malloc $ Inner ts]
-val tuple_assign = [MACRO_tuple_assign]
-val printc = [MACRO_printc]
+val tuple_assign = [MACRO_tuple_assign ()]
+val printc = [MACRO_printc ()]
 fun array_malloc t b = [MACRO_array_malloc (Inner t, b)]
-val array_init_assign = [MACRO_array_init_assign]
-val array_init_len = [MACRO_array_init_len]
+val array_init_assign = [MACRO_array_init_assign ()]
+val array_init_len = [MACRO_array_init_len ()]
 (* val int2byte = [] (* noop, relying on type discipline *) *)
-val int2byte = [MACRO_int2byte]
+val int2byte = [MACRO_int2byte ()]
 fun make_inj t_other = [MACRO_inj $ Inner t_other]
-val br_sum = [MACRO_br_sum]
+val br_sum = [MACRO_br_sum ()]
 fun halt t = MACRO_halt t
                  
 fun inline_macro_inst inst =
   case inst of
-      MACRO_init_free_ptr num_regs => [PUSH_reg $ reg_addr num_regs, PUSH1nat 0, MSTORE]
-    | MACRO_tuple_malloc ts => [PUSH1nat 0, MLOAD, DUP1, PUSH_tuple_offset $ 32 * (length $ unInner ts), ADD, PUSH1 $WNat 0, MSTORE]
-    | MACRO_tuple_assign => [DUP2, MSTORE]
-    | MACRO_printc => [PUSH_reg scratch, MSTORE, PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD, LOG0, PUSH1 WTT]
-    | MACRO_array_malloc (t, b) => [PUSH1nat 0, MLOAD, PUSH1nat 32, ADD, DUP1, SWAP2, PUSH1nat 32, MUL, ADD, PUSH1nat 0, MSTORE]
-    | MACRO_array_init_assign => [DUP3, DUP3, DUP3, ADD, MSTORE]
-    | MACRO_array_init_len => [DUP2, PUSH1nat 32, SWAP1, SUB, MSTORE]
-    | MACRO_int2byte => [PUSH1nat 31, BYTE]
+      MACRO_init_free_ptr num_regs => [PUSH_reg $ reg_addr num_regs, PUSH1nat 0, MSTORE ()]
+    | MACRO_tuple_malloc ts => [PUSH1nat 0, MLOAD (), DUP1, PUSH_tuple_offset $ 32 * (length $ unInner ts), ADD (), PUSH1 $WNat 0, MSTORE ()]
+    | MACRO_tuple_assign () => [DUP2, MSTORE ()]
+    | MACRO_printc () => [PUSH_reg scratch, MSTORE (), PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD (), LOG0, PUSH1 WTT]
+    | MACRO_array_malloc (t, b) => [PUSH1nat 0, MLOAD (), PUSH1nat 32, ADD (), DUP1, SWAP2, PUSH1nat 32, MUL (), ADD (), PUSH1nat 0, MSTORE ()]
+    | MACRO_array_init_assign () => [DUP3, DUP3, DUP3, ADD (), MSTORE ()]
+    | MACRO_array_init_len () => [DUP2, PUSH1nat 32, SWAP1, SUB (), MSTORE ()]
+    | MACRO_int2byte () => [PUSH1nat 31, BYTE ()]
     | MACRO_inj t_other =>
       inline_macro_inst (MACRO_tuple_malloc $ Inner [TUnit, TUnit](*only length matters operationally*)) @
-      [SWAP1, DUP2, MSTORE, SWAP1, DUP2, PUSH1nat 32, ADD, MSTORE(* , PACK_SUM (inj, Inner t_other) *)]
-    | MACRO_br_sum => [DUP2, MLOAD, SWAP1, JUMPI]
-    | MACRO_map_ptr => [PUSH_reg $ scratch, MSTORE, PUSH_reg $ scratch+32, MSTORE, PUSH1nat 64, PUSH_reg $ scratch, SHA3]
-    | MACRO_vector_ptr => [PUSH_reg $ scratch, MSTORE, PUSH1nat 32, PUSH_reg $ scratch, SHA3, ADD]
-    | MACRO_vector_push_back => [DUP2, DUP1, SLOAD, SWAP1, DUP2, PUSH1nat 1, ADD, SWAP1, SSTORE, SWAP1, SWAP2] @ inline_macro_inst MACRO_vector_ptr @ [SSTORE]
+      [SWAP1, DUP2, MSTORE (), SWAP1, DUP2, PUSH1nat 32, ADD (), MSTORE ()(* , PACK_SUM (inj, Inner t_other) *)]
+    | MACRO_br_sum () => [DUP2, MLOAD (), SWAP1, JUMPI ()]
+    | MACRO_map_ptr () => [PUSH_reg $ scratch, MSTORE (), PUSH_reg $ scratch+32, MSTORE (), PUSH1nat 64, PUSH_reg $ scratch, SHA3 ()]
+    | MACRO_vector_ptr () => [PUSH_reg $ scratch, MSTORE (), PUSH1nat 32, PUSH_reg $ scratch, SHA3 (), ADD ()]
+    | MACRO_vector_push_back () => [DUP2, DUP1, SLOAD (), SWAP1, DUP2, PUSH1nat 1, ADD (), SWAP1, SSTORE (), SWAP1, SWAP2] @ inline_macro_inst (MACRO_vector_ptr ()) @ [SSTORE ()]
     | _ => [inst]
 
 fun inline_macro_insts insts =
@@ -228,7 +228,7 @@ fun inline_macro_insts insts =
       in
         inline_macro_inst inst @@ inline_macro_insts I
       end
-    | MACRO_halt t => [PUSH_reg scratch, SWAP1, DUP2, MSTORE, PUSH1nat 32, SWAP1] @@ RETURN (* t *)
+    | MACRO_halt t => [PUSH_reg scratch, SWAP1, DUP2, MSTORE (), PUSH1nat 32, SWAP1] @@ RETURN ()(* t *)
     | _ => insts
                                                                      
 fun inline_macro_hval code =
@@ -244,18 +244,18 @@ fun inline_macro_prog (H, I) =
 
 fun impl_nat_cmp opr =
   case opr of
-      NCLt () => [GT] (* a<b <-> b>a *)
-    | NCGt () => [LT]
-    | NCLe () => [LT, ISZERO] (* a<=b <-> ~(a>b) <-> ~(b<a) *)
-    | NCGe () => [GT, ISZERO]
-    | NCEq () => [EQ]
-    | NCNEq () => [EQ, ISZERO]
+      NCLt () => [GT ()] (* a<b <-> b>a *)
+    | NCGt () => [LT ()]
+    | NCLe () => [LT (), ISZERO ()] (* a<=b <-> ~(a>b) <-> ~(b<a) *)
+    | NCGe () => [GT (), ISZERO ()]
+    | NCEq () => [EQ ()]
+    | NCNEq () => [EQ (), ISZERO ()]
       
 fun concatRepeat n v = List.concat $ repeat n v
                
 fun cg_c c =
   case c of
-      ECTT () => WCTT
+      ECTT () => WCTT ()
     | ECNat n => WCNat n
     | ECInt n => WCInt n
     | ECBool n => WCBool n
@@ -265,8 +265,8 @@ fun cg_c c =
                                 
 fun impl_prim_expr_un_opr opr =
   case opr of
-      EUPIntNeg () => [PUSH1 $ WInt 0, SUB]
-    | EUPBoolNeg () => [ISZERO]
+      EUPIntNeg () => [PUSH1 $ WInt 0, SUB ()]
+    | EUPBoolNeg () => [ISZERO ()]
     | EUPInt2Byte () => int2byte
     | EUPByte2Int () => byte2int
     (* | EUPStrLen () => [PUSH1nat 32, SWAP1, SUB, MLOAD] *)
@@ -274,38 +274,38 @@ fun impl_prim_expr_un_opr opr =
       
 fun impl_prim_expr_bin_op opr =
   case opr of
-       EBPIntAdd () => [ADD]
-     | EBPIntMult () => [MUL]
-     | EBPIntMinus () => [SWAP1, SUB]
-     | EBPIntDiv () => [SWAP1, SDIV]
-     | EBPIntMod () => [SWAP1, MOD]
-     | EBPIntLt () => [SWAP1, LT]
-     | EBPIntGt () => [SWAP1, GT]
-     | EBPIntLe () => [GT, ISZERO]
-     | EBPIntGe () => [LT, ISZERO]
-     | EBPIntEq () => [EQ]
-     | EBPIntNEq () => [EQ, ISZERO]
-     | EBPBoolAnd () => [AND]
-     | EBPBoolOr () => [OR]
+       EBPIntAdd () => [ADD ()]
+     | EBPIntMult () => [MUL ()]
+     | EBPIntMinus () => [SWAP1, SUB ()]
+     | EBPIntDiv () => [SWAP1, SDIV ()]
+     | EBPIntMod () => [SWAP1, MOD ()]
+     | EBPIntLt () => [SWAP1, LT ()]
+     | EBPIntGt () => [SWAP1, GT ()]
+     | EBPIntLe () => [GT (), ISZERO ()]
+     | EBPIntGe () => [LT (), ISZERO ()]
+     | EBPIntEq () => [EQ ()]
+     | EBPIntNEq () => [EQ (), ISZERO ()]
+     | EBPBoolAnd () => [AND ()]
+     | EBPBoolOr () => [OR ()]
      (* | EBPStrConcat () => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat" *)
                   
 fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
-    | EUNat2Int () => [NAT2INT]
-    | EUInt2Nat () => [INT2NAT]
-    | EUArrayLen () => [PUSH1nat 32, SWAP1, SUB, MLOAD]
-    | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD, MLOAD]
+    | EUNat2Int () => [NAT2INT ()]
+    | EUInt2Nat () => [INT2NAT ()]
+    | EUArrayLen () => [PUSH1nat 32, SWAP1, SUB (), MLOAD ()]
+    | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD (), MLOAD ()]
     | EUPrintc () => printc
     (* | EUPrint () => [PRINT] *)
-    | EUStorageGet () => [SLOAD]
+    | EUStorageGet () => [SLOAD ()]
                         
 fun impl_nat_expr_bin_op opr =
   case opr of
-      EBNAdd () => [ADD]
-    | EBNMult () => [MUL]
-    | EBNDiv () => [SWAP1, DIV]
-    | EBNBoundedMinus () => [SWAP1, SUB]
+      EBNAdd () => [ADD ()]
+    | EBNMult () => [MUL ()]
+    | EBNDiv () => [SWAP1, DIV ()]
+    | EBNBoundedMinus () => [SWAP1, SUB ()]
 
 val st_ref = ref IEmptyState
                  
@@ -342,7 +342,7 @@ fun compile st_name2int ectx e =
         val t1 = cg_t t1
         val t2 = cg_t t2
       in
-        compile e1 @ compile e2 @ tuple_malloc [t1, t2] @ [PUSH_tuple_offset (2*32), ADD] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB, SWAP1] @ tuple_assign) @ [MARK_PreTuple2TuplePtr]
+        compile e1 @ compile e2 @ tuple_malloc [t1, t2] @ [PUSH_tuple_offset (2*32), ADD ()] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB (), SWAP1] @ tuple_assign) @ [MARK_PreTuple2TuplePtr ()]
       end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
@@ -365,23 +365,23 @@ fun compile st_name2int ectx e =
         [SWAP1] @
         array_init_len @
         [PUSH1nat 0] @
-        concatMap (fn e => compile e @ [SWAP2, SWAP1] @ array_init_assign @ [SWAP2, POP, SWAP1, PUSH1nat 32, ADD]) es @
-        [POP, MARK_PreArray2ArrayPtr]
+        concatMap (fn e => compile e @ [SWAP2, SWAP1] @ array_init_assign @ [SWAP2, POP (), SWAP1, PUSH1nat 32, ADD ()]) es @
+        [POP (), MARK_PreArray2ArrayPtr ()]
       end
     | EBinOp (EBRead (), e1, e2) =>
       compile e1 @
       compile e2 @
       array_ptr @
-      [MLOAD]
+      [MLOAD ()]
     | ETriOp (ETWrite (), e1, e2, e3) =>
       compile e1 @
       compile e2 @
       compile e3 @
       [SWAP2, SWAP1] @
       array_ptr @
-      [MSTORE, PUSH1 WTT]
-    | EUnOp (EUUnfold, e) =>
-      compile e @ [UNFOLD]
+      [MSTORE (), PUSH1 WTT]
+    | EUnOp (EUUnfold (), e) =>
+      compile e @ [UNFOLD ()]
     | EUnOp (EUTiML opr, e) =>
       compile e @
       impl_expr_un_op opr
@@ -396,25 +396,25 @@ fun compile st_name2int ectx e =
     | EBinOp (EBMapPtr (), e1, e2) =>
       compile e1 @ 
       compile e2 @
-      [MACRO_map_ptr]
+      [MACRO_map_ptr ()]
     | EBinOp (EBStorageSet (), e1, e2) =>
       compile e1 @ 
       compile e2 @
-      [SWAP1, SSTORE, PUSH1 WTT]
+      [SWAP1, SSTORE (), PUSH1 WTT]
     | EBinOp (EBVectorGet (), e1, e2) =>
       compile e1 @ 
       compile e2 @
-      [SWAP1, MACRO_vector_ptr, SLOAD]
+      [SWAP1, MACRO_vector_ptr (), SLOAD ()]
     | ETriOp (ETVectorSet (), e1, e2, e3) =>
       compile e1 @ 
       compile e2 @
       compile e3 @
-      [SWAP2, MACRO_vector_ptr, SSTORE, PUSH1 WTT]
+      [SWAP2, MACRO_vector_ptr (), SSTORE (), PUSH1 WTT]
     | EBinOp (EBVectorPushBack (), e1, e2) =>
       let
         val I = compile e1 @
                 compile e2 @
-                [MACRO_vector_push_back, PUSH1 WTT]
+                [MACRO_vector_push_back (), PUSH1 WTT]
         val x = assert_EState e1
         val st = !st_ref
         val len = st @%!! x
@@ -424,10 +424,10 @@ fun compile st_name2int ectx e =
       end
     (* | EUnOp (EUVectorClear, e) => *)
     (*   compile e @ *)
-    (*   [PUSH1nat 0, SWAP1, SSTORE, PUSH1 WTT] *)
+    (*   [PUSH1nat 0, SWAP1, SSTORE (), PUSH1 WTT] *)
     (* | EUnOp (EUVectorLength, e) => *)
     (*   compile e @ *)
-    (*   [SLOAD] *)
+    (*   [SLOAD ()] *)
     | ETriOp (ETIte (), _, _, _) => err ()
     | EBinOp (EBApp (), _, _) => err ()
     | EBinOp (EBNew (), _, _) => err ()
@@ -518,9 +518,9 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
                   array_malloc t false @@
                   [DUP2] @@
                   array_init_len @@
-                  [SWAP1, PUSH1nat 32, MUL] @@
+                  [SWAP1, PUSH1nat 32, MUL ()] @@
                   PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len])) @@
-                  JUMP
+                  JUMP ()
               (* val pre_loop_label = fresh_label () *)
               (* val pre_loop_block = *)
               (*     let *)
@@ -534,14 +534,14 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
                     val s = MakeSubset ("i", BSNat, IV 0 %<= shift01_i_i len)
                     val i = fresh_ivar ()
                     val loop_code =
-                        [PUSH1 WTT, DUP2, ISZERO] @@
+                        [PUSH1 WTT, DUP2, ISZERO ()] @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel post_loop_label, itctx), [inl $ FIV i])) @@
-                        [JUMPI, UNPACKI $ IBinder ("__n_neq0", dummy)] @@
+                        [JUMPI (), UNPACKI $ IBinder ("__n_neq0", dummy)] @@
                         (shift01_i_insts $
-                        [POP, PUSH1nat 32, SWAP1, SUB] @@
+                        [POP (), PUSH1nat 32, SWAP1, SUB ()] @@
                         array_init_assign @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
-                        JUMP)
+                        JUMP ())
                     val block = ((st, rctx, [TNat (INat 32 %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], IToReal (FIV i %* INat 8) %+ T1 %+ i_e), loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
@@ -555,7 +555,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
                     val post_loop_code =
                         [UNPACKI $ IBinder ("__n_eq0", dummy)] @@
                         (shift01_i_insts $
-                        [POP, POP, SWAP1, POP, MARK_PreArray2ArrayPtr] @@
+                        [POP (), POP (), SWAP1, POP (), MARK_PreArray2ArrayPtr ()] @@
                         set_reg r @@
                         cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len)), st) e)
                     val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N32 %=? N0) %= Itrue
@@ -622,7 +622,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         val (I_e1, st) = compile (e1, st) 
         val (I_e2, st) = compile (e2, st)
       in
-        I_e1 @@ I_e2 @@ set_reg ARG_REG @@ JUMP
+        I_e1 @@ I_e2 @@ set_reg ARG_REG @@ JUMP ()
       end
     | ECase (e, bind1, bind2) =>
       let
@@ -636,7 +636,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         val r = fresh_reg ()
         val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1), st) e1
         val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2), st) e2
-        val branch_prelude = [PUSH1nat 32, ADD, MLOAD] @ set_reg r
+        val branch_prelude = [PUSH1nat 32, ADD (), MLOAD ()] @ set_reg r
         val itbinds = rev itctx
         val hval = HCode' (itbinds, ((st, rctx, [TProd (TiBoolConst true, t2)](*the stack spec*), i_e2), branch_prelude @@ I2))
         val l = fresh_label ()
@@ -670,9 +670,9 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         val () = output_heap ((l, "ifi_else_branch"), hval)
       in
         I_e @@
-        [ISZERO, PUSH1 WTT, SWAP1] @@
+        [ISZERO (), PUSH1 WTT, SWAP1] @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
-        [JUMPI] @@
+        [JUMPI ()] @@
         branch_prelude @@
         I1
       end
@@ -688,9 +688,9 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         val () = output_heap ((l, "else_branch"), hval)
       in
         I_e @@
-        [ISZERO] @@
+        [ISZERO ()] @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
-        [JUMPI] @@
+        [JUMPI ()] @@
         I1
       end
     | EHalt (e, _) =>
