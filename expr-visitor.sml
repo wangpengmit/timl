@@ -195,12 +195,12 @@ fun default_expr_visitor_vtable
         val data = (e1, e2)
       in
         case opr of
-            EBApp => #visit_EApp vtable this env data
-          | EBPair => #visit_EPair vtable this env data
-          | EBNew => #visit_ENew vtable this env data
-          | EBRead => #visit_ERead vtable this env data
-          | EBPrim EBPIntAdd => #visit_EAdd vtable this env data
-          | EBNat EBNAdd => #visit_ENatAdd vtable this env data
+            EBApp () => #visit_EApp vtable this env data
+          | EBPair () => #visit_EPair vtable this env data
+          | EBNew () => #visit_ENew vtable this env data
+          | EBRead () => #visit_ERead vtable this env data
+          | EBPrim (EBPIntAdd ()) => #visit_EAdd vtable this env data
+          | EBNat (EBNAdd ()) => #visit_ENatAdd vtable this env data
           | _ => T.EBinOp (opr, #visit_expr vtable this env e1, #visit_expr vtable this env e2)
       end
     fun visit_EApp this env data =
@@ -210,7 +210,7 @@ fun default_expr_visitor_vtable
         val e1 = #visit_expr vtable this env e1
         val e2 = #visit_expr vtable this env e2
       in
-        T.EBinOp (EBApp, e1, e2)
+        T.EBinOp (EBApp (), e1, e2)
       end
     fun visit_EPair this env data =
       let
@@ -219,7 +219,7 @@ fun default_expr_visitor_vtable
         val e1 = #visit_expr vtable this env e1
         val e2 = #visit_expr vtable this env e2
       in
-        T.EBinOp (EBPair, e1, e2)
+        T.EBinOp (EBPair (), e1, e2)
       end
     fun visit_EAdd this env data =
       let
@@ -246,7 +246,7 @@ fun default_expr_visitor_vtable
         val e1 = #visit_expr vtable this env e1
         val e2 = #visit_expr vtable this env e2
       in
-        T.EBinOp (EBNew, e1, e2)
+        T.EBinOp (EBNew (), e1, e2)
       end
     fun visit_ERead this env data =
       let
@@ -255,7 +255,7 @@ fun default_expr_visitor_vtable
         val e1 = #visit_expr vtable this env e1
         val e2 = #visit_expr vtable this env e2
       in
-        T.EBinOp (EBRead, e1, e2)
+        T.EBinOp (EBRead (), e1, e2)
       end
     fun visit_ETriOp this env data =
       let
@@ -274,8 +274,8 @@ fun default_expr_visitor_vtable
         val data = (e, i)
       in
         case opr of
-	    EEIAppI => #visit_EAppI vtable this env data
-	  | EEIAscTime => #visit_EAscTime vtable this env data
+	    EEIAppI () => #visit_EAppI vtable this env data
+	  | EEIAscTime () => #visit_EAscTime vtable this env data
       end
     fun visit_EAppI this env data = 
       let
@@ -284,7 +284,7 @@ fun default_expr_visitor_vtable
         val e = #visit_expr vtable this env e
         val i = #visit_idx vtable this env i
       in
-        T.EEI (EEIAppI, e, i)
+        T.EEI (EEIAppI (), e, i)
       end
     fun visit_EAscTime this env data = 
       let
@@ -293,7 +293,7 @@ fun default_expr_visitor_vtable
         val e = #visit_expr vtable this env e
         val i = #visit_idx vtable this env i
       in
-        T.EEI (EEIAscTime, e, i)
+        T.EEI (EEIAscTime (), e, i)
       end
     fun visit_EET this env data = 
       let
@@ -302,9 +302,9 @@ fun default_expr_visitor_vtable
         val data = (e, t)
       in
         case opr of
-	    EETAppT => #visit_EAppT vtable this env data
-	  | EETAsc => #visit_EAsc vtable this env data
-          | EETHalt => T.EET (EETHalt, #visit_expr vtable this env e, #visit_mtype vtable this env t)
+	    EETAppT () => #visit_EAppT vtable this env data
+	  | EETAsc () => #visit_EAsc vtable this env data
+          | EETHalt () => T.EET (opr, #visit_expr vtable this env e, #visit_mtype vtable this env t)
       end
     fun visit_EAppT this env data = 
       let
@@ -313,7 +313,7 @@ fun default_expr_visitor_vtable
         val e = #visit_expr vtable this env e
         val t = #visit_mtype vtable this env t
       in
-        T.EET (EETAppT, e, t)
+        T.EET (EETAppT (), e, t)
       end
     fun visit_EAsc this env data = 
       let
@@ -322,7 +322,7 @@ fun default_expr_visitor_vtable
         val e = #visit_expr vtable this env e
         val t = #visit_mtype vtable this env t
       in
-        T.EET (EETAsc, e, t)
+        T.EET (EETAsc (), e, t)
       end
     fun visit_ET this env data = 
       let

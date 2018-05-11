@@ -46,11 +46,11 @@ open Util
 infixr 0 $
 infixr 0 !!
          
-val BSTime = BSBase BSSTime
-val BSNat = BSBase BSSNat
-val BSBool = BSBase BSSBool
-val BSUnit = BSBase BSSUnit
-val BSState = BSBase BSSState
+val BSTime = BSBase (BSSTime ())
+val BSNat = BSBase (BSSNat ())
+val BSBool = BSBase (BSSBool ())
+val BSUnit = BSBase (BSSUnit ())
+val BSState = BSBase (BSSState ())
                  
 fun STime r = SBasic (BSTime, r)
 fun SNat r = SBasic (BSNat, r)
@@ -143,14 +143,14 @@ and is_wf_prop gctx (ctx, p) =
 	  PBinConn (opr,
                    is_wf_prop (ctx, p1),
 	           is_wf_prop (ctx, p2))
-        | U.PBinPred (BPEq, i1, i2) =>
+        | U.PBinPred (BPEq (), i1, i2) =>
 	  let 
             val (i1, bs1) = get_basic_sort (ctx, i1)
 	    val (i2, bs2) = get_basic_sort (ctx, i2)
             (* val () = println $ sprintf "is_wf_prop()/EqP: $ vs $" [str_bs bs1, str_bs bs2] *)
             val () = unify_bs (U_get_region_p p) (bs1, bs2)
 	  in
-            PBinPred (BPEq, i1, i2)
+            PBinPred (BPEq (), i1, i2)
 	  end
         | U.PBinPred (opr, i1, i2) =>
 	  let 
@@ -162,7 +162,7 @@ and is_wf_prop gctx (ctx, p) =
               Error (U_get_region_p p, sprintf "Sorts of operands of $ must be both $:" [str_bin_pred opr, expected] :: indent ["left: " ^ str_bs bs1, "right: " ^ str_bs bs2])
             val () =
                 case opr of
-                    BPBigO =>
+                    BPBigO () =>
                     let
                       val (args, ret) = collect_BSArrow bs
                       val r = U_get_region_p p
@@ -176,8 +176,8 @@ and is_wf_prop gctx (ctx, p) =
                     end
                   | _ =>
                     (case bs of
-                         BSBase BSSNat => ()
-                       | BSBase BSSTime => ()
+                         BSBase (BSSNat ()) => ()
+                       | BSBase (BSSTime ()) => ()
                        | _ => raise error "Nat or Time"
                     )
 	  in
@@ -186,7 +186,7 @@ and is_wf_prop gctx (ctx, p) =
         | U.PQuan (q, bs, Bind ((name, r), p), r_all) =>
           let
             val q = case q of
-                        Forall => Forall
+                        Forall () => Forall ()
                       | Exists _ => Exists NONE
             val bs = is_wf_basic_sort bs
             val p = open_close add_sorting (name, SBasic (bs, r)) ctx (fn ctx => is_wf_prop (ctx, p))
@@ -234,7 +234,7 @@ and get_basic_sort gctx (ctx, i) =
             (case c of
 	         ICBool _ => 
                  (IConst (c, r), BSBool)
-	       | ICTT => 
+	       | ICTT () => 
                  (ITT r, BSUnit)
 	       | ICTime x => 
 	         (ITime (x, r), BSTime)
@@ -243,19 +243,19 @@ and get_basic_sort gctx (ctx, i) =
 	           (INat (n, r), BSNat)
 	         else
 	           raise Error (r, ["Natural number constant must be non-negative"])
-	       | ICAdmit => 
+	       | ICAdmit () => 
                  (IAdmit r, BSUnit)
             )
           | U.IUnOp (opr, i, r) =>
             let
               fun idx_un_op_type opr =
                 case opr of
-                    IUToReal => (BSSNat, BSSTime)
-                  | IULog _ => (BSSTime, BSSTime)
-                  | IUCeil => (BSSTime, BSSNat)
-                  | IUFloor => (BSSTime, BSSNat)
-                  | IUB2n => (BSSBool, BSSNat)
-                  | IUNeg => (BSSBool, BSSBool)
+                    IUToReal () => (BSSNat (), BSSTime ())
+                  | IULog _ => (BSSTime (), BSSTime ())
+                  | IUCeil () => (BSSTime (), BSSNat ())
+                  | IUFloor () => (BSSTime (), BSSNat ())
+                  | IUB2n () => (BSSBool (), BSSNat ())
+                  | IUNeg () => (BSSBool (), BSSBool ())
                   | IUDiv _ => raise Impossible "idx_un_op_type ()"
                                      (* | IUExp _ => raise Impossible "idx_un_op_type ()" *)
             in
@@ -308,26 +308,26 @@ and get_basic_sort gctx (ctx, i) =
                 end
               fun idx_bin_op_type opr =
                 case opr of
-                    IBAnd => (BSSBool, BSSBool, BSSBool)
-                  | IBOr => (BSSBool, BSSBool, BSSBool)
-                  | IBExpN => raise Impossible "idx_bin_op_type ()"
-                  | IBMax => raise Impossible "idx_bin_op_type ()"
-                  | IBMin => raise Impossible "idx_bin_op_type ()"
-                  | IBApp => raise Impossible "idx_bin_op_type ()"
-                  | IBEq => raise Impossible "idx_bin_op_type ()"
-                  | IBLt => raise Impossible "idx_bin_op_type ()"
-                  | IBGt => raise Impossible "idx_bin_op_type ()"
-                  | IBLe => raise Impossible "idx_bin_op_type ()"
-                  | IBGe => raise Impossible "idx_bin_op_type ()"
-                  | IBAdd => raise Impossible "idx_bin_op_type ()"
-                  | IBMult => raise Impossible "idx_bin_op_type ()"
-                  | IBMod => raise Impossible "idx_bin_op_type ()"
-                  | IBBoundedMinus => raise Impossible "idx_bin_op_type ()"
-                  | IBMinus => raise Impossible "idx_bin_op_type()/MinusI"
-                  | IBUnion => (BSSState, BSSState, BSSState)
+                    IBAnd () => (BSSBool (), BSSBool (), BSSBool ())
+                  | IBOr () => (BSSBool (), BSSBool (), BSSBool ())
+                  | IBExpN () => raise Impossible "idx_bin_op_type ()"
+                  | IBMax () => raise Impossible "idx_bin_op_type ()"
+                  | IBMin () => raise Impossible "idx_bin_op_type ()"
+                  | IBApp () => raise Impossible "idx_bin_op_type ()"
+                  | IBEq () => raise Impossible "idx_bin_op_type ()"
+                  | IBLt () => raise Impossible "idx_bin_op_type ()"
+                  | IBGt () => raise Impossible "idx_bin_op_type ()"
+                  | IBLe () => raise Impossible "idx_bin_op_type ()"
+                  | IBGe () => raise Impossible "idx_bin_op_type ()"
+                  | IBAdd () => raise Impossible "idx_bin_op_type ()"
+                  | IBMult () => raise Impossible "idx_bin_op_type ()"
+                  | IBMod () => raise Impossible "idx_bin_op_type ()"
+                  | IBBoundedMinus () => raise Impossible "idx_bin_op_type ()"
+                  | IBMinus () => raise Impossible "idx_bin_op_type()/MinusI"
+                  | IBUnion () => (BSSState (), BSSState (), BSSState ())
             in
               case opr of
-                  IBApp =>
+                  IBApp () =>
                   let
                     (* val () = println $ U.str_i (names ctx) i *)
                     val (i1, bs) = get_basic_sort (ctx, i1)
@@ -336,19 +336,19 @@ and get_basic_sort gctx (ctx, i) =
                   in
                     (IBinOp (opr, i1, i2), bs2)
                   end
-                | IBAdd => overloaded [BSSNat, BSSTime] NONE
-                | IBBoundedMinus => overloaded [BSSNat, BSSTime] NONE
-                | IBExpN => overloaded [BSSNat, BSSTime] NONE
-                | IBMinus => overloaded [BSSNat, BSSTime] NONE
-                | IBMult => overloaded [BSSNat, BSSTime] NONE
-                | IBMod => overloaded [BSSNat] NONE
-                | IBMax => overloaded [BSSNat, BSSTime] NONE
-                | IBMin => overloaded [BSSNat, BSSTime] NONE
-                | IBEq => overloaded [BSSNat, BSSBool, BSSUnit] (SOME BSSBool)
-                | IBLt => overloaded [BSSNat, BSSTime(* , BSSBool, UnitSort *)] (SOME BSSBool)
-                | IBGt => overloaded [BSSNat, BSSTime(* , BSSBool, UnitSort *)] (SOME BSSBool)
-                | IBLe => overloaded [BSSNat, BSSTime(* , BSSBool, UnitSort *)] (SOME BSSBool)
-                | IBGe => overloaded [BSSNat, BSSTime(* , BSSBool, UnitSort *)] (SOME BSSBool)
+                | IBAdd () => overloaded [BSSNat (), BSSTime ()] NONE
+                | IBBoundedMinus () => overloaded [BSSNat (), BSSTime ()] NONE
+                | IBExpN () => overloaded [BSSNat (), BSSTime ()] NONE
+                | IBMinus () => overloaded [BSSNat (), BSSTime ()] NONE
+                | IBMult () => overloaded [BSSNat (), BSSTime ()] NONE
+                | IBMod () => overloaded [BSSNat ()] NONE
+                | IBMax () => overloaded [BSSNat (), BSSTime ()] NONE
+                | IBMin () => overloaded [BSSNat (), BSSTime ()] NONE
+                | IBEq () => overloaded [BSSNat (), BSSBool (), BSSUnit ()] (SOME (BSSBool ()))
+                | IBLt () => overloaded [BSSNat (), BSSTime ()(* , BSSBool (), UnitSort *)] (SOME (BSSBool ()))
+                | IBGt () => overloaded [BSSNat (), BSSTime ()(* , BSSBool (), UnitSort *)] (SOME (BSSBool ()))
+                | IBLe () => overloaded [BSSNat (), BSSTime ()(* , BSSBool (), UnitSort *)] (SOME (BSSBool ()))
+                | IBGe () => overloaded [BSSNat (), BSSTime ()(* , BSSBool (), UnitSort *)] (SOME (BSSBool ()))
                 | _ =>
                   let
                     val (arg1type, arg2type, rettype) = idx_bin_op_type opr
@@ -434,7 +434,7 @@ and check_sort gctx (ctx, i : U.idx, s : sort) : idx =
             val r = get_region_i i
             val (i, is_admit) =
                 case i of
-                    IConst (ICAdmit, r) => (ITT r, true)
+                    IConst (ICAdmit (), r) => (ITT r, true)
                   | _ => (i, false)
             (* val () = println $ "is_admit=" ^ str_bool is_admit *)
             val p = subst_i_p i p

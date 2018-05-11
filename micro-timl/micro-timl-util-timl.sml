@@ -23,7 +23,7 @@ infixr 1 -->
 infix 1 <->
 
 infix 8 %**
-fun a %** b = IBinOp (IBExpN, a, b)
+fun a %** b = IBinOp (IBExpN (), a, b)
                    
 val unTAbsT = unBindAnnoName
                 
@@ -76,7 +76,7 @@ fun IBool c = IConst (ICBool c, dummy)
                      
 fun TiBoolConst b = TiBool $ IBool b
                            
-val SState = SBasic (BSBase BSSState, dummy)
+val SState = SBasic (BSBase (BSSState ()), dummy)
                                 
 fun assert_TArrow t =
   case t of

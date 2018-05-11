@@ -66,8 +66,8 @@ fun eq_bs bs bs' =
 fun eq_idx_const c c' =
   case c of
       ICBool b => (case c' of ICBool b' => b = b' | _ => false)
-    | ICTT => (case c' of ICTT => true | _ => false)
-    | ICAdmit => raise Impossible "can't compare index ICAdmit"
+    | ICTT () => (case c' of ICTT () => true | _ => false)
+    | ICAdmit () => raise Impossible "can't compare index ICAdmit"
     | ICNat n => (case c' of ICNat n' => n = n' | _ => false)
     | ICTime x => (case c' of ICTime x' => TimeType.time_eq (x, x') | _ => false)
     
@@ -92,8 +92,8 @@ and eq_state st st' = StMapU.is_same_domain st st' andalso List.all (fn (k, v) =
     
 fun eq_quan q q' =
   case q of
-      Forall => (case q' of Forall => true | Exists _ => false)
-    | Exists _ => (case q' of Forall => false | Exists _ => true)
+      Forall () => (case q' of Forall () => true | Exists _ => false)
+    | Exists _ => (case q' of Forall () => false | Exists _ => true)
                     
 fun eq_p p p' =
   case p of

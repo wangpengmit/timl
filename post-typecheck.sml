@@ -191,7 +191,7 @@ fun str_f2 gctx ctx f =
 fun f_to_f2 f =
   case f of
       ForallF (name, ft, fs) => ForallF2 (name, ft, fs_to_f2 fs)
-    | ImplyF (p, fs) => BinConnF2 (BCImply, PropF2 (p, get_region_p p), fs_to_f2 fs)
+    | ImplyF (p, fs) => BinConnF2 (BCImply (), PropF2 (p, get_region_p p), fs_to_f2 fs)
     | AndF fs => fs_to_f2 fs
     | PropF p => PropF2 p
     | AdmitF p => PropF2 p (* drop admit info *)
@@ -199,7 +199,7 @@ fun f_to_f2 f =
 and fs_to_f2 fs =
     case fs of
         [] => PropF2 (PTrue dummy, dummy)
-      | f :: fs => BinConnF2 (BCAnd, f_to_f2 f, fs_to_f2 fs)
+      | f :: fs => BinConnF2 (BCAnd (), f_to_f2 f, fs_to_f2 fs)
 
 (* remove all forall-module *)
                            
@@ -233,7 +233,7 @@ fun unpackage_f2 f =
                   val (b, p) = get_base_and_refinement s
                   val f =
                       case p of
-                          SOME p => BinConnF2 (BCImply, PropF2 (p, get_region_p p), f)
+                          SOME p => BinConnF2 (BCImply (), PropF2 (p, get_region_p p), f)
                         | NONE => f
                 in
                   ForallF2 (mod_name ^ "_" ^ name, FtSorting b, f)
@@ -264,7 +264,7 @@ fun f2_to_prop f : prop =
                    | FtModule _ => raise Impossible "f2_to_prop(): FtModule"
         val p = f2_to_prop f
       in
-        PQuan (Forall, bs, Bind ((name, dummy), p), get_region_p p)
+        PQuan (Forall (), bs, Bind ((name, dummy), p), get_region_p p)
       end
     | BinConnF2 (opr, f1, f2) => PBinConn(opr, f2_to_prop f1, f2_to_prop f2)
     | PropF2 (p, r) => set_region_p p r

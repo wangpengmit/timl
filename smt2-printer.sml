@@ -16,24 +16,24 @@ fun evar_name n = "!!" ^ str_int n
 
 fun print_idx_bin_op opr =
     case opr of
-        IBAdd => "+"
-      | IBBoundedMinus => "-"
-      | IBMult => "*"
-      | IBMod => "mod"
-      | IBEq => "="
-      | IBAnd => "and"
-      | IBOr => "or"
-      | IBExpN => "exp_i_i"
-      (* | ExpNI => "^" *)
-      | IBLt => "<"
-      | IBGt => ">"
-      | IBLe => "<="
-      | IBGe => ">="
-      | IBMax => raise Impossible "print_idx_bin_op ()"
-      | IBMin => raise Impossible "print_idx_bin_op ()"
-      | IBApp => raise Impossible "print_idx_bin_op ()"
-      | IBMinus => raise Impossible "print_idx_bin_op ()"
-      | IBUnion => raise Impossible "print_idx_bin_op ()"
+        IBAdd () => "+"
+      | IBBoundedMinus () => "-"
+      | IBMult () => "*"
+      | IBMod () => "mod"
+      | IBEq () => "="
+      | IBAnd () => "and"
+      | IBOr () => "or"
+      | IBExpN () => "exp_i_i"
+      (* | ExpNI () => "^" *)
+      | IBLt () => "<"
+      | IBGt () => ">"
+      | IBLe () => "<="
+      | IBGe () => ">="
+      | IBMax () => raise Impossible "print_idx_bin_op ()"
+      | IBMin () => raise Impossible "print_idx_bin_op ()"
+      | IBApp () => raise Impossible "print_idx_bin_op ()"
+      | IBMinus () => raise Impossible "print_idx_bin_op ()"
+      | IBUnion () => raise Impossible "print_idx_bin_op ()"
         
 fun print_i ctx i =
   case i of
@@ -49,46 +49,46 @@ fun print_i ctx i =
            ICNat n => str_int n
          | ICTime x => TimeType.toString x
          | ICBool b => str_bool b
-         | ICTT => "TT"
-         | ICAdmit => "TT"
+         | ICTT () => "TT"
+         | ICAdmit () => "TT"
       )
     | IUnOp (opr, i, _) => 
       (case opr of
-           IUToReal => sprintf "(to_real $)" [print_i ctx i]
+           IUToReal () => sprintf "(to_real $)" [print_i ctx i]
          | IULog base =>
            sprintf "(log $ $)" [base, print_i ctx i]
            (* raise SMTError "can't handle log2" *)
-         | IUCeil => sprintf "(ceil $)" [print_i ctx i]
-         | IUFloor => sprintf "(floor $)" [print_i ctx i]
-         | IUB2n => sprintf "(b2i $)" [print_i ctx i]
-         | IUNeg => sprintf "(not $)" [print_i ctx i]
+         | IUCeil () => sprintf "(ceil $)" [print_i ctx i]
+         | IUFloor () => sprintf "(floor $)" [print_i ctx i]
+         | IUB2n () => sprintf "(b2i $)" [print_i ctx i]
+         | IUNeg () => sprintf "(not $)" [print_i ctx i]
          | IUDiv n => sprintf "(/ $ $)" [print_i ctx i, str_int n]
-         (* | IUExp s => sprintf "(^ $ $)" [print_i ctx i, s] *)
+         (* | IUExp s () => sprintf "(^ $ $)" [print_i ctx i, s] *)
       )
     | IBinOp (opr, i1, i2) => 
       (case opr of
-           IBMax =>
+           IBMax () =>
            let
                fun max a b =
                    sprintf "(ite (>= $ $) $ $)" [a, b, a, b]
            in
                max (print_i ctx i1) (print_i ctx i2)
            end
-         | IBMin =>
+         | IBMin () =>
            let
                fun min a b =
                    sprintf "(ite (<= $ $) $ $)" [a, b, a, b]
            in
                min (print_i ctx i1) (print_i ctx i2)
            end
-         | IBBoundedMinus =>
+         | IBBoundedMinus () =>
            let
              fun bounded_minus a b =
                  sprintf "(ite (< $ $) 0 (- $ $))" [a, b, a, b]
            in
              bounded_minus (print_i ctx i1) (print_i ctx i2)
            end
-         | IBApp =>
+         | IBApp () =>
            let
              val (f, is) = collect_IBApp i1 
              val is = f :: is
@@ -97,7 +97,7 @@ fun print_i ctx i =
                (* sprintf "(app_$$)" [str_int (length is - 1), join_prefix " " $ map (print_i ctx) is] *)
                sprintf "($)" [join " " $ map (print_i ctx) is]
            end
-         (* | ExpNI => sprintf "($ $)" [print_idx_bin_op opr, print_i ctx i2] *)
+         (* | ExpNI () => sprintf "($ $)" [print_idx_bin_op opr, print_i ctx i2] *)
          | _ => 
            sprintf "($ $ $)" [print_idx_bin_op opr, print_i ctx i1, print_i ctx i2]
       )
@@ -113,11 +113,11 @@ fun negate s = sprintf "(not $)" [s]
 
 fun print_base_sort b =
   case b of
-      BSSUnit => "Unit"
-    | BSSBool => "Bool"
-    | BSSNat => "Int"
-    | BSSTime => "Real"
-    | BSSState => "Unit"
+      BSSUnit () => "Unit"
+    | BSSBool () => "Bool"
+    | BSSNat () => "Int"
+    | BSSTime () => "Real"
+    | BSSState () => "Unit"
 
 fun print_bsort bsort =
   case bsort of
@@ -132,18 +132,18 @@ fun print_p ctx p =
   let
       fun str_conn opr =
         case opr of
-            BCAnd => "and"
-          | BCOr => "or"
-          | BCImply => "=>"
-          | BCIff => "="
+            BCAnd () => "and"
+          | BCOr () => "or"
+          | BCImply () => "=>"
+          | BCIff () => "="
       fun str_pred opr =
         case opr of
-            BPEq => "="
-          | BPLe => "<="
-          | BPLt => "<"
-          | BPGe => ">="
-          | BPGt => ">"
-          | BPBigO => raise SMTError "can't handle big-O"
+            BPEq () => "="
+          | BPLe () => "<="
+          | BPLt () => "<"
+          | BPGe () => ">="
+          | BPGt () => ">"
+          | BPBigO () => raise SMTError "can't handle big-O"
       fun f p =
         case p of
             PTrueFalse (b, _) => str_bool b
@@ -251,11 +251,11 @@ fun check get_ce = [
 (* convert to Z3's types and naming conventions *)
 fun conv_base_sort b =
       case b of
-          BSSUnit => (BSSUnit, NONE)
-        | BSSBool => (BSSBool, NONE)
-        | BSSNat => (BSSNat, SOME (PBinPred (BPLe, INat (0, dummy), IVar (ID (0, dummy), []))))
-        | BSSTime => (BSSTime, SOME (PBinPred (BPLe, ITime (TimeType.zero, dummy), IVar (ID (0, dummy), []))))
-        | BSSState => (BSSUnit, NONE)
+          BSSUnit () => (BSSUnit (), NONE)
+        | BSSBool () => (BSSBool (), NONE)
+        | BSSNat () => (BSSNat (), SOME (PBinPred (BPLe (), INat (0, dummy), IVar (ID (0, dummy), []))))
+        | BSSTime () => (BSSTime (), SOME (PBinPred (BPLe (), ITime (TimeType.zero, dummy), IVar (ID (0, dummy), []))))
+        | BSSState () => (BSSUnit (), NONE)
 
 fun conv_bsort bsort =
   case bsort of

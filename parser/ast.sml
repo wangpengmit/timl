@@ -31,11 +31,11 @@ datatype sort =
          | SBigO of string * bsort * idx * region
 
 datatype quan =
-	 Forall
+	 Forall of unit
 
 datatype abs = 
-	 AbsFn
-	 | AbsRec
+	 AbsFn of unit
+	 | AbsRec of unit
 
 type sort_bind = id * sort * region
 type bsort_bind = id * bsort * region
@@ -100,8 +100,8 @@ datatype exp_const =
          | ECChar of Char.char
 
 datatype expr_tri_op =
-         ETIte
-         | ETIfDec
+         ETIte of unit
+         | ETIfDec of unit
 
 type state = (id * idx) list
      
@@ -135,9 +135,9 @@ datatype exp =
          | DTypeDef of id * ty
          | DOpen of id
 
-fun EIte (e1, e2, e3, r) = ETriOp (ETIte, e1, e2, e3, r)
+fun EIte (e1, e2, e3, r) = ETriOp (ETIte (), e1, e2, e3, r)
 (* fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r) *)
-fun EApp (e1, e2, r) = EBinOp (EBApp, e1, e2, r)
+fun EApp (e1, e2, r) = EBinOp (EBApp (), e1, e2, r)
 fun short_id id = ((NONE, id), false)
 fun PnShortVar (x, r) = PnConstr (short_id (x, r), [], NONE, r)
 (* fun EIte (e, e1, e2, r) = Case (e, (NONE, NONE), [(PShortVar ("true", r), e1), (PShortVar ("false", r), e2)], r) *)
@@ -195,7 +195,7 @@ fun underscore r = (NONE, ("_", r))
 
 fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
 
-fun IUnOp (opr, i, r) = IBinOp (IBApp, IVar (NONE, (str_idx_un_op opr, r)), i, r)
+fun IUnOp (opr, i, r) = IBinOp (IBApp (), IVar (NONE, (str_idx_un_op opr, r)), i, r)
 
 val empty_state = []
 

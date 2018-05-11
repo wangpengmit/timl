@@ -131,6 +131,6 @@ structure UVarExprUtil = struct
 open BaseSorts
 open Subst
        
-fun SSubset_from_prop r p = SSubset ((BSBase BSSUnit, r), Bind.Bind (("__u", r), shift_i_p p), r)
+fun SSubset_from_prop r p = SSubset ((BSBase (BSSUnit ()), r), Bind.Bind (("__u", r), shift_i_p p), r)
                                   
 end

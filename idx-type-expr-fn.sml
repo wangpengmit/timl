@@ -72,10 +72,11 @@ open ExprUtil
        
 (* some shorthands *)
 
-val BSTime = BSBase BSSTime
-val BSNat = BSBase BSSNat
-val BSBool = BSBase BSSBool
-val BSUnit = BSBase BSSUnit
+val BSTime = BSBase (BSSTime ())
+val BSNat = BSBase (BSSNat ())
+val BSBool = BSBase (BSSBool ())
+val BSUnit = BSBase (BSSUnit ())
+val BSState = BSBase (BSSState ())
                  
 fun STime r = SBasic (BSTime, r)
 fun SNat r = SBasic (BSNat, r)
@@ -87,9 +88,9 @@ fun SUnit r = SBasic (BSUnit, r)
 (* val SBool = SBasic (BSBase BoolSort, dummy) *)
 (* val SUnit = SBasic (BSBase UnitSort, dummy) *)
 
-fun TInt r = TBase (BTInt, r)
-fun TBool r = TBase (BTBool, r)
-fun TByte r = TBase (BTByte, r)
+fun TInt r = TBase (BTInt (), r)
+fun TBool r = TBase (BTBool (), r)
+fun TByte r = TBase (BTByte (), r)
 
 val Type = (0, [])
 

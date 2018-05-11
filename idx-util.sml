@@ -23,15 +23,15 @@ fun N0 r = INat (0, r)
 fun N1 r = INat (1, r)
 fun IDiv (i, (n, r)) = IUnOp (IUDiv n, i, r)
 (* fun ExpI (i, (s, r)) = IUnOp (IUExp s, i, r) *)
-fun IMod (a, b) = IBinOp (IBMod, a, b)
+fun IMod (a, b) = IBinOp (IBMod (), a, b)
 fun ITrue r = IConst (ICBool true, r)
 fun IFalse r = IConst (ICBool false, r)
-fun ITT r = IConst (ICTT, r)
-fun IAdmit r = IConst (ICAdmit, r)
+fun ITT r = IConst (ICTT (), r)
+fun IAdmit r = IConst (ICAdmit (), r)
 fun PTrue r = PTrueFalse (true, r)
 fun PFalse r = PTrueFalse (false, r)
 
-fun PEq (a, b) = PBinPred (BPEq, a, b)             
+fun PEq (a, b) = PBinPred (BPEq (), a, b)             
 
 (* notations *)
          
@@ -56,26 +56,26 @@ infixr 2 \/?
 infixr 1 -->
 infix 1 <->
 
-fun a %@ b = IBinOp (IBApp, a, b)
-fun a %^ b = IBinOp (IBExpN, a, b)
-fun a %* b = IBinOp (IBMult, a, b)
-fun a %+ b = IBinOp (IBAdd, a, b)
-fun a %< b = PBinPred (BPLt, a, b)
-fun a %> b = PBinPred (BPGt, a, b)
-fun a %<= b = PBinPred (BPLe, a, b)
-fun a %>= b = PBinPred (BPGe, a, b)
+fun a %@ b = IBinOp (IBApp (), a, b)
+fun a %^ b = IBinOp (IBExpN (), a, b)
+fun a %* b = IBinOp (IBMult (), a, b)
+fun a %+ b = IBinOp (IBAdd (), a, b)
+fun a %< b = PBinPred (BPLt (), a, b)
+fun a %> b = PBinPred (BPGt (), a, b)
+fun a %<= b = PBinPred (BPLe (), a, b)
+fun a %>= b = PBinPred (BPGe (), a, b)
 fun a %= b = PEq (a, b)
-fun a %<? b = IBinOp (IBLt, a, b)
-fun a %>? b = IBinOp (IBGt, a, b)
-fun a %<=? b = IBinOp (IBLe, a, b)
-fun a %>=? b = IBinOp (IBGe, a, b)
-fun a %=? b = IBinOp (IBEq, a, b)
-fun a /\ b = PBinConn (BCAnd, a, b)
-fun a \/ b = PBinConn (BCOr, a, b)
-fun a /\? b = IBinOp (IBAnd, a, b)
-fun a \/? b = IBinOp (IBOr, a, b)
-fun a --> b = PBinConn (BCImply, a, b)
-fun a <-> b = PBinConn (BCIff, a, b)
+fun a %<? b = IBinOp (IBLt (), a, b)
+fun a %>? b = IBinOp (IBGt (), a, b)
+fun a %<=? b = IBinOp (IBLe (), a, b)
+fun a %>=? b = IBinOp (IBGe (), a, b)
+fun a %=? b = IBinOp (IBEq (), a, b)
+fun a /\ b = PBinConn (BCAnd (), a, b)
+fun a \/ b = PBinConn (BCOr (), a, b)
+fun a /\? b = IBinOp (IBAnd (), a, b)
+fun a \/? b = IBinOp (IBOr (), a, b)
+fun a --> b = PBinConn (BCImply (), a, b)
+fun a <-> b = PBinConn (BCIff (), a, b)
                       
 fun combine_And ps = foldl' (fn (p, acc) => acc /\ p) (PTrue dummy) ps
                             
@@ -95,9 +95,9 @@ fun collect_IBinOp_left opr i =
       else [i]
     | _ => [i]
              
-val collect_IBAdd = collect_IBinOp IBAdd
-val collect_IBAdd_left = collect_IBinOp_left IBAdd
-val collect_IBMult = collect_IBinOp IBMult
+val collect_IBAdd = collect_IBinOp (IBAdd ())
+val collect_IBAdd_left = collect_IBinOp_left (IBAdd ())
+val collect_IBMult = collect_IBinOp (IBMult ())
                                    
 fun combine_IBAdd zero is = foldl' (fn (i, acc) => acc %+ i) zero is
 fun combine_IBAdd_Time is = combine_IBAdd (T0 dummy) is
@@ -113,10 +113,10 @@ fun collect_PBinConn opr i =
       else [i]
     | _ => [i]
              
-val collect_PAnd = collect_PBinConn BCAnd
+val collect_PAnd = collect_PBinConn (BCAnd ())
 
 fun collect_IBApp i =
-  case collect_IBinOp_left IBApp i of
+  case collect_IBinOp_left (IBApp ()) i of
       f :: args => (f, args)
     | [] => raise Impossible "collect_IBApp(): null"
 
@@ -180,39 +180,39 @@ fun is_SApp_SUVar s =
       | _ => NONE
   end
     
-fun IApps f args = foldl (fn (arg, f) => IBinOp (IBApp, f, arg)) f args
+fun IApps f args = foldl (fn (arg, f) => IBinOp (IBApp (), f, arg)) f args
 fun SApps f args = foldl (fn (arg, f) => SApp (f, arg)) f args
                          
 fun SAbs_Many (ctx, s, r) = foldr (fn ((name, s_arg), s) => SAbs (s_arg, Bind ((name, r), s), r)) s ctx
 fun IAbs_Many (ctx, i, r) = foldr (fn ((name, b), i) => IAbs (b, Bind ((name, r), i), r)) i ctx
                                  
-fun IMax (i1, i2) = IBinOp (IBMax, i1, i2)
+fun IMax (i1, i2) = IBinOp (IBMax (), i1, i2)
                            
 fun interp_nat_expr_bin_op opr (i1, i2) err =
   case opr of
-      EBNAdd => i1 %+ i2
-    | EBNBoundedMinus => IBinOp (IBBoundedMinus, i1, i2)
-    | EBNMult => i1 %* i2
-    | EBNDiv =>
+      EBNAdd () => i1 %+ i2
+    | EBNBoundedMinus () => IBinOp (IBBoundedMinus (), i1, i2)
+    | EBNMult () => i1 %* i2
+    | EBNDiv () =>
       case i2 of
-          IConst (ICNat n, r) => IUnOp (IUFloor, IUnOp (IUDiv n, IUnOp (IUToReal, i1, r), r), r)
+          IConst (ICNat n, r) => IUnOp (IUFloor (), IUnOp (IUDiv n, IUnOp (IUToReal (), i1, r), r), r)
         | _ => err ()
          
 fun interp_nat_cmp r opr =
   let
-    fun neq (a, b) = IUnOp (IUNeg, a %=? b, r)
+    fun neq (a, b) = IUnOp (IUNeg (), a %=? b, r)
   in
   case opr of
-      NCLt => op%<?
-    | NCGt => op%>?
-    | NCLe => op%<=?
-    | NCGe => op%>=?
-    | NCEq => op%=?
-    | NCNEq => neq
+      NCLt () => op%<?
+    | NCGt () => op%>?
+    | NCLe () => op%<=?
+    | NCGe () => op%>=?
+    | NCEq () => op%=?
+    | NCNEq () => neq
   end
     
-fun IUnion (a, b) = IBinOp (IBUnion, a, b)
-val collect_IUnion = collect_IBinOp IBUnion
+fun IUnion (a, b) = IBinOp (IBUnion (), a, b)
+val collect_IUnion = collect_IBinOp (IBUnion ())
 fun combine_IUnion i is = foldl (fn (i, acc) => IUnion (acc, i)) i is
 val IEmptyState = IState StMap.empty
                          

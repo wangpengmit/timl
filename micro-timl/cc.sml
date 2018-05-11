@@ -308,7 +308,7 @@ fun TV (x, k) = TVar (make_Free_t x, [k])
 
 fun TExists bind = TQuan (Exists (), bind)
                          
-val ETT = EConst ECTT
+val ETT = EConst (ECTT ())
 
 fun ceil_half n = (n + 1) div 2
 
@@ -385,8 +385,8 @@ fun cc_ty_visitor_vtable cast () =
       in
       case t of
           TArrow _ => cc_t_arrow t
-        | TQuan (Forall, _) => cc_t_arrow t
-        | TQuanI (Forall, _) => cc_t_arrow t
+        | TQuan (Forall (), _) => cc_t_arrow t
+        | TQuanI (Forall (), _) => cc_t_arrow t
         | TQuan (q, bind) =>
           let
             val (k, (name, t)) = unBindAnnoName bind
@@ -472,13 +472,13 @@ fun cc_expr_un_op opr =
 
 fun apply_TForallIT b args =
     case (b, args) of
-        (TQuanI (Forall, bind), inl v :: args) =>
+        (TQuanI (Forall (), bind), inl v :: args) =>
         let
           val (_, (_, b)) = unBindAnnoName bind
         in
           apply_TForallIT (subst0_i_t v b) args
         end
-      | (TQuan (Forall, bind), inr v :: args) =>
+      | (TQuan (Forall (), bind), inr v :: args) =>
         let
           val (_, (_, b)) = unBindAnnoName bind
         in
@@ -511,7 +511,7 @@ fun cc_expr_visitor_vtable cast () =
         fun cc_e e = #visit_expr (cast this) this env e
         val e =
             case e of
-                EBinOp (EBApp, e1, e2) =>
+                EBinOp (EBApp (), e1, e2) =>
                 let
                   (* val () = println "cc() on EApp" *)
                   val (e1, itargs) = collect_EAppIT e1

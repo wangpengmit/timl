@@ -88,7 +88,7 @@ fun find_constr (gctx : ns_sigcontext) ctx x =
 
 fun on_quan q =
     case q of
-        Forall => Forall
+        Forall () => Forall ()
       | Exists _ => Exists NONE
 
 structure IdxVisitor = IdxVisitorFn (structure S = S.Idx
@@ -394,7 +394,7 @@ fun copy_anno gctx (anno as (t, d)) e =
             fun is_tuple_value e =
                 case e of
                     EVar _ => true
-                  | EBinOp (EBPair, e1, e2) => is_tuple_value e1 andalso is_tuple_value e2
+                  | EBinOp (EBPair (), e1, e2) => is_tuple_value e1 andalso is_tuple_value e2
                   | _ => false
             (* if e is tuple value, we are sure it doesn't cost time, so we can copy time annotation *)
             val d = if is_tuple_value e then d else NONE
@@ -427,21 +427,21 @@ fun copy_anno gctx (anno as (t, d)) e =
           in
             ELet ((t, d), Unbound.Bind (Teles decls, copy_anno (shift_return (sctxn, kctxn) (t, d')) e), r)
           end
-        | EEI (EEIAscTime, e, d') =>
+        | EEI (EEIAscTime (), e, d') =>
           let
             val d = SOME d'
             val e = copy_anno (t, d) e
           in
             EAscTime (e, d')
           end
-        | EET (EETAsc, e, t') =>
+        | EET (EETAsc (), e, t') =>
           let
             val t = SOME t'
             val e = copy_anno (t, d) e
           in
             EAsc (e, t')
           end
-        | ET (ETNever, _, _) => e
+        | ET (ETNever (), _, _) => e
         | _ =>
           case t of
               SOME t => EAsc (e, t)
@@ -653,7 +653,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
         val e = #visit_EAscTime super_vtable this ctx data
         val (e, i) = 
             case e of
-                EEI (EEIAscTime, e, i) => (e, i)
+                EEI (EEIAscTime (), e, i) => (e, i)
               | _ => raise Impossible "import_e/visit_EAscTime"
         val e = copy_anno (gctx_names gctx) (NONE, SOME i) e
       in
@@ -666,7 +666,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
         val e = #visit_EAsc super_vtable this ctx data
         val (e, t) = 
             case e of
-                EET (EETAsc, e, t) => (e, t)
+                EET (EETAsc (), e, t) => (e, t)
               | _ => raise Impossible "import_e/visit_EAsc"
         val e = copy_anno (gctx_names gctx) (SOME t, NONE) e
       in

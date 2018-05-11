@@ -62,14 +62,14 @@ fun strn_i i =
       )
     | IBinOp (opr, i1, i2) =>
       (case opr of
-           IBApp =>
+           IBApp () =>
            let
              val (f, is) = collect_IBApp i
              val is = f :: is
            in
              sprintf "($)" [join " " $ map strn_i is]
            end
-         | IBAdd =>
+         | IBAdd () =>
            let
              val is = collect_IBAdd_left i
            in
@@ -109,7 +109,7 @@ fun strn_s s =
         fun default () = sprintf "{ $ : $ | $ }" [name, strn_bs bs, strn_p p]
       in
         case (is_time_fun bs, p) of
-            (SOME arity, PBinPred (BPBigO, IVar (x, _), i2)) =>
+            (SOME arity, PBinPred (BPBigO (), IVar (x, _), i2)) =>
             if x = name then
               sprintf "BigO $ $" [str_int arity, strn_i i2]
             else
@@ -341,33 +341,33 @@ fun strn_e e =
     | EUnOp (opr, e, _) => sprintf "($ $)" [str_expr_un_op opr, strn_e e]
     | EBinOp (opr, e1, e2) =>
       (case opr of
-           EBApp => sprintf "($ $)" [strn_e e1, strn_e e2]
-         | EBPair =>
+           EBApp () => sprintf "($ $)" [strn_e e1, strn_e e2]
+         | EBPair () =>
            let
              val es = collect_Pair e
            in
              sprintf "($)" [join ", " $ map strn_e es]
            end
-         | EBNew => sprintf "(new $ $)" [strn_e e1, strn_e e2]
-         | EBRead => sprintf "(read $ $)" [strn_e e1, strn_e e2]
+         | EBNew () => sprintf "(new $ $)" [strn_e e1, strn_e e2]
+         | EBRead () => sprintf "(read $ $)" [strn_e e1, strn_e e2]
          | _ => sprintf "($ $ $)" [strn_e e1, pretty_str_expr_bin_op opr, strn_e e2]
       )
     | ETriOp (opr, e1, e2, e3) => sprintf "($ $ $ $)" [str_expr_tri_op opr, strn_e e1, strn_e e2, strn_e e3]
     | EEI (opr, e, i) =>
       (case opr of
-           EEIAppI => sprintf "($ {$})" [strn_e e, strn_i i]
-         | EEIAscTime => sprintf "($ |> $)" [strn_e e, strn_i i]
+           EEIAppI () => sprintf "($ {$})" [strn_e e, strn_i i]
+         | EEIAscTime () => sprintf "($ |> $)" [strn_e e, strn_i i]
       )
     | EET (opr, e, t) =>
       (case opr of
-           EETAppT => sprintf "($ [$])" [strn_e e, strn_mt t]
-         | EETAsc => sprintf "($ : $)" [strn_e e, strn_mt t]
-         | EETHalt => sprintf "(halt $ [$])" [strn_e e, strn_mt t]
+           EETAppT () => sprintf "($ [$])" [strn_e e, strn_mt t]
+         | EETAsc () => sprintf "($ : $)" [strn_e e, strn_mt t]
+         | EETHalt () => sprintf "(halt $ [$])" [strn_e e, strn_mt t]
       )
     | ENewArrayValues (t, es, _) => sprintf "array [$] {$}" [strn_mt t, join ", " $ map strn_e es]
     | ET (opr, t, _) =>
       (case opr of
-           ETNever => sprintf "(never [$])" [strn_mt t]
+           ETNever () => sprintf "(never [$])" [strn_mt t]
          | ETBuiltin name => sprintf "(builtin $ [$])" [name, strn_mt t]
       )
     | EAbs (st, bind) => 

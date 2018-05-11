@@ -244,18 +244,18 @@ fun inline_macro_prog (H, I) =
 
 fun impl_nat_cmp opr =
   case opr of
-      NCLt => [GT] (* a<b <-> b>a *)
-    | NCGt => [LT]
-    | NCLe => [LT, ISZERO] (* a<=b <-> ~(a>b) <-> ~(b<a) *)
-    | NCGe => [GT, ISZERO]
-    | NCEq => [EQ]
-    | NCNEq => [EQ, ISZERO]
+      NCLt () => [GT] (* a<b <-> b>a *)
+    | NCGt () => [LT]
+    | NCLe () => [LT, ISZERO] (* a<=b <-> ~(a>b) <-> ~(b<a) *)
+    | NCGe () => [GT, ISZERO]
+    | NCEq () => [EQ]
+    | NCNEq () => [EQ, ISZERO]
       
 fun concatRepeat n v = List.concat $ repeat n v
                
 fun cg_c c =
   case c of
-      ECTT => WCTT
+      ECTT () => WCTT
     | ECNat n => WCNat n
     | ECInt n => WCInt n
     | ECBool n => WCBool n
@@ -265,47 +265,47 @@ fun cg_c c =
                                 
 fun impl_prim_expr_un_opr opr =
   case opr of
-      EUPIntNeg => [PUSH1 $ WInt 0, SUB]
-    | EUPBoolNeg => [ISZERO]
-    | EUPInt2Byte => int2byte
-    | EUPByte2Int => byte2int
-    (* | EUPStrLen => [PUSH1nat 32, SWAP1, SUB, MLOAD] *)
+      EUPIntNeg () => [PUSH1 $ WInt 0, SUB]
+    | EUPBoolNeg () => [ISZERO]
+    | EUPInt2Byte () => int2byte
+    | EUPByte2Int () => byte2int
+    (* | EUPStrLen () => [PUSH1nat 32, SWAP1, SUB, MLOAD] *)
     (* | _ => raise Impossible $ "impl_prim_expr_up_op() on " ^ str_prim_expr_un_op opr *)
       
 fun impl_prim_expr_bin_op opr =
   case opr of
-       EBPIntAdd => [ADD]
-     | EBPIntMult => [MUL]
-     | EBPIntMinus => [SWAP1, SUB]
-     | EBPIntDiv => [SWAP1, SDIV]
-     | EBPIntMod => [SWAP1, MOD]
-     | EBPIntLt => [SWAP1, LT]
-     | EBPIntGt => [SWAP1, GT]
-     | EBPIntLe => [GT, ISZERO]
-     | EBPIntGe => [LT, ISZERO]
-     | EBPIntEq => [EQ]
-     | EBPIntNEq => [EQ, ISZERO]
-     | EBPBoolAnd => [AND]
-     | EBPBoolOr => [OR]
-     (* | EBPStrConcat => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat" *)
+       EBPIntAdd () => [ADD]
+     | EBPIntMult () => [MUL]
+     | EBPIntMinus () => [SWAP1, SUB]
+     | EBPIntDiv () => [SWAP1, SDIV]
+     | EBPIntMod () => [SWAP1, MOD]
+     | EBPIntLt () => [SWAP1, LT]
+     | EBPIntGt () => [SWAP1, GT]
+     | EBPIntLe () => [GT, ISZERO]
+     | EBPIntGe () => [LT, ISZERO]
+     | EBPIntEq () => [EQ]
+     | EBPIntNEq () => [EQ, ISZERO]
+     | EBPBoolAnd () => [AND]
+     | EBPBoolOr () => [OR]
+     (* | EBPStrConcat () => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat" *)
                   
 fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
-    | EUNat2Int => [NAT2INT]
-    | EUInt2Nat => [INT2NAT]
-    | EUArrayLen => [PUSH1nat 32, SWAP1, SUB, MLOAD]
+    | EUNat2Int () => [NAT2INT]
+    | EUInt2Nat () => [INT2NAT]
+    | EUArrayLen () => [PUSH1nat 32, SWAP1, SUB, MLOAD]
     | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD, MLOAD]
-    | EUPrintc => printc
-    (* | EUPrint => [PRINT] *)
-    | EUStorageGet => [SLOAD]
+    | EUPrintc () => printc
+    (* | EUPrint () => [PRINT] *)
+    | EUStorageGet () => [SLOAD]
                         
 fun impl_nat_expr_bin_op opr =
   case opr of
-      EBNAdd => [ADD]
-    | EBNMult => [MUL]
-    | EBNDiv => [SWAP1, DIV]
-    | EBNBoundedMinus => [SWAP1, SUB]
+      EBNAdd () => [ADD]
+    | EBNMult () => [MUL]
+    | EBNDiv () => [SWAP1, DIV]
+    | EBNBoundedMinus () => [SWAP1, SUB]
 
 val st_ref = ref IEmptyState
                  
@@ -335,7 +335,7 @@ fun compile st_name2int ectx e =
     | EAscState (e, st) => compile e
     | ENever t => PUSH_value $ VNever $ cg_t t
     | EBuiltin (name, t) => PUSH_value $ VBuiltin (name, cg_t t)
-    | EBinOp (EBPair, e1, e2) =>
+    | EBinOp (EBPair (), e1, e2) =>
       let
         val (e1, t1) = assert_EAscType e1
         val (e2, t2) = assert_EAscType e2
@@ -368,12 +368,12 @@ fun compile st_name2int ectx e =
         concatMap (fn e => compile e @ [SWAP2, SWAP1] @ array_init_assign @ [SWAP2, POP, SWAP1, PUSH1nat 32, ADD]) es @
         [POP, MARK_PreArray2ArrayPtr]
       end
-    | EBinOp (EBRead, e1, e2) =>
+    | EBinOp (EBRead (), e1, e2) =>
       compile e1 @
       compile e2 @
       array_ptr @
       [MLOAD]
-    | ETriOp (ETWrite, e1, e2, e3) =>
+    | ETriOp (ETWrite (), e1, e2, e3) =>
       compile e1 @
       compile e2 @
       compile e3 @
@@ -393,24 +393,24 @@ fun compile st_name2int ectx e =
       compile e1 @ 
       compile e2 @
       impl_nat_cmp opr
-    | EBinOp (EBMapPtr, e1, e2) =>
+    | EBinOp (EBMapPtr (), e1, e2) =>
       compile e1 @ 
       compile e2 @
       [MACRO_map_ptr]
-    | EBinOp (EBStorageSet, e1, e2) =>
+    | EBinOp (EBStorageSet (), e1, e2) =>
       compile e1 @ 
       compile e2 @
       [SWAP1, SSTORE, PUSH1 WTT]
-    | EBinOp (EBVectorGet, e1, e2) =>
+    | EBinOp (EBVectorGet (), e1, e2) =>
       compile e1 @ 
       compile e2 @
       [SWAP1, MACRO_vector_ptr, SLOAD]
-    | ETriOp (ETVectorSet, e1, e2, e3) =>
+    | ETriOp (ETVectorSet (), e1, e2, e3) =>
       compile e1 @ 
       compile e2 @
       compile e3 @
       [SWAP2, MACRO_vector_ptr, SSTORE, PUSH1 WTT]
-    | EBinOp (EBVectorPushBack, e1, e2) =>
+    | EBinOp (EBVectorPushBack (), e1, e2) =>
       let
         val I = compile e1 @
                 compile e2 @
@@ -428,9 +428,9 @@ fun compile st_name2int ectx e =
     (* | EUnOp (EUVectorLength, e) => *)
     (*   compile e @ *)
     (*   [SLOAD] *)
-    | ETriOp (ETIte, _, _, _) => err ()
-    | EBinOp (EBApp, _, _) => err ()
-    | EBinOp (EBNew, _, _) => err ()
+    | ETriOp (ETIte (), _, _, _) => err ()
+    | EBinOp (EBApp (), _, _) => err ()
+    | EBinOp (EBNew (), _, _) => err ()
     | ECase _ => err ()
     | EAbs _ => err ()
     | ERec _ => err ()
@@ -504,7 +504,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         val r = fresh_reg ()
       in        
         case e1 of
-            EBinOp (EBNew, e1, e2) =>
+            EBinOp (EBNew (), e1, e2) =>
             let
               val (I_e1, st) = compile (e1, st) 
               val (I_e2, st) = compile (e2, st)
@@ -530,7 +530,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
               val loop_block =
                   let
                     fun MakeSubset (name, s, p) = SSubset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
-                    fun IToReal i = IUnOp (IUToReal, i, dummy)
+                    fun IToReal i = IUnOp (IUToReal (), i, dummy)
                     val s = MakeSubset ("i", BSNat, IV 0 %<= shift01_i_i len)
                     val i = fresh_ivar ()
                     val loop_code =
@@ -617,7 +617,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
     (*   in *)
     (*     i @:: I *)
     (*   end *)
-    | EBinOp (EBApp, e1, e2) =>
+    | EBinOp (EBApp (), e1, e2) =>
       let
         val (I_e1, st) = compile (e1, st) 
         val (I_e2, st) = compile (e2, st)
@@ -676,7 +676,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         branch_prelude @@
         I1
       end
-    | ETriOp (ETIte, e, e1, e2) =>
+    | ETriOp (ETIte (), e, e1, e2) =>
       let
         val (I_e, st) = compile (e, st)
         val (e2, i_e2) = assert_EAscTime e2
@@ -704,18 +704,18 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
     | EAscTime (e, i) => ASCTIME (Inner i) @:: cg_e params e
     | EAscType (e, _) => cg_e params e
     | EAscState (e, _) => cg_e params e
-    | EBinOp (EBPair, _, _) => err ()
-    | EBinOp (EBNew, _, _) => err ()
-    | EBinOp (EBRead, _, _) => err ()
+    | EBinOp (EBPair (), _, _) => err ()
+    | EBinOp (EBNew (), _, _) => err ()
+    | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBNat _, _, _) => err ()
     | EBinOp (EBNatCmp _, _, _) => err ()
-    | EBinOp (EBVectorGet, _, _) => err ()
-    | EBinOp (EBVectorPushBack, _, _) => err ()
-    | EBinOp (EBMapPtr, _, _) => err ()
-    | EBinOp (EBStorageSet, _, _) => err ()
-    | ETriOp (ETWrite, _, _, _) => err ()
-    | ETriOp (ETVectorSet, _, _, _) => err ()
+    | EBinOp (EBVectorGet (), _, _) => err ()
+    | EBinOp (EBVectorPushBack (), _, _) => err ()
+    | EBinOp (EBMapPtr (), _, _) => err ()
+    | EBinOp (EBStorageSet (), _, _) => err ()
+    | ETriOp (ETWrite (), _, _, _) => err ()
+    | ETriOp (ETVectorSet (), _, _, _) => err ()
     | EVar _ => err ()
     | EConst _ => err ()
     | EState _ => err ()

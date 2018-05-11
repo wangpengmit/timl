@@ -22,16 +22,16 @@ local
       handle
       Error e => Failed e
 
-  val un_ops = [IUToReal, IULog2, IULog10, IUCeil, IUFloor, IUB2n, IUNeg]
+  val un_ops = [IUToReal (), IULog2, IULog10, IUCeil (), IUFloor (), IUB2n (), IUNeg ()]
   val un_op_names = zip (un_ops, map str_idx_un_op un_ops)
   fun is_un_op (opr, i1) =
       case (opr, i1) of
-          (IBApp, S.IVar (NONE, (x, r1))) => find_by_snd_eq op= x un_op_names
+          (IBApp (), S.IVar (NONE, (x, r1))) => find_by_snd_eq op= x un_op_names
         | _ => NONE
 
   fun is_ite i =
       case i of
-          S.IBinOp (IBApp, S.IBinOp (IBApp, S.IBinOp (IBApp, S.IVar (NONE, (x, _)), i1, _), i2, _), i3, _) =>
+          S.IBinOp (IBApp (), S.IBinOp (IBApp (), S.IBinOp (IBApp (), S.IVar (NONE, (x, _)), i1, _), i2, _), i3, _) =>
           if x = "ite" then SOME (i1, i2, i3)
           else NONE
         | _ => NONE
@@ -102,13 +102,13 @@ local
       case b of
           S.BSId (name, r) =>
 	  if name = "Time" then
-	    (BSBase BSSTime, r)
+	    (BSBase (BSSTime ()), r)
 	  else if name = "Nat" then
-	    (BSBase BSSNat, r)
+	    (BSBase (BSSNat ()), r)
 	  else if name = "Bool" then
-	    (BSBase BSSBool, r)
+	    (BSBase (BSSBool ()), r)
 	  else if name = "Unit" then
-	    (BSBase BSSUnit, r)
+	    (BSBase (BSSUnit ()), r)
           else if name = "_" then
             (BSUVar (), r)
 	  else raise Error (r, sprintf "Unrecognized base sort: $" [name])
@@ -127,7 +127,7 @@ local
               let
                 val name = "__f"
               in
-                SSubset (bs, Bind ((name, r), PBinPred (BPBigO, IVar (ID (name, r), []), i)), r)
+                SSubset (bs, Bind ((name, r), PBinPred (BPBigO (), IVar (ID (name, r), []), i)), r)
               end
           in
             if name = "BigO" then
@@ -188,7 +188,7 @@ local
 	| S.TQuan (quan, binds, t, r) =>
 	  let fun f ((x, s, _), t) =
 		case quan of
-		    S.Forall => TUniI (elab_s s, Bind (x, t), r)
+		    S.Forall () => TUniI (elab_s s, Bind (x, t), r)
 	  in
 	    foldr f (elab_mt t) binds
 	  end
@@ -383,7 +383,7 @@ local
                 in
                   e
                 end)
-	| S.EBinOp (EBApp, e1, e2, r) =>
+	| S.EBinOp (EBApp (), e1, e2, r) =>
 	  let 
 	    fun default () = EApp (elab e1, elab e2)
 	  in
@@ -393,16 +393,16 @@ local
                      NONE =>
 		     if x = "__&fst" then EFst (elab e2, r)
 		     else if x = "__&snd" then ESnd (elab e2, r)
-		     else if x = "__&not" then EUnOp (EUPrim EUPBoolNeg, elab e2, r)
+		     else if x = "__&not" then EUnOp (EUPrim (EUPBoolNeg ()), elab e2, r)
 		     (* else if x = "__&int2str" then EUnOp (EUInt2Str, elab e2, r) *)
-		     else if x = "__&nat2int" then EUnOp (EUNat2Int, elab e2, r)
-		     else if x = "__&int2nat" then EUnOp (EUInt2Nat, elab e2, r)
-		     else if x = "__&byte2int" then EUnOp (EUPrim EUPByte2Int, elab e2, r)
-		     else if x = "__&int2byte" then EUnOp (EUPrim EUPInt2Byte, elab e2, r)
-		     else if x = "__&array_length" then EUnOp (EUArrayLen, elab e2, r)
+		     else if x = "__&nat2int" then EUnOp (EUNat2Int (), elab e2, r)
+		     else if x = "__&int2nat" then EUnOp (EUInt2Nat (), elab e2, r)
+		     else if x = "__&byte2int" then EUnOp (EUPrim (EUPByte2Int ()), elab e2, r)
+		     else if x = "__&int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
+		     else if x = "__&array_length" then EUnOp (EUArrayLen (), elab e2, r)
 		     (* else if x = "__&print" then EUnOp (EUPrint, elab e2, r) *)
-		     else if x = "__&printc" then EUnOp (EUPrintc, elab e2, r)
-		     else if x = "__&halt" then EET (EETHalt, elab e2, elab_mt (S.TVar (NONE, ("_", r))))
+		     else if x = "__&printc" then EUnOp (EUPrintc (), elab e2, r)
+		     else if x = "__&halt" then EET (EETHalt (), elab e2, elab_mt (S.TVar (NONE, ("_", r))))
                      else if x = "__&builtin" then
                        (case e2 of
                             S.EConst (S.ECString s, _) =>
@@ -439,8 +439,8 @@ local
 	  end
         | S.EBinOp (opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
         | S.EUnOp (opr, e, r) => EUnOp (opr, elab e, r)
-        | S.ETriOp (S.ETIte, e1, e2, e3, _) => ETriOp (ETIte, elab e1, elab e2, elab e3)
-        | S.ETriOp (S.ETIfDec, e, e1, e2, r) => ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
+        | S.ETriOp (S.ETIte (), e1, e2, e3, _) => ETriOp (ETIte (), elab e1, elab e2, elab e3)
+        | S.ETriOp (S.ETIfDec (), e, e1, e2, r) => ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.EIfi (e, e1, e2, r) => EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.TVar (NONE, ("_", r))), r)
         | S.EStrConcat (e1, e2, r) => EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, false), EPair (elab e1, elab e2))

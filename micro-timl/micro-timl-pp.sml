@@ -451,9 +451,9 @@ fun str_expr_un_op str_t opr =
 
 fun str_expr_tri_op opr =
   case opr of
-      ETWrite => "EWrite"
-    | ETIte => "EIte"
-    | ETVectorSet => "EVectorSet"
+      ETWrite () => "EWrite"
+    | ETIte () => "EIte"
+    | ETVectorSet () => "EVectorSet"
                                              
 fun str_e str_var str_i e =
   let
@@ -610,7 +610,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | EConst ECTT =>
+      | EConst (ECTT ()) =>
         str "ETT"
       | EConst c =>
         (
@@ -640,7 +640,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | EBinOp (EBApp, e1, e2) =>
+      | EBinOp (EBApp (), e1, e2) =>
         (
           open_hbox ();
           str "EApp";
@@ -652,7 +652,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | EBinOp (EBPair, e1, e2) =>
+      | EBinOp (EBPair (), e1, e2) =>
         (
           open_hbox ();
           str "EPair";
@@ -664,7 +664,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | EBinOp (EBPrim EBPIntAdd, e1, e2) =>
+      | EBinOp (EBPrim (EBPIntAdd ()), e1, e2) =>
         (
           open_hbox ();
           str "EAdd";
@@ -690,7 +690,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | ETriOp (ETIte, e, e1, e2) =>
+      | ETriOp (ETIte (), e, e1, e2) =>
         (
           open_vbox (); open_hbox (); str "ETIte"; space (); str "("; pp_e e; close_box (); comma ();
     	    open_vbox_noindent (); pp_e e1; comma ();

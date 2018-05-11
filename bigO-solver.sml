@@ -42,7 +42,7 @@ end
 
 fun match_bigO f hyps hyp =
   case hyp of
-      PropH (PBinPred (BPBigO, f', g)) =>
+      PropH (PBinPred (BPBigO (), f', g)) =>
       if eq_i f' f then SOME g else NONE
     | _ => NONE
              
@@ -186,17 +186,17 @@ fun summarize (is_outer, on_error) i =
             M.empty
           else
             M.insert (M.empty, x, (1, 0))
-        | IUnOp (IUB2n, i, _) =>
+        | IUnOp (IUB2n (), i, _) =>
           M.empty
-        | IUnOp (IUToReal, i, _) =>
+        | IUnOp (IUToReal (), i, _) =>
           loop i
-        | IUnOp (IUCeil, i, _) =>
+        | IUnOp (IUCeil (), i, _) =>
           loop i
-        | IUnOp (IUFloor, i, _) =>
+        | IUnOp (IUFloor (), i, _) =>
           loop i
         | IUnOp (IUDiv _, i, _) =>
           loop i
-        | IUnOp (IULog2, i, _) =>
+        | IUnOp (IULog _, i, _) =>
           let
             (* val () = println "summarize/Log2" *)
             val is = collect_IBMult i
@@ -213,13 +213,13 @@ fun summarize (is_outer, on_error) i =
           in
             cls
           end
-        | IBinOp (IBMult, a, b) =>
+        | IBinOp (IBMult (), a, b) =>
           mult_class (loop a, loop b)
-        | IBinOp (IBAdd, a, b) =>
+        | IBinOp (IBAdd (), a, b) =>
           add_class (loop a, loop b)
-        | IBinOp (IBBoundedMinus, a, b) =>
+        | IBinOp (IBBoundedMinus (), a, b) =>
           loop a
-        | IBinOp (IBMax, a, b) =>
+        | IBinOp (IBMax (), a, b) =>
           add_class (loop a, loop b)
         | _ => err i
   in
@@ -252,7 +252,7 @@ fun timefun_le is_outer hs a b =
     (* another version of [use_bigO_hyp] that substitute with all big-O premises *)
     fun match_bigO () hyps hyp =
       case hyp of
-          PropH (PBinPred (BPBigO, f', g)) =>
+          PropH (PBinPred (BPBigO (), f', g)) =>
           SOME (f', g)
         | _ => NONE
     fun find_bigO_hyp f_i hyps =
@@ -325,7 +325,7 @@ fun by_master_theorem uvar (hs, p) =
     (* val () = println $ sprintf "Running bigO inference for ?$" [str_int uvar_name] *)
     fun ask_smt p = ask_smt_vc (hs, p)
     fun V n = IVar (ID (n, dummy), [])
-    fun to_real i = IUnOp (IUToReal, i, dummy)
+    fun to_real i = IUnOp (IUToReal (), i, dummy)
     val rV = to_real o V
     val use_bigO_hyp = use_bigO_hyp hs
     fun simp_i_max set i =
@@ -347,13 +347,13 @@ fun by_master_theorem uvar (hs, p) =
                   end
               in
                 case opr of
-                    IBMax =>
+                    IBMax () =>
                     if ask_smt (remove_uvar i1 %>= i2) then
                       mark i1
                     else if ask_smt (i1 %<= remove_uvar i2) then
                       mark i2
                     else def ()
-                  | IBMult =>
+                  | IBMult () =>
                     let
                       val i2s = collect_IBAdd i2
                       val () = if length i2s >= 2 then set () else ()
@@ -392,7 +392,7 @@ fun by_master_theorem uvar (hs, p) =
     (* [main_arg] is the main argument; [args] are the passive arguments *)
     val (lhs, main_fun, main_arg) =
         case p of
-            PBinPred (LeP, i1, IBinOp (IBApp, g, n_i)) => (i1, g, n_i)
+            PBinPred (BPLe (), i1, IBinOp (IBApp (), g, n_i)) => (i1, g, n_i)
           | _ => raise Error "wrong pattern for by_master_theorem"
     val ((uvar', _), args) = is_IBApp_IUVar main_fun !! (fn () => raise Error "RHS not [uvar arg1 ...]")
     val () = if uvar = uvar' then () else raise Error "uvar <> uvar'"
@@ -452,7 +452,7 @@ fun by_master_theorem uvar (hs, p) =
             let
               val int_add = op+
               open Real
-              fun ExpI (a, b) = IBinOp (IBExpN, a, b)
+              fun ExpI (a, b) = IBinOp (IBExpN (), a, b)
               val log_b_a = Math.ln (fromInt a) / Math.ln (fromInt b)
               val T =
                   if fromInt c < log_b_a then
@@ -488,7 +488,7 @@ fun by_master_theorem uvar (hs, p) =
                   | _ => []
               fun infer_b_p p =
                 case p of
-                    PBinPred (EqP, i1, i2) => infer_b_i i1 @ infer_b_i i2
+                    PBinPred (BPEq (), i1, i2) => infer_b_i i1 @ infer_b_i i2
                   | _ => []
               fun infer_b_hyp h =
                 case h of
@@ -497,7 +497,7 @@ fun by_master_theorem uvar (hs, p) =
               val bs = infer_b_i n' @ concatMap infer_b_hyp hs
               fun good_b b =
                 ((* println (str_int b); *)
-                  if ask_smt (n' %<= IUnOp (IUCeil, IDiv (n_, (b, dummy)), dummy)) then
+                  if ask_smt (n' %<= IUnOp (IUCeil (), IDiv (n_, (b, dummy)), dummy)) then
                     SOME b
                   else NONE)
             in
@@ -506,7 +506,7 @@ fun by_master_theorem uvar (hs, p) =
           fun is_sub_problem i =
             ((* println (str_raw_i i); *)
               case i of
-                  IBinOp (IBApp, g, n') =>
+                  IBinOp (IBApp (), g, n') =>
                   if eq_i g main_fun then
                     ((* println (str_i [] hs_ctx n');  *)infer_b n_ n')
                   else NONE
@@ -540,7 +540,7 @@ fun by_master_theorem uvar (hs, p) =
           (* val () = println $ sprintf "main_fun=$   g=$" [str_int main_fun, str_int g] *)
           fun par i =
             case i of
-                IBinOp (IBApp, g, n') =>
+                IBinOp (IBApp (), g, n') =>
                 let
                   (* val () = println $ sprintf "main_fun=$   g=$  g'=$" [str_int main_fun, str_int g, str_int g'] *)
 
@@ -660,7 +660,7 @@ fun solve_exists (vc as (hs, p), vcs) =
           val () = println "Trying case [_ <== spec] ..."
           val (f, spec) =
               case p of
-                  PBinPred (BPBigO, f, spec) =>
+                  PBinPred (BPBigO (), f, spec) =>
                   (f, spec)
                 | _ => raise SolveExistsError "wrong pattern"
           val ((uvar, _), args) = is_IBApp_IUVar f !! (fn () => raise SolveExistsError "not [uvar arg1 ...]")
@@ -763,7 +763,7 @@ fun solve_exists (vc as (hs, p), vcs) =
           val () = println "Try case [_ <= uvar arg1 ...] (just to infer a Time)"
           val (lhs, rhs) =
               case p of
-                  PBinPred (Le, lhs, rhs) => (lhs, rhs)
+                  PBinPred (BPLe (), lhs, rhs) => (lhs, rhs)
                 | _ => raise SolveExistsError "wrong pattern"
           val () = unify (rhs, lhs)
         in
@@ -786,7 +786,7 @@ fun solve_exists (vc as (hs, p), vcs) =
               if arity1 = 0 then
                 (* just to infer a Time *)
                 (case p of
-                     PBinPred (Le, i1 as (ITime _), IVar (_, (x, _))) =>
+                     PBinPred (PBLe, i1 as (ITime _), IVar (_, (x, _))) =>
                      if x = 0 then SOME (i1, []) else NONE
                    | _ => NONE
                 )
@@ -847,7 +847,7 @@ end
 
 fun solve_bigO_compare (vc as (hs, p)) =
   case normalize_p p of
-      PBinPred (BPBigO, i1, i2) =>
+      PBinPred (BPBigO (), i1, i2) =>
       let
         (* val () = println "BigO-compare-solver to solve this: " *)
         val () = app println $ str_vc false "" vc @ [""]
@@ -866,14 +866,14 @@ fun solve_bigO_compare (vc as (hs, p)) =
 (* relying on monoticity of functions *)             
 fun solve_fun_compare (vc as (hs, p)) =
   case p of
-      PBinPred (Le, i1, i2) =>
+      PBinPred (BPLe (), i1, i2) =>
       let
         fun find_apps i =
           let
             val is = collect_IBAdd i
             fun par i =
               case i of
-                  IBinOp (IBApp, IVar (ID (f, _), _), n) =>
+                  IBinOp (IBApp (), IVar (ID (f, _), _), n) =>
                   SOME (f, n)
                 | _ => NONE
             val (apps, rest) = partitionOption par is
@@ -932,8 +932,8 @@ fun infer_numbers vcs0 =
     (* val uvars = dedup (fn (a, b) => #1 a = #1 b) $ concatMap collect_uvar_i_vc vcs *)
     fun is_number (x as (_, (_, _, b), _)) =
       case update_bs b of
-          BSBase BSSNat => SOME (x, true)
-        | BSBase BSSTime => SOME (x, false)
+          BSBase (BSSNat ()) => SOME (x, true)
+        | BSBase (BSSTime ()) => SOME (x, false)
         | _ => NONE
     val uvars = List.mapPartial is_number uvars
     (* val () = println $ str_int $ length uvars *)
@@ -953,7 +953,7 @@ fun infer_numbers vcs0 =
       let
         fun set_value (((x, (_, ctx, _), r), is_nat), value) =
           let
-            fun to_real i = IUnOp (IUToReal, i, r)
+            fun to_real i = IUnOp (IUToReal (), i, r)
             val value = INat (value, r)
             val value = if is_nat then value else to_real value
             val value = IAbs_Many (rev ctx, value, r)

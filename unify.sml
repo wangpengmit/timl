@@ -124,7 +124,7 @@ fun unify_i r gctxn ctxn (i, i') =
       let
         fun default () = 
           if eq_i i i' then ()
-          else write_prop (PBinPred (BPEq, i, i'), r)
+          else write_prop (PBinPred (BPEq (), i, i'), r)
       in
         if eq_i i i' then ()
         (* if one-side is not in a normal form because of uvar, we can't do structural comparison *)
@@ -133,7 +133,7 @@ fun unify_i r gctxn ctxn (i, i') =
         else
         case (i, i') of
             (* ToReal is injective *)
-            (IUnOp (IUToReal, i, _), IUnOp (IUToReal, i', _)) =>
+            (IUnOp (IUToReal (), i, _), IUnOp (IUToReal (), i', _)) =>
             unify_i ctxn (i', i)
           | _ => default ()
       end

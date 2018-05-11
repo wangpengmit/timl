@@ -10,22 +10,22 @@ fun KArrows bs k = foldr KArrow k bs
 fun KArrowTs ks k = foldr KArrowT k ks
 fun KArrowTypes n k = KArrowTs (repeat n KType) k
                           
-fun TForallI bind = TQuanI (Forall, bind)
-fun TForall bind = TQuan (Forall, bind)
+fun TForallI bind = TQuanI (Forall (), bind)
+fun TForall bind = TQuan (Forall (), bind)
 fun TExistsI bind = TQuanI (Exists (), bind)
 fun TExistsI_Many (ctx, t) = foldr (TExistsI o BindAnno) t ctx
 fun MakeTExistsI (name, s, t) = TExistsI $ IBindAnno ((name, s), t)
 fun TAbsI_Many (ctx, t) = foldr (TAbsI o BindAnno) t ctx
 fun TAbsT_Many (ctx, t) = foldr (TAbsT o BindAnno) t ctx
-fun TUni bind = TQuan (Forall, bind)
+fun TUni bind = TQuan (Forall (), bind)
 fun MakeTUni (name, k, t) = TUni $ TBindAnno ((name, k), t)
 fun TUniKind (name, t) = MakeTUni (name, KType, t)
 fun TUniKind_Many (names, t) = foldr TUniKind t names
 
 (* val TCString = TCTiML BaseTypes.String *)
-val TCInt = TCTiML BaseTypes.BTInt
-val TCBool = TCTiML BaseTypes.BTBool
-val TCByte = TCTiML BaseTypes.BTByte
+val TCInt = TCTiML (BaseTypes.BTInt ())
+val TCBool = TCTiML (BaseTypes.BTBool ())
+val TCByte = TCTiML (BaseTypes.BTByte ())
 val TUnit = TConst TCUnit
 val TEmpty = TConst TCEmpty
 (* val TString = TConst TCString *)
@@ -39,23 +39,23 @@ fun TAppTs (t, ts) = foldl (swap TAppT) t ts
 fun TMemTuplePtr (ts, i) = TTuplePtr (ts, i, false)
 fun TStorageTuplePtr (ts, i) = TTuplePtr (ts, i, true)
          
-fun EPair (e1, e2) = EBinOp (EBPair, e1, e2)
+fun EPair (e1, e2) = EBinOp (EBPair (), e1, e2)
 fun EProj (proj, e) = EUnOp (EUTiML $ EUProj proj, e)
-fun EFst e = EProj (ProjFst, e)
-fun ESnd e = EProj (ProjSnd, e)
+fun EFst e = EProj (ProjFst (), e)
+fun ESnd e = EProj (ProjSnd (), e)
 fun EInj (inj, t, e) = EUnOp (EUInj (inj, t), e)
 fun EInl (t, e) = EInj (InjInl, t, e)
 fun EInr (t, e) = EInj (InjInr, t, e)
 fun EFold (t, e) = EUnOp (EUFold t, e)
 fun EUnfold e = EUnOp (EUUnfold, e)
-fun EApp (e1, e2) = EBinOp (EBApp, e1, e2)
+fun EApp (e1, e2) = EBinOp (EBApp (), e1, e2)
 
 fun EBinOpPrim (opr, e1, e2) = EBinOp (EBPrim opr, e1, e2)
-val EBNatAdd = EBNat EBNAdd
+val EBNatAdd = EBNat (EBNAdd ())
 fun ENatAdd (e1, e2) = EBinOp (EBNatAdd, e1, e2)
-fun ENew (e1, e2) = EBinOp (EBNew, e1, e2)
-fun ERead (e1, e2) = EBinOp (EBRead, e1, e2)
-fun EWrite (e1, e2, e3) = ETriOp (ETWrite, e1, e2, e3)
+fun ENew (e1, e2) = EBinOp (EBNew (), e1, e2)
+fun ERead (e1, e2) = EBinOp (EBRead (), e1, e2)
+fun EWrite (e1, e2, e3) = ETriOp (ETWrite (), e1, e2, e3)
                                       
 fun MakeEAbs (i, name, t, e) = EAbs (i, EBindAnno ((name, t), e))
 fun MakeEAbsI (name, s, e) = EAbsI $ IBindAnno ((name, s), e)
@@ -71,20 +71,15 @@ fun MakeEAbsConstr (tnames, inames, ename, e) = EAbsConstr $ Bind ((map TBinder 
 fun MakeECase (e, (name1, e1), (name2, e2)) = ECase (e, EBind (name1, e1), EBind (name2, e2))
 fun MakeTQuanI (q, s, name, t) = TQuanI (q, IBindAnno ((name, s), t))
 fun MakeTQuan (q, k, name, t) = TQuan (q, TBindAnno ((name, k), t))
-fun MakeTForallI (s, name, t) = MakeTQuanI (Forall, s, name, t)
-fun MakeTForall (s, name, t) = MakeTQuan (Forall, s, name, t)
+fun MakeTForallI (s, name, t) = MakeTQuanI (Forall (), s, name, t)
+fun MakeTForall (s, name, t) = MakeTQuan (Forall (), s, name, t)
 fun EAbsTKind (name, e) = MakeEAbsT (name, KType, e) 
 fun EAbsTKind_Many (names, e) = foldr EAbsTKind e names
 
-fun choose (t1, t2) proj =
-  case proj of
-      ProjFst => t1
-    | ProjSnd => t2
-                                 
 fun choose_update (b1, b2) proj =
   case proj of
-      ProjFst => (true, b2)
-    | ProjSnd => (b1, true)
+      ProjFst () => (true, b2)
+    | ProjSnd () => (b1, true)
                    
 fun choose_inj (t1, t2) inj =
   case inj of

@@ -49,7 +49,7 @@ fun int2var x = ID (x, dummy)
 
 fun PEqs pairs = combine_And $ map PEq pairs
   
-val BSUnit = BSBase BSSUnit
+val BSUnit = BSBase (BSSUnit ())
 
 fun on_mt (t : S.mtype) =
   case t of
@@ -59,7 +59,7 @@ fun on_mt (t : S.mtype) =
     | S.TArray (t, i) => TArr (on_mt t, i)
     | S.TUnit _ => TUnit
     | S.TProd (t1, t2) => TProd (on_mt t1, on_mt t2)
-    | S.TUniI (s, Bind.Bind (name, t), r) => TQuanI (Forall, IBindAnno ((name, s), on_mt t))
+    | S.TUniI (s, Bind.Bind (name, t), r) => TQuanI (Forall (), IBindAnno ((name, s), on_mt t))
     | S.TVar x => TVar (x, [])
     | S.TApp (t1, t2) => TAppT (on_mt t1, on_mt t2)
     | S.TAbs (k, Bind.Bind (name, t), _) => TAbsT $ TBindAnno ((name, on_k k), on_mt t)
@@ -139,18 +139,18 @@ fun on_e (e : S.expr) =
     | S.ETriOp (opr, e1, e2, e3) => ETriOp (opr, on_e e1, on_e e2, on_e e3)
     | S.EEI (opr, e, i) =>
       (case opr of
-           Op.EEIAppI => EAppI (on_e e, i)
-         | Op.EEIAscTime => EAscTime (on_e e, i)
+           Op.EEIAppI () => EAppI (on_e e, i)
+         | Op.EEIAscTime () => EAscTime (on_e e, i)
       )
     | S.EET (opr, e, t) =>
       (case opr of
-           EETAsc => EAscType (on_e e, on_mt t)
-         | EETAppT => EAppT (on_e e, on_mt t)
-         | EETHalt => EHalt (on_e e, on_mt t)
+           EETAsc () => EAscType (on_e e, on_mt t)
+         | EETAppT () => EAppT (on_e e, on_mt t)
+         | EETHalt () => EHalt (on_e e, on_mt t)
       )
     | S.ET (opr, t, r) =>
       (case opr of
-           Op.ETNever => ENever (on_mt t)
+           Op.ETNever () => ENever (on_mt t)
          | Op.ETBuiltin name => EBuiltin (name, on_mt t)
       )
     | S.ENewArrayValues (t, es, r) => ENewArrayValues (on_mt t, map on_e es)
@@ -535,7 +535,7 @@ and on_DVal (ename, Outer bind, r) =
       val (tnames, e) = Unbound.unBind bind
       val tnames = map unBinderName tnames
       val (e, t) = case e of
-                       S.EET (EETAsc, e, t) => (e, SOME t)
+                       S.EET (EETAsc (), e, t) => (e, SOME t)
                      | _ => (e, NONE)
       val e = on_e e
       val e = EAbsTKind_Many (tnames, e)

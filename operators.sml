@@ -4,17 +4,17 @@ open Util
 
 datatype idx_const =
          ICBool of bool
-	 | ICTT
-         | ICAdmit
+	 | ICTT of unit
+         | ICAdmit of unit
          | ICNat of int
          | ICTime of TimeType.time
 
 datatype idx_un_op =
-         IUToReal
-         | IUCeil
-         | IUFloor
-         | IUB2n
-         | IUNeg
+         IUToReal of unit
+         | IUCeil of unit
+         | IUFloor of unit
+         | IUB2n of unit
+         | IUNeg of unit
          | IUDiv of int
          | IULog of string
          (* | IUExp of string *)
@@ -23,49 +23,49 @@ val IULog2 = IULog "2"
 val IULog10 = IULog "10"
                
 datatype idx_bin_op =
-	 IBAdd
-	 | IBMult
-         | IBMod
-	 | IBMax
-	 | IBMin
-         | IBApp 
-         | IBEq
-         | IBAnd
-         | IBOr
-         | IBExpN
-         | IBLt
-         | IBGt
-         | IBLe
-         | IBGe
-         | IBBoundedMinus
-         | IBMinus (* only used internally for annotation propagation *)
-         | IBUnion
+	 IBAdd of unit
+	 | IBMult of unit
+         | IBMod of unit
+	 | IBMax of unit
+	 | IBMin of unit
+         | IBApp of unit 
+         | IBEq of unit
+         | IBAnd of unit
+         | IBOr of unit
+         | IBExpN of unit
+         | IBLt of unit
+         | IBGt of unit
+         | IBLe of unit
+         | IBGe of unit
+         | IBBoundedMinus of unit
+         | IBMinus of unit (* only used internally for annotation propagation *)
+         | IBUnion of unit
 
 (* binary logical connectives *)
 datatype bin_conn =
-	 BCAnd
-	 | BCOr
-	 | BCImply
-	 | BCIff
+	 BCAnd of unit
+	 | BCOr of unit
+	 | BCImply of unit
+	 | BCIff of unit
 
 (* binary predicates on indices *)
 datatype bin_pred =
-         BPEq
-         | BPLe
-         | BPLt
-         | BPGe
-         | BPGt
-         | BPBigO
+         BPEq of unit
+         | BPLe of unit
+         | BPLt of unit
+         | BPGe of unit
+         | BPGt of unit
+         | BPBigO of unit
                
 (* existential quantifier might carry other information such as a unification variable to update when this existential quantifier gets instantiated *)
 datatype 'a quan =
-         Forall
+         Forall of unit
          | Exists of 'a
 
 type nat = int
 
 datatype expr_const =
-         ECTT
+         ECTT of unit
          | ECNat of nat
          | ECInt of int
          | ECBool of bool
@@ -75,31 +75,36 @@ datatype expr_const =
 
 (* projector for product type *)
 datatype projector =
-         ProjFst
-         | ProjSnd
+         ProjFst of unit
+         | ProjSnd of unit
 
+fun choose (t1, t2) proj =
+  case proj of
+      ProjFst () => t1
+    | ProjSnd () => t2
+                                 
 (* primitive unary term operators *)
 datatype prim_expr_un_op =
-         EUPIntNeg
-         | EUPBoolNeg
-         | EUPInt2Byte
-         | EUPByte2Int
-         (* | EUPInt2Str *)
-         (* | EUPStrLen *)
-                         
+         EUPIntNeg of unit
+         | EUPBoolNeg of unit
+         | EUPInt2Byte of unit
+         | EUPByte2Int of unit
+         (* | EUPInt2Str of unit *)
+         (* | EUPStrLen of unit *)
+
 datatype expr_un_op =
          EUProj of projector
          | EUPrim of prim_expr_un_op
-         | EUArrayLen
-         | EUNat2Int
-         | EUInt2Nat
-         | EUPrintc
-(* | EUPrint *)
-         | EUStorageGet
+         | EUArrayLen of unit
+         | EUNat2Int of unit
+         | EUInt2Nat of unit
+         | EUPrintc of unit
+(* | EUPrint of unit *)
+         | EUStorageGet of unit
 
 fun str_expr_const c =
   case c of
-      ECTT => "()"
+      ECTT () => "()"
     | ECInt n => str_int n
     | ECNat n => sprintf "#$" [str_int n]
     | ECiBool b => sprintf "#$" [str_bool b]
@@ -109,15 +114,15 @@ fun str_expr_const c =
                                 
 fun str_proj opr =
   case opr of
-      ProjFst => "fst"
-    | ProjSnd => "snd"
+      ProjFst () => "fst"
+    | ProjSnd () => "snd"
 
 fun str_prim_expr_un_op opr =
   case opr of
-      EUPIntNeg => "int_neg"
-    | EUPBoolNeg => "not"
-    | EUPInt2Byte => "int2byte"
-    | EUPByte2Int => "byte2int"
+      EUPIntNeg () => "int_neg"
+    | EUPBoolNeg () => "not"
+    | EUPInt2Byte () => "int2byte"
+    | EUPByte2Int () => "byte2int"
     (* | EUPInt2Str => "int2str" *)
     (* | EUPStrLen => "str_len" *)
                    
@@ -125,256 +130,256 @@ fun str_expr_un_op opr =
   case opr of
       EUProj opr => str_proj opr
     | EUPrim opr => str_prim_expr_un_op opr
-    | EUArrayLen => "array_len"
-    | EUNat2Int => "nat2int"
-    | EUInt2Nat => "int2nat"
-    | EUPrintc => "printc"
+    | EUArrayLen () => "array_len"
+    | EUNat2Int () => "nat2int"
+    | EUInt2Nat () => "int2nat"
+    | EUPrintc () => "printc"
 (* | EUPrint => "print" *)
-    | EUStorageGet => "storage_get"
+    | EUStorageGet () => "storage_get"
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =
-         EBPIntAdd
-         | EBPIntMinus
-         | EBPIntMult
-         | EBPIntDiv
-         | EBPIntMod
-         | EBPIntLt
-         | EBPIntGt
-         | EBPIntLe
-         | EBPIntGe
-         | EBPIntEq
-         | EBPIntNEq
-         | EBPBoolAnd
-         | EBPBoolOr
+         EBPIntAdd of unit
+         | EBPIntMinus of unit
+         | EBPIntMult of unit
+         | EBPIntDiv of unit
+         | EBPIntMod of unit
+         | EBPIntLt of unit
+         | EBPIntGt of unit
+         | EBPIntLe of unit
+         | EBPIntGe of unit
+         | EBPIntEq of unit
+         | EBPIntNEq of unit
+         | EBPBoolAnd of unit
+         | EBPBoolOr of unit
 (* | EBPStrConcat *)
 
 (* binary nat operators *)
 datatype nat_expr_bin_op =
-         EBNAdd
-         | EBNBoundedMinus
-         | EBNMult
-         | EBNDiv
+         EBNAdd of unit
+         | EBNBoundedMinus of unit
+         | EBNMult of unit
+         | EBNDiv of unit
 
 datatype nat_cmp =
-         NCLt
-         | NCGt
-         | NCLe
-         | NCGe
-         | NCEq
-         | NCNEq
-         
+         NCLt of unit
+         | NCGt of unit
+         | NCLe of unit
+         | NCGe of unit
+         | NCEq of unit
+         | NCNEq of unit
+                      
 datatype expr_bin_op =
-         EBApp
-         | EBPair
-         | EBNew
-         | EBRead
+         EBApp of unit
+         | EBPair of unit
+         | EBNew of unit
+         | EBRead of unit
+         | EBVectorGet of unit
+         | EBVectorPushBack of unit
+         | EBMapPtr of unit
+         | EBStorageSet of unit
          | EBPrim of prim_expr_bin_op
          | EBNat of nat_expr_bin_op
          | EBNatCmp of nat_cmp
-         | EBVectorGet
-         | EBVectorPushBack
-         | EBMapPtr
-         | EBStorageSet
 
 fun str_prim_expr_bin_op opr =
   case opr of
-      EBPIntAdd => "add"
-    | EBPIntMult => "mult"
-    | EBPIntMinus => "minus"
-    | EBPIntDiv => "div"
-    | EBPIntMod => "mod"
-    | EBPIntLt => "lt"
-    | EBPIntGt => "gt"
-    | EBPIntLe => "le"
-    | EBPIntGe => "ge"
-    | EBPIntEq => "eq"
-    | EBPIntNEq => "neq"
-    | EBPBoolAnd => "and"
-    | EBPBoolOr => "or"
-    (* | EBPStrConcat => "str_concat" *)
+      EBPIntAdd () => "add"
+    | EBPIntMult () => "mult"
+    | EBPIntMinus () => "minus"
+    | EBPIntDiv () => "div"
+    | EBPIntMod () => "mod"
+    | EBPIntLt () => "lt"
+    | EBPIntGt () => "gt"
+    | EBPIntLe () => "le"
+    | EBPIntGe () => "ge"
+    | EBPIntEq () => "eq"
+    | EBPIntNEq () => "neq"
+    | EBPBoolAnd () => "and"
+    | EBPBoolOr () => "or"
+    (* | EBPStrConcat () => "str_concat" *)
 
 fun str_nat_expr_bin_op opr =
   case opr of
-      EBNAdd => "nat_add"
-    | EBNBoundedMinus => "nat_bounded_minus"
-    | EBNMult => "mult"
-    | EBNDiv => "div"
+      EBNAdd () => "nat_add"
+    | EBNBoundedMinus () => "nat_bounded_minus"
+    | EBNMult () => "mult"
+    | EBNDiv () => "div"
 
 fun str_nat_cmp opr =
   case opr of
-      NCLt => "nat_lt"
-    | NCGt => "nat_gt"
-    | NCLe => "nat_le"
-    | NCGe => "nat_ge"
-    | NCEq => "nat_eq"
-    | NCNEq => "nat_neq"
+      NCLt () => "nat_lt"
+    | NCGt () => "nat_gt"
+    | NCLe () => "nat_le"
+    | NCGe () => "nat_ge"
+    | NCEq () => "nat_eq"
+    | NCNEq () => "nat_neq"
                     
 fun str_expr_bin_op opr =
   case opr of
-      EBApp => "app"
-    | EBPair => "pair"
-    | EBNew => "new"
-    | EBRead => "read"
+      EBApp () => "app"
+    | EBPair () => "pair"
+    | EBNew () => "new"
+    | EBRead () => "read"
     | EBPrim opr => str_prim_expr_bin_op opr
     | EBNat opr => str_nat_expr_bin_op opr
     | EBNatCmp opr => str_nat_cmp opr
-    | EBVectorGet => "vector_get"
-    | EBVectorPushBack => "vector_push_back"
-    | EBMapPtr => "map_ptr"
-    | EStorageSet => "storage_set"
+    | EBVectorGet () => "vector_get"
+    | EBVectorPushBack () => "vector_push_back"
+    | EBMapPtr () => "map_ptr"
+    | EBStorageSet () => "storage_set"
 
 fun pretty_str_prim_expr_bin_op opr =
   case opr of
-      EBPIntAdd => "+"
-    | EBPIntMult => "*"
-    | EBPIntMinus => "-"
-    | EBPIntDiv => "/"
-    | EBPIntMod => "mod"
-    | EBPIntLt => "<"
-    | EBPIntGt => ">"
-    | EBPIntLe => "<="
-    | EBPIntGe => ">="
-    | EBPIntEq => "="
-    | EBPIntNEq => "<>"
-    | EBPBoolAnd => "$$"
-    | EBPBoolOr => "||"
-    (* | EBPStrConcat => "^" *)
+      EBPIntAdd () => "+"
+    | EBPIntMult () => "*"
+    | EBPIntMinus () => "-"
+    | EBPIntDiv () => "/"
+    | EBPIntMod () => "mod"
+    | EBPIntLt () => "<"
+    | EBPIntGt () => ">"
+    | EBPIntLe () => "<="
+    | EBPIntGe () => ">="
+    | EBPIntEq () => "="
+    | EBPIntNEq () => "<>"
+    | EBPBoolAnd () => "$$"
+    | EBPBoolOr () => "||"
+    (* | EBPStrConcat () => "^" *)
 
 fun pretty_str_nat_expr_bin_op opr =
   case opr of
-      EBNAdd => "#+"
-    | EBNBoundedMinus => "#-"
-    | EBNMult => "#*"
-    | EBNDiv => "#/"
+      EBNAdd () => "#+"
+    | EBNBoundedMinus () => "#-"
+    | EBNMult () => "#*"
+    | EBNDiv () => "#/"
                     
 fun pretty_str_nat_cmp opr =
   case opr of
-      NCLt => "#<"
-    | NCGt => "#>"
-    | NCLe => "#<="
-    | NCGe => "#>="
-    | NCEq => "#="
-    | NCNEq => "#<>"
+      NCLt () => "#<"
+    | NCGt () => "#>"
+    | NCLe () => "#<="
+    | NCGe () => "#>="
+    | NCEq () => "#="
+    | NCNEq () => "#<>"
                     
 fun pretty_str_expr_bin_op opr =
   case opr of
-      EBApp => "$"
-    | EBPair => "pair"
-    | EBNew => "new"
-    | EBRead => "read"
+      EBApp () => "$"
+    | EBPair () => "pair"
+    | EBNew () => "new"
+    | EBRead () => "read"
     | EBPrim opr => pretty_str_prim_expr_bin_op opr
     | EBNat opr => pretty_str_nat_expr_bin_op opr
     | EBNatCmp opr => pretty_str_nat_cmp opr
-    | EBVectorGet => "vector_get"
-    | EBVectorPushBack => "vector_push_back"
-    | EBMapPtr => "map_ptr"
-    | EStorageSet => "storage_set"
+    | EBVectorGet () => "vector_get"
+    | EBVectorPushBack () => "vector_push_back"
+    | EBMapPtr () => "map_ptr"
+    | EBStorageSet () => "storage_set"
 
 datatype expr_tri_op =
-         ETWrite
-         | ETIte
-         | ETVectorSet
+         ETWrite of unit
+         | ETIte of unit
+         | ETVectorSet of unit
 
 fun str_expr_tri_op opr =
   case opr of
-      ETWrite => "write"
-    | ETIte => "ite"
-    | ETVectorSet => "vector_set"
+      ETWrite () => "write"
+    | ETIte () => "ite"
+    | ETVectorSet () => "vector_set"
                   
 datatype expr_EI =
-         EEIAppI
-         | EEIAscTime
+         EEIAppI of unit
+         | EEIAscTime of unit
 
 datatype expr_ET =
-         EETAppT
-         | EETAsc
-         | EETHalt
+         EETAppT of unit
+         | EETAsc of unit
+         | EETHalt of unit
 
 datatype expr_T =
-         ETNever
+         ETNever of unit
          | ETBuiltin of string
          (* | ETEmptyArray *)
              
 fun str_idx_const c =
   case c of
       ICBool b => str_bool b
-    | ICTT => "()"
-    | ICAdmit => "admit"
+    | ICTT () => "()"
+    | ICAdmit () => "admit"
     | ICNat n => str_int n
     | ICTime x => TimeType.str_time x
 
 fun str_idx_un_op opr =
   case opr of
-      IUToReal => "$"
+      IUToReal () => "$"
     | IULog base => sprintf "log$" [base]
-    | IUCeil => "ceil"
-    | IUFloor => "floor"
-    | IUB2n => "b2n"
-    | IUNeg => "not"
+    | IUCeil () => "ceil"
+    | IUFloor () => "floor"
+    | IUB2n () => "b2n"
+    | IUNeg () => "not"
     | IUDiv d => sprintf "(/ $)" [str_int d]
     (* | IUExp s => sprintf "( ** $)" [s] *)
 
 fun str_idx_bin_op opr =
   case opr of
-      IBAdd => "+"
-    | IBMult => " *"
-    | IBMod => "mod"
-    | IBMax => "max"
-    | IBMin => "min"
-    | IBApp => "app"
-    | IBAnd => "&&"
-    | IBOr => "||"
-    | IBExpN => "**"
-    | IBEq => "=?"
-    | IBLt => "<?"
-    | IBGt => ">?"
-    | IBLe => "<=?"
-    | IBGe => ">=?"
-    | IBBoundedMinus => "-"
-    | IBMinus => "MinusI"
-    | IBUnion => "++"
+      IBAdd () => "+"
+    | IBMult () => " *"
+    | IBMod () => "mod"
+    | IBMax () => "max"
+    | IBMin () => "min"
+    | IBApp () => "app"
+    | IBAnd () => "&&"
+    | IBOr () => "||"
+    | IBExpN () => "**"
+    | IBEq () => "=?"
+    | IBLt () => "<?"
+    | IBGt () => ">?"
+    | IBLe () => "<=?"
+    | IBGe () => ">=?"
+    | IBBoundedMinus () => "-"
+    | IBMinus () => "MinusI"
+    | IBUnion () => "++"
 
 fun str_bin_conn opr =
   case opr of
-      BCAnd => "/\\"
-    | BCOr => "\\/"
-    | BCImply => "->"
-    | BCIff => "<->"
+      BCAnd () => "/\\"
+    | BCOr () => "\\/"
+    | BCImply () => "->"
+    | BCIff () => "<->"
 
 fun str_bin_pred opr =
   case opr of
-      BPEq => "="
-    | BPLe => "<="
-    | BPLt => "<"
-    | BPGe => ">="
-    | BPGt => ">"
-    | BPBigO => "<=="
+      BPEq () => "="
+    | BPLe () => "<="
+    | BPLt () => "<"
+    | BPGe () => ">="
+    | BPGt () => ">"
+    | BPBigO () => "<=="
 
 fun strip_quan q =
   case q of
-      Forall => Forall
+      Forall () => Forall ()
     | Exists _ => Exists ()
                          
 fun str_quan q =
     case q of
-        Forall => "forall"
+        Forall () => "forall"
       | Exists _ => "exists"
 
 fun str_expr_EI opr =
   case opr of
-      EEIAppI => "EEIAppI"
-    | EEIAscTime => "EEIAscTime"
+      EEIAppI () => "EEIAppI"
+    | EEIAscTime () => "EEIAscTime"
 
 fun str_expr_ET opr =
   case opr of
-      EETAppT => "EETAppT"
-    | EETAsc => "EETAsc"
-    | EETHalt => "EETHalt"
+      EETAppT () => "EETAppT"
+    | EETAsc () => "EETAsc"
+    | EETHalt () => "EETHalt"
 
 fun str_expr_T opr =
   case opr of
-      ETNever => "ETNever"
+      ETNever () => "ETNever"
     | ETBuiltin name => sprintf "ETBuiltin($)" [name]
                   
 end

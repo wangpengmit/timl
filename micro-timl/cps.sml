@@ -186,7 +186,7 @@ fun cps_ty_visitor_vtable cast () =
                 in
                   TForallICloseMany ([(j, "j", STime), (F, "F", SState)], t)
                 end
-              | TQuan (Forall, bind) =>
+              | TQuan (Forall (), bind) =>
                 let
                   val ((name_a, kd_a), t) = unBindAnno2 bind
                   val a = fresh_tvar ()
@@ -195,7 +195,7 @@ fun cps_ty_visitor_vtable cast () =
                 in
                   TForall $ close0_t_t_anno ((a, name_a, kd_a), t)
                 end
-              | TQuanI (Forall, bind) =>
+              | TQuanI (Forall (), bind) =>
                 let
                   val ((name_a, s_a), t) = unBindAnno2 bind
                   val a = fresh_ivar ()
@@ -328,7 +328,7 @@ fun cps (e, t_e, F) (k, j_k) =
       in
         (k $$ e, j_k %+ T_1)
       end
-    | S.EBinOp (EBApp, e1, e2) =>
+    | S.EBinOp (EBApp (), e1, e2) =>
       (* [[ e1 e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. x1 {k.j} (x2, k))) *)
       let
         val (e1, st_e1) = assert_EAscState e1
@@ -507,7 +507,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val (e2, st_e2) = assert_EAscState e2
         fun get_comp_types (e1, e2) t_e =
           case opr of
-              EBPair => ((e1, e2), assert_TProd t_e)
+              EBPair () => ((e1, e2), assert_TProd t_e)
             | _ =>
               let
                 val (e1, t_e1) = assert_EAscType e1
@@ -574,13 +574,13 @@ fun cps (e, t_e, F) (k, j_k) =
                 in
                   (t_e, EUFold $ cps_t t_fold)
                 end
-              | EUTiML EUPrintc =>
+              | EUTiML (EUPrintc ()) =>
                 (TByte, opr)
               (* | EUTiML EUPrint => *)
               (*   (TString, opr) *)
               (* | EUTiML EUInt2Str => *)
               (*   (TInt, opr) *)
-              | EUTiML EUInt2Nat =>
+              | EUTiML (EUInt2Nat ()) =>
                 (TInt, opr)
               | _ =>
                 let
@@ -674,7 +674,7 @@ fun cps (e, t_e, F) (k, j_k) =
       end
     | S.EAscState (e, _) =>
       cps (e, t_e) (k, j_k)
-    | S.ETriOp (ETIte, e, e1, e2) =>
+    | S.ETriOp (ETIte (), e, e1, e2) =>
       (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
       let
         val (e, st_e) = assert_EAscState e
@@ -685,7 +685,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
         val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
         val y = fresh_evar ()
-        val c = ETriOp (ETIte, EV y, e1, e2)
+        val c = ETriOp (ETIte (), EV y, e1, e2)
         val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
@@ -842,7 +842,7 @@ fun check_CPSed_ty_visitor_vtable cast () =
           visit_noop
     fun visit_TQuanI this env (data as (q, _)) =
       case q of
-          Forall =>
+          Forall () =>
           let
             val (binds, t) = collect_TForallIT $ TQuanI data
             val _ = assert_TArrow t
@@ -853,7 +853,7 @@ fun check_CPSed_ty_visitor_vtable cast () =
         | _ => #visit_TQuanI vtable this env data (* call super *)
     fun visit_TQuan this env (data as (q, _)) =
       case q of
-          Forall =>
+          Forall () =>
           let
             val (binds, t) = collect_TForallIT $ TQuan data
             val _ = assert_TArrow t
@@ -937,7 +937,7 @@ fun check_CPSed_expr e =
       in
         loop e2
       end
-    | EBinOp (EBApp, e1, e2) =>
+    | EBinOp (EBApp (), e1, e2) =>
       (check_value e1;
        check_value e2)
     | ECase (e, bind1, bind2) =>
@@ -958,7 +958,7 @@ fun check_CPSed_expr e =
         (loop e1;
          loop e2)
       end
-    | ETriOp (ETIte, e, e1, e2) =>
+    | ETriOp (ETIte (), e, e1, e2) =>
       let
         val () = check_value e
       in
@@ -967,18 +967,18 @@ fun check_CPSed_expr e =
       end
     | EHalt (e, _) => check_value e
     | EAscTime (e, _) => loop e
-    | EBinOp (EBPair, _, _) => err ()
-    | EBinOp (EBNew, _, _) => err ()
-    | EBinOp (EBRead, _, _) => err ()
+    | EBinOp (EBPair (), _, _) => err ()
+    | EBinOp (EBNew (), _, _) => err ()
+    | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBNat _, _, _) => err ()
     | EBinOp (EBNatCmp _, _, _) => err ()
-    | EBinOp (EBVectorGet, _, _) => err ()
-    | EBinOp (EBVectorPushBack, _, _) => err ()
-    | EBinOp (EBMapPtr, _, _) => err ()
-    | EBinOp (EBStorageSet, _, _) => err ()
-    | ETriOp (ETWrite, _, _, _) => err ()
-    | ETriOp (ETVectorSet, _, _, _) => err ()
+    | EBinOp (EBVectorGet (), _, _) => err ()
+    | EBinOp (EBVectorPushBack (), _, _) => err ()
+    | EBinOp (EBMapPtr (), _, _) => err ()
+    | EBinOp (EBStorageSet (), _, _) => err ()
+    | ETriOp (ETWrite (), _, _, _) => err ()
+    | ETriOp (ETVectorSet (), _, _, _) => err ()
     | EVar _ => err ()
     | EConst _ => err ()
     | EState _ => err ()
@@ -1015,10 +1015,10 @@ and check_decl e =
     case fst $ collect_EAscType e of
         EUnOp (_, e) => check_value e
       | EBinOp (opr, e1, e2) =>
-        (assert_b "check_decl/EBinOp/opr <> EBApp" $ opr <> EBApp;
+        (assert_b "check_decl/EBinOp/opr <> EBApp" $ opr <> EBApp ();
          check_value e1;
          check_value e2)
-      | ETriOp (ETWrite, e1, e2, e3) =>
+      | ETriOp (ETWrite (), e1, e2, e3) =>
         (check_value e1;
          check_value e2;
          check_value e3)
@@ -1040,7 +1040,7 @@ and check_value e =
   case e of
       EConst _ => ()
     | EState _ => ()
-    | EBinOp (EBPair, e1, e2) => (check_value e1; check_value e2)
+    | EBinOp (EBPair (), e1, e2) => (check_value e1; check_value e2)
     | EUnOp (EUInj _, e) => check_value e
     | EAbs (_, bind) =>
       let
@@ -1079,16 +1079,16 @@ and check_value e =
     | EBuiltin _ => ()
     | EUnOp (EUUnfold, _) => err ()
     | EUnOp (EUTiML _, _) => err ()
-    | EBinOp (EBApp, _, _) => err ()
-    | EBinOp (EBNew, _, _) => err ()
-    | EBinOp (EBRead, _, _) => err ()
+    | EBinOp (EBApp (), _, _) => err ()
+    | EBinOp (EBNew (), _, _) => err ()
+    | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBNat _, _, _) => err ()
     | EBinOp (EBNatCmp _, _, _) => err ()
-    | EBinOp (EBVectorGet, _, _) => err ()
-    | EBinOp (EBVectorPushBack, _, _) => err ()
-    | EBinOp (EBMapPtr, _, _) => err ()
-    | EBinOp (EBStorageSet, _, _) => err ()
+    | EBinOp (EBVectorGet (), _, _) => err ()
+    | EBinOp (EBVectorPushBack (), _, _) => err ()
+    | EBinOp (EBMapPtr (), _, _) => err ()
+    | EBinOp (EBStorageSet (), _, _) => err ()
     | ETriOp _ => err ()
     | ECase _ => err ()
     | EUnpack _ => err ()

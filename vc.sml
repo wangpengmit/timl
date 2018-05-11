@@ -80,27 +80,27 @@ fun prop2vcs p : vc list =
     let
     in
         case p of
-            PQuan (Forall, bs, Bind ((name, r), p), r_all) =>
+            PQuan (Forall (), bs, Bind ((name, r), p), r_all) =>
             let
                 val ps = prop2vcs p
                 val ps = add_hyp (VarH (name, bs)) ps
             in
                 ps
             end
-          | PBinConn (BCImply, p1, p) =>
+          | PBinConn (BCImply (), p1, p) =>
             let
                 val ps = prop2vcs p
                 val ps = add_hyp (PropH p1) ps
             in
                 ps
             end
-          | PBinConn (BCAnd, p1, p2) =>
+          | PBinConn (BCAnd (), p1, p2) =>
             prop2vcs p1 @ prop2vcs p2
           | _ => [([], p)]
     end
 
 fun vc2prop ((hs, p) : vc) =
-    foldl (fn (h, p) => case h of VarH (name, b) => PQuan (Forall, b, Bind ((name, dummy), p), get_region_p p) | PropH p1 => p1 --> p) p hs
+    foldl (fn (h, p) => case h of VarH (name, b) => PQuan (Forall (), b, Bind ((name, dummy), p), get_region_p p) | PropH p1 => p1 --> p) p hs
 
 fun simp_vc_vcs (vc : vc) : vc list = prop2vcs $ simp_p $ vc2prop $ vc
           

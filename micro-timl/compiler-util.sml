@@ -39,11 +39,11 @@ fun assert_TAbsI t =
     | _ => raise assert_fail "assert_TAbsI"
 fun assert_TForall t =
   case t of
-      TQuan (Forall, bind) => unBindAnno bind
+      TQuan (Forall (), bind) => unBindAnno bind
     | _ => raise assert_fail $ "assert_TForall; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TForallI t =
   case t of
-      TQuanI (Forall, bind) => unBindAnno bind
+      TQuanI (Forall (), bind) => unBindAnno bind
     | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TExists t =
   case t of
@@ -185,7 +185,7 @@ fun EAscTypeTimes (f, args) = foldl (swap EAscTypeTime) f args
                      
 fun open_collect_TForallIT_whnf whnf t =
   case t of
-      TQuanI (Forall, bind) =>
+      TQuanI (Forall (), bind) =>
       let
         val (s, (name, t)) = unBindAnnoName bind
         val x = fresh_ivar ()
@@ -194,7 +194,7 @@ fun open_collect_TForallIT_whnf whnf t =
       in
         (inl (x, fst name, s) :: binds, t)
       end
-    | TQuan (Forall, bind) =>
+    | TQuan (Forall (), bind) =>
       let
         val (k, (name, t)) = unBindAnnoName bind
         val x = fresh_tvar ()
@@ -207,7 +207,7 @@ fun open_collect_TForallIT_whnf whnf t =
 
 fun collect_TForallIT_open_with_whnf whnf vars t =
   case t of
-      TQuanI (Forall, bind) =>
+      TQuanI (Forall (), bind) =>
       let
         val (s, (name, t)) = unBindAnnoName bind
         val (x, vars) = case vars of
@@ -218,7 +218,7 @@ fun collect_TForallIT_open_with_whnf whnf vars t =
       in
         (inl (x, fst name, s) :: binds, t)
       end
-    | TQuan (Forall, bind) =>
+    | TQuan (Forall (), bind) =>
       let
         val (k, (name, t)) = unBindAnnoName bind
         val (x, vars) = case vars of
@@ -280,14 +280,14 @@ fun reduce_ELets e =
                
 fun collect_TForallIT b =
   case b of
-      TQuanI (Forall, bind) =>
+      TQuanI (Forall (), bind) =>
       let
         val (s, (name, b)) = unBindAnnoName bind
         val (binds, b) = collect_TForallIT b
       in
         (inl (name, s) :: binds, b)
       end
-    | TQuan (Forall, bind) =>
+    | TQuan (Forall (), bind) =>
       let
         val (k, (name, b)) = unBindAnnoName bind
         val (binds, b) = collect_TForallIT b

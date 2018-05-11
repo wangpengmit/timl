@@ -543,5 +543,14 @@ fun scan radix s = StringCvt.scanString (Int.scan radix) s
                                         
 fun bounded_minus a b = max 0 $ a - b
 
+(* types that avoids the use of parameter-less constructor NONE to prevent misspelling in patterns *)
+datatype 'a my_option =
+         None of unit
+         | Some of 'a
+
+datatype my_bool =
+         True of unit
+         | False of unit
+                     
 end
 
