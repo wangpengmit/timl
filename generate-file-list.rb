@@ -183,40 +183,40 @@ parse-filename.sml
 vc-solver.sml
 remove-open.sml
 merge-modules.sml
-micro-timl/micro-timl.sml
-micro-timl/micro-timl-visitor.t.sml
-micro-timl/micro-timl-long-id.sml
-micro-timl/micro-timl-visitor2.sml
-micro-timl/micro-timl-util.sml
-micro-timl/micro-timl-pp.sml
-micro-timl/pattern-ex.sml
-micro-timl/post-process.sml
-micro-timl/export-pp.sml
-micro-timl/micro-timl-util-timl.sml
-micro-timl/timl-to-micro-timl.sml
-micro-timl/micro-timl-typecheck.sml
-micro-timl/micro-timl-locally-nameless.sml
-micro-timl/compiler-util.sml
-micro-timl/cps.sml
-micro-timl/cc.sml
-# micro-timl/pair-alloc.sml
-# micro-timl/tital.sml
-# micro-timl/tital-visitor.sml
-# micro-timl/tital-pp.sml
-# micro-timl/tital-export-pp.sml
-# micro-timl/tital-tc.sml
-# micro-timl/tital-eval.sml
-# micro-timl/code-gen.sml
-micro-timl/evm1.sml
-micro-timl/evm1-visitor.sml
-micro-timl/evm1-pp.sml
-micro-timl/evm1-export-pp.sml
-micro-timl/evm1-pp.sml
-micro-timl/evm-costs.sml
-micro-timl/evm1-util.sml
-micro-timl/evm1-tc.sml
-micro-timl/evm1-assemble.sml
-micro-timl/to-evm1.sml
+compiler/micro-timl.sml
+compiler/micro-timl-visitor.t.sml
+compiler/micro-timl-long-id.sml
+compiler/micro-timl-visitor2.sml
+compiler/micro-timl-util.sml
+compiler/micro-timl-pp.sml
+compiler/pattern-ex.sml
+compiler/post-process.sml
+compiler/export-pp.sml
+compiler/micro-timl-util-timl.sml
+compiler/timl-to-micro-timl.sml
+compiler/micro-timl-typecheck.sml
+compiler/micro-timl-locally-nameless.sml
+compiler/compiler-util.sml
+compiler/cps.sml
+compiler/cc.sml
+# compiler/pair-alloc.sml
+# compiler/tital.sml
+# compiler/tital-visitor.sml
+# compiler/tital-pp.sml
+# compiler/tital-export-pp.sml
+# compiler/tital-tc.sml
+# compiler/tital-eval.sml
+# compiler/code-gen.sml
+compiler/evm1.sml
+compiler/evm1-visitor.sml
+compiler/evm1-pp.sml
+compiler/evm1-export-pp.sml
+compiler/evm1-pp.sml
+compiler/evm-costs.sml
+compiler/evm1-util.sml
+compiler/evm1-tc.sml
+compiler/evm1-assemble.sml
+compiler/to-evm1.sml
 unit-test.sml
 main.sml
 }
