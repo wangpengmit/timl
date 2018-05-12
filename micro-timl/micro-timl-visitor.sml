@@ -520,11 +520,11 @@ fun default_ty_visitor_vtable
         val vtable = cast this
       in
         case data of
-            KType => #visit_KType vtable this env ()
+            KType () => #visit_KType vtable this env ()
           | KArrow data => #visit_KArrow vtable this env data
           | KArrowT data => #visit_KArrowT vtable this env data
       end
-    fun visit_KType this env data = KType
+    fun visit_KType this env data = KType ()
     fun visit_KArrow this env data = 
       let
         val vtable = cast this
@@ -2146,7 +2146,7 @@ fun default_expr_visitor_vtable
         case opr of
             EUInj (opr, t) => EUInj (opr, on_t t)
           | EUFold t => EUFold $ on_t t
-          | EUUnfold => EUUnfold
+          | EUUnfold () => EUUnfold ()
           | EUTiML opr => EUTiML opr
       end
     fun visit_EUnOp this env data = 
