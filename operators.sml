@@ -101,6 +101,8 @@ datatype expr_un_op =
          | EUPrintc of unit
 (* | EUPrint of unit *)
          | EUStorageGet of unit
+         | EUVectorClear of unit
+         | EUVectorLen of unit
 
 fun str_expr_const c =
   case c of
@@ -136,6 +138,8 @@ fun str_expr_un_op opr =
     | EUPrintc () => "printc"
 (* | EUPrint => "print" *)
     | EUStorageGet () => "storage_get"
+    | EUVectorClear () => "vector_clear"
+    | EUVectorLen () => "vector_len"
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =

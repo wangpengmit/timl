@@ -25,7 +25,12 @@ fun foo {len : Nat} () pre {TestState_v : len} post {TestState_v : len+1} =
   end
 
 val a = foo ()
-            
+
+val a = vector_len TestState_v
+
+val () = vector_clear TestState_v
+val a = vector_len TestState_v
+                   
 (* val () = __&halt a *)
             
 end

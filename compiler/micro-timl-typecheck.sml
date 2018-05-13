@@ -952,6 +952,8 @@ val anno_EUPrim = ref false
 val anno_EArrayLen = ref false
 val anno_ENat2Int = ref false
 val anno_EStorageGet = ref false
+val anno_EVectorLen = ref false
+val anno_EVectorClear = ref false
 
 val anno_EProj_state = ref false
 val anno_EPrintc_state = ref false
@@ -989,9 +991,11 @@ val anno_ELet_state = ref false
 val anno_ENewArrayValues_state = ref false
 val anno_EHalt_state = ref false
 val anno_EAbs_state = ref false
+val anno_EVectorLen_state = ref false
+val anno_EVectorClear_state = ref false
 
 val allow_substate_call = ref false
-                              
+
 fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
   let
     val tc = tc st_types
@@ -1293,7 +1297,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EBinOp (EBMapPtr (), e1, e2), t, j1 %+ j2, st)
         end
-      | EBinOp (EBVectorGet (), e1, e2) =>
+      | EBinOp (opr as EBVectorGet (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
@@ -1304,9 +1308,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EVectorGet then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorGet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (EBVectorGet (), e1, e2), t, j1 %+ j2, st)
+          (EBinOp (opr, e1, e2), t, j1 %+ j2, st)
         end
-      | EBinOp (EBVectorPushBack (), e1, e2) =>
+      | EBinOp (opr as EBVectorPushBack (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
@@ -1316,9 +1320,27 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EVectorPushBack then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorPushBack_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (EBVectorPushBack (), e1, e2), TUnit, j1 %+ j2, st @%+ (x, len %+ N1))
+          (EBinOp (opr, e1, e2), TUnit, j1 %+ j2, st @%+ (x, len %+ N1))
         end
-      | ETriOp (ETVectorSet (), e1, e2, e3) =>
+      | EUnOp (opr as EUTiML (EUVectorLen ()), e) =>
+        let
+          val (e, t, j, st) = tc (ctx, st) e
+          val (_, _, len) = get_vector $ whnf itctx t
+          val e = if !anno_EVectorLen then e %: t else e
+          val e = if !anno_EVectorLen_state then e %~ st else e
+        in
+          (EUnOp (opr, e), TNat len, j, st)
+        end
+      | EUnOp (opr as EUTiML (EUVectorClear ()), e) =>
+        let
+          val (e, t, j, st) = tc (ctx, st) e
+          val (x, _, _) = get_vector $ whnf itctx t
+          val e = if !anno_EVectorClear then e %: t else e
+          val e = if !anno_EVectorClear_state then e %~ st else e
+        in
+          (EUnOp (opr, e), TUnit, j, st @%+ (x, N0))
+        end
+      | ETriOp (opr as ETVectorSet (), e1, e2, e3) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
@@ -1333,9 +1355,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2, e3) = if !anno_EVectorSet then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
           val (e1, e2, e3) = if !anno_EVectorSet_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
-          (ETriOp (ETVectorSet (), e1, e2, e3), TUnit, j1 %+ j2 %+ j3, st)
+          (ETriOp (opr, e1, e2, e3), TUnit, j1 %+ j2 %+ j3, st)
         end
-      | EBinOp (EBStorageSet (), e1, e2) =>
+      | EBinOp (opr as EBStorageSet (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
@@ -1345,7 +1367,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EStorageSet then (e1 %: t1, e2 %: t) else (e1, e2)
           val (e1, e2) = if !anno_EStorageSet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (EBStorageSet (), e1, e2), TUnit, j1 %+ j2, st)
+          (EBinOp (opr, e1, e2), TUnit, j1 %+ j2, st)
         end
       | EState x => (EState x, TState x, T0, st)
       | EBinOp (EBNat opr, e1, e2) =>
@@ -2051,6 +2073,11 @@ datatype tc_flag =
        | Anno_ENewArrayValues_state
        | Anno_EHalt_state
        | Anno_EAbs_state
+| Anno_EVectorLen
+| Anno_EVectorClear
+| Anno_EVectorLen_state
+| Anno_EVectorClear_state
+                              
 
 fun typecheck (flags, st_types) ctx e =
   let
@@ -2127,6 +2154,10 @@ fun typecheck (flags, st_types) ctx e =
     val () = anno_ENewArrayValues_state := mem Anno_ENewArrayValues_state flags
     val () = anno_EHalt_state := mem Anno_EHalt_state flags
     val () = anno_EAbs_state := mem Anno_EAbs_state flags
+val () = anno_EVectorLen := mem Anno_EVectorLen flags
+val () = anno_EVectorClear := mem Anno_EVectorClear flags
+val () = anno_EVectorLen_state := mem Anno_EVectorLen_state flags
+val () = anno_EVectorClear_state := mem Anno_EVectorClear_state flags
     val ret = runWriter (fn () => tc st_types ctx e) ()
   in
     ret

@@ -921,6 +921,8 @@ fun is_value (e : U.expr) : bool =
            | EUPrintc () => false
         (* | EUPrint () => false *)
            | EUStorageGet () => false
+    | EUVectorClear () => false
+    | EUVectorLen () => false
         )
       | EBinOp (opr, e1, e2) =>
         (case opr of
@@ -1236,6 +1238,22 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t = assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
                in
                  (EUnOp (opr, e, r), t, j, st)
+               end
+             | EUVectorLen () =>
+               let
+                 val (e, t, j, st) = get_mtype (ctx, st) e
+                 val t = whnf_mt true gctx kctx t
+                 val (_, _, len) = get_vector (fn () => r) t
+               in
+                 (EUnOp (opr, e, r), TNat (len, r), j, st)
+               end
+             | EUVectorClear () =>
+               let
+                 val (e, t, j, st) = get_mtype (ctx, st) e
+                 val t = whnf_mt true gctx kctx t
+                 val (x, _, _) = get_vector (fn () => r) t
+               in
+                 (EUnOp (opr, e, r), TUnit r, j, st @+ (x, N0 r))
                end
           )
 	| U.EBinOp (opr, e1, e2) =>

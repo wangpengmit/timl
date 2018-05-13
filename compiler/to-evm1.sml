@@ -299,6 +299,8 @@ fun impl_expr_un_op opr =
     | EUPrintc () => printc
     (* | EUPrint () => [PRINT] *)
     | EUStorageGet () => [SLOAD ()]
+    | EUVectorClear () => [PUSH1nat 0, SWAP1, SSTORE (), PUSH1 WTT]
+    | EUVectorLen () => [SLOAD ()]
                         
 fun impl_nat_expr_bin_op opr =
   case opr of
@@ -422,12 +424,6 @@ fun compile st_name2int ectx e =
       in
         I
       end
-    (* | EUnOp (EUVectorClear, e) => *)
-    (*   compile e @ *)
-    (*   [PUSH1nat 0, SWAP1, SSTORE (), PUSH1 WTT] *)
-    (* | EUnOp (EUVectorLength, e) => *)
-    (*   compile e @ *)
-    (*   [SLOAD ()] *)
     | ETriOp (ETIte (), _, _, _) => err ()
     | EBinOp (EBApp (), _, _) => err ()
     | EBinOp (EBNew (), _, _) => err ()

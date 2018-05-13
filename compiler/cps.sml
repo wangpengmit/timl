@@ -823,6 +823,10 @@ val cps_tc_flags =
        Anno_EUnpackI_state,
        Anno_ELet_state,
        Anno_ENewArrayValues_state,
+Anno_EVectorLen,
+Anno_EVectorClear,
+Anno_EVectorLen_state,
+Anno_EVectorClear_state,
        Anno_EHalt_state
       ]
     end

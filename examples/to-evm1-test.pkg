@@ -1,4 +1,4 @@
-(* test-state.timl *)
+test-state.timl
 (* unit-test-basic1.timl *)
 
 (* pervasive.timl *)
@@ -8,7 +8,7 @@
 (* array.timl *)
 (* string.timl *)
 
-stdlib.pkg
+(* stdlib.pkg *)
                
 (* unit-test-basic.timl *)
             
@@ -38,8 +38,8 @@ stdlib.pkg
 (* array-msort.timl *)
 (* array-msort-inplace.timl *)
 (* array-kmed.timl *)
-dlist.timl
+(* dlist.timl *)
 (* qsort.timl *)
-dijkstra.timl
+(* dijkstra.timl *)
 
 (* dynamic-table.timl *)
