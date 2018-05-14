@@ -124,6 +124,23 @@ local
                      | _ =>
                        let
                          val is = collect_IBAdd i
+                         fun partition3 f xs = foldr (
+                             case f x of
+                                 inl x => (x :: xs, ys, zs)
+                               | inr (inl y) => (xs, y :: ys, zs)
+                               | inr (inr z) => (xs, ys, z :: zs)
+                           ) ([], [], []) xs
+                         val (consts, toReal_consts, others) =
+                             partition3
+                               (fn i =>
+                                   case i of
+                                       IConst (c, r) => inl (c, r)
+                                     | IUnOp (IUToReal (), IConst (c, _), r) => inr $ inl (c, r)
+                                     | _ => inr $ inr i) $ map passi is
+                         fun simp_consts 
+                         val consts = simp_consts consts
+                         val toReal_consts = simp_consts toReal_consts
+                         val is = map IConst consts @ map (fn (c, r) => IToReal (IConst (c, r), r)) @ others
                          val (i', is) = case is of
                                             i :: is => (i, is)
                                           | [] => raise Impossible "passi/IBAdd"

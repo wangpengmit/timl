@@ -200,37 +200,10 @@ val int2byte = [MACRO_int2byte ()]
 fun make_inj t_other = [MACRO_inj $ Inner t_other]
 val br_sum = [MACRO_br_sum ()]
 fun halt t = MACRO_halt t
-                 
-fun inline_macro_inst inst =
-  case inst of
-      MACRO_init_free_ptr num_regs => [PUSH_reg $ reg_addr num_regs, PUSH1nat 0, MSTORE ()]
-    | MACRO_tuple_malloc ts => [PUSH1nat 0, MLOAD (), DUP1, PUSH_tuple_offset $ 32 * (length $ unInner ts), ADD (), PUSH1 $WNat 0, MSTORE ()]
-    | MACRO_tuple_assign () => [DUP2, MSTORE ()]
-    | MACRO_printc () => [PUSH_reg scratch, MSTORE (), PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD (), LOG0, PUSH1 WTT]
-    | MACRO_array_malloc (t, b) => [PUSH1nat 0, MLOAD (), PUSH1nat 32, ADD (), DUP1, SWAP2, PUSH1nat 32, MUL (), ADD (), PUSH1nat 0, MSTORE ()]
-    | MACRO_array_init_assign () => [DUP3, DUP3, DUP3, ADD (), MSTORE ()]
-    | MACRO_array_init_len () => [DUP2, PUSH1nat 32, SWAP1, SUB (), MSTORE ()]
-    | MACRO_int2byte () => [PUSH1nat 31, BYTE ()]
-    | MACRO_inj t_other =>
-      inline_macro_inst (MACRO_tuple_malloc $ Inner [TUnit, TUnit](*only length matters operationally*)) @
-      [SWAP1, DUP2, MSTORE (), SWAP1, DUP2, PUSH1nat 32, ADD (), MSTORE ()(* , PACK_SUM (inj, Inner t_other) *)]
-    | MACRO_br_sum () => [DUP2, MLOAD (), SWAP1, JUMPI ()]
-    | MACRO_map_ptr () => [PUSH_reg $ scratch, MSTORE (), PUSH_reg $ scratch+32, MSTORE (), PUSH1nat 64, PUSH_reg $ scratch, SHA3 ()]
-    | MACRO_vector_ptr () => [PUSH_reg $ scratch, MSTORE (), PUSH1nat 32, PUSH_reg $ scratch, SHA3 (), ADD ()]
-    | MACRO_vector_push_back () => [DUP2, DUP1, SLOAD (), SWAP1, DUP2, PUSH1nat 1, ADD (), SWAP1, SSTORE (), SWAP1, SWAP2] @ inline_macro_inst (MACRO_vector_ptr ()) @ [SSTORE ()]
-    | _ => [inst]
 
-fun inline_macro_insts insts =
-  case insts of
-      ISCons bind =>
-      let
-        val (inst, I) = unBind bind
-      in
-        inline_macro_inst inst @@ inline_macro_insts I
-      end
-    | MACRO_halt t => [PUSH_reg scratch, SWAP1, DUP2, MSTORE (), PUSH1nat 32, SWAP1] @@ RETURN ()(* t *)
-    | _ => insts
-                                                                     
+val inline_macro_inst = inline_macro_inst (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr, TUnit)
+val inline_macro_insts = inline_macro_insts (inline_macro_inst, PUSH_reg, scratch)
+                                          
 fun inline_macro_hval code =
   let
     val (binds, (spec, I)) = unBind code
@@ -988,9 +961,9 @@ fun test1 dirname =
     val st_int2name = invert_map st_name2int
     val (i, vcs, admits) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
     val () = println "Finished EVM1 typechecking"
-    (* val () = println "Time:" *)
-    (* val i = simp_i i *)
-    (* val () = println $ ToString.str_i Gctx.empty [] i *)
+    val () = println "Time:"
+    val i = simp_i i
+    val () = println $ ToString.str_i Gctx.empty [] i
 
     val () = println "ToEVM1.UnitTest passed"
   in
