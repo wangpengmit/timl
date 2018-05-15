@@ -89,6 +89,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EPackI of 'ty * 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | EUnpackI of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ibind
          | EAscTime of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx (* time ascription *)
+         | EAscSpace of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx (* space annotation *)
          | EAscState of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx (* post-state annotation *)
          | EAscType of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty (* type ascription *)
          | ENever of 'ty

@@ -52,6 +52,11 @@ infix  9 @!!
 infix  9 @%!!
 infix  6 @%+
          
+val T0 = T0 dummy
+val T1 = T1 dummy
+val N0 = N0 dummy
+val N1 = N1 dummy
+            
 val STime = STime dummy
 val SNat = SNat dummy
 val SBool = SBool dummy
@@ -63,7 +68,7 @@ fun close_t_insts a = shift_t_insts_fn close_t_t a
 fun close0_i_insts a = close_i_insts 0 a
 fun close0_t_insts a = close_t_insts 0 a
 
-fun close0_i_block x ((st, rctx, ts, i), I) = ((close0_i_i x st, Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, close0_i_i x i), close0_i_insts x I)
+fun close0_i_block x ((st, rctx, ts, (j, i)), I) = ((close0_i_i x st, Rctx.map (close0_i_t x) rctx, map (close0_i_t x) ts, (close0_i_i x j, close0_i_i x i)), close0_i_insts x I)
                                             
 fun shift_i_insts a = shift_i_insts_fn (shiftx_i_i, shiftx_i_s, shift_i_t) a
 fun shift_t_insts a = shift_t_insts_fn shift_t_t a
@@ -71,7 +76,7 @@ fun shift_t_insts a = shift_t_insts_fn shift_t_t a
 fun shift01_i_insts a = shift_i_insts 0 1 a
 fun shift01_t_insts a = shift_t_insts 0 1 a
 
-fun shift01_i_block ((st, rctx, ts, i), I) = ((shift_i_i st, Rctx.map shift01_i_t rctx, map shift01_i_t ts, shift_i_i i), shift01_i_insts I)
+fun shift01_i_block ((st, rctx, ts, (j, i)), I) = ((shift_i_i st, Rctx.map shift01_i_t rctx, map shift01_i_t ts, (shift_i_i j, shift_i_i i)), shift01_i_insts I)
                                             
 fun reg_addr r = 32 * (r + 1)
 (* use r0 as scratch space *)
@@ -162,10 +167,6 @@ fun output_heap pair = push_ref heap_ref pair
 fun IV n = IVar (ID (n, dummy), [])
 fun TV n = TVar (ID (n, dummy), [])
 fun FIV x = IVar (make_Free_i x, [])
-val T0 = T0 dummy
-val T1 = T1 dummy
-val N0 = N0 dummy
-val N1 = N1 dummy
                 
 fun VAppITs_ctx (e, itctx) =
   let
@@ -479,6 +480,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
               val (I_e2, st) = compile (e2, st)
               val (t, len, _) = assert_TArrayPtr t
               val (name, e) = unBindSimpName bind
+              val (e, space_e) = assert_EAscSpace e
               val (e, i_e) = assert_EAscTime e
               val post_loop_label = fresh_label ()
               val loop_label = fresh_label ()
@@ -511,7 +513,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
                         array_init_assign @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
                         JUMP ())
-                    val block = ((st, rctx, [TNat (INat 32 %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], IToReal (FIV i %* INat 8) %+ T1 %+ i_e), loop_code)
+                    val block = ((st, rctx, [TNat (INat 32 %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], (IToReal (FIV i %* INat 8) %+ T1 %+ i_e, space_e)), loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -528,7 +530,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
                         set_reg r @@
                         cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len)), st) e)
                     val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N32 %=? N0) %= Itrue
-                    val block = ((st, rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], T1 %+ i_e), post_loop_code)
+                    val block = ((st, rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], (T1 %+ i_e, space_e)), post_loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -601,13 +603,14 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         val (t1, t2) = assert_TSum t
         val (name1, e1) = unBindSimpName bind1
         val (name2, e2) = unBindSimpName bind2
+        val (e2, space_e2) = assert_EAscSpace e2
         val (e2, i_e2) = assert_EAscTime e2
         val r = fresh_reg ()
         val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1), st) e1
         val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2), st) e2
         val branch_prelude = [PUSH1nat 32, ADD (), MLOAD ()] @ set_reg r
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((st, rctx, [TProd (TiBoolConst true, t2)](*the stack spec*), i_e2), branch_prelude @@ I2))
+        val hval = HCode' (itbinds, ((st, rctx, [TProd (TiBoolConst true, t2)](*the stack spec*), (i_e2, space_e2)), branch_prelude @@ I2))
         val l = fresh_label ()
         val () = output_heap ((l, "inr_branch"), hval)
       in
@@ -779,7 +782,7 @@ val code_gen_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EIfi, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EPair, Anno_EInj]
+      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EIfi, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EIfi_e2_time, Anno_EPair, Anno_EInj]
     end
                      
 structure UnitTest = struct

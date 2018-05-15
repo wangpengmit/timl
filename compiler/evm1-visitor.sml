@@ -204,7 +204,7 @@ fun visit_hval (extend_i, extend_t, visit_idx, visit_sort, visit_kind, visit_ty,
     (visit_pair (visit_tuple_4 visit_idx
                                (visit_map Rctx.map visit_ty)
                                (visit_list visit_ty)
-                               visit_idx) visit_insts) env h
+                               (visit_pair visit_idx visit_idx)) visit_insts) env h
     
 fun visit_prog (visit_label, visit_hval, visit_insts) env (H, I) =
   (visit_list (visit_pair (visit_pair visit_label return2) visit_hval) env H, visit_insts env I)

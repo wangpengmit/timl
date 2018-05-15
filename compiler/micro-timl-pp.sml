@@ -26,7 +26,7 @@ fun str_ty_bin_op opr =
     | TBSum () => "sum"
 
 (* depth=NONE means no depth limit *)
-fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
+fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s depth (t : ('var, 'bsort, 'idx, 'sort) ty) =
   let
     val (reached_depth_limit, depth) =
         case depth of
@@ -359,7 +359,7 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
-      | TArrowEVM (st, rctx, ts, (time, space)) =>
+      | TArrowEVM (st, rctx, ts, (i, j)) =>
         (
           open_hbox ();
           str "TArrowEVM";
@@ -380,9 +380,9 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           app (fn t => (pp_t t; comma ())) ts;
           str "]";
           comma ();
-          str $ str_i time;
+          str $ str_i i;
           comma ();
-          str $ str_i space;
+          str $ str_i j;
           str ")";
           close_box ()
         )

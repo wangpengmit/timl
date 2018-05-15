@@ -63,9 +63,10 @@ fun get_sort_type_SUVar gctx ctx data = SUVar data
 
 fun open_close add ns ctx f = f $ add ns ctx
 
-(* type state = (scontext * prop) list *)
-(* val vcs : state ref = ref [] *)
-(* val admits : state ref = ref [] *)
+type state = (scontext * prop) list
+val vcs : state ref = ref []
+val admits : state ref = ref []
+                             
 (* fun check_prop ctx p = push_ref vcs (ctx, p) *)
 (* fun add_admit p = push_ref admits (ctx, p)                *)
 fun check_prop p = ()
@@ -161,7 +162,7 @@ fun is_eq_sort ctx (s, s') =
     | (SSubset ((bs, r1), Bind ((name, _), p), _), SSubset ((bs', _), Bind (_, p'), _)) =>
       let
 	val () = is_eq_basic_sort (bs, bs')
-	val () = check_prop (add_sorting (name, BasicSort bs) ctx) (p --> p')
+	val () = check_prop (p --> p')
       in
         ()
       end
@@ -174,7 +175,7 @@ fun is_eq_sort ctx (s, s') =
     | (SBasic (bs, r1), SSubset ((bs', _), Bind ((name, _), p), _)) =>
       let
 	val () = is_eq_basic_sort (bs, bs')
-	val () = check_prop (add_sorting (name, BasicSort bs) ctx) p
+	val () = check_prop p
       in
         ()
       end
@@ -944,6 +945,7 @@ val anno_ELet = ref false
 val anno_EHalt = ref false
 val anno_ECase_e2_time = ref false
 val anno_EIte_e2_time = ref false
+val anno_EIfi_e2_time = ref false
 val anno_EIfi = ref false
 val anno_EVectorSet = ref false
 val anno_EMapPtr = ref false
@@ -1476,7 +1478,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t2 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
           val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
           val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
-          val e2 = if !anno_ECase_e2_time then e2 |> i2 else e2
+          val e2 = if !anno_EIfi_e2_time then e2 |> i2 else e2
           val () = is_eq_ty itctx (t1, t2)
           val () = is_eq_idx ictx (st2, st1)
           val e = if !anno_EIfi then e %: t_e else e
@@ -2029,6 +2031,7 @@ datatype tc_flag =
        | Anno_EHalt
        | Anno_ECase_e2_time
        | Anno_EIte_e2_time
+       | Anno_EIfi_e2_time
        | Anno_EIfi
        | Anno_EVectorSet
        | Anno_EMapPtr
@@ -2110,6 +2113,7 @@ fun typecheck (flags, st_types) ctx e =
     val () = anno_EHalt := mem Anno_EHalt flags
     val () = anno_ECase_e2_time := mem Anno_ECase_e2_time flags
     val () = anno_EIte_e2_time := mem Anno_EIte_e2_time flags
+    val () = anno_EIif_e2_time := mem Anno_EIfi_e2_time flags
     val () = anno_EIfi := mem Anno_EIfi flags
     val () = anno_EVectorSet := mem Anno_EVectorSet flags
     val () = anno_EMapPtr := mem Anno_EMapPtr flags

@@ -164,7 +164,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         ((itctx, rctx, t :: sctx, st))
       end
     fun err () = raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctx_names itctx) inst)
-    val time_ref = ref $ to_real G_inst inst
+    val time_ref = ref $ to_real $ G_inst inst
     val space_ref = ref N0
     val ishift_ref = ref 0
     fun add_time n = unop_ref (fn i => i %+ to_real n) time_ref
@@ -652,6 +652,9 @@ fun ILePair ((a, b), (a', b')) = a %<= a' /\ b %<= b'
 infix 4 %%<=
 val op%%<= = ILePair                                             
 
+fun shiftn_i_i n = shiftx_i_i 0 n
+fun shiftn_i_2i n (a, b) = (shiftn_i_i n a, shiftn_i_i n b)
+      
 fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itctx as (ictx, tctx), rctx, sctx, st)) insts =
   let
     val tc_insts = tc_insts params
@@ -695,7 +698,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         val () = is_eq_stack itctx (sctx, sctx')
         val () = is_eq_st ictx (st, st')
       in
-        Tn (G_insts insts) %%+ i
+        (Tn (G_insts insts) %%+ i, 0)
       end
     (* | ISHalt t => *)
     (*   let *)
@@ -709,9 +712,9 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         val t = kc_against_KType itctx t
         val () = is_eq_stack itctx (sctx, [t])
       in
-        Tn $ G_insts insts
+        (Tn $ G_insts insts, 0)
       end
-    | ISDummy _ => Tn $ G_insts insts
+    | ISDummy _ => (Tn $ G_insts insts, 0)
     | RETURN () => err ()
     | ISCons bind =>
       let
@@ -731,9 +734,9 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                     val () = is_sub_rctx itctx (rctx, rctx')
                     val () = is_eq_stack itctx (sctx, sctx')
                     val () = is_eq_st ictx (st, st')
-                    val i1 = tc_insts (itctx, rctx, sctx, st) I
+                    val (i1, ni) = tc_insts (itctx, rctx, sctx, st) I
                   in
-                    Tn (G_inst inst) %+ IMax (i1, i2)
+                    (Tn (G_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
                   end
                 | TiBool i =>
                   let
@@ -747,9 +750,9 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                     val t2 = make_exists (SSubset_from_prop dummy $ i %= Itrue)
                     val () = is_eq_stack itctx (t1 :: sctx, sctx')
                     val () = is_eq_st ictx (st, st')
-                    val i1 = tc_insts (itctx, rctx, t2 :: sctx, st) I
+                    val (i1, ni) = tc_insts (itctx, rctx, t2 :: sctx, st) I
                   in
-                    Tn (G_inst inst) %+ IMax (i1, i2)
+                    (Tn (G_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
                   end
                 | t1 => raise Impossible $ "tc()/JUMPI wrong type of t1: " ^ str_t t1
             end
@@ -762,24 +765,25 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val () = is_sub_rctx itctx (rctx, rctx')
               val () = is_eq_stack itctx (TProd (TiBoolConst true, tr) :: sctx, sctx')
               val () = is_eq_st ictx (st, st')
-              val i1 = tc_insts (itctx, rctx, TProd (TiBoolConst false, tl) :: sctx, st) I
+              val (i1, ni) = tc_insts (itctx, rctx, TProd (TiBoolConst false, tl) :: sctx, st) I
             in
-              Tn (G_inst inst) %+ IMax (i1, i2)
+              (Tn (G_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
             end
           | ASCTIME i =>
             let
               val i = sc_against_sort ictx (unInner i, STime)
-              val (i', j) = tc_insts ctx I
+              val ((i', j), ni) = tc_insts ctx I
+              val i = shiftn_i_i ni i
               val () = check_prop (i' %<= i)
             in
-              Tn (G_inst inst) %%+ (i, j)
+              (Tn (G_inst inst) %%+ (i, j), ni)
             end
           | _ =>
             let
-              val (ctx, i1, ishift1) = tc_inst params ctx inst 
-              val (i2, ishift2) = tc_insts ctx I
+              val (ctx, i1, ni1) = tc_inst params ctx inst 
+              val (i2, ni2) = tc_insts ctx I
             in
-              (shift_i_i ishift2 $ i1 %+ i2, ishift1+isfhit2)
+              (shiftn_i_2i ni2 i1 %%+ i2, ni1 + ni2)
             end
       end
     fun extra_msg () = "\nwhen typechecking\n" ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, SOME 5) (itctx_names itctx) insts)
@@ -797,7 +801,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
 fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
   let
     (* val () = println "tc_hval() started" *)
-    val (itbinds, ((st, rctx, sctx, i), insts)) = unBind h
+    val (itbinds, ((st, rctx, sctx, (time, space)), insts)) = unBind h
     val itbinds = unTeles itbinds
     (* val () = println "before getting itctx" *)
     val itctx as (ictx, tctx) =
@@ -828,13 +832,14 @@ fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
     (* val () = println "before checking sctx" *)
     val sctx = map (kc_against_KType itctx) sctx
     (* val () = println "before checking i" *)
-    val i = sc_against_sort ictx (i, STime)
+    val time = sc_against_sort ictx (time, STime)
+    val space = sc_against_sort ictx (space, STime)
     val st = sc_against_sort ictx (st, SState)
     (* val () = println "before checking insts" *)
-    val (i', ishift) = tc_insts params (itctx, rctx, sctx, st) insts
+    val (i', ni) = tc_insts params (itctx, rctx, sctx, st) insts
     (* val () = println "after checking insts" *)
-    val () = check_prop (i' %%<= shift_i_i ishift i)
-    val () = close_n ishift
+    val () = check_prop (i' %%<= shiftn_i_2i ni (time, space))
+    val () = close_n ni
     (* val () = println "tc_hval() finished" *)
   in
     ()
@@ -854,7 +859,8 @@ fun tc_prog (num_regs, st_name2ty, st_int2name, init_st) (H, I) =
     fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
     val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval (hctx, num_regs, st_name2ty, st_int2name) h)) H
-    val i = tc_insts (hctx, num_regs, st_name2ty, st_int2name) (([], []), Rctx.empty, [], init_st) I
+    val (i, _) = tc_insts (hctx, num_regs, st_name2ty, st_int2name) (([], []), Rctx.empty, [], init_st) I
+                          (* todo: should have a forget_i_i on i here *)
   in
     i
   end

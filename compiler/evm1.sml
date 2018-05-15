@@ -97,7 +97,7 @@ datatype ('idx, 'ty) insts =
 
 type 'v rctx = 'v IntBinaryMap.map
                   
-type ('idx, 'sort, 'kind, 'ty) hval = ((ibinder * 'sort outer, tbinder * 'kind) sum tele, ('idx * 'ty rctx * 'ty list * 'idx) * ('idx, 'ty) insts) bind
+type ('idx, 'sort, 'kind, 'ty) hval = ((ibinder * 'sort outer, tbinder * 'kind) sum tele, ('idx * 'ty rctx * 'ty list * ('idx * 'idx)) * ('idx, 'ty) insts) bind
 
 infixr 0 $
 
