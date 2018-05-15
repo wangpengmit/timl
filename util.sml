@@ -238,6 +238,11 @@ fun foldl' f init xs =
         [] => init
       | x :: xs => foldl f x xs
 
+fun foldl_nonempty f xs =
+    case xs of
+        [] => raise Impossible "fold_nonempty(): got []"
+      | x :: xs => foldl f x xs
+
 fun foldlM (bind, return) f init xs =
     let
       fun loop init xs =
@@ -458,6 +463,14 @@ fun partitionSum f xs =
             | inr z => (ys, z :: zs)
         end
 
+fun partition3 f ls = foldr (
+    fn (a, (xs, ys, zs)) =>
+       case f a of
+           inl x => (x :: xs, ys, zs)
+         | inr (inl y) => (xs, y :: ys, zs)
+         | inr (inr z) => (xs, ys, z :: zs)
+  ) ([], [], []) ls
+                            
 fun partitionOptionFirst f xs =
     case xs of
         [] => NONE

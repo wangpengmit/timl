@@ -30,8 +30,9 @@ fun ITT r = IConst (ICTT (), r)
 fun IAdmit r = IConst (ICAdmit (), r)
 fun PTrue r = PTrueFalse (true, r)
 fun PFalse r = PTrueFalse (false, r)
-
 fun PEq (a, b) = PBinPred (BPEq (), a, b)             
+fun IMax (i1, i2) = IBinOp (IBMax (), i1, i2)
+fun IToReal (i, r) = IUnOp (IUToReal (), i, r)                           
 
 (* notations *)
          
@@ -98,12 +99,16 @@ fun collect_IBinOp_left opr i =
 val collect_IBAdd = collect_IBinOp (IBAdd ())
 val collect_IBAdd_left = collect_IBinOp_left (IBAdd ())
 val collect_IBMult = collect_IBinOp (IBMult ())
-                                   
-fun combine_IBAdd zero is = foldl' (fn (i, acc) => acc %+ i) zero is
+
+fun combine_IBinOp f init is = foldl' (fn (i, acc) => f (acc, i)) init is
+fun combine_IBinOp_nonempty f is = foldl_nonempty (fn (i, acc) => f (acc, i)) is
+                                    
+fun combine_IBAdd zero is = combine_IBinOp op%+ zero is
 fun combine_IBAdd_Time is = combine_IBAdd (T0 dummy) is
 fun combine_IBAdd_Nat is = combine_IBAdd (N0 dummy) is
-fun combine_IBAdd_nonempty i is = combine_IBAdd_Time (i :: is)
-fun combine_IBMult is = foldl' (fn (i, acc) => acc %* i) (T1 dummy) is
+fun combine_IBAdd_nonempty (i, is) = combine_IBinOp_nonempty op%+ (i :: is)
+fun combine_IBMult one is = combine_IBinOp op%* one is
+fun combine_IBMult_nonempty (i, is) = combine_IBinOp_nonempty op%* (i :: is)
                                             
 fun collect_PBinConn opr i =
   case i of
@@ -186,8 +191,6 @@ fun SApps f args = foldl (fn (arg, f) => SApp (f, arg)) f args
 fun SAbs_Many (ctx, s, r) = foldr (fn ((name, s_arg), s) => SAbs (s_arg, Bind ((name, r), s), r)) s ctx
 fun IAbs_Many (ctx, i, r) = foldr (fn ((name, b), i) => IAbs (b, Bind ((name, r), i), r)) i ctx
                                  
-fun IMax (i1, i2) = IBinOp (IBMax (), i1, i2)
-                           
 fun interp_nat_expr_bin_op opr (i1, i2) err =
   case opr of
       EBNAdd () => i1 %+ i2

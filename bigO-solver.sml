@@ -342,7 +342,7 @@ fun by_master_theorem uvar (hs, p) =
                     val is = List.filter (isNone o is_IBApp_IUVar) is
                   in
                     case is of
-                        i :: is => combine_IBAdd_nonempty i is
+                        i :: is => combine_IBAdd_nonempty (i, is)
                       | [] => i
                   end
               in
@@ -426,7 +426,7 @@ fun by_master_theorem uvar (hs, p) =
     val is = collect_IBAdd lhs
     fun get_class m k = default (0, 0) $ M.find (m, k)
     fun get_class_or_0 m k = default (0, 0) $ Option.map (get_class m) k
-    fun exp n i = combine_IBMult (repeat n i)
+    fun exp n i = combine_IBMult (T1 dummy) (repeat n i)
     fun class2term (c, k) n =
       exp c n %* exp k (IUnOp (IULog2, n, dummy))
     (* is a variable appears as an argument to [uvar] but not among the last [arity] arguments, then it is seen as an "outer" parameter  *)

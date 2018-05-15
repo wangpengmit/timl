@@ -69,6 +69,41 @@ local
     let
       (* val () = println $ str_i [] [] i *)
       fun r () = get_region_i i
+      fun reduce_IBinOps (collect_opr, combine_opr, combine_nat, combine_time) i =
+        let
+          fun simp_consts ls =
+            let
+              val (nats, times, others) =
+                  partition3 (fn (c, r) =>
+                                 case c of
+                                     ICNat n => inl (n, r)
+                                   | ICTime x => inr $ inl (x, r)
+                                   | _ => inr $ inr (c, r)
+                             ) ls
+              fun combine f ls =
+                if length ls >= 2 then
+                  mark $ [foldl_nonempty (fn ((a, _), (b, r)) => (f (a, b), r)) ls]
+                else ls
+              val nats = combine combine_nat nats
+              val times = combine combine_time times
+            in
+              map (mapFst ICNat) nats @ map (mapFst ICTime) times @ others
+            end
+          val is = collect_opr i
+          val is = map passi is
+          val (consts, toReal_consts, others) =
+              partition3
+                (fn i =>
+                    case i of
+                        IConst (c, r) => inl (c, r)
+                      | IUnOp (IUToReal (), IConst (c, _), r) => inr $ inl (c, r)
+                      | _ => inr $ inr i) is
+          val consts = simp_consts consts
+          val toReal_consts = simp_consts toReal_consts
+          val is = map IConst consts @ map (fn (c, r) => IToReal (IConst (c, r), r)) toReal_consts @ others
+        in
+          combine_opr $ assert_cons is
+        end
     in
       case i of
 	  IBinOp (opr, i1, i2) =>
@@ -112,46 +147,7 @@ local
 	        else if eq_i i2 (T0 dummy) orelse eq_i i2 (INat (0, dummy)) then
                   mark i1
 	        else
-                  (case (i1, i2) of
-                       (IConst (ICTime x1, _), IConst (ICTime x2, _)) =>
-                       let
-                         open TimeType
-                       in
-                         mark $ ITime (x1 + x2, r ())
-                       end
-                     | (IConst (ICNat n1, _), IConst (ICNat n2, _)) =>
-                       mark $ INat (n1 + n2, r ())
-                     | _ =>
-                       let
-                         val is = collect_IBAdd i
-                         fun partition3 f xs = foldr (
-                             case f x of
-                                 inl x => (x :: xs, ys, zs)
-                               | inr (inl y) => (xs, y :: ys, zs)
-                               | inr (inr z) => (xs, ys, z :: zs)
-                           ) ([], [], []) xs
-                         val (consts, toReal_consts, others) =
-                             partition3
-                               (fn i =>
-                                   case i of
-                                       IConst (c, r) => inl (c, r)
-                                     | IUnOp (IUToReal (), IConst (c, _), r) => inr $ inl (c, r)
-                                     | _ => inr $ inr i) $ map passi is
-                         fun simp_consts 
-                         val consts = simp_consts consts
-                         val toReal_consts = simp_consts toReal_consts
-                         val is = map IConst consts @ map (fn (c, r) => IToReal (IConst (c, r), r)) @ others
-                         val (i', is) = case is of
-                                            i :: is => (i, is)
-                                          | [] => raise Impossible "passi/IBAdd"
-                         val i' = combine_IBAdd_nonempty i' is
-                       in
-		         if eq_i i' i then
-                           def ()
-                         else
-                           mark i'
-                       end
-                  )
+                  reduce_IBinOps (collect_IBAdd, combine_IBAdd_nonempty, op+, TimeType.add) i
 	      | IBMult () => 
 	        if eq_i i1 (T0 dummy) then
                   mark $ T0 $ r ()
@@ -162,35 +158,22 @@ local
 	        else if eq_i i2 (T1 dummy) then
                   mark i1
 	        else
-                  (case (i1, i2) of
-                       (IConst (ICNat n1, _), IConst (ICNat n2, _)) =>
-                       mark $ INat (n1 * n2, r ())
-                     | _ =>
-                       let
-                         val i2s = collect_IBAdd i2
-                         fun pred i =
-                           case i of
-                               IConst (ICNat _, _) => SOME i
-                             | IUnOp (IUB2n (), _, _) => SOME i
-                             | _ => NONE
-                       in
-                         case partitionOptionFirst pred i2s of
-                             SOME (i2, rest) =>
-                             let
-                               val ret = i1 %* i2
-                               val ret =
-                                   case rest of
-                                       [] => ret
-                                     | hd :: rest => ret %+ i1 %* combine_IBAdd_nonempty hd rest
-                             in
-                               if eq_i ret i then
-                                 def ()
-                               else
-                                 mark ret
-                             end
-                           | NONE => def ()
-                       end
-                  )
+                  let
+                    fun reduce () = reduce_IBinOps (collect_IBMult, combine_IBMult_nonempty, op*, TimeType.mult) i
+                    val i2s = collect_IBAdd i2
+                    fun pred i =
+                      case i of
+                          IConst (ICNat _, _) => SOME i
+                        | IUnOp (IUB2n (), _, _) => SOME i
+                        | _ => NONE
+                  in
+                    case partitionOptionFirst pred i2s of
+                        NONE => reduce ()
+                      | SOME (i2, rest) =>
+                        case rest of
+                            [] => reduce ()
+                          | hd :: rest => i1 %* i2 %+ i1 %* combine_IBAdd_nonempty (hd, rest)
+                  end
               | IBApp () =>
                 (case (* passi *) i1 of
                      IAbs (_, Bind (_, body), _) =>

@@ -12,6 +12,8 @@ val one = fromInt 1
 
 fun str_time x = toString x
                    
-val time_eq = op== 
+val time_eq = op==
+val add = op+
+val mult = op*
 
 end

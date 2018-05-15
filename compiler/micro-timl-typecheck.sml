@@ -1727,7 +1727,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                   let
                     val collect_MinusI_left = collect_IBinOp_left (IBMinus ())
                     val (i', is) = assert_cons $ collect_MinusI_left i'
-                    val i = combine_IBAdd_nonempty i is
+                    val i = combine_IBAdd_nonempty (i, is)
                     val () = check_prop ictx (i %<= i')
                   in
                     ()
@@ -1796,7 +1796,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (decls, is) = unzip decls 
           val (e, t, i, st) = tc (ctx, st) e
           val e = ELets (decls, e)
-          val is = uncurry combine_IBAdd_nonempty $ assert_cons is
+          val is = combine_IBAdd_nonempty $ assert_cons is
         in
           (e, t, is %+ i, st)
         end
