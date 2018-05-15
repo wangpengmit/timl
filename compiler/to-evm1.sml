@@ -89,7 +89,9 @@ fun assert_EState e =
   case e of
       EState a => a
     | _ => raise assert_fail "assert_EState"
-                 
+
+fun assert_EAscSpace e = (e, N0)
+                           
 fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
 
 fun cg_ty_visitor_vtable cast () =
@@ -436,7 +438,7 @@ val compile = fn (st_name2int, ectx, e, st) =>
                    (I, !st_ref)
                  end
 
-fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
+fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx, mtiml_ty) insts =
   let
     (* val () = print $ "cg_e() started:\n" *)
     val compile = fn (e, st) => compile (st_name2int, ectx, e, st)
@@ -631,13 +633,14 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
         val t2 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
         val (name1, e1) = unBindSimpName bind1
         val (name2, e2) = unBindSimpName bind2
+        val (e2, space_e2) = assert_EAscSpace e2
         val (e2, i_e2) = assert_EAscTime e2
         val r = fresh_reg ()
         val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1), st) e1
         val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2), st) e2
         val branch_prelude = set_reg r
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((st, rctx, [t2], i_e2), branch_prelude @@ I2))
+        val hval = HCode' (itbinds, ((st, rctx, [t2], (i_e2, space_e2)), branch_prelude @@ I2))
         val l = fresh_label ()
         val () = output_heap ((l, "ifi_else_branch"), hval)
       in
@@ -651,11 +654,12 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e =
     | ETriOp (ETIte (), e, e1, e2) =>
       let
         val (I_e, st) = compile (e, st)
+        val (e2, space_e2) = assert_EAscSpace e2
         val (e2, i_e2) = assert_EAscTime e2
         val I1 = cg_e (ectx, itctx, rctx, st) e1
         val I2 = cg_e (ectx, itctx, rctx, st) e2
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((st, rctx, [], i_e2), I2))
+        val hval = HCode' (itbinds, ((st, rctx, [], (i_e2, space_e2)), I2))
         val l = fresh_label ()
         val () = output_heap ((l, "else_branch"), hval)
       in
@@ -738,14 +742,14 @@ fun cg_hval (st_name2int, ectx) (e, t_all) =
     val rctx = rctx_single (ARG_REG, t)
     val reg_counter = ref $ ARG_REG+1
     val I = cg_e (reg_counter, st_name2int) (ectx, rev itbinds, rctx, st) e
-    fun get_time t =
+    fun get_time_space t =
       let
         val (_, t) = collect_TForallIT t
         val (_, i, _) = assert_TArrow t
       in
-        i
+        (i, N0)
       end
-    val hval = HCode' (itbinds, ((st, rctx, [], get_time t_all), I))
+    val hval = HCode' (itbinds, ((st, rctx, [], get_time_space t_all), I))
   in
     (hval, !reg_counter)
   end
@@ -775,7 +779,7 @@ fun cg_prog (st_name2int, init_st) e =
     val num_regs = max num_regs (!reg_counter)
     val I = init_free_ptr num_regs @@ I
   in
-    ((H, I), num_regs)
+    ((H, I : (idx, mtiml_ty) insts), num_regs)
   end
 
 val code_gen_tc_flags =
@@ -932,9 +936,12 @@ fun test1 dirname =
     val () = println "Started EVM1 typechecking ..."
     fun invert_map m = StMap.foldli (fn (k, v, acc) => IMap.insert (acc, v, k)) IMap.empty m
     val st_int2name = invert_map st_name2int
-    val (i, vcs, admits) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
+    val ((j, i), vcs, admits) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
     val () = println "Finished EVM1 typechecking"
     val () = println "Time:"
+    val j = simp_i j
+    val () = println $ ToString.str_i Gctx.empty [] j
+    val () = println "Space:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
 

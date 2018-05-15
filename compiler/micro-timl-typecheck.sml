@@ -2113,7 +2113,7 @@ fun typecheck (flags, st_types) ctx e =
     val () = anno_EHalt := mem Anno_EHalt flags
     val () = anno_ECase_e2_time := mem Anno_ECase_e2_time flags
     val () = anno_EIte_e2_time := mem Anno_EIte_e2_time flags
-    val () = anno_EIif_e2_time := mem Anno_EIfi_e2_time flags
+    val () = anno_EIfi_e2_time := mem Anno_EIfi_e2_time flags
     val () = anno_EIfi := mem Anno_EIfi flags
     val () = anno_EVectorSet := mem Anno_EVectorSet flags
     val () = anno_EMapPtr := mem Anno_EMapPtr flags
