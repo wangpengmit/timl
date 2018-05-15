@@ -134,7 +134,7 @@ in
 val G_inst = fn b => sum $ map G_inst $ dummy_inline_macro_inst b
 val G_insts = fn b => G_insts $ inline_macro_insts (dummy_inline_macro_inst, fn _ => PUSH1nat 0, 0) b
 end
-                         
+
 fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, tctx), rctx, sctx, st : idx)) inst =
   let
     fun itctxn () = itctx_names itctx
@@ -194,7 +194,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | SUB () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
-        fun a %%- b = (check_prop ictx (a %>= b); a %- b)
+        fun a %%- b = (check_prop (a %>= b); a %- b)
         val t =
             case (t0, t1) of
                 (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TInt
@@ -262,7 +262,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                    | _ => raise Impossible $ sprintf "MLOAD: unknown offset in type ($)" [str_t t0])
               | TArrayPtr (t, len, offset) =>
                 let
-                  fun read () = (check_prop ictx (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); t)
+                  fun read () = (check_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); t)
                 in
                   case simp_i offset of
                      IConst (ICNat n, _) =>
@@ -291,7 +291,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                     | _ => def ()
                 end
               | TArrayPtr (t, len, offset) =>
-                (is_eq_ty itctx (t1, t); check_prop ictx (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); rctx)
+                (is_eq_ty itctx (t1, t); check_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); rctx)
               | _ => def ()
       in
         ((itctx, rctx, sctx, st))
@@ -469,10 +469,10 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val () = is_eq_ty itctx (t2, t)
       in
         if is_upward then
-          (check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %= lowest);
+          (check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %= lowest);
            ((itctx, rctx, TNat len :: TPreArray (t, len, lowest %+ N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
         else
-          (check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest);
+          (check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest);
            ((itctx, rctx, TNat len :: TPreArray (t, len, lowest %- N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
       end
     | MACRO_array_init_len () =>
@@ -480,7 +480,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, t1, sctx) = assert_cons2 sctx
         val len' = assert_TNat $ whnf itctx t0
         val (t, len, lowest_inited, (_, dir)) = assert_TPreArray $ whnf itctx t1
-        val () = check_prop ictx (len' %= len)
+        val () = check_prop (len' %= len)
       in
         ((itctx, rctx, TPreArray (t, len, lowest_inited, (true, dir)) :: sctx, st))
       end
@@ -491,10 +491,10 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val () = assert_b "len_inited = true" (len_inited = true)
       in
         if is_upward then
-          (check_prop ictx (lowest %= len);
+          (check_prop (lowest %= len);
            ((itctx, rctx, TArrayPtr (t, len, N32) :: sctx, st)))
         else
-          (check_prop ictx (lowest %= N0);
+          (check_prop (lowest %= N0);
            ((itctx, rctx, TArrayPtr (t, len, N32) :: sctx, st)))
       end
     | MACRO_tuple_malloc ts =>
@@ -509,7 +509,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val (ts, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t1
-        val () = check_prop ictx (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest_inited)
+        val () = check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest_inited)
         val n = assert_INat $ simp_i lowest_inited
         val () = is_eq_ty itctx (t0, List.nth (ts, n-1))
       in
@@ -519,7 +519,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, sctx) = assert_cons sctx
         val (t, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t0
-        val () = check_prop ictx (lowest_inited %= N0)
+        val () = check_prop (lowest_inited %= N0)
       in
         ((itctx, rctx, TTuplePtr (t, offset, false) :: sctx, st))
       end
@@ -574,7 +574,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                 let
                   val len = st @%!! vec
                   val t = assert_fst_false $ st_name2ty @!! vec
-                  val () = check_prop ictx (offset %< len)
+                  val () = check_prop (offset %< len)
                 in
                   t
                 end
@@ -606,7 +606,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                 let
                   val len = st @%!! vec
                   val t = assert_fst_false $ st_name2ty @!! vec
-                  val () = check_prop ictx (offset %< len)
+                  val () = check_prop (offset %< len)
                   val () = is_eq_ty itctx (t1, t)
                 in
                   st
@@ -615,7 +615,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                 let
                   val _ = assert_fst_false $ st_name2ty @!! vec
                   val new = assert_TNat t1
-                  val () = check_prop ictx (new %= N0)
+                  val () = check_prop (new %= N0)
                 in
                   st @%+ (vec, N0)
                 end
@@ -770,7 +770,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
             let
               val i = sc_against_sort ictx (unInner i, STime)
               val (i', j) = tc_insts ctx I
-              val () = check_prop ictx (i' %<= i)
+              val () = check_prop (i' %<= i)
             in
               Tn (G_inst inst) %%+ (i, j)
             end

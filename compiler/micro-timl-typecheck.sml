@@ -150,7 +150,7 @@ fun is_eq_basic_sort x = unify_bs dummy x
   
 fun BasicSort b = SBasic (b, dummy)
                         
-fun is_eq_idx ctx (i, i') = check_prop ctx (i %= i')
+fun is_eq_idx ctx (i, i') = check_prop (i %= i')
 
 open Bind
        
@@ -895,7 +895,7 @@ infix 0 %~
 fun a %~ b = EAscState (a, b)
 
 fun check_sub_map ictx (pre_st, st) =
-  StMap.appi (fn (k, v) => check_prop ictx $ v %= st @!! k) pre_st
+  StMap.appi (fn (k, v) => check_prop $ v %= st @!! k) pre_st
              
 fun assert_TMap t =
   case t of
@@ -1279,7 +1279,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val t2 = whnf itctx t2
           val i2 = assert_TNat_m t2 (fn s => raise MTCError $ "ERead: " ^ s)
-          val () = check_prop ictx (i2 %< i1)
+          val () = check_prop (i2 %< i1)
           val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ERead_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
@@ -1306,7 +1306,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val i = assert_TNat_m t2 (fn s => raise MTCError $ "EVectorGet: " ^ s)
           val (x, t, len) = get_vector $ whnf itctx t1
-          val () = check_prop ictx (i %< len)
+          val () = check_prop (i %< len)
           val (e1, e2) = if !anno_EVectorGet then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorGet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
@@ -1353,7 +1353,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t1 = whnf itctx t1
           val (x, t, len) = get_vector t1
           val () = is_eq_ty itctx (t3, t)
-          val () = check_prop ictx (i %< len)
+          val () = check_prop (i %< len)
           val (e1, e2, e3) = if !anno_EVectorSet then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
           val (e1, e2, e3) = if !anno_EVectorSet_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
@@ -1386,7 +1386,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                        TNat i => i
                      | _ => raise MTCError "ENatAdd 2"
           val i2 = Simp.simp_i $ update_i i2
-          val () = if opr = EBNBoundedMinus () then check_prop ictx (i2 %<= i1) else ()
+          val () = if opr = EBNBoundedMinus () then check_prop (i2 %<= i1) else ()
           val (e1, e2) = if !anno_ENat then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ENat_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
           val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
@@ -1426,7 +1426,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i2 = case t2 of
                        TNat i => i
                      | _ => raise MTCError "EWrite 2"
-          val () = check_prop ictx (i2 %< i1)
+          val () = check_prop (i2 %< i1)
           val (e3, j3, st) = tc_against_ty (ctx, st) (e3, t)
           val (e1, e2, e3) = if !anno_EWrite then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
           val (e1, e2, e3) = if !anno_EWrite_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
@@ -1730,7 +1730,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                     val collect_MinusI_left = collect_IBinOp_left (IBMinus ())
                     val (i', is) = assert_cons $ collect_MinusI_left i'
                     val i = combine_IBAdd_nonempty (i, is)
-                    val () = check_prop ictx (i %<= i')
+                    val () = check_prop (i %<= i')
                   in
                     ()
                   end
@@ -1761,7 +1761,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       | ENever t =>
         let
           val t = kc_against_kind itctx (t, KType ())
-          val () = check_prop ictx (PFalse dummy)
+          val () = check_prop (PFalse dummy)
         in
           (ENever t, t, T0, st)
         end
@@ -1944,7 +1944,7 @@ and tc_against_time st_types (ctx as (ictx, tctx, _), st) (e, i) =
       (* val () = println e_str *)
       val (e, t, i', st) = tc st_types (ctx, st) e
       (* val () = println "before tc_against_time()/check_prop()" *)
-      val () = check_prop ictx (i' %<= i)
+      val () = check_prop (i' %<= i)
       (* val () = println "tc_against_time() finished:" *)
       (* val () = println e_str *)
     in
