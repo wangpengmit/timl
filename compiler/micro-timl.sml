@@ -47,7 +47,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool)
          (* used by compiler/code-gen *)
          | TArrowTAL of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx
-         | TArrowEVM of 'idx(*pre-state*) * ('var, 'bsort, 'idx, 'sort) ty Rctx.map (*register typing*) * ('var, 'bsort, 'idx, 'sort) ty list (*stack typing*) * 'idx
+         | TArrowEVM of 'idx(*pre-state*) * ('var, 'bsort, 'idx, 'sort) ty Rctx.map (*register typing*) * ('var, 'bsort, 'idx, 'sort) ty list (*stack typing*) * ('idx * 'idx)
          | TiBool of 'idx
          | TPreTuple of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * 'idx(*lowest inited pos*)
          | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * bool(*is storage?*)

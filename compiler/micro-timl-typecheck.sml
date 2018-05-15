@@ -63,16 +63,16 @@ fun get_sort_type_SUVar gctx ctx data = SUVar data
 
 fun open_close add ns ctx f = f $ add ns ctx
 
-type state = (scontext * prop) list
-val vcs : state ref = ref []
-val admits : state ref = ref []
-                 
+(* type state = (scontext * prop) list *)
+(* val vcs : state ref = ref [] *)
+(* val admits : state ref = ref [] *)
 (* fun check_prop ctx p = push_ref vcs (ctx, p) *)
-fun check_prop ctx p = ()
-fun add_admit ctx p = push_ref admits (ctx, p)               
+(* fun add_admit p = push_ref admits (ctx, p)                *)
+fun check_prop p = ()
+fun add_admit p = ()
                          
-fun write_prop ctx (p, r) = check_prop ctx p
-fun write_admit ctx (p, r) = add_admit ctx p
+fun write_prop ctx (p, r) = check_prop p
+fun write_admit ctx (p, r) = add_admit p
                                        
 structure Sortcheck = SortcheckFn (structure U = Expr
                                    structure T = Expr
@@ -396,14 +396,15 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TArrowTAL (ts, i), KType ())
       end
-    | TArrowEVM (st, rctx, ts, i) =>
+    | TArrowEVM (st, rctx, ts, (time, space)) =>
       let
         val st = sc_against_sort ictx (st, SState)
         val rctx = Rctx.map (fn t => kc_against_kind ctx (t, KType ())) rctx
         val ts = map (kc_against_KType ctx) ts
-        val i = sc_against_sort ictx (i, STime)
+        val time = sc_against_sort ictx (time, STime)
+        val space = sc_against_sort ictx (space, SNat)
       in
-        (TArrowEVM (st, rctx, ts, i), KType ())
+        (TArrowEVM (st, rctx, ts, (time, space)), KType ())
       end
     | TMap t => (TMap $ kc_against_KType ctx t, KType ())
     | TState x => 
@@ -641,12 +642,13 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           in
             ()
           end
-        | (TArrowEVM (st, rctx, ts, i), TArrowEVM (st', rctx', ts', i')) =>
+        | (TArrowEVM (st, rctx, ts, (j, i)), TArrowEVM (st', rctx', ts', (j', i'))) =>
           let
             val () = is_eq_idx ictx (st, st')
             val () = assert_b $ Rctx.numItems rctx = Rctx.numItems rctx'
             val () = is_sub_rctx ctx (rctx, rctx')
             val () = is_eq_tys ctx (ts, ts')
+            val () = is_eq_idx ictx (j, j')
             val () = is_eq_idx ictx (i, i')
           in
             ()

@@ -104,7 +104,7 @@ fun cg_ty_visitor_vtable cast () =
         val cg_t = #visit_ty (cast this) this env
         val t1 = cg_t t1
       in
-        TArrowEVM (pre, rctx_single (ARG_REG, t1), [], i)
+        TArrowEVM (pre, rctx_single (ARG_REG, t1), [], (i, N0))
       end
     val vtable = override_visit_TArrow vtable visit_TArrow
     fun visit_TBinOp this env (data as (opr, t1, t2)) =

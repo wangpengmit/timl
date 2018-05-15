@@ -285,7 +285,7 @@ fun default_ty_visitor2_vtable
                    val rctx = Rctx.map (fn inr t => t
                                        | _ => error (TArrowEVM data) other) rctx
                    val ts = visit2_list (#visit2_ty vtable this) env ts ts'
-                   val i2 = #visit2_idx vtable this env i2 i2'
+                   val i2 = visit2_pair (#visit2_idx vtable this) (#visit2_idx vtable this) env i2 i2'
                  in
                    TArrowEVM (i1, rctx, ts, i2)
                  end

@@ -100,8 +100,8 @@ structure Sortcheck = SortcheckFn (structure U = U
                                    val gctx_names = gctx_names
                                    val normalize_s = normalize_s
                                    val subst_i_p = subst_i_p
-                                   val write_admit = fn x => const_fun write_admit x
-                                   val write_prop = fn x => const_fun write_prop x
+                                   val write_admit = fn _ => fn a => write_admit a
+                                   val write_prop = fn _ => fn a => write_prop a
                                    val get_uvar_info = get_uvar_info
                                    val refine = refine
                                   )

@@ -359,13 +359,13 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           str ")";
           close_box ()
         )
-      | TArrowEVM (i1, rctx, ts, i2) =>
+      | TArrowEVM (st, rctx, ts, (time, space)) =>
         (
           open_hbox ();
           str "TArrowEVM";
           space ();
           str "(";
-          str $ str_i i1;
+          str $ str_i st;
           comma ();
           str "{";
           Rctx.appi
@@ -380,7 +380,9 @@ fun pp_t (params as (str_var, str_b, str_i, str_s, str_k)) s depth t =
           app (fn t => (pp_t t; comma ())) ts;
           str "]";
           comma ();
-          str $ str_i i2;
+          str $ str_i time;
+          comma ();
+          str $ str_i space;
           str ")";
           close_box ()
         )

@@ -567,7 +567,7 @@ fun default_ty_visitor_vtable
             TArrowEVM (#visit_idx vtable this env i1,
                        Rctx.map (#visit_ty vtable this env) rctx,
                        visit_list (#visit_ty vtable this) env ts,
-                       #visit_idx vtable this env i2)
+                       visit_pair (#visit_idx vtable this) (#visit_idx vtable this) env i2)
           | TiBool idx => TiBool $ #visit_idx vtable this env idx
           | TPreArray (t, i1, i2, b) => TPreArray (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2, b)
           | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)

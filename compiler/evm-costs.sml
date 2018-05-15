@@ -45,7 +45,7 @@ fun G_inst b =
                     
     | SHA3 () => 30
     | SLOAD () => 200
-    | SSTORE () => G_sset
+    | SSTORE () => G_sset (* can't do value-sensitive analysis, so we'll just use the highest cost *)
     | JUMPDEST () => 1
     | LOG _ => 375
     (* extensions (noops) *)
