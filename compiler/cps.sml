@@ -34,8 +34,11 @@ val SNat = SNat dummy
 val SBool = SBool dummy
 val SUnit = SUnit dummy
 
-val T_0 = T0 dummy
-val T_1 = T1 dummy
+val T0 = T0 dummy
+val T1 = T1 dummy
+val N0 = N0 dummy
+val N1 = N1 dummy
+val TN0 = TN0 dummy
 
 fun unBindAnno2 data =
   let
@@ -54,6 +57,7 @@ fun EAbsIClose (x, e) = EAbsI $ close0_i_e_anno (x, e)
 fun EAbsICloseMany (xs, b) = foldr EAbsIClose b xs
 fun EAbsTimeClose ((x, name), e) = EAbsIClose ((x, name, STime), e)
 fun ELetConstrClose ((x, name), e1, e2) = MakeELetConstr (e1, (name, dummy), close0_c_e x e2)
+fun EAppIPair (e, (i, j)) = EAppIs (e, [i, j])
   
 fun Eid t = EAbs (IEmptyState, EBindAnno ((("x", dummy), t), EVar $ Bound 0))
 fun EHaltFun t_arg t_result = EAbs (IEmptyState, EBindAnno ((("x", dummy), t_arg), EHalt (EVar $ Bound 0, t_result)))
@@ -137,9 +141,12 @@ fun assert_and_reduce_letxx e =
 
 val whnf = fn t => whnf ([], []) t
                        
-fun blowup_time (i : idx, j : idx) = i %* ITime (TimeType.fromInt 999) %+ j
-fun blowup_time_t (j : idx) = j %* ITime (TimeType.fromInt 888)
-fun blowup_time_i (j : idx) = j %* ITime (TimeType.fromInt 777)
+infix 6 %%+
+
+fun blowup_time (i, j) = i %+ j
+fun blowup_time_space (i, j) = i %%+ j
+fun blowup_time_space_t j = j
+fun blowup_time_space_i j = j
 
 (* CPS conversion on types *)
 fun cps_ty_visitor_vtable cast () =
@@ -161,11 +168,13 @@ fun cps_ty_visitor_vtable cast () =
         fun cps_Forall t =
           let
             val t = cps_t t
-            val j = fresh_ivar ()
+            val j1 = fresh_ivar ()
+            val j2 = fresh_ivar ()
             val F = fresh_ivar ()
-            val t = TArrow ((IV F, t), IV j, Void)
-            val t = TArrow ((IV F, t), IV j %+ T_1, Void)
-            val t = TForallICloseMany ([(j, "j", STime), (F, "F", SState)], t)
+            val j12 = (IV j1, IV j2)
+            val t = TArrow ((IV F, t), j12, Void)
+            val t = TArrow ((IV F, t), blowup_time_space_t j12, Void)
+            val t = TForallICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], t)
           in
             t
           end
@@ -177,12 +186,14 @@ fun cps_ty_visitor_vtable cast () =
                 let
                   val t1 = cps_t t1
                   val t2 = cps_t t2
-                  val j = fresh_ivar ()
+                  val j1 = fresh_ivar ()
+                  val j2 = fresh_ivar ()
                   val F = fresh_ivar ()
-                  val t = TProd (t1, TArrow ((st2 %++ IV F, t2), IV j, Void))
-                  val t = TArrow ((st1 %++ IV F, t), blowup_time (i, IV j), Void)
+                  val j12 = (IV j1, IV j2)
+                  val t = TProd (t1, TArrow ((st2 %++ IV F, t2), j12, Void))
+                  val t = TArrow ((st1 %++ IV F, t), blowup_time_space (i, j12), Void)
                 in
-                  TForallICloseMany ([(j, "j", STime), (F, "F", SState)], t)
+                  TForallICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], t)
                 end
               | TQuan (Forall (), bind) =>
                 let
@@ -277,7 +288,7 @@ fun cps_t t =
 (* CPS conversion on terms *)
 (* pre: ... |- k : [[t_e]] --j_k-=> unit |> 0 *)
 (* the 'unit' part can be relaxed if e is a value *)
-fun cps (e, t_e, F) (k, j_k) =
+fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
   let
     (* val () = println $ "CPS on " ^ (substr 0 400 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
     (* [[ \\a.e ]](k) = k (\\a. \\j F. \c {F}. [[e]](c)) *)
@@ -285,16 +296,18 @@ fun cps (e, t_e, F) (k, j_k) =
     fun cps (e, t_e) (k, j_k) = cps_with_frame (e, t_e, F) (k, j_k)
     fun cps_EAbsIT (e, t_e) =
       let
-        val j = fresh_ivar ()
+        val j1 = fresh_ivar ()
+        val j2 = fresh_ivar ()
         val F = fresh_ivar ()
         val c = fresh_evar ()
         val () = assert_b_m (fn () => "is_value() on " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)) $ is_value e
-        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, IV j)
-        val e = EAscTime (e, blowup_time_t (IV j))
+        val j12 = (IV j1, IV j2)
+        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, j12)
+        val e = EAscTimeSpace (e, blowup_time_space_t j12)
         val t_e = cps_t t_e
-        val t_c = cont_type ((IV F, t_e), IV j)
+        val t_c = cont_type ((IV F, t_e), j12)
         val e = EAbs (IV F, close0_e_e_anno ((c, "c", t_c), e))
-        val e = EAbsICloseMany ([(j, "j", STime), (F, "F", SState)], e)
+        val e = EAbsICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], e)
       in
         e
       end
@@ -303,7 +316,7 @@ fun cps (e, t_e, F) (k, j_k) =
   case e of
       S.EVar x =>
       (* [[ x ]](k) = k x *)
-      (k $$ EVar x, j_k %+ T_1)
+      (k $$ EVar x, j_k)
     | S.EAbs (_, bind) =>
       (* [[ \x {pre_st}. e {post_st} ]](k) = k (\\j F. \(x, c) {pre_st+F}. [[e]](c) |> blowup_time(i, j))
          where [i] is the time bound of [e], blowup_time(i,j) = b(i+1)+2i+1+j, [b] is blow-up factor *)
@@ -314,17 +327,19 @@ fun cps (e, t_e, F) (k, j_k) =
         val x = fresh_evar ()
         val e = open0_e_e x e
         val c = fresh_evar ()
-        val j = fresh_ivar ()
+        val j1 = fresh_ivar ()
+        val j2 = fresh_ivar ()
         val F = fresh_ivar ()
-        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, IV j)
-        val e = EAscTime (e, blowup_time (i, IV j))
+        val j12 = (IV j1, IV j2)
+        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, j12)
+        val e = EAscTimeSpace (e, blowup_time_space (i, j12))
         val t_e = cps_t t_e
-        val t_c = cont_type ((post_st %++ IV F, t_e), IV j)
+        val t_c = cont_type ((post_st %++ IV F, t_e), j12)
         val t_x = cps_t t_x
         val e = EAbsPairClose (pre_st %++ IV F, (x, name_x, t_x), (c, "c", t_c), e)
-        val e = EAbsICloseMany ([(j, "j", STime), (F, "F", SState)], e)
+        val e = EAbsICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], e)
       in
-        (k $$ e, j_k %+ T_1)
+        (k $$ e, j_k)
       end
     | S.EBinOp (EBApp (), e1, e2) =>
       (* [[ e1 e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. x1 {k.j} (x2, k))) *)
@@ -337,11 +352,11 @@ fun cps (e, t_e, F) (k, j_k) =
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
         val xk = fresh_evar ()
-        val e = EAppI (EV x1, j_k) %$ EPair (EV x2, EV xk)
+        val e = EAppIPair (EV x1, j_k) %$ EPair (EV x2, EV xk)
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
         val e = EAbs (st_e2 %++ F, close0_e_e_anno ((x2, "x2", t_x2), e))
-        val (e, i_e) = cps (e2, t_e2) (e, blowup_time (i, j_k))
+        val (e, i_e) = cps (e2, t_e2) (e, blowup_time_space (i, j_k))
         val t_x1 = cps_t t_e1
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e))
       in
@@ -349,16 +364,16 @@ fun cps (e, t_e, F) (k, j_k) =
       end
     | S.EConst c =>
       (* [[ c ]](k) = k c *)
-      (k $$ EConst c, j_k %+ T_1)
+      (k $$ EConst c, j_k)
     | S.EState x =>
       (* [[ x ]](k) = k x *)
-      (k $$ EState x, j_k %+ T_1)
+      (k $$ EState x, j_k)
     | S.ENever t =>
       (* [[ never ]](k) = k(never) *)
-      (k $$ ENever (cps_t t), j_k %+ T_1)
+      (k $$ ENever (cps_t t), j_k)
     | S.EBuiltin (name, t) =>
       (* [[ builtin ]](k) = k(builtin) *)
-      (k $$ EBuiltin (name, cps_t t), j_k %+ T_1)
+      (k $$ EBuiltin (name, cps_t t), j_k)
     | S.ERec bind =>
       (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
       let
@@ -368,7 +383,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val e = open0_e_e x e
         val t_x = cps_t t_e
         val () = assert_b "cps/ERec/1" $ is_value e
-        val (e, i_e) = cps (e, t_e) (Eid t_x, T_0) (* CPS with id is not strictly legal, since id doesn't return unit. It's OK because e should be a value. Values can be CPSed with continuations that return non-unit. *)
+        val (e, i_e) = cps (e, t_e) (Eid t_x, TN0) (* CPS with id is not strictly legal, since id doesn't return unit. It's OK because e should be a value. Values can be CPSed with continuations that return non-unit. *)
         val e = assert_and_reduce_letxx e
         val (e, _) = collect_EAscTypeTime e
         val () = assert_b "cps/ERec/2" $ is_value e
@@ -377,7 +392,7 @@ fun cps (e, t_e, F) (k, j_k) =
                    | _ => raise Impossible "ERec: body after CPS should be EAbsITMany (EAbs (...))"
         val e = ERec $ close0_e_e_anno ((x, name_x, t_x), e)
       in
-        (k $$ e, j_k %+ T_1)
+        (k $$ e, j_k)
       end
     | S.EAbsT bind =>
       let
@@ -390,7 +405,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val e = cps_EAbsIT (e, t_e)
         val e = EAbsT $ close0_t_e_anno ((a, name_a, kd_a), e)
       in
-        (k $$ e, j_k %+ T_1)
+        (k $$ e, j_k)
       end
     | S.EAbsI bind =>
       let
@@ -403,7 +418,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val e = cps_EAbsIT (e, t_e)
         val e = EAbsI $ close0_i_e_anno ((a, name_a, s_a), e)
       in
-        (k $$ e, j_k %+ T_1)
+        (k $$ e, j_k)
       end
     | S.EAppT (e, t) =>
       (* [[ e[t] ]](k) = [[e]](\x. x[t]{k.j}(k)) *)
@@ -411,11 +426,11 @@ fun cps (e, t_e, F) (k, j_k) =
         val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
-        val c = EAppI (EAppT (EV x, cps_t t), j_k) %$ k
+        val c = EAppIPair (EAppT (EV x, cps_t t), j_k) %$ k
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
-        cps (e, t_e) (c, blowup_time_t j_k)
+        cps (e, t_e) (c, blowup_time_space_t j_k)
       end
     | S.EAppI (e, i) =>
       (* [[ e[i] ]](k) = [[e]](\x. x[i]{k.j}(k)) *)
@@ -423,11 +438,11 @@ fun cps (e, t_e, F) (k, j_k) =
         val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
-        val c = EAppI (EAppI (EV x, i), j_k) %$ k
+        val c = EAppIPair (EAppI (EV x, i), j_k) %$ k
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
-        cps (e, t_e) (c, blowup_time_i j_k)
+        cps (e, t_e) (c, blowup_time_space_i j_k)
       end
     | S.EPack (t_pack, t, e) =>
       (* [[ pack <t, e> ]](k) = [[e]](\x. k (pack <t, x>)) *)
@@ -442,7 +457,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
-        cps (e, t_e) (c, j_k %+ T_1)
+        cps (e, t_e) (c, j_k)
       end
     | S.EPackI (t_pack, i, e) =>
       (* [[ packI <i, e> ]](k) = [[e]](\x. k (packI <i, x>)) *)
@@ -456,7 +471,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
-        cps (e, t_e) (c, j_k %+ T_1)
+        cps (e, t_e) (c, j_k)
       end
     | S.EUnpack (e1, bind) =>
       (* [[ unpack e1 as <alpha, x> in e2 ]](k) = [[e1]](\x1. unpack x1 as <alpha, x> in [[e2]](k)) *)
@@ -521,7 +536,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val t_x2 = cps_t t_e2
         val e = k $$ EBinOp (opr, EV x1, EV x2)
         val e = EAbs (st_e2 %++ F, close0_e_e_anno ((x2, "x2", t_x2), e))
-        val (e, i_e) = cps (e2, t_e2) (e, j_k %+ T_1)
+        val (e, i_e) = cps (e2, t_e2) (e, j_k)
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e))
       in
         cps (e1, t_e1) (e, i_e)
@@ -539,7 +554,7 @@ fun cps (e, t_e, F) (k, j_k) =
             cps (e, t) (ek, i_ek)
           end
       in
-        foldr f (ek, j_k %+ T_1) xs_names_es
+        foldr f (ek, j_k) xs_names_es
       end
     | S.EUnOp (opr, e) =>
       (* [[ opr e ]](k) = [[e]](\x. k (opr x)) *)
@@ -553,7 +568,7 @@ fun cps (e, t_e, F) (k, j_k) =
             val t_x = cps_t t_e
             val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
           in
-            cps (e, t_e) (c, j_k %+ T_1)
+            cps (e, t_e) (c, j_k)
           end
         val (t_e, opr) = 
             case opr of
@@ -609,7 +624,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
-        val i_c = IMax (i_e1, i_e2)
+        val i_c = IMaxPair (i_e1, i_e2)
       in
         cps (e, t_e) (c, i_c)
       end
@@ -633,7 +648,26 @@ fun cps (e, t_e, F) (k, j_k) =
         val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
-        val i_c = IMax (i_e1, i_e2)
+        val i_c = IMaxPair (i_e1, i_e2)
+      in
+        cps (e, t_e) (c, i_c)
+      end
+    | S.ETriOp (ETIte (), e, e1, e2) =>
+      (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
+      let
+        val (e, st_e) = assert_EAscState e
+        val t_res = t_e
+        val t_e = TBool
+        val t_res = cps_t t_res
+        val x_k = fresh_evar ()
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
+        val y = fresh_evar ()
+        val c = ETriOp (ETIte (), EV y, e1, e2)
+        val c = ELetClose ((x_k, "k", k), c)
+        val t_y = cps_t t_e
+        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
+        val i_c = IMaxPair (i_e1, i_e2)
       in
         cps (e, t_e) (c, i_c)
       end
@@ -665,32 +699,13 @@ fun cps (e, t_e, F) (k, j_k) =
       cps (e, t) (k, j_k)  (* todo: may need to do more *)
     | S.EAscTime (e, i) =>
       let
-        val (e, i') = cps (e, t_e) (k, j_k)
-        val i = blowup_time (i, j_k)
+        val (e, (i', j)) = cps (e, t_e) (k, j_k)
+        val i = blowup_time (i, fst j_k)
       in
-        (e (* |> i' *) |> i, i)
+        (e (* |> i' *) |> i, (i, j))
       end
     | S.EAscState (e, _) =>
       cps (e, t_e) (k, j_k)
-    | S.ETriOp (ETIte (), e, e1, e2) =>
-      (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
-      let
-        val (e, st_e) = assert_EAscState e
-        val t_res = t_e
-        val t_e = TBool
-        val t_res = cps_t t_res
-        val x_k = fresh_evar ()
-        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
-        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
-        val y = fresh_evar ()
-        val c = ETriOp (ETIte (), EV y, e1, e2)
-        val c = ELetClose ((x_k, "k", k), c)
-        val t_y = cps_t t_e
-        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
-        val i_c = IMax (i_e1, i_e2)
-      in
-        cps (e, t_e) (c, i_c)
-      end
     | S.ETriOp (opr, e1, e2, e3) =>
       (* [[ opr e1 e2 e3 ]](k) = [[e1]] (\x1. [[e2]] (\x2. [[e3]] (\x3. k (opr x1 x2 x3)))) *)
       let
@@ -708,7 +723,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val t_x3 = cps_t t_e3
         val e = k $$ ETriOp (opr, EV x1, EV x2, EV x3)
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x3, "x3", t_x3), e))
-        val (e, i_e) = cps (e3, t_e3) (e, j_k %+ T_1)
+        val (e, i_e) = cps (e3, t_e3) (e, j_k)
         val e = EAbs (st_e2 %++ F, close0_e_e_anno ((x2, "x2", t_x2), e))
         val (e, i_e) = cps (e2, t_e2) (e, i_e)
         val e = EAbs (st_e3 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e))
@@ -726,7 +741,7 @@ fun cps (e, t_e, F) (k, j_k) =
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
-        cps (e, t_e) (c, T_1)
+        cps (e, t_e) (c, TN0)
       end
     (* | S.ELetConstr (e1, bind) => *)
     (*   (* [[ let constr x = e1 in e2 ]](k) = [[e1]](\y. let constr x = y in [[e2]](k)) *) *)
@@ -1183,7 +1198,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (cps_tc_flags, st_types) (([], [], []), IEmptyState) e
+    val ((e, t, (i, j), st), vcs, admits) = typecheck (cps_tc_flags, st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP
@@ -1191,6 +1206,9 @@ fun test1 dirname =
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
+    val () = println "Space:"
+    val j = simp_i j
+    val () = println $ ToString.str_i Gctx.empty [] j
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
@@ -1199,7 +1217,7 @@ fun test1 dirname =
                      
     val () = println "Started CPS conversion ..."
     open MicroTiMLUtil
-    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
+    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, TN0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion ..."
     val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx e
@@ -1208,13 +1226,16 @@ fun test1 dirname =
     val () = check_CPSed_expr e
     val () = println "Finished post-CPS form checking"
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
+    val ((e, t, (i, j), st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
+    val () = println "Space:"
+    val j = simp_i j
+    val () = println $ ToString.str_i Gctx.empty [] j
     val () = println "CPS.UnitTest passed"
   in
     ((* t, e *))
