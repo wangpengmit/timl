@@ -23,7 +23,7 @@ type 'mtype datatype_def = (name(*for datatype self-reference*) * (unit, name, I
 
 (* monotypes *)
 datatype mtype = 
-	 TArrow of (idx StMap.map * mtype) * (idx (* * idx *)) * (idx StMap.map * mtype)
+	 TArrow of (idx StMap.map * mtype) * (idx * idx) * (idx StMap.map * mtype)
          | TNat of idx * region
          | TiBool of idx * region
          | TArray of mtype * idx

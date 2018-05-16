@@ -183,7 +183,7 @@ local
                   def ()
               | SOME _ => def ()
           end
-	| S.TArrow (t1, d, t2, _) => TPureArrow (elab_mt t1, elab_i d, elab_mt t2)
+	| S.TArrow (t1, (j, i), t2, _) => TPureArrow (elab_mt t1, (elab_i j, elab_i i), elab_mt t2)
 	| S.TProd (t1, t2, _) => TProd (elab_mt t1, elab_mt t2)
 	| S.TQuan (quan, binds, t, r) =>
 	  let fun f ((x, s, _), t) =

@@ -222,11 +222,11 @@ fun strn_mt t =
     (*     SOME ((x, _), i_args, t_args) => sprintf "($ ...)" [strn_uvar_mt (strn_raw_bs, strn_raw_k, strn_mt ([], [])) x] *)
     (*   | NONE => *)
     case t of
-        TArrow ((st1, t1), d, (st2, t2)) =>
-        if is_T0 d then
+        TArrow ((st1, t1), (j, i), (st2, t2)) =>
+        if is_T0 j andalso is_N0 i then
           sprintf "($$ -> $$)" [strn_state st1, strn_mt t1, strn_state st2, strn_mt t2]
         else
-          sprintf "($$ -- $ --> $$)" [strn_state st1, strn_mt t1, strn_i d, strn_state st2, strn_mt t2]
+          sprintf "($$ -- $, $ --> $$)" [strn_state st1, strn_mt t1, strn_i j, strn_i i, strn_state st2, strn_mt t2]
       | TNat (i, _) => sprintf "(nat $)" [strn_i i]
       | TiBool (i, _) => sprintf "(ibool $)" [strn_i i]
       | TArray (t, i) => sprintf "(array $ $)" [strn_mt t, strn_i i]

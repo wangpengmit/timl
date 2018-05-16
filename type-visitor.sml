@@ -21,7 +21,7 @@ infixr 0 $
 type ('this, 'env) type_visitor_vtable =
      {
        visit_mtype : 'this -> 'env -> mtype -> T.mtype,
-       visit_TArrow : 'this -> 'env -> (idx StMap.map * mtype) * idx * (idx StMap.map * mtype) -> T.mtype,
+       visit_TArrow : 'this -> 'env -> (idx StMap.map * mtype) * (idx * idx) * (idx StMap.map * mtype) -> T.mtype,
        visit_TNat : 'this -> 'env -> idx * region -> T.mtype,
        visit_TArray : 'this -> 'env -> mtype * idx -> T.mtype,
        visit_TBase : 'this -> 'env -> base_type * region -> T.mtype,
@@ -331,7 +331,7 @@ fun default_type_visitor_vtable
         val ((st1, t1), i, (st2, t2)) = data
         val st1 = StMap.map (#visit_idx vtable this env) st1
         val t1 = #visit_mtype vtable this env t1
-        val i = #visit_idx vtable this env i
+        val i = visit_pair (#visit_idx vtable this) (#visit_idx vtable this) env i
         val st2 = StMap.map (#visit_idx vtable this env) st2
         val t2 = #visit_mtype vtable this env t2
       in

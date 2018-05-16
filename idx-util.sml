@@ -18,6 +18,10 @@ fun is_T0 i =
   case i of
       IConst (ICTime s, _) => TimeType.time_eq (s, TimeType.zero)
     | _ => false
+fun is_N0 i =
+  case i of
+      IConst (ICNat n, _) => n = 0
+    | _ => false
 fun T1 r = ITime (TimeType.one, r)
 fun N0 r = INat (0, r)
 fun N1 r = INat (1, r)

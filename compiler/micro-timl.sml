@@ -31,7 +31,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          TVar of 'var * 'bsort kind list
          | TConst of ty_const
          | TBinOp of ty_bin_op * ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
-         | TArrow of ('idx * ('var, 'bsort, 'idx, 'sort) ty) * ('idx (* * 'idx *)) * ('idx * ('var, 'bsort, 'idx, 'sort) ty)
+         | TArrow of ('idx * ('var, 'bsort, 'idx, 'sort) ty) * ('idx * 'idx) * ('idx * ('var, 'bsort, 'idx, 'sort) ty)
          | TAbsI of ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno
          | TAppI of ('var, 'bsort, 'idx, 'sort) ty * 'idx
          | TQuan of unit Operators.quan * ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
@@ -89,7 +89,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EPackI of 'ty * 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | EUnpackI of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ibind
          | EAscTime of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx (* time ascription *)
-         (* | EAscSpace of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx (* space annotation *) *)
+         | EAscSpace of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx (* space annotation *)
          | EAscState of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'idx (* post-state annotation *)
          | EAscType of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty (* type ascription *)
          | ENever of 'ty

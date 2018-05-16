@@ -384,10 +384,11 @@ fun unify_mt r gctx ctx (t, t') =
         raise error ctxn (t, t')
       else
       case (t, t') of
-          (TArrow ((st1, t1), d, (st2, t2)), TArrow ((st1', t1'), d', (st2', t2'))) =>
+          (TArrow ((st1, t1), (d, j), (st2, t2)), TArrow ((st1', t1'), (d', j'), (st2', t2'))) =>
           (unify_state r gctxn sctxn (st1, st1');
            unify_mt ctx (t1, t1');
            unify_i r gctxn sctxn (d, d');
+           unify_i r gctxn sctxn (j, j');
            unify_state r gctxn sctxn (st2, st2');
            unify_mt ctx (t2, t2'))
         | (TArray (t, i), TArray (t', i')) =>

@@ -199,11 +199,12 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
     (* val () = print (sprintf "Kinding $\n" [U.str_mt gctxn ctxn c]) *)
     fun main () =
       case c of
-	  U.TArrow ((st1, c1), d, (st2, c2)) =>
+	  U.TArrow ((st1, c1), (d, j), (st2, c2)) =>
           (check_same_domain st1 st2;
 	   (TArrow ((is_wf_state gctx sctx st1, check_higher_kind_Type (ctx, c1)), 
-	           check_basic_sort gctx (sctx, d, BSTime),
-	           (is_wf_state gctx sctx st2, check_higher_kind_Type (ctx, c2))),
+	            (check_basic_sort gctx (sctx, d, BSTime),
+                     check_basic_sort gctx (sctx, j, BSNat)),
+	            (is_wf_state gctx sctx st2, check_higher_kind_Type (ctx, c2))),
             HType))
         | U.TArray (t, i) =>
 	  (TArray (check_higher_kind_Type (ctx, t),
@@ -1268,9 +1269,9 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	     | EBApp () =>
 	       let
                  val r1 = U.get_region_e e1
-                 val (e1, t1, d1, st) = get_mtype (ctx, st) e1
+                 val (e1, t1, (d1, j1), st) = get_mtype (ctx, st) e1
                  val t1 = whnf_mt true gctx kctx t1
-                 val ((pre_st, t2), d, (post_st, t)) =
+                 val ((pre_st, t2), (d, j), (post_st, t)) =
                      case t1 of
                          TArrow a => a
                        | t1 =>
@@ -1279,8 +1280,9 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                              let
                                val t2 = fresh_mt gctx (sctx, kctx) r1
                                val d = fresh_i gctx sctx BSTime r1
+                               val j = fresh_i gctx sctx BSNat r1
                                val t = fresh_mt gctx (sctx, kctx) r1
-                               val arrow = ((StMap.empty, t2), d, (StMap.empty, t))
+                               val arrow = ((StMap.empty, t2), (d, j), (StMap.empty, t))
                                val () = unify_mt r1 gctx (sctx, kctx) (t1, TArrow arrow)
                              in
                                arrow
@@ -1289,7 +1291,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                              raise Error (r1, "type mismatch:" ::
                                               indent ["expect: _ -- _ --> _",
                                                       "got: " ^ str_mt gctxn skctxn t1])
-                 val (e2, t2', d2, st) = get_mtype (ctx, st) e2
+                 val (e2, t2', (d2, j2), st) = get_mtype (ctx, st) e2
                  (* todo: if I swap (t2, t2'), unify_mt() has a bug that it unifies the index arguments too eagerly *)
                  val () = unify_mt (get_region_e e2) gctx (sctx, kctx) (t2, t2')
                  fun check_submap pre_st st =
@@ -1303,7 +1305,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
                  val st = st @++ post_st
                in
-                 (EApp (e1, e2), t, d1 %+ d2 %+ T1 r1 %+ d, st) 
+                 (EApp (e1, e2), t, (d1 %+ d2 %+ T1 r1 %+ d, j1 %+ j2 %+ j), st) 
 	       end
 	     | EBNew () =>
                let

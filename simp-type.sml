@@ -13,7 +13,7 @@ infixr 0 $
          
 fun simp_mt t =
   case t of
-      TArrow ((st1, t1), d, (st2, t2)) => TArrow ((StMap.map simp_i st1, simp_mt t1), simp_i d, (StMap.map simp_i st2, simp_mt t2))
+      TArrow ((st1, t1), (j, i), (st2, t2)) => TArrow ((StMap.map simp_i st1, simp_mt t1), (simp_i j, simp_i i), (StMap.map simp_i st2, simp_mt t2))
     | TNat (i, r) => TNat (simp_i i, r)
     | TiBool (i, r) => TiBool (simp_i i, r)
     | TArray (t, i) => TArray (simp_mt t, simp_i i)

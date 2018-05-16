@@ -52,7 +52,7 @@ fun str_raw_state st = StMapU.str_map (id, str_raw_i) st
                                       
 fun str_raw_mt (t : mtype) : string =
   case t of
-      TArrow ((st1, t1), i, (st2, t2)) => sprintf "TArrow ($, $, $, $, $)" [str_raw_state st1, str_raw_mt t1, str_raw_i i, str_raw_state st2, str_raw_mt t2]
+      TArrow ((st1, t1), (j, i), (st2, t2)) => sprintf "TArrow ($, $, $, $, $)" [str_raw_state st1, str_raw_mt t1, str_raw_i j, str_raw_i i, str_raw_state st2, str_raw_mt t2]
     | TNat (i, _) => sprintf "TNat ($))" [str_raw_i i]
     | TiBool (i, _) => sprintf "TiBool ($))" [str_raw_i i]
     | TArray (t, i) => sprintf "TArray ($, $)" [str_raw_mt t, str_raw_i i]

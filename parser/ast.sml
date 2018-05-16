@@ -47,7 +47,7 @@ type id_or_bsort_bind = (id, bsort_bind) sum
                                
 datatype ty =
 	 TVar of long_id
-	 | TArrow of ty * idx * ty * region
+	 | TArrow of ty * (idx * idx) * ty * region
 	 | TProd of ty * ty * region
 	 | TQuan of quan * sort_bind list * ty * region
 	 | TAppT of ty * ty * region

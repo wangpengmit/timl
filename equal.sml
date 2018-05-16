@@ -138,9 +138,9 @@ fun eq_k ((n, sorts) : kind) (n', sorts') =
 
 fun eq_mt t t' = 
     case t of
-	TArrow ((st1, t1), i, (st2, t2)) =>
+	TArrow ((st1, t1), (j, i), (st2, t2)) =>
         (case t' of
-	     TArrow ((st1', t1'), i', (st2', t2')) => eq_state st1 st1' andalso eq_mt t1 t1' andalso eq_i i i' andalso eq_state st2 st2' andalso eq_mt t2 t2'
+	     TArrow ((st1', t1'), (j', i'), (st2', t2')) => eq_state st1 st1' andalso eq_mt t1 t1' andalso eq_i j j' andalso eq_i i i' andalso eq_state st2 st2' andalso eq_mt t2 t2'
            | _ => false
         )
       | TNat (i, r) =>

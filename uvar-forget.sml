@@ -194,7 +194,7 @@ fun forget_i_mt x n b =
         val on_i_s = forget_i_s
       in
         case b of
-	    TArrow ((st1, t1), d, (st2, t2)) => TArrow ((StMap.map (on_i_i x n) st1, f x n t1), on_i_i x n d, (StMap.map (on_i_i x n) st2, f x n t2))
+	    TArrow ((st1, t1), (i, j), (st2, t2)) => TArrow ((StMap.map (on_i_i x n) st1, f x n t1), (on_i_i x n i, on_i_i x n j), (StMap.map (on_i_i x n) st2, f x n t2))
           | TNat (i, r) => TNat (on_i_i x n i, r)
           | TiBool (i, r) => TiBool (on_i_i x n i, r)
           | TArray (t, i) => TArray (f x n t, on_i_i x n i)
