@@ -319,7 +319,7 @@ fun strn_return return =
       (NONE, NONE, NONE) => ""
     | (t, d, j) => sprintf "return$$$"
                            [default "" $ Option.map (prefix " " o strn_mt) t,
-                            default "" $ Option.map (prefix " using " o strn_i) i,
+                            default "" $ Option.map (prefix " using " o strn_i) d,
                             default "" $ Option.map (prefix " space " o strn_i) j]
 
 fun strn_sortings binds =

@@ -218,5 +218,18 @@ fun assert_TiBool t =
       TiBool a => a
     | _ => raise assert_fail $ "assert_TiBool"
 
+infix 0 %:
+infix 0 |>
+infix 0 |#
+infix 0 %~
+infix 0 |>#
+        
+fun a %: b = EAscType (a, b)
+fun a |> b = EAscTime (a, b)
+fun a |# b = EAscSpace (a, b)
+fun a %~ b = EAscState (a, b)
+fun EAscTimeSpace (e, (i, j)) = e |> i |# j
+fun a |># b = EAscTimeSpace (a, b)
+
 end
                                  

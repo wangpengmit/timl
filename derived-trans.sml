@@ -14,12 +14,12 @@ fun for_dt f dt =
     | _ => raise Impossible "for_dt"
                  
 fun for_decls f decls =
-  case f $ ELet ((NONE, NONE), Bind (Teles decls, ETT dummy), dummy) of
+  case f $ ELet ((NONE, NONE, NONE), Bind (Teles decls, ETT dummy), dummy) of
       ELet (_, bind, _) => unTeles $ fst $ unBind bind
     | _ => raise Impossible "for_decls"
                  
 fun for_decls_e f (decls, e) =
-  case f $ ELet ((NONE, NONE), Bind (Teles decls, e), dummy) of
+  case f $ ELet ((NONE, NONE, NONE), Bind (Teles decls, e), dummy) of
       ELet (_, bind, _) => mapFst unTeles $ unBind bind
     | _ => raise Impossible "for_decls_e"
                  

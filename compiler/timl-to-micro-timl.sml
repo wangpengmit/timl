@@ -116,8 +116,8 @@ structure S = TiML
 fun shift_e_pn a = shift_e_pn_fn shift_e_e a
 
 fun SEV n = S.EVar (ID (n, dummy), true)
-fun SMakeECase (e, rules) = S.ECase (e, (NONE, NONE), map Bind rules, dummy)
-fun SMakeELet (decls, e) = S.ELet ((NONE, NONE), Bind (decls, e), dummy)
+fun SMakeECase (e, rules) = S.ECase (e, (NONE, NONE, NONE), map Bind rules, dummy)
+fun SMakeELet (decls, e) = S.ELet ((NONE, NONE, NONE), Bind (decls, e), dummy)
 
 structure SS = struct
 open ExprShift
@@ -568,7 +568,7 @@ and on_DRec (name, bind, _) =
             S.SortingST (name, Outer s) => S.MakeTUniI (s, unBinderName name, t, dummy)
           | S.TypingST pn =>
             case pn of
-                S.PnAnno (_, Outer t1) => S.TArrow ((StMap.empty, t1), T0 dummy, (StMap.empty, t))
+                S.PnAnno (_, Outer t1) => S.TArrow ((StMap.empty, t1), TN0 dummy, (StMap.empty, t))
               | _ => raise Impossible "to-micro-timl/DRec: must be AnnoP"
       val t = 
           case rev binds of

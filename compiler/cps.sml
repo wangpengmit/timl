@@ -59,10 +59,8 @@ fun Eid t = EAbs (IEmptyState, EBindAnno ((("x", dummy), t), EVar $ Bound 0))
 fun EHaltFun t_arg t_result = EAbs (IEmptyState, EBindAnno ((("x", dummy), t_arg), EHalt (EVar $ Bound 0, t_result)))
 
 infix 0 %:
-fun a %: b = EAscType (a, b)
 infix 0 |>
-fun a |> b = EAscTime (a, b)
-
+        
 (* smart EApp that converts topmost beta-redex to ELet and creates aliases for e1 and e2 *)
 (* pre: e1 and e2 must be value *)
 fun EApp_alias_fun_arg (e1, e2) =

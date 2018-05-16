@@ -20,7 +20,7 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'va
        visit2_TVar : 'this -> 'env -> 'var * 'bsort kind list -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TConst : 'this -> 'env -> ty_const -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TBinOp : 'this -> 'env -> ty_bin_op * ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
-       visit2_TArrow : 'this -> 'env -> ('idx * ('var, 'bsort, 'idx, 'sort) ty) * 'idx * ('idx * ('var, 'bsort, 'idx, 'sort) ty) -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
+       visit2_TArrow : 'this -> 'env -> ('idx * ('var, 'bsort, 'idx, 'sort) ty) * ('idx * 'idx) * ('idx * ('var, 'bsort, 'idx, 'sort) ty) -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TAbsI : 'this -> 'env -> ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TAppI : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TQuan : 'this -> 'env -> unit quan * ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
@@ -375,7 +375,7 @@ fun default_ty_visitor2_vtable
             let
               val i1 = #visit2_idx vtable this env i1 i1'
               val t1 = #visit2_ty vtable this env t1 t1'
-              val i = #visit2_idx vtable this env i i'
+              val i = visit2_pair (#visit2_idx vtable this) (#visit2_idx vtable this) env i i'
               val i2 = #visit2_idx vtable this env i2 i2'
               val t2 = #visit2_ty vtable this env t2 t2'
             in

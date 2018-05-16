@@ -265,15 +265,16 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TBinOp (opr, t1, t2), get_ty_bin_op_res_kind opr)
       end
-    | TArrow ((i1, t1), i, (i2, t2)) =>
+    | TArrow ((i1, t1), (i, j), (i2, t2)) =>
       let
         val i1 = sc_against_sort ictx (i1, SState)
         val t1 = kc_against_kind ctx (t1, KType ())
         val i = sc_against_sort ictx (i, STime)
+        val j = sc_against_sort ictx (j, SNat)
         val i2 = sc_against_sort ictx (i2, SState)
         val t2 = kc_against_kind ctx (t2, KType ())
       in
-        (TArrow ((i1, t1), i, (i2, t2)), KType ())
+        (TArrow ((i1, t1), (i, j), (i2, t2)), KType ())
       end
     | TAbsI data =>
       let
@@ -513,11 +514,12 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           in
             ()
           end
-        | (TArrow ((i1, t1), i, (i2, t2)), TArrow ((i1', t1'), i', (i2', t2'))) =>
+        | (TArrow ((i1, t1), (i, j), (i2, t2)), TArrow ((i1', t1'), (i', j'), (i2', t2'))) =>
           let
             val () = is_eq_idx ictx (i1, i1')
             val () = is_eq_ty ctx (t1, t1')
             val () = is_eq_idx ictx (i, i')
+            val () = is_eq_idx ictx (j, j')
             val () = is_eq_idx ictx (i2, i2')
             val () = is_eq_ty ctx (t2, t2')
           in
@@ -674,6 +676,8 @@ fun forget01_i_s x = forget_i_s 0 1 x
 fun forget01_i_t x = forget_i_t 0 1 x
 fun forget01_t_t x = forget_t_t 0 1 x
 
+fun forget01_i_2i a = unop_pair forget01_i_i a
+                                
 fun collect_TAppIT_rev t =
   let
     val self = collect_TAppIT_rev
@@ -781,6 +785,7 @@ val T0 = T0 dummy
 val T1 = T1 dummy
 val N0 = N0 dummy
 val N1 = N1 dummy
+val TN0 = TN0 dummy
 
 (* structure IntMap = IntBinaryMap *)
 (* structure HeapMap = IntMap *)
@@ -889,12 +894,11 @@ fun smart_EAscType (e, t) =
     end
       
 infix 0 %:
-fun a %: b = smart_EAscType (a, b)
 infix 0 |>
-fun a |> b = EAscTime (a, b)
+infix 0 |#
 infix 0 %~
-fun a %~ b = EAscState (a, b)
-
+infix 0 |>#
+        
 fun check_sub_map ictx (pre_st, st) =
   StMap.appi (fn (k, v) => check_prop $ v %= st @!! k) pre_st
              
@@ -919,6 +923,8 @@ fun assert_TCell t =
            | _ => err ())
       | _ => err ()
   end
+
+infix 6 %%+
 
 val anno_EVar = ref false
 val anno_EProj = ref false
@@ -1006,6 +1012,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     val tc_against_ty = tc_against_ty st_types
     val tc_against_ty_time = tc_against_ty_time st_types
     val tc_against_time = tc_against_time st_types
+    val tc_against_time_space = tc_against_time_space st_types
+    val tc_against_ty_time_space = tc_against_ty_time_space st_types
     (* val () = print "tc() start: " *)
     (* val e_input_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input *)
     (* val () = print $ e_input_str *)
@@ -1029,16 +1037,11 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                val e = e_input
                val e = if !anno_EVar then e %: t else e
              in
-               (e, t, T0, st)
+               (e, t, TN0, st)
              end
            | NONE => raise MTCError "Unbound term variable"
         )
-      | EConst c => (e_input, get_expr_const_type c, T0, st)
-      (* | ELoc l => *)
-      (*   (case HeapMap.find (hctx, l) of *)
-      (*        SOME (t, i) => (e_input, TArr (t, i), T0) *)
-      (*      | NONE => raise MTCError "Unbound location" *)
-      (*   ) *)
+      | EConst c => (e_input, get_expr_const_type c, TN0, st)
       | EUnOp (EUTiML (EUProj proj), e) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e
@@ -1231,7 +1234,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
           val (e1, e2) = if !anno_EApp_state then (e1 %~ st_e1, e2 %~ st_e2) else (e1, e2)
         in
-          (EApp (e1, e2), t2, i1 %+ i2 %+ T1 %+ i, st)
+          (EApp (e1, e2), t2, i1 %%+ i2 %%+ (T1, N0) %%+ i, st)
         end
       | EBinOp (EBPair (), e1, e2) =>
         let
@@ -1241,7 +1244,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EPair then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EPair_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EPair (e1, e2), TProd (t1, t2), i1 %+ i2, st)
+          (EPair (e1, e2), TProd (t1, t2), i1 %%+ i2, st)
         end
       | EBinOp (EBPrim opr, e1, e2) =>
         let
@@ -1255,7 +1258,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = EBinOpPrim (opr, e1, e2)
           val t = get_prim_expr_bin_op_res_ty opr
         in
-          (e, t, i1 %+ i2, st)
+          (e, t, i1 %%+ i2, st)
         end
       | EBinOp (EBNew (), e1, e2) =>
         let
@@ -1269,7 +1272,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ENew then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ENew_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (ENew (e1, e2), TArr (t2, i), j1 %+ j2, st)
+          (ENew (e1, e2), TArr (t2, i), j1 %%+ j2, st)
         end
       | EBinOp (EBRead (), e1, e2) =>
         let
@@ -1285,7 +1288,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ERead_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (ERead (e1, e2), t, j1 %+ j2, st)
+          (ERead (e1, e2), t, j1 %%+ j2, st)
         end
       | EBinOp (EBMapPtr (), e1, e2) =>
         let
@@ -1299,7 +1302,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EMapPtr then (e1 %: t1, e2 %: TInt) else (e1, e2)
           val (e1, e2) = if !anno_EMapPtr_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (EBMapPtr (), e1, e2), t, j1 %+ j2, st)
+          (EBinOp (EBMapPtr (), e1, e2), t, j1 %%+ j2, st)
         end
       | EBinOp (opr as EBVectorGet (), e1, e2) =>
         let
@@ -1312,7 +1315,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EVectorGet then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorGet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (opr, e1, e2), t, j1 %+ j2, st)
+          (EBinOp (opr, e1, e2), t, j1 %%+ j2, st)
         end
       | EBinOp (opr as EBVectorPushBack (), e1, e2) =>
         let
@@ -1324,7 +1327,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EVectorPushBack then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorPushBack_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (opr, e1, e2), TUnit, j1 %+ j2, st @%+ (x, len %+ N1))
+          (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2, st @%+ (x, len %+ N1))
         end
       | EUnOp (opr as EUTiML (EUVectorLen ()), e) =>
         let
@@ -1359,7 +1362,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2, e3) = if !anno_EVectorSet then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
           val (e1, e2, e3) = if !anno_EVectorSet_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
-          (ETriOp (opr, e1, e2, e3), TUnit, j1 %+ j2 %+ j3, st)
+          (ETriOp (opr, e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3, st)
         end
       | EBinOp (opr as EBStorageSet (), e1, e2) =>
         let
@@ -1371,9 +1374,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EStorageSet then (e1 %: t1, e2 %: t) else (e1, e2)
           val (e1, e2) = if !anno_EStorageSet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (opr, e1, e2), TUnit, j1 %+ j2, st)
+          (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2, st)
         end
-      | EState x => (EState x, TState x, T0, st)
+      | EState x => (EState x, TState x, TN0, st)
       | EBinOp (EBNat opr, e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
@@ -1393,7 +1396,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ENat_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
           val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
         in
-          (EBinOp (EBNat opr, e1, e2), t, j1 %+ j2, st)
+          (EBinOp (EBNat opr, e1, e2), t, j1 %%+ j2, st)
         end
       | EBinOp (EBNatCmp opr, e1, e2) =>
         let
@@ -1412,7 +1415,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ENatCmp_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
           val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
         in
-          (EBinOp (EBNatCmp opr, e1, e2), t, j1 %+ j2, st)
+          (EBinOp (EBNatCmp opr, e1, e2), t, j1 %%+ j2, st)
         end
       | ETriOp (ETWrite (), e1, e2, e3) =>
         let
@@ -1433,7 +1436,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2, e3) = if !anno_EWrite then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
           val (e1, e2, e3) = if !anno_EWrite_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
-          (EWrite (e1, e2, e3), TUnit, j1 %+ j2 %+ j3, st)
+          (EWrite (e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3, st)
         end
       | ECase data =>
         let
@@ -1445,13 +1448,13 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                            | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
           val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
           val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
-          val e2 = if !anno_ECase_e2_time then e2 |> i2 else e2
+          val e2 = if !anno_ECase_e2_time then e2 |># i2 else e2
           val () = is_eq_ty itctx (t1, t2)
           val () = is_eq_idx ictx (st2, st1)
           val e = if !anno_ECase then e %: t_e else e
           val e = if !anno_ECase_state then e %~ st else e
         in
-          (MakeECase (e, (name1, e1), (name2, e2)), t1, i %+ IMax (i1, i2), st1)
+          (MakeECase (e, (name1, e1), (name2, e2)), t1, i %%+ IMaxPair (i1, i2), st1)
         end
       | ETriOp (ETIte (), e, e1, e2) =>
         let
@@ -1463,10 +1466,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t, i1, st1) = tc (ctx, st) e1
           val (e2, i2, st2) = tc_against_ty (ctx, st) (e2, t)
           val () = is_eq_idx ictx (st2, st1)
-          val e2 = if !anno_EIte_e2_time then e2 |> i2 else e2
+          val e2 = if !anno_EIte_e2_time then e2 |># i2 else e2
           val e = if !anno_EIte_state then e %~ st else e
         in
-          (ETriOp (ETIte (), e, e1, e2), t, i %+ IMax (i1, i2), st1)
+          (ETriOp (ETIte (), e, e1, e2), t, i %%+ IMaxPair (i1, i2), st1)
         end
       | EIfi data =>
         let
@@ -1478,13 +1481,13 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t2 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
           val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
           val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
-          val e2 = if !anno_EIfi_e2_time then e2 |> i2 else e2
+          val e2 = if !anno_EIfi_e2_time then e2 |># i2 else e2
           val () = is_eq_ty itctx (t1, t2)
           val () = is_eq_idx ictx (st2, st1)
           val e = if !anno_EIfi then e %: t_e else e
           val e = if !anno_EIfi_state then e %~ st else e
         in
-          (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %+ IMax (i1, i2), st1)
+          (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %%+ IMaxPair (i1, i2), st1)
         end
       | EAbs (pre_st, bind) =>
         let
@@ -1492,10 +1495,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind
           val t1 = kc_against_kind itctx (t1, KType ())
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
-          val e = if !anno_EAbs then e %: t2 |> i else e
+          val e = if !anno_EAbs then e %: t2 |># i else e
           val e = if !anno_EAbs_state then e %~ post_st else e
         in
-          (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), T0, st)
+          (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), TN0, st)
         end
       | ERec data =>
         let
@@ -1505,17 +1508,17 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                        EAbs _ => ()
                      | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"
           val t = kc_against_kind itctx (t, KType ())
-          val (e, _) = tc_against_ty_time (add_typing_full (fst name, t) ctx, IEmptyState) (e, t, T0)
+          val (e, _) = tc_against_ty_time_space (add_typing_full (fst name, t) ctx, IEmptyState) (e, t, TN0)
         in
-          (MakeERec (name, t, e), t, T0, st)
+          (MakeERec (name, t, e), t, TN0, st)
         end
       | EAbsT data =>
         let
           val (k, (name, e)) = unEAbsT data
           val () = assert_b "EAbsT: is_value e" (is_value e)
-          val (e, t, _) = tc_against_time (add_kinding_full (fst name, k) ctx, IEmptyState) (e, T0)
+          val (e, t, _) = tc_against_time_space (add_kinding_full (fst name, k) ctx, IEmptyState) (e, TN0)
         in
-          (MakeEAbsT (name, k, e), MakeTForall (k, name, t), T0, st)
+          (MakeEAbsT (name, k, e), MakeTForall (k, name, t), TN0, st)
         end
       | EAbsI _ =>
         let
@@ -1548,10 +1551,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           (* val () = println "" *)
           val ctx = (ictx, tctx, ectx)
           (* val () = println "before tc()/EAbsI/tc_against_time()" *)
-          val (e, t, _) = tc_against_time (ctx, IEmptyState) (e, T0)
+          val (e, t, _) = tc_against_time_space (ctx, IEmptyState) (e, TN0)
           (* val () = println "before tc()/EAbsI/making result" *)
           val binds = ListPair.mapEq (fn ((name, anno), r) => ((name, r), anno)) (binds, regions)
-          val result = (EAbsIs (binds, e), TForallIs (binds, t), T0, st)
+          val result = (EAbsIs (binds, e), TForallIs (binds, t), TN0, st)
           (* val () = println "after tc()/EAbsI/making result" *)
         in
           result
@@ -1647,7 +1650,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e1 = if !anno_EUnpack then e1 %: t_e1 else e1
           val e1 = if !anno_EUnpack_state then e1 %~ st_e1 else e1
         in
-          (MakeEUnpack (e1, tname, ename, e2), t2, i1 %+ i2, st)
+          (MakeEUnpack (e1, tname, ename, e2), t2, i1 %%+ i2, st)
         end
       | EUnpackI data =>
         let
@@ -1663,14 +1666,15 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, i2, st) = tc (add_typing_full (fst ename, t) $ add_sorting_full (fst iname, s) ctx, shift_i_i st) e2
           val t2 = forget01_i_t t2
                    handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names $ add_sorting_it (fst iname, s) itctx) t2))
-          val i2 = forget01_i_i i2
-                   handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting time: " ^ (ToString.SN.strn_i $ ExportPP.export_i (fst iname :: map fst ictx) i2))
-          val st = forget01_i_i st
-                   handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting state: " ^ (ToString.SN.strn_i $ ExportPP.export_i (fst iname :: map fst ictx) st))
+          fun forget_i name i =
+            forget01_i_i i
+            handle ForgetError (r, m) => raise ForgetError (r, m ^ sprintf " when forgetting $: $" [name, ToString.SN.strn_i $ ExportPP.export_i (fst iname :: map fst ictx) i])
+          val i2 = mapPair (forget_i "time", forget_i "space") i2
+          val st = forget_i "state" st
           val e1 = if !anno_EUnpackI then e1 %: t_e1 else e1
           val e1 = if !anno_EUnpackI_state then e1 %~ st_e1 else e1
         in
-          (MakeEUnpackI (e1, iname, ename, e2), t2, i1 %+ i2, st)
+          (MakeEUnpackI (e1, iname, ename, e2), t2, i1 %%+ i2, st)
         end
       | EPackIs (t, is, e) =>
         let
@@ -1702,16 +1706,16 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
               ELet data =>
               let
                 val (e1, (name, e2)) = unELet data
-                val (e1, t1, i1, st) = tc (ctx, st) e1
+                val (e1, t1, (i1, j1), st) = tc (ctx, st) e1
                 val st_e1 = st
                 val e2 = EAscTypes (e2, ts)
                 val e2 = EAscTime (e2, IBinOp (IBMinus (), i, i1))
-                val (e2, t2, _, st) = tc (add_typing_full (fst name, t1) ctx, st) e2
+                val (e2, t2, (_, j2), st) = tc (add_typing_full (fst name, t1) ctx, st) e2
                 val e1 = if !anno_ELet then e1 %: t1 else e1
                 val e1 = if !anno_ELet_state then e1 %~ st_e1 else e1
                 val e = MakeELet (e1, name, e2)
               in
-                (e |> i, t2, i, st)
+                (e |> i, t2, (i, j1 %+ j2), st)
               end
             | _ =>
               let
@@ -1725,8 +1729,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                             end
                           | _ => e
                 val e = EAscTypes (e, ts)
-                val (e, t, i1, st) = tc (ctx, st) e
-                val i = sc_against_sort ictx (i, STime)
+                val (e, t, (i1, j), st) = tc (ctx, st) e
                 fun check_le_with_subtractions ictx (i, i') =
                   let
                     val collect_MinusI_left = collect_IBinOp_left (IBMinus ())
@@ -1738,7 +1741,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                   end
                 val () = check_le_with_subtractions ictx (i1, i)
               in
-                (e |> i, t, i, st)
+                (e |> i, t, (i, j), st)
               end
         end
       | EAscType (e, t2) =>
@@ -1765,13 +1768,13 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t = kc_against_kind itctx (t, KType ())
           val () = check_prop (PFalse dummy)
         in
-          (ENever t, t, T0, st)
+          (ENever t, t, TN0, st)
         end
       | EBuiltin (name, t) =>
         let
           val t = kc_against_kind itctx (t, KType ())
         in
-          (EBuiltin (name, t), t, T0, st)
+          (EBuiltin (name, t), t, TN0, st)
         end
       (* | ELet data => *)
       (*   let *)
@@ -1800,9 +1803,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (decls, is) = unzip decls 
           val (e, t, i, st) = tc (ctx, st) e
           val e = ELets (decls, e)
-          val is = combine_IBAdd_nonempty $ assert_cons is
+          val is = combine_IBAdd_Time_Nat is
         in
-          (e, t, is %+ i, st)
+          (e, t, is %%+ i, st)
         end
       | ELetType data =>
         let
@@ -1832,12 +1835,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val () = assert_b "EMallocPair: is_value a" (is_value a)
           val () = assert_b "EMallocPair: is_value b" (is_value b)
-          val (a, t1, _, st) = tc (ctx, st) a
-          val (b, t2, _, st) = tc (ctx, st) b
+          val (a, t1, i1, st) = tc (ctx, st) a
+          val (b, t2, i2, st) = tc (ctx, st) b
           val e = EMallocPair (a, b)
           val t = TProdEx ((t1, false), (t2, false))
         in
-          (e, t, T0, st)
+          (e, t, i1 %%+ i2, st)
         end
       | EPairAssign (e1, proj, e2) =>
         let
@@ -1852,7 +1855,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = EPairAssign (e1, proj, e2)
           val t = TProdEx ((t1, b1), (t2, b2))
         in
-          (e, t, i_e1 %+ i_e2, st)
+          (e, t, i_e1 %%+ i_e2, st)
         end
       | EProjProtected (proj, e) =>
         let
@@ -1880,7 +1883,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                           ((e, i) :: eis, st)
                         end) ([], st) es
           val (es, is) = unzip $ rev eis
-          val i = combine_IBAdd_Time is
+          val i = combine_IBAdd_Time_Nat is
         in
           (ENewArrayValues (t, es), TArr (t, INat $ length es), i, st)
         end
@@ -1944,11 +1947,19 @@ and tc_against_time st_types (ctx as (ictx, tctx, _), st) (e, i) =
       (* val () = print "tc_against_time() start:\n" *)
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
       (* val () = println e_str *)
-      val (e, t, i', st) = tc st_types (ctx, st) e
+      val (e, t, (i', j), st) = tc st_types (ctx, st) e
       (* val () = println "before tc_against_time()/check_prop()" *)
       val () = check_prop (i' %<= i)
       (* val () = println "tc_against_time() finished:" *)
       (* val () = println e_str *)
+    in
+      (e, t, j, st)
+    end
+    
+and tc_against_time_space st_types (ctx as (ictx, tctx, _), st) (e, (i, j)) =
+    let
+      val (e, t, j', st) = tc_against_time st_types (ctx, st) (e, i)
+      val () = check_prop (j' %<= j)
     in
       (e, t, st)
     end
@@ -1958,7 +1969,7 @@ and tc_against_ty_time st_types (ctx as (ictx, tctx, _), st) (e, t, i) =
       (* val () = print "tc_against_ty_time() start:\n" *)
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
       (* val () = println e_str *)
-      val (e, t', st) = tc_against_time st_types (ctx, st) (e, i)
+      val (e, t', j, st) = tc_against_time st_types (ctx, st) (e, i)
       (* val () = print "tc_against_ty_time() to compare types:\n" *)
       (* val t_str = substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
       (* val () = println $ sprintf "  $\n  $\n" [ *)
@@ -1969,6 +1980,14 @@ and tc_against_ty_time st_types (ctx as (ictx, tctx, _), st) (e, t, i) =
       val () = is_eq_ty (ictx, tctx) (t', t)
       (* val () = println "tc_against_ty_time() finished:" *)
       (* val () = println e_str *)
+    in
+      (e, j, st)
+    end
+
+and tc_against_ty_time_space st_types (ctx as (ictx, tctx, _), st) (e, t, (i, j)) =
+    let
+      val (e, j', st) = tc_against_ty_time st_types (ctx, st) (e, t, i)
+      val () = check_prop (j' %<= j)
     in
       (e, st)
     end
@@ -2233,13 +2252,16 @@ fun test1 dirname =
     open TestUtil
     open ExportPP
     val () = println "Started MicroTiML typechecking ..."
-    val ((_, t, i, st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
+    val ((_, t, (i, j), st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
     val () = println "Time:"
     val i = simp_i i
     val () = println $ ToString.str_i Gctx.empty [] i
+    val () = println "Space:"
+    val j = simp_i j
+    val () = println $ ToString.str_i Gctx.empty [] j
     val () = println $ "#VCs: " ^ str_int (length vcs)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)

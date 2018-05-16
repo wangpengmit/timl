@@ -663,7 +663,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
             case e of
                 EEI (EEIAscTime (), e, i) => (e, i)
               | _ => raise Impossible "import_e/visit_EAscTime"
-        val e = copy_anno (gctx_names gctx) (NONE, SOME i) e
+        val e = copy_anno (gctx_names gctx) (NONE, SOME i, NONE) e
       in
         EAscTime (e, i)
       end
@@ -676,7 +676,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
             case e of
                 EET (EETAsc (), e, t) => (e, t)
               | _ => raise Impossible "import_e/visit_EAsc"
-        val e = copy_anno (gctx_names gctx) (SOME t, NONE) e
+        val e = copy_anno (gctx_names gctx) (SOME t, NONE, NONE) e
       in
         EAsc (e, t)
       end
@@ -702,10 +702,10 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
             case d of
                 [DRec data] => data
               | _ => raise Impossible "import_e/visit_DRec"
-        val (names, (sts, (t, d), e)) = Unbound.unBind $ unInner bind
-        val e = copy_anno (gctx_names gctx) (SOME t, SOME d) e
+        val (names, (sts, (t, (d, j)), e)) = Unbound.unBind $ unInner bind
+        val e = copy_anno (gctx_names gctx) (SOME t, SOME d, SOME j) e
       in
-        [DRec (name, Inner $ Unbound.Bind (names, (sts, (t, d), e)), r)]
+        [DRec (name, Inner $ Unbound.Bind (names, (sts, (t, (d, j)), e)), r)]
       end
     val vtable = EV.override_visit_DRec vtable visit_DRec
     fun visit_DTypeDef this ctx data =

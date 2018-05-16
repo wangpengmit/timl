@@ -465,7 +465,7 @@ local
                 else
                   raise Error (r, "compound pattern can't be generalized, so can't have explicit type variables")
           end
-	| S.DRec (tnames, name, binds, pre, post, (t, d), e, r) =>
+	| S.DRec (tnames, name, binds, pre, post, (t, d, j), e, r) =>
           let
             val post = default pre post
             fun f bind =
@@ -477,9 +477,10 @@ local
             (* val e = copy_anno (t, d) e *)
             val t = default (TUVar ((), r)) (Option.map elab_mt t)
             val d = default (IUVar ((), r)) (Option.map elab_i d)
+            val j = default (IUVar ((), r)) (Option.map elab_i j)
             val e = elab e
           in
-	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((elab_state r pre, elab_state r post), (t, d), e)), r)
+	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((elab_state r pre, elab_state r post), (t, (d, j)), e)), r)
           end
         | S.DIdxDef ((name, r), s, i) =>
           let

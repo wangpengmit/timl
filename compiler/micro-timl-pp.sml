@@ -111,7 +111,7 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           str ")";
           close_box ()
         )
-      | TArrow ((i1, t1), i, (i2, t2)) =>
+      | TArrow ((i1, t1), (i, j), (i2, t2)) =>
         (
           open_hbox ();
           str "TArrow";
@@ -122,6 +122,8 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           pp_t t1;
           comma ();
           str $ str_i i;
+          comma ();
+          str $ str_i j;
           comma ();
           str $ str_i i2;
           comma ();

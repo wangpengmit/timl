@@ -32,6 +32,7 @@ fun EAppT (e, i) = EET (EETAppT (), e, i)
 fun EAppTs (f, args) = foldl (swap EAppT) f args
 fun EAsc (e, t) = EET (EETAsc (), e, t)
 fun EAscTime (e, i) = EEI (EEIAscTime (), e, i)
+fun EAscSpace (e, i) = EEI (EEIAscSpace (), e, i)
 fun ENever (t, r) = ET (ETNever (), t, r)
 fun EBuiltin (name, t, r) = ET (ETBuiltin name, t, r)
 fun ENew (e1, e2) = EBinOp (EBNew (), e1, e2)

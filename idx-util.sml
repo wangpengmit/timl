@@ -226,11 +226,21 @@ val IEmptyState = IState StMap.empty
 infix 6 %%+ 
 infix 4 %%<=
 
+fun unop_pair f (a, b) = (f a, f b)
 fun binop_pair f ((a, b), (a', b')) = (f (a, a'), f (b, b'))
 fun IAddPair a = binop_pair op%+ a
 val op%%+ = IAddPair
 fun IMaxPair a = binop_pair IMax a
 fun ILePair a = binop_pair op%<= a
 val op%%<= = ILePair                                             
+
+fun TN0 r = (T0 r, N0 r)
+              
+fun combine_IBAdd_Time_Nat ls =
+  let
+    val (is, js) = unzip ls
+  in
+    (combine_IBAdd_Time is, combine_IBAdd_Nat js)
+  end
 
 end
