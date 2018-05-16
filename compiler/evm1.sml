@@ -70,6 +70,7 @@ datatype ('idx, 'ty) inst =
          (* | PRINTC of unit *)
          (* | PACK_SUM of injector * 'ty inner *)
          | ASCTIME of 'idx inner
+         | ASCSPACE of 'idx inner
          | MARK_PreArray2ArrayPtr of unit
          | MARK_PreTuple2TuplePtr of unit
          (* | MARK_inj of 'ty inner *)

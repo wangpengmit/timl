@@ -2098,6 +2098,8 @@ fun default_expr_visitor_vtable
           | EPackIs data => #visit_EPackIs vtable this env data
           | EUnpackI data => #visit_EUnpackI vtable this env data
           | EAscTime data => #visit_EAscTime vtable this env data
+          | EAscSpace (e, i) => EAscSpace (#visit_expr vtable this env e, #visit_idx vtable this env i)
+          | EAscState (e, i) => EAscState (#visit_expr vtable this env e, #visit_idx vtable this env i)
           | EAscType data => #visit_EAscType vtable this env data
           | ENever data => #visit_ENever vtable this env data
           | EBuiltin data => #visit_EBuiltin vtable this env data
@@ -2122,7 +2124,6 @@ fun default_expr_visitor_vtable
                visit_ebind this (#visit_expr vtable this) env e1,
                visit_ebind this (#visit_expr vtable this) env e2)
           | EState x => EState x
-          | EAscState (e, i) => EAscState (#visit_expr vtable this env e, #visit_idx vtable this env i)
       end
     fun visit_EVar this env data =
       let

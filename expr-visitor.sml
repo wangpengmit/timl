@@ -276,6 +276,8 @@ fun default_expr_visitor_vtable
         case opr of
 	    EEIAppI () => #visit_EAppI vtable this env data
 	  | EEIAscTime () => #visit_EAscTime vtable this env data
+	  | EEIAscSpace () =>
+            T.EEI (EEIAscSpace (), #visit_expr vtable this env e, #visit_idx vtable this env i)
       end
     fun visit_EAppI this env data = 
       let

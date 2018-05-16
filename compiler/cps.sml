@@ -64,6 +64,7 @@ fun EHaltFun t_arg t_result = EAbs (IEmptyState, EBindAnno ((("x", dummy), t_arg
 
 infix 0 %:
 infix 0 |>
+infix 0 |#
         
 (* smart EApp that converts topmost beta-redex to ELet and creates aliases for e1 and e2 *)
 (* pre: e1 and e2 must be value *)
@@ -144,6 +145,7 @@ val whnf = fn t => whnf ([], []) t
 infix 6 %%+
 
 fun blowup_time (i, j) = i %+ j
+fun blowup_space (i, j) = i %+ j
 fun blowup_time_space (i, j) = i %%+ j
 fun blowup_time_space_t j = j
 fun blowup_time_space_i j = j
@@ -702,7 +704,14 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val (e, (i', j)) = cps (e, t_e) (k, j_k)
         val i = blowup_time (i, fst j_k)
       in
-        (e (* |> i' *) |> i, (i, j))
+        (e |> i, (i, j))
+      end
+    | S.EAscSpace (e, i) =>
+      let
+        val (e, (j, i')) = cps (e, t_e) (k, j_k)
+        val i = blowup_space (i, snd j_k)
+      in
+        (e |# i, (j, i))
       end
     | S.EAscState (e, _) =>
       cps (e, t_e) (k, j_k)
@@ -984,6 +993,7 @@ fun check_CPSed_expr e =
       end
     | EHalt (e, _) => check_value e
     | EAscTime (e, _) => loop e
+    | EAscSpace (e, _) => loop e
     | EBinOp (EBPair (), _, _) => err ()
     | EBinOp (EBNew (), _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
@@ -1111,6 +1121,7 @@ and check_value e =
     | EUnpack _ => err ()
     | EUnpackI _ => err ()
     | EAscTime _ => err ()
+    | EAscSpace _ => err ()
     | ELet _ => err ()
     | ENewArrayValues _ => err ()
     | ELetIdx _ => err ()
@@ -1198,17 +1209,21 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, (i, j), st), vcs, admits) = typecheck (cps_tc_flags, st_types) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck (cps_tc_flags, st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP
     val () = pp_t NONE $ export_t NONE ([], []) t
-    val () = println "Time:"
-    val i = simp_i i
-    val () = println $ ToString.str_i Gctx.empty [] i
-    val () = println "Space:"
-    val j = simp_i j
-    val () = println $ ToString.str_i Gctx.empty [] j
+    fun print_time_space (i, j) =
+        let
+          val () = println "Time:"
+          val () = println $ ToString.str_i Gctx.empty [] $ simp_i i
+          val () = println "Space:"
+          val () = println $ ToString.str_i Gctx.empty [] $ simp_i j
+        in
+          ()
+        end
+    val () = print_time_space i
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
@@ -1226,16 +1241,11 @@ fun test1 dirname =
     val () = check_CPSed_expr e
     val () = println "Finished post-CPS form checking"
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, (i, j), st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
-    val () = println "Time:"
-    val i = simp_i i
-    val () = println $ ToString.str_i Gctx.empty [] i
-    val () = println "Space:"
-    val j = simp_i j
-    val () = println $ ToString.str_i Gctx.empty [] j
+    val () = print_time_space i
     val () = println "CPS.UnitTest passed"
   in
     ((* t, e *))

@@ -141,6 +141,7 @@ fun on_e (e : S.expr) : mtiml_expr =
       (case opr of
            Op.EEIAppI () => EAppI (on_e e, i)
          | Op.EEIAscTime () => EAscTime (on_e e, i)
+         | Op.EEIAscSpace () => EAscSpace (on_e e, i)
       )
     | S.EET (opr, e, t) =>
       (case opr of

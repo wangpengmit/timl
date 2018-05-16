@@ -358,6 +358,7 @@ fun strn_e e =
       (case opr of
            EEIAppI () => sprintf "($ {$})" [strn_e e, strn_i i]
          | EEIAscTime () => sprintf "($ |> $)" [strn_e e, strn_i i]
+         | EEIAscSpace () => sprintf "($ |# $)" [strn_e e, strn_i i]
       )
     | EET (opr, e, t) =>
       (case opr of

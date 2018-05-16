@@ -637,6 +637,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | JUMPI () => err ()
     | LOG _ => err ()
     | ASCTIME _ => err ()
+    | ASCSPACE _ => err ()
     | MACRO_br_sum () => err ()
   in
     (ctx, (!time_ref, !space_ref), !ishift_ref)
@@ -772,6 +773,15 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val () = check_prop (i' %<= i)
             in
               (Tn (G_inst inst) %%+ (i, j), ni)
+            end
+          | ASCSPACE i =>
+            let
+              val i = sc_against_sort ictx (unInner i, SNat)
+              val ((j, i'), ni) = tc_insts ctx I
+              val i = shiftn_i_i ni i
+              val () = check_prop (i' %<= i)
+            in
+              (Tn (G_inst inst) %%+ (j, i), ni)
             end
           | _ =>
             let

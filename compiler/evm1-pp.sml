@@ -71,6 +71,7 @@ fun str_inst a =
     | VALUE_Fold t => err ()
     | VALUE_AscType t => err ()
     | ASCTIME i => err ()
+    | ASCSPACE i => err ()
     | MACRO_tuple_malloc ts => err ()
     | MACRO_array_malloc t => err ()
     | MACRO_inj t => err ()
@@ -244,6 +245,16 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
         (
           open_hbox ();
           str $ "ASCTIME";
+          space ();
+          str "(";
+          str $ str_i i;
+          str ")";
+          close_box ()
+        )
+      | ASCSPACE i =>
+        (
+          open_hbox ();
+          str $ "ASCSPACE";
           space ();
           str "(";
           str $ str_i i;

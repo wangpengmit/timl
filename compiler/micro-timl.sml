@@ -189,6 +189,7 @@ fun is_value e =
     | EUnOp (EUFold _, e) => is_value e
     | EAscType (e, _) => is_value e
     | EAscTime (e, _) => is_value e
+    | EAscSpace (e, _) => is_value e
     | EAscState (e, _) => is_value e
     (* | ELoc _ => true *)
     | EAppT (e, _) => is_value e

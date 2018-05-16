@@ -1059,6 +1059,21 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           close_box ()
         )
         (* pp_e e *)
+      | EAscSpace (e, i) =>
+        (
+	  open_vbox_noindent ();
+          open_hbox ();
+          str "EAscSpace";
+          space ();
+          str "(";
+          str $ str_i i;
+          close_box ();
+          comma ();
+          pp_e e;
+          str ")";
+          close_box ()
+        )
+        (* pp_e e *)
       | EAscState (e, i) =>
         (
 	  open_vbox_noindent ();

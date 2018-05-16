@@ -967,6 +967,7 @@ fun is_value (e : U.expr) : bool =
              EEIAppI () => false
            (* | EEIAscTime () => false *)
            | EEIAscTime () => is_value e
+           | EEIAscSpace () => is_value e
         )
       | EET (opr, e, t) =>
         (case opr of
@@ -1107,6 +1108,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     val get_mtype = get_mtype gctx
     val check_mtype = check_mtype gctx
     val check_time = check_time gctx
+    val check_space = check_space gctx
     val check_mtype_time = check_mtype_time gctx
     val check_decl = check_decl gctx
     val check_decls = check_decls gctx
@@ -1554,6 +1556,12 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                in
 	         (EAscTime (e, i), t, (i, j), st)
 	       end
+	     | EEIAscSpace () => 
+	       let val i = check_basic_sort gctx (sctx, i, BSNat)
+	           val (e, t, j, st) = check_space (ctx, st) (e, i)
+               in
+	         (EAscSpace (e, i), t, (j, i), st)
+	       end
           )
 	| U.EET (opr, e, t) =>
           (case opr of
@@ -1842,6 +1850,14 @@ and check_time gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, d) =
     let 
       val (e, t, (d', j), st) = get_mtype gctx ctx_st e
       val () = smart_write_le (gctx_names gctx) (names sctx) (d', d, get_region_e e)
+    in
+      (e, t, j, st)
+    end
+
+and check_space gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, i) =
+    let 
+      val (e, t, (j, i'), st) = get_mtype gctx ctx_st e
+      val () = smart_write_le (gctx_names gctx) (names sctx) (i', i, get_region_e e)
     in
       (e, t, j, st)
     end

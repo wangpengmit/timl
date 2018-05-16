@@ -64,6 +64,7 @@ fun G_inst b =
     (* | PRINTC _ => 0 *)
     (* | PACK_SUM _ => 0 *)
     | ASCTIME _ => 0
+    | ASCSPACE _ => 0
     | MARK_PreArray2ArrayPtr _ => 0
     | MARK_PreTuple2TuplePtr _ => 0
     (* | MARK_inj _ => 0 *)

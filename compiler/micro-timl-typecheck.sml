@@ -1744,16 +1744,20 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 (e |> i, t, (i, j), st)
               end
         end
-      | EAscType (e, t2) =>
+      | EAscSpace (e, i) =>
         let
-          (* val () = println "tc() on EAscType" *)
-          val (e, t1, i, st) = tc (ctx, st) e
-          val t2 = kc_against_kind itctx (t2, KType ())
-          (* val () = println "before tc()/EAscType/is_eq_ty()" *)
-          val () = is_eq_ty itctx (t1, t2)
-          (* val () = println "after tc()/EAscType/is_eq_ty()" *)
+          val i = sc_against_sort ictx (i, SNat)
+          val (e, t, (j, i'), st) = tc (ctx, st) e
+          val () = check_prop (i' %<= i)
         in
-          (e %: t2, t2, i, st)
+          (e |# i, t, (j, i), st)
+        end
+      | EAscType (e, t) =>
+        let
+          val t = kc_against_kind itctx (t, KType ())
+          val (e, i, st) = tc_against_ty (ctx, st) (e, t)
+        in
+          (e %: t, t, i, st)
         end
       | EAscState (e, st') =>
         let
@@ -2252,16 +2256,20 @@ fun test1 dirname =
     open TestUtil
     open ExportPP
     val () = println "Started MicroTiML typechecking ..."
-    val ((_, t, (i, j), st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
+    val ((_, t, i, st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
-    val () = println "Time:"
-    val i = simp_i i
-    val () = println $ ToString.str_i Gctx.empty [] i
-    val () = println "Space:"
-    val j = simp_i j
-    val () = println $ ToString.str_i Gctx.empty [] j
+    fun print_time_space (i, j) =
+        let
+          val () = println "Time:"
+          val () = println $ ToString.str_i Gctx.empty [] $ simp_i i
+          val () = println "Space:"
+          val () = println $ ToString.str_i Gctx.empty [] $ simp_i j
+        in
+          ()
+        end
+    val () = print_time_space i
     val () = println $ "#VCs: " ^ str_int (length vcs)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)

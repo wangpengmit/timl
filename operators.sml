@@ -375,6 +375,7 @@ fun str_expr_EI opr =
   case opr of
       EEIAppI () => "EEIAppI"
     | EEIAscTime () => "EEIAscTime"
+    | EEIAscSpace () => "EEIAscSpace"
 
 fun str_expr_ET opr =
   case opr of

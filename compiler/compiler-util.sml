@@ -125,6 +125,23 @@ fun assert_EAscTime e =
       | _ => raise assert_fail $ "assert_EAscTime; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
   end
     
+fun assert_EAscSpace e =
+  let
+    val (e, ts) = collect_EAscType e
+  in
+    case e of
+        EAscSpace (e, i) => (EAscTypes (e, ts), i)
+      | _ => raise assert_fail $ "assert_EAscSpace; got:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
+  end
+
+fun assert_EAscTimeSpace e =
+    let
+      val (e, space) = assert_EAscSpace e
+      val (e, time) = assert_EAscTime e
+    in
+      (e, (time, space))
+    end
+      
 fun assert_EAscState e =
   let
     val (e, ts) = collect_EAscType e

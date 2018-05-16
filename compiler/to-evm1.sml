@@ -411,6 +411,7 @@ fun compile st_name2int ectx e =
     | EUnpack _ => err ()
     | EUnpackI _ => err ()
     | EAscTime _ => err ()
+    | EAscSpace _ => err ()
     | ELet _ => err ()
     | ELetIdx _ => err ()
     | ELetType _ => err ()
@@ -678,6 +679,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
         I_e @@ halt t
       end
     | EAscTime (e, i) => ASCTIME (Inner i) @:: cg_e params e
+    | EAscSpace (e, i) => ASCSPACE (Inner i) @:: cg_e params e
     | EAscType (e, _) => cg_e params e
     | EAscState (e, _) => cg_e params e
     | EBinOp (EBPair (), _, _) => err ()
@@ -747,7 +749,7 @@ fun cg_hval (st_name2int, ectx) (e, t_all) =
         val (_, t) = collect_TForallIT t
         val (_, i, _) = assert_TArrow t
       in
-        (i, N0)
+        i
       end
     val hval = HCode' (itbinds, ((st, rctx, [], get_time_space t_all), I))
   in
@@ -868,9 +870,16 @@ fun test1 dirname =
     open ExportPP
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
-    val () = println "Time:"
-    val i = simp_i i
-    val () = println $ ToString.str_i Gctx.empty [] i
+    fun print_time_space (i, j) =
+        let
+          val () = println "Time:"
+          val () = println $ ToString.str_i Gctx.empty [] $ simp_i i
+          val () = println "Space:"
+          val () = println $ ToString.str_i Gctx.empty [] $ simp_i j
+        in
+          ()
+        end
+    val () = print_time_space i
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
@@ -879,7 +888,7 @@ fun test1 dirname =
                      
     val () = println "Started CPS conversion ..."
     open MicroTiMLUtil
-    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
+    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, TN0 dummy)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
@@ -891,9 +900,7 @@ fun test1 dirname =
     val () = println "Finished MicroTiML typechecking #2"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
-    val () = println "Time:"
-    val i = simp_i i
-    val () = println $ ToString.str_i Gctx.empty [] i
+    val () = print_time_space i
                      
     val () = println "Started CC ..."
     val e = cc e
@@ -908,9 +915,7 @@ fun test1 dirname =
     val () = println "Finished MicroTiML typechecking #4"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
-    val () = println "Time:"
-    val i = simp_i i
-    val () = println $ ToString.str_i Gctx.empty [] i
+    val () = print_time_space i
                      
     open EVM1ExportPP
     val () = println "Started Code Generation ..."
@@ -936,14 +941,9 @@ fun test1 dirname =
     val () = println "Started EVM1 typechecking ..."
     fun invert_map m = StMap.foldli (fn (k, v, acc) => IMap.insert (acc, v, k)) IMap.empty m
     val st_int2name = invert_map st_name2int
-    val ((j, i), vcs, admits) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
+    val (i, vcs, admits) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
     val () = println "Finished EVM1 typechecking"
-    val () = println "Time:"
-    val j = simp_i j
-    val () = println $ ToString.str_i Gctx.empty [] j
-    val () = println "Space:"
-    val i = simp_i i
-    val () = println $ ToString.str_i Gctx.empty [] i
+    val () = print_time_space i
 
     val () = println "ToEVM1.UnitTest passed"
   in

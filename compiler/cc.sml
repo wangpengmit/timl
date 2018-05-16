@@ -746,7 +746,7 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
               )
             else (default_fun_name, name_y)
         val (e, post) = assert_EAscState e
-        val (e, i) = assert_EAscTime e
+        val (e, i) = assert_EAscTimeSpace e
         val (_, t_e) = assert_EAscType e
         val e = #visit_expr (cast this) this env e
         val e = EAbs (pre, EBindAnno (((name_y, r), t_y), e))
@@ -1047,9 +1047,16 @@ fun test1 dirname =
     val () = println "Type:"
     open ExportPP
     val () = pp_t NONE $ export_t NONE ([], []) t
-    val () = println "Time:"
-    val i = simp_i i
-    val () = println $ ToString.str_i Gctx.empty [] i
+    fun print_time_space (i, j) =
+        let
+          val () = println "Time:"
+          val () = println $ ToString.str_i Gctx.empty [] $ simp_i i
+          val () = println "Space:"
+          val () = println $ ToString.str_i Gctx.empty [] $ simp_i j
+        in
+          ()
+        end
+    val () = print_time_space i
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
@@ -1058,7 +1065,7 @@ fun test1 dirname =
                      
     val () = println "Started CPS conversion ..."
     open MicroTiMLUtil
-    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, T_0)
+    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, TN0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export empty_ctx e *)
@@ -1072,9 +1079,7 @@ fun test1 dirname =
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
-    val () = println "Time:"
-    val i = simp_i i
-    val () = println $ ToString.str_i Gctx.empty [] i
+    val () = print_time_space i
     (* val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx e *)
     (* val () = println "" *)
                      
@@ -1095,9 +1100,7 @@ fun test1 dirname =
     val () = println "Finished MicroTiML typechecking #3"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
-    val () = println "Time:"
-    (* val i = simp_i i *)
-    val () = println $ ToString.str_i Gctx.empty [] i
+    val () = print_time_space i
                      
     val () = println "CC.UnitTest passed"
   in
