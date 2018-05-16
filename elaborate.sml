@@ -213,7 +213,7 @@ local
 	    foldr f (elab_mt t) binds
 	  end
 
-  fun elab_return return = mapPair (Option.map elab_mt, Option.map elab_i) return
+  fun elab_return (t, i, j) = (Option.map elab_mt t, Option.map elab_i i, Option.map elab_i j)
                                    
   fun elab_pn pn =
       case pn of
@@ -333,7 +333,7 @@ local
 	  (case es of
 	       [] => ETT r
 	     | e :: es => foldl (fn (e2, e1) => EPair (e1, elab e2)) (elab e) es)
-	| S.EAbs (binds, (t, d), e, r) =>
+	| S.EAbs (binds, (t, d, j), e, r) =>
 	  let 
             fun f (b, e) =
 		case b of
@@ -341,6 +341,7 @@ local
 		  | BindSorting (name, s, _) => EAbsI (BindAnno ((IName name, elab_s s), e), r)
             val e = elab e
             val e = case d of SOME d => EAscTime (e, elab_i d) | _ => e
+            val e = case j of SOME j => EAscSpace (e, elab_i j) | _ => e
             val e = case t of SOME t => EAsc (e, elab_mt t) | _ => e
 	  in
 	    foldr f e binds

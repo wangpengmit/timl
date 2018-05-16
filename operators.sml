@@ -294,6 +294,7 @@ fun str_expr_tri_op opr =
 datatype expr_EI =
          EEIAppI of unit
          | EEIAscTime of unit
+         | EEIAscSpace of unit
 
 datatype expr_ET =
          EETAppT of unit

@@ -49,7 +49,7 @@ type ('this, 'env) expr_visitor_vtable =
        visit_decl : 'this -> 'env ctx -> decl -> T.decl list,
        visit_DVal : 'this -> 'env ctx -> ename binder * (tname binder list, expr) bind outer * region -> T.decl list,
        visit_DValPtrn : 'this -> 'env ctx -> ptrn * expr outer * region -> T.decl list,
-       visit_DRec : 'this -> 'env ctx -> ename binder * (tname binder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) bind inner * region -> T.decl list,
+       visit_DRec : 'this -> 'env ctx -> ename binder * (tname binder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * (idx * idx)) * expr) bind inner * region -> T.decl list,
        visit_DIdxDef : 'this -> 'env ctx -> iname binder * sort option outer * idx outer -> T.decl list,
        visit_DAbsIdx2 : 'this -> 'env ctx -> iname binder * sort outer * idx outer -> T.decl list,
        visit_DAbsIdx : 'this -> 'env ctx -> (iname binder * sort outer * idx outer) * decl tele rebind * region -> T.decl list,
@@ -360,13 +360,14 @@ fun default_expr_visitor_vtable
       in
         T.EAppConstr ((var, eia), ts, is, e, ot)
       end
-    fun visit_return this env (t, i) =
+    fun visit_return this env (t, i, j) =
       let
         val vtable = cast this
         val t = Option.map (#visit_mtype vtable this env) t                                      
         val i = Option.map (#visit_idx vtable this env) i                                     
+        val j = Option.map (#visit_idx vtable this env) j
       in
-        (t, i)
+        (t, i, j)
       end
     fun visit_ECase this env data =
       let
@@ -582,7 +583,8 @@ fun default_expr_visitor_vtable
                          (visit_triple (visit_pair (visit_map $ #visit_idx vtable this)
                                                    (visit_map $ #visit_idx vtable this))
                                        (visit_pair (#visit_mtype vtable this)
-                                                   (#visit_idx vtable this))
+                                                   (visit_pair (#visit_idx vtable this)
+                                                               (#visit_idx vtable this)))
                                        (#visit_expr vtable this))) env bind
       in
         [T.DRec (name, bind, r)]

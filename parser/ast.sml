@@ -89,7 +89,7 @@ datatype bind =
 	 BindTyping of ptrn
 	 | BindSorting of sort_bind
 
-type return = ty option * idx option
+type return = ty option * idx option * idx option
 
 type datatype_def = string * string list * bsort_bind list * bsort list * constr_decl list * region
 
@@ -148,7 +148,7 @@ fun ENil r = EShortVar ("Nil", r)
 fun EList (es, r) = foldr (fn (e, acc) => ECons (e, acc, r)) (ENil r) es
 fun PnNil r = PnShortVar ("Nil", r)
 fun PnList (pns, r) = foldr (fn (pn, acc) => PnCons (pn, acc, r)) (PnNil r) pns
-fun ESemiColon (e1, e2, r) = ELet ((NONE, NONE), [DVal ([], PnShortVar ("_", r), e1, r)], e2, r)
+fun ESemiColon (e1, e2, r) = ELet ((NONE, NONE, NONE), [DVal ([], PnShortVar ("_", r), e1, r)], e2, r)
 fun EInc r =EShortVar ("inc", r)
 fun EAdd r =EShortVar ("add", r)
                                

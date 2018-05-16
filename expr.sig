@@ -13,7 +13,7 @@ signature EXPR = sig
          
   type ptrn = (cvar * ptrn_constr_tag, mtype) Pattern.ptrn
                                               
-  type return = mtype option * idx option
+  type return = mtype option * idx option * idx option
                                    
   datatype stbind = 
            SortingST of Binders.ibinder * sort Unbound.outer
@@ -47,7 +47,7 @@ signature EXPR = sig
        and decl =
            DVal of Binders.ebinder * (Binders.tbinder list, expr) Unbound.bind Unbound.outer * Region.region
            | DValPtrn of ptrn * expr Unbound.outer * Region.region
-           | DRec of Binders.ebinder * (Binders.tbinder list * stbind Unbound.tele Unbound.rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) Unbound.bind Unbound.inner * Region.region
+           | DRec of Binders.ebinder * (Binders.tbinder list * stbind Unbound.tele Unbound.rebind, (idx StMap.map * idx StMap.map) * (mtype * (idx * idx)) * expr) Unbound.bind Unbound.inner * Region.region
            | DIdxDef of Binders.ibinder * sort option Unbound.outer * idx Unbound.outer
            | DAbsIdx2 of Binders.ibinder * sort Unbound.outer * idx Unbound.outer
            | DAbsIdx of (Binders.ibinder * sort Unbound.outer * idx Unbound.outer) * decl Unbound.tele Unbound.rebind * Region.region

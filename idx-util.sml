@@ -223,4 +223,14 @@ val collect_IUnion = collect_IBinOp (IBUnion ())
 fun combine_IUnion i is = foldl (fn (i, acc) => IUnion (acc, i)) i is
 val IEmptyState = IState StMap.empty
                          
+infix 6 %%+ 
+infix 4 %%<=
+
+fun binop_pair f ((a, b), (a', b')) = (f (a, a'), f (b, b'))
+fun IAddPair a = binop_pair op%+ a
+val op%%+ = IAddPair
+fun IMaxPair a = binop_pair IMax a
+fun ILePair a = binop_pair op%<= a
+val op%%<= = ILePair                                             
+
 end

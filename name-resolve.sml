@@ -372,15 +372,16 @@ fun add_typing_skct name (sctx, kctx, cctx, tctx) = (sctx, kctx, cctx, name :: t
 (* fun add_ctx (sctxd, kctxd, cctxd, tctxd) (sctx, kctx, cctx, tctx) = *)
 (*     (sctxd @ sctx, kctxd @ kctx, cctxd @ cctx, tctxd @ tctx) *)
       
-fun shift_return (sctxn, kctxn) (t, d) =
+fun shift_return (sctxn, kctxn) (t, d, j) =
     let
       open UnderscoredSubst
     in
       (Option.map (fn t => shiftx_t_mt 0 kctxn $ shiftx_i_mt 0 sctxn t) t,
-       Option.map (fn d => shiftx_i_i 0 sctxn d) d)
+       Option.map (fn d => shiftx_i_i 0 sctxn d) d,
+       Option.map (fn d => shiftx_i_i 0 sctxn d) j)
     end
       
-fun copy_anno gctx (anno as (t, d)) e =
+fun copy_anno gctx (anno as (t, d, j)) e =
     let
       val copy_anno = copy_anno gctx
       val copy_anno_rule = copy_anno_rule gctx
@@ -389,7 +390,7 @@ fun copy_anno gctx (anno as (t, d)) e =
                        | SOME _ => a
     in
       case e of
-          ECase (e, (t', d'), es, r) =>
+          ECase (e, (t', d', j'), es, r) =>
           let
             fun is_tuple_value e =
                 case e of
@@ -397,17 +398,17 @@ fun copy_anno gctx (anno as (t, d)) e =
                   | EBinOp (EBPair (), e1, e2) => is_tuple_value e1 andalso is_tuple_value e2
                   | _ => false
             (* if e is tuple value, we are sure it doesn't cost time, so we can copy time annotation *)
-            val d = if is_tuple_value e then d else NONE
-            val (t, d) = (copy t' t, copy d' d)
-            val es = map (copy_anno_rule (t, d)) es
+            val (d, j) = if is_tuple_value e then (d, j) else (NONE, NONE)
+            val (t, d, j) = (copy t' t, copy d' d, copy j' j)
+            val es = map (copy_anno_rule (t, d, j)) es
           in
-            ECase (e, (t, d), es, r)
+            ECase (e, (t, d, j), es, r)
           end
-        | ELet ((t', d'), bind, r) =>
+        | ELet ((t', d', j'), bind, r) =>
           let
             val (decls, e) = Unbound.unBind bind
             val decls = unTeles decls
-            val (t, d) = (copy t' t, copy d' d)
+            val (t, d, j) = (copy t' t, copy d' d, copy j' j)
             open UnderscoredToString
             val (_, (sctx, kctx, _, _)) = str_decls gctx ([], [], [], []) decls
             val (sctxn, kctxn) = (length sctx, length kctx)
@@ -423,21 +424,28 @@ fun copy_anno gctx (anno as (t, d)) e =
                         | _ => false
                     end
                   | _ => false
-            val d' = if List.all is_match_var decls then d else NONE
+            val (d', j') = if List.all is_match_var decls then (d, j) else (NONE, NONE)
           in
-            ELet ((t, d), Unbound.Bind (Teles decls, copy_anno (shift_return (sctxn, kctxn) (t, d')) e), r)
+            ELet ((t, d, j), Unbound.Bind (Teles decls, copy_anno (shift_return (sctxn, kctxn) (t, d', j')) e), r)
           end
         | EEI (EEIAscTime (), e, d') =>
           let
             val d = SOME d'
-            val e = copy_anno (t, d) e
+            val e = copy_anno (t, d, j) e
           in
             EAscTime (e, d')
+          end
+        | EEI (EEIAscSpace (), e, j') =>
+          let
+            val j = SOME j'
+            val e = copy_anno (t, d, j) e
+          in
+            EAscSpace (e, j')
           end
         | EET (EETAsc (), e, t') =>
           let
             val t = SOME t'
-            val e = copy_anno (t, d) e
+            val e = copy_anno (t, d, j) e
           in
             EAsc (e, t')
           end

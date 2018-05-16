@@ -316,10 +316,11 @@ fun strn_pn pn =
 
 fun strn_return return =
   case return of
-      (NONE, NONE) => ""
-    | (SOME t, NONE) => sprintf "return $ " [strn_mt t]
-    | (NONE, SOME d) => sprintf "return using $ " [strn_i d]
-    | (SOME t, SOME d) => sprintf "return $ using $ " [strn_mt t, strn_i d]
+      (NONE, NONE, NONE) => ""
+    | (t, d, j) => sprintf "return$$$"
+                           [default "" $ Option.map (prefix " " o strn_mt) t,
+                            default "" $ Option.map (prefix " using " o strn_i) i,
+                            default "" $ Option.map (prefix " space " o strn_i) j]
 
 fun strn_sortings binds =
   let
@@ -442,7 +443,7 @@ and strn_decl decl =
       | DRec (name, bind, _) =>
         let
           val name = binder2str name
-          val ((tnames, Rebind binds), ((pre_st, post_st), (t, d), e)) = Unbound.unBind $ unInner bind
+          val ((tnames, Rebind binds), ((pre_st, post_st), (t, (d, j)), e)) = Unbound.unBind $ unInner bind
           val binds = unTeles binds
           val tnames = map binder2str tnames
           val tnames = (join "" o map (fn nm => sprintf " [$]" [nm])) tnames
@@ -460,9 +461,10 @@ and strn_decl decl =
           val binds = (join "" o map (prefix " ")) binds
           val t = strn_mt t
           val d = strn_i d
+          val j = strn_i j
           val e = strn_e e
         in
-          sprintf "rec$ $$ : $$$ |> $ = $" [tnames, name, binds, strn_state pre_st, strn_state post_st, t, d, e]
+          sprintf "rec$ $$ : $$$ |> $,$ = $" [tnames, name, binds, strn_state pre_st, strn_state post_st, t, d, j, e]
         end
       | DIdxDef (name, Outer s, Outer i) =>
         let

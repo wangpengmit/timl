@@ -22,7 +22,7 @@ open Binders
 
 type ptrn = (cvar * ptrn_constr_tag, mtype) Pattern.ptrn
 
-type return = mtype option * idx option
+type return = mtype option * idx option * idx option
                                  
 datatype stbind =
          SortingST of ibinder * sort outer
@@ -54,7 +54,7 @@ datatype expr =
      and decl =
          DVal of ebinder * (tbinder list, expr) bind outer * region
          | DValPtrn of ptrn * expr outer * region
-         | DRec of ebinder * (tbinder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * idx) * expr) bind inner * region
+         | DRec of ebinder * (tbinder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * (idx * idx)) * expr) bind inner * region
          | DIdxDef of ibinder * sort option outer * idx outer
          | DAbsIdx2 of ibinder * sort outer * idx outer
          | DAbsIdx of (ibinder * sort outer * idx outer) * decl tele rebind * region

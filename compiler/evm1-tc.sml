@@ -644,14 +644,9 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       
 fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
 
-fun IAddPair ((a, b), (a', b')) = (a %+ a', b %+ b')
 infix 6 %%+ 
-val op%%+ = IAddPair
-fun IMaxPair ((a, b), (a', b')) = (IMax (a, a'), IMax (b, b'))
-fun ILePair ((a, b), (a', b')) = a %<= a' /\ b %<= b'
 infix 4 %%<=
-val op%%<= = ILePair                                             
-
+        
 fun shiftn_i_i n = shiftx_i_i 0 n
 fun shiftn_i_2i n (a, b) = (shiftn_i_i n a, shiftn_i_i n b)
       
