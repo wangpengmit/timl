@@ -530,6 +530,7 @@ fun open_module (name, ctx : context) = write $ VcModule (name, #1 ctx)
                                               
 fun close_paren () = write CloseParen
 fun close_n n = repeat_app close_paren n
+fun close () = close_n 1
 fun open_premises ps = app write $ map ImplyVC ps
 fun open_sortings sortings = app open_sorting $ rev sortings
 fun open_ctx (ctx as (sctx, _, _, _)) =

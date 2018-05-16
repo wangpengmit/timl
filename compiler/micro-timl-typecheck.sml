@@ -61,20 +61,15 @@ fun match_BSArrow gctx ctx r bs =
 
 fun get_sort_type_SUVar gctx ctx data = SUVar data
 
-fun open_close add ns ctx f = f $ add ns ctx
-
-type state = (scontext * prop) list
-val vcs : state ref = ref []
-val admits : state ref = ref []
+(* type state = (scontext * prop) list *)
+(* val vcs : state ref = ref [] *)
+(* val admits : state ref = ref [] *)
                              
 (* fun check_prop ctx p = push_ref vcs (ctx, p) *)
 (* fun add_admit p = push_ref admits (ctx, p)                *)
-fun check_prop p = ()
-fun add_admit p = ()
+fun check_prop p = write_prop (p, get_region_p p)
+fun add_admit p = write_admit (p, get_region_p p)
                          
-fun write_prop ctx (p, r) = check_prop p
-fun write_admit ctx (p, r) = add_admit p
-                                       
 structure Sortcheck = SortcheckFn (structure U = Expr
                                    structure T = Expr
                                    type sigcontext = sigcontext
@@ -100,8 +95,8 @@ structure Sortcheck = SortcheckFn (structure U = Expr
                                    val gctx_names = gctx_names
                                    val normalize_s = normalize_s
                                    val subst_i_p = subst_i_p
-                                   val write_admit = write_admit
-                                   val write_prop = write_prop
+                                   val write_admit = fn _ => fn a => write_admit a
+                                   val write_prop = fn _ => fn a => write_prop a
                                    val get_uvar_info = get_uvar_info
                                    val refine = refine
                                   )
@@ -155,6 +150,8 @@ fun is_eq_idx ctx (i, i') = check_prop (i %= i')
 
 open Bind
        
+val open_s = open_sorting
+               
 fun is_eq_sort ctx (s, s') =
   case (s, s') of
       (SBasic (bs, _), SBasic (bs', _)) =>
@@ -162,7 +159,9 @@ fun is_eq_sort ctx (s, s') =
     | (SSubset ((bs, r1), Bind ((name, _), p), _), SSubset ((bs', _), Bind (_, p'), _)) =>
       let
 	val () = is_eq_basic_sort (bs, bs')
+        val () = open_s (name, BasicSort bs)
 	val () = check_prop (p --> p')
+        val () = close ()
       in
         ()
       end
@@ -175,7 +174,9 @@ fun is_eq_sort ctx (s, s') =
     | (SBasic (bs, r1), SSubset ((bs', _), Bind ((name, _), p), _)) =>
       let
 	val () = is_eq_basic_sort (bs, bs')
+        val () = open_s (name, BasicSort bs)
 	val () = check_prop p
+        val () = close ()
       in
         ()
       end
@@ -279,7 +280,7 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
     | TAbsI data =>
       let
         val (b, (name, t)) = unTAbsI data
-        val (t, k) = kc (add_sorting_it (fst name, BasicSort b) ctx) t
+        val (t, k) = open_close add_sorting_it (fst name, BasicSort b) ctx (fn ctx => kc ctx t)
       in
         (TAbsI $ IBindAnno ((name, b), t), KArrow (b, k))
       end
@@ -316,7 +317,7 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
         (* val  () = println "before is_wf_sort" *)
         val s = is_wf_sort ictx s
         (* val  () = println "after is_wf_sort" *)
-        val t = kc_against_kind (add_sorting_it (fst name, s) ctx) (t, KType ())
+        val t = open_close add_sorting_it (fst name, s) ctx (fn ctx => kc_against_kind ctx (t, KType ()))
       in
         (TQuanI (q, IBindAnno ((name, s), t)), KType ())
       end
@@ -531,7 +532,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
             val (s, (name, t)) = unTQuanI data
             val (s', (_, t')) = unTQuanI data'
             val () = is_eq_sort ictx (s, s')
-            val () = is_eq_ty (add_sorting_it (fst name, s) ctx) (t, t')
+            val () = open_close add_sorting_it (fst name, s) ctx (fn ctx => is_eq_ty ctx (t, t'))
           in
             ()
           end
@@ -617,7 +618,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
             val (b, (name, t)) = unTAbsI data
             val (b', (_, t')) = unTAbsI data'
             val () = is_eq_basic_sort (b, b')
-            val () = is_eq_ty (add_sorting_it (fst name, BasicSort b) ctx) (t, t')
+            val () = open_close add_sorting_it (fst name, BasicSort b) ctx (fn ctx => is_eq_ty ctx (t, t'))
           in
             ()
           end
@@ -1533,6 +1534,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                     let
                       val s = is_wf_sort ctx s
                       val bind = (name, s)
+                      val () = open_s bind
                     in
                       (bind :: binds, bind :: ctx)
                     end
@@ -1552,6 +1554,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val ctx = (ictx, tctx, ectx)
           (* val () = println "before tc()/EAbsI/tc_against_time()" *)
           val (e, t, _) = tc_against_time_space (ctx, IEmptyState) (e, TN0)
+          val () = close_n len_binds
           (* val () = println "before tc()/EAbsI/making result" *)
           val binds = ListPair.mapEq (fn ((name, anno), r) => ((name, r), anno)) (binds, regions)
           val result = (EAbsIs (binds, e), TForallIs (binds, t), TN0, st)
@@ -1569,9 +1572,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       (*     val () = assert_b "EAbsI: is_value e" (is_value e) *)
       (*     val () = println "before add_sorting_full()" *)
       (*     val () = println $ sprintf "#ictx=$  #ectx=$" [str_int $ length ictx, str_int $ length ectx] *)
-      (*     val ctx = add_sorting_full (fst name, s) ctx *)
-      (*     val () = println "before tc_against_time()" *)
-      (*     val (e, t) = tc_against_time ctx (e, T0) *)
+      (*     val (e, t) = open_close add_sorting_full (fst name, s) ctx *)
+      (*                             (fn ctx => *)
+      (*                                 (println "before tc_against_time()"; *)
+      (*                                  tc_against_time ctx (e, T0))) *)
       (*     val () = println "before making result" *)
       (*     val result = (MakeEAbsI (name, s, e), MakeTForallI (s, name, t), T0) *)
       (*     val () = println "after making result" *)
@@ -1663,7 +1667,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (s, (_, t)) = case t_e1 of
                                 TQuanI (Exists _, data) => unTQuanI data
                               | _ => raise MTCError $ mismatch "EUnpackI" (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names itctx) t_e1) "TQuanI (Exists, _)"
-          val (e2, t2, i2, st) = tc (add_typing_full (fst ename, t) $ add_sorting_full (fst iname, s) ctx, shift_i_i st) e2
+          val (e2, t2, i2, st) = open_close add_sorting_full (fst iname, s) ctx (fn ctx => tc (add_typing_full (fst ename, t) ctx, shift_i_i st) e2)
           val t2 = forget01_i_t t2
                    handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names $ add_sorting_it (fst iname, s) itctx) t2))
           fun forget_i name i =
@@ -2006,23 +2010,24 @@ fun to_vc (ctx, p) = (concatMap sort_to_hyps ctx, p)
   
 fun runWriter m () =
   let 
-    val () = vcs := []
-    val () = admits := []
+    (* val () = vcs := [] *)
+    (* val () = admits := [] *)
     val r = m ()
-    (* val () = println "after m ()" *)
-    val vcs = !vcs
-    val admits = !admits
-    val vcs = map to_vc vcs
-    (* val () = println "after to_vc; calling simp_vc_vcs" *)
-    (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    val vcs_len = length vcs
-    (* val () = println $ "#VCs: " ^ str_int vcs_len *)
-    (* val vcs = concatMapi (fn (i, vc) => (println (sprintf "vc $ @ $" [str_int vcs_len, str_int i]); simp_vc_vcs vc)) vcs *)
-    (* val () = println "before simp vcs" *)
-    (* val vcs = map VC.simp_vc vcs *)
-    (* val () = println "after simp vcs" *)
-    (* val vcs = TrivialSolver.simp_and_solve_vcs vcs *)
-    val admits = map to_vc admits
+    val vcs = []
+    val admits = []
+    (* val vcs = !vcs *)
+    (* val admits = !admits *)
+    (* val vcs = map to_vc vcs *)
+    (* (* val () = println "after to_vc; calling simp_vc_vcs" *) *)
+    (* (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *) *)
+    (* val vcs_len = length vcs *)
+    (* (* val () = println $ "#VCs: " ^ str_int vcs_len *) *)
+    (* (* val vcs = concatMapi (fn (i, vc) => (println (sprintf "vc $ @ $" [str_int vcs_len, str_int i]); simp_vc_vcs vc)) vcs *) *)
+    (* (* val () = println "before simp vcs" *) *)
+    (* (* val vcs = map VC.simp_vc vcs *) *)
+    (* (* val () = println "after simp vcs" *) *)
+    (* (* val vcs = TrivialSolver.simp_and_solve_vcs vcs *) *)
+    (* val admits = map to_vc admits *)
   in 
     (r, vcs, admits) 
   end

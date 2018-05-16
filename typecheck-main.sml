@@ -247,6 +247,14 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
 	    (TUniI (s, Bind ((name, r), c), r_all),
              HType)
           end
+        | U.TAbsI (b, Bind ((name, r1), t), r) =>
+          let
+            val b = is_wf_basic_sort b
+            val (t, k) = open_close add_sorting_sk (name, SBasic (b, r1)) ctx (fn ctx => get_higher_kind (ctx, t))
+            val k = HKArrowI (b, k)
+          in
+            (TAbsI (b, Bind ((name, r1), t), r), k)
+          end
         | U.TSumbool (s1, s2) =>
           (TSumbool (is_wf_sort gctx (sctx, s1), is_wf_sort gctx (sctx, s2)), HType)
 	| U.TBase a => (TBase a, HType)
@@ -276,14 +284,6 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
                   (TApp (t1, t2), k2)
                 end
               | _ => error (get_region_mt t1, str_mt gctxn ctxn t1, "<kind> => <kind>", str_hk, k)
-          end
-        | U.TAbsI (b, Bind ((name, r1), t), r) =>
-          let
-            val b = is_wf_basic_sort b
-            val (t, k) = get_higher_kind (add_sorting_sk (name, SBasic (b, r1)) ctx, t)
-            val k = HKArrowI (b, k)
-          in
-            (TAbsI (b, Bind ((name, r1), t), r), k)
           end
         | U.TAppI (t, i) =>
           let

@@ -231,7 +231,7 @@ fun binop_pair f ((a, b), (a', b')) = (f (a, a'), f (b, b'))
 fun IAddPair a = binop_pair op%+ a
 val op%%+ = IAddPair
 fun IMaxPair a = binop_pair IMax a
-fun ILePair a = binop_pair op%<= a
+fun ILePair a = op/\ $ binop_pair op%<= a
 val op%%<= = ILePair                                             
 
 fun TN0 r = (T0 r, N0 r)
