@@ -238,11 +238,19 @@ local
               | IBLe () => def ()
               | IBGe () => def ()
               | IBBoundedMinus () =>
-                (case (i1, i2) of
-                     (IConst (ICNat n1, _), IConst (ICNat n2, _)) =>
-                     mark $ INat (bounded_minus n1 n2, r ())
-                   | _ => def ())
-              | IBMinus () => raise Impossible "simp_p()/MinusI"
+	        if eq_i i2 (T0 dummy) orelse eq_i i2 (N0 dummy) then
+                  mark i1
+	        else
+                  (case (i1, i2) of
+                       (IConst (ICNat n1, _), IConst (ICNat n2, _)) =>
+                       mark $ INat (bounded_minus n1 n2, r ())
+                     | _ => def ())
+              | IBMinus () =>
+	        if eq_i i2 (T0 dummy) orelse eq_i i2 (N0 dummy) then
+                  mark i1
+	        else
+                  def ()
+              (* | IBMinus () => raise Impossible "simp_p()/MinusI" *)
               | IBUnion () => def ()
           end
         | IIte (i, i1, i2, r) =>

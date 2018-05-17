@@ -1209,7 +1209,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (cps_tc_flags, st_types) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), (vcs, admits)) = typecheck (cps_tc_flags, st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #1"
     val () = println "Type:"
     open ExportPP
@@ -1241,7 +1241,7 @@ fun test1 dirname =
     val () = check_CPSed_expr e
     val () = println "Finished post-CPS form checking"
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
+    val ((e, t, i, st), (vcs, admits)) = typecheck ([], st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking #2"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t

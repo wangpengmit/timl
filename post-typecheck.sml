@@ -1,4 +1,4 @@
-structure PostTypeCheck = struct
+structure PostTypecheck = struct
 open TypeCheckMain
        
 infixr 0 $
@@ -308,7 +308,7 @@ fun vces_to_vcs vces =
     (vcs, admits)
   end
 
-fun runWriter m _ =
+fun runWriter m () =
   let 
     val () = acc := []
     val r = m () 

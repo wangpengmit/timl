@@ -1,6 +1,6 @@
 structure TypeCheck = struct
 open TypeCheckMain
-open PostTypeCheck
+open PostTypecheck
        
 val anno_less = TypeCheckMain.anno_less
                   

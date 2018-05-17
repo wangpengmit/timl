@@ -15,9 +15,12 @@ fun escape s = if s = "_" then "__!escaped_from_underscore_for_smt" else String.
 fun evar_name n = "!!" ^ str_int n
 
 fun print_idx_bin_op opr =
+    let
+      fun err () = raise Impossible $ "print_idx_bin_op () on " ^ str_idx_bin_op opr
+    in
     case opr of
         IBAdd () => "+"
-      | IBBoundedMinus () => "-"
+      | IBMinus () => "-"
       | IBMult () => "*"
       | IBMod () => "mod"
       | IBEq () => "="
@@ -29,11 +32,12 @@ fun print_idx_bin_op opr =
       | IBGt () => ">"
       | IBLe () => "<="
       | IBGe () => ">="
-      | IBMax () => raise Impossible "print_idx_bin_op ()"
-      | IBMin () => raise Impossible "print_idx_bin_op ()"
-      | IBApp () => raise Impossible "print_idx_bin_op ()"
-      | IBMinus () => raise Impossible "print_idx_bin_op ()"
-      | IBUnion () => raise Impossible "print_idx_bin_op ()"
+      | IBBoundedMinus () => err ()
+      | IBMax () => err ()
+      | IBMin () => err ()
+      | IBApp () => err ()
+      | IBUnion () => err ()
+    end
         
 fun print_i ctx i =
   case i of

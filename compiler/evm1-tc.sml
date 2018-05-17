@@ -844,12 +844,14 @@ fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
     val (i', ni) = tc_insts params (itctx, rctx, sctx, st) insts
     (* val () = println "after checking insts" *)
     val () = check_prop (i' %%<= shiftn_i_2i ni (time, space))
-    val () = close_n ni
+    val () = close_n $ ni + length ictx
     (* val () = println "tc_hval() finished" *)
   in
     ()
   end
 
+fun forget_i_2i x n = unop_pair $ forget_i_i x n
+      
 fun tc_prog (num_regs, st_name2ty, st_int2name, init_st) (H, I) =
   let
     fun get_hval_type h =
@@ -864,8 +866,9 @@ fun tc_prog (num_regs, st_name2ty, st_int2name, init_st) (H, I) =
     fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
     val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval (hctx, num_regs, st_name2ty, st_int2name) h)) H
-    val (i, _) = tc_insts (hctx, num_regs, st_name2ty, st_int2name) (([], []), Rctx.empty, [], init_st) I
-                          (* todo: should have a forget_i_i on i here *)
+    val (i, ni) = tc_insts (hctx, num_regs, st_name2ty, st_int2name) (([], []), Rctx.empty, [], init_st) I
+    val () = close_n ni
+    val i = forget_i_2i 0 ni i
   in
     i
   end

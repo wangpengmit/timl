@@ -2,6 +2,7 @@ structure MicroTiMLTypecheck = struct
 
 open UVar
 open UVarExprUtil
+open PostTypecheck
 open TypecheckUtil
 open FreshUVar
 open Expr
@@ -145,8 +146,34 @@ fun unECase (e, bind1, bind2) =
 fun is_eq_basic_sort x = unify_bs dummy x
   
 fun BasicSort b = SBasic (b, dummy)
-                        
-fun is_eq_idx ctx (i, i') = check_prop (i %= i')
+
+fun is_state i =
+    case i of
+        IBinOp (IBUnion (), _, _) => true
+      | IState _ => true
+      | _ => false
+               
+fun check_same_domain pre_st st =
+    let
+      val (pre_vars, _, pre_map) = decompose_state pre_st
+      val (st_vars, _, st_map) = decompose_state st
+      val () = assert_b "ISet.equal" $ ISet.equal (pre_vars, st_vars)
+      val () = assert_b "SMapU.is_same_domain" $ SMapU.is_same_domain pre_map st_map
+    in
+      (pre_map, st_map)
+    end
+fun check_sub_map ictx (pre_st, st) =
+  StMap.appi (fn (k, v) => check_prop $ v %= st @!! k) pre_st
+             
+fun is_eq_idx ctx (i, i') =
+    if is_state i orelse is_state i' then
+      let
+        val (m, m') = check_same_domain i i'
+      in
+        check_sub_map ctx (m, m')
+      end
+    else
+      check_prop (i %= i')
 
 open Bind
        
@@ -900,9 +927,6 @@ infix 0 |#
 infix 0 %~
 infix 0 |>#
         
-fun check_sub_map ictx (pre_st, st) =
-  StMap.appi (fn (k, v) => check_prop $ v %= st @!! k) pre_st
-             
 fun assert_TMap t =
   case t of
       TMap a => a
@@ -1166,24 +1190,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val st_e1 = st
           val (e2, t_e2, i2, st) = tc (ctx, st) e2
           val st_e2 = st
-          fun check_sub_domain pre_st st =
-            let
-              val (pre_vars, _, pre_map) = decompose_state pre_st
-              val (st_vars, _, st_map) = decompose_state st
-              val () = assert_b "ISet.isSubset" $ ISet.isSubset (pre_vars, st_vars)
-              val () = assert_b "SMapU.is_sub_domain" $ SMapU.is_sub_domain pre_map st_map
-            in
-              (pre_map, st_map)
-            end
-          fun check_same_domain pre_st st =
-            let
-              val (pre_vars, _, pre_map) = decompose_state pre_st
-              val (st_vars, _, st_map) = decompose_state st
-              val () = assert_b "ISet.equal" $ ISet.equal (pre_vars, st_vars)
-              val () = assert_b "SMapU.is_same_domain" $ SMapU.is_same_domain pre_map st_map
-            in
-              (pre_map, st_map)
-            end
           fun check_sub_state pre_st st =
             let
               val st = shift_i_i st
@@ -1207,16 +1213,28 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (((pre_st, t1), i, (post_st, t2)), st, (e1, t_e1)) =
               case t_e1 of
                   TArrow (data as ((pre_st, t1), i, (post_st, t2))) =>
+                  if !allow_substate_call then
                     let
-                      val (pre_map, st_map) =
-                          (if !allow_substate_call then
-                             check_sub_domain
-                           else
-                             check_same_domain) pre_st st
+                      fun check_sub_domain pre_st st =
+                          let
+                            val (pre_vars, _, pre_map) = decompose_state pre_st
+                            val (st_vars, vars_info, st_map) = decompose_state st
+                            val () = assert_b "ISet.isSubset" $ ISet.isSubset (pre_vars, st_vars)
+                            val () = assert_b "SMapU.is_sub_domain" $ SMapU.is_sub_domain pre_map st_map
+                          in
+                            (pre_map, st_map, (ISet.difference (st_vars, pre_vars), vars_info, st_map @-- pre_map))
+                          end
+                      val (pre_map, st_map, diff) = check_sub_domain pre_st st
                       val () = check_sub_map ictx (pre_map, st_map)
-                      val st = IUnion_simp (st, post_st)
+                      val st = IUnion_simp (compose_state diff, post_st)
                     in
                       (data, st, (e1, t_e1))
+                    end
+                  else
+                    let
+                      val () = is_eq_idx ictx (st, pre_st)
+                    in
+                      (data, post_st, (e1, t_e1))
                     end
                 | TQuanI (Forall (), bind) =>
                   let
@@ -1931,7 +1949,7 @@ and tc_against_ty st_types (ctx as (ictx, tctx, _), st) (e, t) =
     let
       (* val () = print "tc_against_ty() start:\n" *)
       (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
-      (* val t_str = substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
+      (* val t_str = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) t *)
       (* val () = println $ sprintf "  $\n  $\n" [ *)
       (*       e_str, *)
       (*       t_str *)
@@ -1939,10 +1957,9 @@ and tc_against_ty st_types (ctx as (ictx, tctx, _), st) (e, t) =
       val (e, t', i, st) = tc st_types (ctx, st) e
       (* val () = print "tc_against_ty() to compare types:\n" *)
       (* val () = println $ sprintf "  $\n  $\n" [ *)
-      (*       substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t', *)
+      (*       ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) t', *)
       (*       t_str *)
       (*     ] *)
-      (* val () = println "before tc_against_ty()/is_eq_ty()" *)
       val () = is_eq_ty (ictx, tctx) (t', t)
       (* val () = println "tc_against_ty() finished:" *)
       (* val () = println e_str *)
@@ -1974,20 +1991,8 @@ and tc_against_time_space st_types (ctx as (ictx, tctx, _), st) (e, (i, j)) =
     
 and tc_against_ty_time st_types (ctx as (ictx, tctx, _), st) (e, t, i) =
     let
-      (* val () = print "tc_against_ty_time() start:\n" *)
-      (* val e_str = substr 0 100 $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
-      (* val () = println e_str *)
-      val (e, t', j, st) = tc_against_time st_types (ctx, st) (e, i)
-      (* val () = print "tc_against_ty_time() to compare types:\n" *)
-      (* val t_str = substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t *)
-      (* val () = println $ sprintf "  $\n  $\n" [ *)
-      (*       substr 0 100 $ ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names (ictx, tctx)) t', *)
-      (*       t_str *)
-      (*     ] *)
-      (* val () = println "before tc_against_ty_time()/is_eq_ty()" *)
-      val () = is_eq_ty (ictx, tctx) (t', t)
-      (* val () = println "tc_against_ty_time() finished:" *)
-      (* val () = println e_str *)
+      val (e, (i', j), st) = tc_against_ty st_types (ctx, st) (e, t)
+      val () = check_prop (i' %<= i)
     in
       (e, j, st)
     end
@@ -2000,37 +2005,37 @@ and tc_against_ty_time_space st_types (ctx as (ictx, tctx, _), st) (e, t, (i, j)
       (e, st)
     end
 
-fun sort_to_hyps (name, s) =
-  case s of
-      SBasic (b, r) => [VarH (name, b)]
-    | SSubset ((b, _), Bind.Bind (_, p), _) => [PropH p, VarH (name, b)]
-    | _ => raise Impossible "sort_to_hyps"
+(* fun sort_to_hyps (name, s) = *)
+(*   case s of *)
+(*       SBasic (b, r) => [VarH (name, b)] *)
+(*     | SSubset ((b, _), Bind.Bind (_, p), _) => [PropH p, VarH (name, b)] *)
+(*     | _ => raise Impossible "sort_to_hyps" *)
       
-fun to_vc (ctx, p) = (concatMap sort_to_hyps ctx, p)
+(* fun to_vc (ctx, p) = (concatMap sort_to_hyps ctx, p) *)
   
-fun runWriter m () =
-  let 
-    (* val () = vcs := [] *)
-    (* val () = admits := [] *)
-    val r = m ()
-    val vcs = []
-    val admits = []
-    (* val vcs = !vcs *)
-    (* val admits = !admits *)
-    (* val vcs = map to_vc vcs *)
-    (* (* val () = println "after to_vc; calling simp_vc_vcs" *) *)
-    (* (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *) *)
-    (* val vcs_len = length vcs *)
-    (* (* val () = println $ "#VCs: " ^ str_int vcs_len *) *)
-    (* (* val vcs = concatMapi (fn (i, vc) => (println (sprintf "vc $ @ $" [str_int vcs_len, str_int i]); simp_vc_vcs vc)) vcs *) *)
-    (* (* val () = println "before simp vcs" *) *)
-    (* (* val vcs = map VC.simp_vc vcs *) *)
-    (* (* val () = println "after simp vcs" *) *)
-    (* (* val vcs = TrivialSolver.simp_and_solve_vcs vcs *) *)
-    (* val admits = map to_vc admits *)
-  in 
-    (r, vcs, admits) 
-  end
+(* fun runWriter m () = *)
+(*   let  *)
+(*     (* val () = vcs := [] *) *)
+(*     (* val () = admits := [] *) *)
+(*     val r = m () *)
+(*     val vcs = [] *)
+(*     val admits = [] *)
+(*     (* val vcs = !vcs *) *)
+(*     (* val admits = !admits *) *)
+(*     (* val vcs = map to_vc vcs *) *)
+(*     (* (* val () = println "after to_vc; calling simp_vc_vcs" *) *) *)
+(*     (* (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *) *) *)
+(*     (* val vcs_len = length vcs *) *)
+(*     (* (* val () = println $ "#VCs: " ^ str_int vcs_len *) *) *)
+(*     (* (* val vcs = concatMapi (fn (i, vc) => (println (sprintf "vc $ @ $" [str_int vcs_len, str_int i]); simp_vc_vcs vc)) vcs *) *) *)
+(*     (* (* val () = println "before simp vcs" *) *) *)
+(*     (* (* val vcs = map VC.simp_vc vcs *) *) *)
+(*     (* (* val () = println "after simp vcs" *) *) *)
+(*     (* (* val vcs = TrivialSolver.simp_and_solve_vcs vcs *) *) *)
+(*     (* val admits = map to_vc admits *) *)
+(*   in  *)
+(*     (r, vcs, admits)  *)
+(*   end *)
     
 datatype tc_flag =
          Allow_substate_call
@@ -2261,7 +2266,7 @@ fun test1 dirname =
     open TestUtil
     open ExportPP
     val () = println "Started MicroTiML typechecking ..."
-    val ((_, t, i, st), vcs, admits) = typecheck ([], st_types) (([], [], []), IEmptyState) e
+    val ((_, t, i, st), (vcs, admits)) = typecheck ([], st_types) (([], [], []), IEmptyState) e
     val () = println "Finished MicroTiML typechecking"
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t

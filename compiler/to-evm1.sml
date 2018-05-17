@@ -90,8 +90,6 @@ fun assert_EState e =
       EState a => a
     | _ => raise assert_fail "assert_EState"
 
-fun assert_EAscSpace e = (e, N0)
-                           
 fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
 
 fun cg_ty_visitor_vtable cast () =
@@ -833,13 +831,15 @@ fun test1 dirname =
     val () = TypeCheck.clear_st_types ()
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
     val (st_name2ty, st_name2int) = TypeCheck.get_st_types ()
-    val vcs = VCSolver.vc_solver filename vcs
-    val () = if null vcs then ()
-             else
-               raise curry TypeCheck.Error dummy $ (* str_error "Error" filename dummy *) [sprintf "Typecheck Error: $ Unproved obligations:" [str_int $ length vcs], ""] @ (
-               (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *)
-               concatMap (VCSolver.print_unsat true filename) vcs
-             )
+    fun check_vcs vcs = 
+        case VCSolver.vc_solver filename vcs of
+            [] => ()
+          | vcs =>
+            raise curry TypeCheck.Error dummy $ (* str_error "Error" filename dummy *) [sprintf "Typecheck Error: $ Unproved obligations:" [str_int $ length vcs], ""] @ (
+              (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *)
+              concatMap (VCSolver.print_unsat true filename) vcs
+            )
+    val () = check_vcs vcs
     val () = println "Finished TiML typechecking"
                      
     open MergeModules
@@ -865,7 +865,8 @@ fun test1 dirname =
     open TestUtil
     val init_st = IState $ StMap.map (fn _ => INat 0) st_name2ty
     val () = println "Started MicroTiML typechecking #1 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
+    val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
+    val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #1"
     open ExportPP
     val () = println "Type:"
@@ -896,7 +897,9 @@ fun test1 dirname =
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
+    val ((e, t, i, st), (vcs, admits)) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
+    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
+    val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #2"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
@@ -911,7 +914,8 @@ fun test1 dirname =
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #4 ..."
-    val ((e, t, i, st), vcs, admits) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), init_st) e
+    val ((e, t, i, st), (vcs, admits)) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), init_st) e
+    val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #4"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
@@ -941,7 +945,9 @@ fun test1 dirname =
     val () = println "Started EVM1 typechecking ..."
     fun invert_map m = StMap.foldli (fn (k, v, acc) => IMap.insert (acc, v, k)) IMap.empty m
     val st_int2name = invert_map st_name2int
-    val (i, vcs, admits) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
+    val (i, (vcs, admits)) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
+    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
+    val () = check_vcs vcs
     val () = println "Finished EVM1 typechecking"
     val () = print_time_space i
 
