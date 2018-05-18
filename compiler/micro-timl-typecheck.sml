@@ -1,5 +1,6 @@
 structure MicroTiMLTypecheck = struct
 
+open MicroTiMLCosts
 open UVar
 open UVarExprUtil
 open PostTypecheck
@@ -951,6 +952,9 @@ fun assert_TCell t =
 
 infix 6 %%+
 
+val N : nat -> idx = INat
+val T : TimeType.time -> idx = ITime
+                
 fun to_real n = IToReal (N n, dummy)
 fun Tn n = (to_real n, N0)
 
@@ -1034,6 +1038,13 @@ val anno_EVectorClear_state = ref false
 
 val allow_substate_call = ref false
 
+datatype phase =
+         PhMicroTiML of unit
+         | PhCPS of unit
+         | PhCC of unit
+
+val phase = ref $ PhMicroTiML ()
+
 fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
   let
     val tc = tc st_types
@@ -1069,7 +1080,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
              end
            | NONE => raise MTCError "Unbound term variable"
         )
-      | EConst c => (e_input, get_expr_const_type c, TN0, st)
+      | EConst c => (e_input, get_expr_const_type c, Tn 0, st)
       | EUnOp (EUTiML (EUProj proj), e) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e
@@ -1102,7 +1113,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EUPrim then e %: t_e else e
           val e = if !anno_EUPrim_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i %%+ Tn C_UPrim opr, st)
+          (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i %%+ Tn (C_UPrim opr), st)
         end
       | EUnOp (EUTiML (EUArrayLen ()), e) =>
         let
@@ -1255,14 +1266,16 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = is_eq_ty itctx (t_e2, t1)
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
           val (e1, e2) = if !anno_EApp_state then (e1 %~ st_e1, e2 %~ st_e2) else (e1, e2)
-          val C_App_CC = C_set_reg + G_JUMP
-          val C_App_CPS = 
-          val cost = C_App_CC
+          val C_App_CC = C_set_reg + C_JUMP
+          val C_App_CPS = C_Unpack + 2 * (C_Proj + C_Let) + C_Pair
+          val C_MicroTiML = 99999
+          val cost = 
               case !phase of
-                  PhCC => C_App_CC
-                | PhCPS => C_App_CC + C_App_CPS
+                  PhCC () => C_App_CC
+                | PhCPS () => C_App_CC + C_App_CPS
+                | PhMicroTiML () => C_App_CC + C_App_CPS + C_MicroTiML
         in
-          (EApp (e1, e2), t2, i1 %%+ i2 %%+ (T cost, N0) %%+ i, st)
+          (EApp (e1, e2), t2, i1 %%+ i2 %%+ (to_real cost, N0) %%+ i, st)
         end
       | EBinOp (EBPair (), e1, e2) =>
         let
@@ -1272,7 +1285,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EPair then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EPair_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EPair (e1, e2), TProd (t1, t2), i1 %%+ i2, st)
+          (EPair (e1, e2), TProd (t1, t2), i1 %%+ i2 %%+ Tn C_Pair, st)
         end
       | EBinOp (EBPrim opr, e1, e2) =>
         let
@@ -1286,21 +1299,23 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = EBinOpPrim (opr, e1, e2)
           val t = get_prim_expr_bin_op_res_ty opr
         in
-          (e, t, i1 %%+ i2, st)
+          (e, t, i1 %%+ i2 %%+ Tn (C_BPrim opr), st)
         end
       | EBinOp (EBNew (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
           val t1 = whnf itctx t1
-          val i = case t1 of
-                      TNat i => i
+          val len = case t1 of
+                      TNat len => len
                     | _ => raise MTCError "ENew"
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val (e1, e2) = if !anno_ENew then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ENew_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
+          val C_New_pre_loop = 2 * C_SWAP + 2 * C_DUP + C_array_malloc + C_array_init_len + 2 * C_PUSH + C_JUMP
+          val cost = N C_New_pre_loop %+ N C_New_loop_test %+ N C_New_loop %* len %+ N C_New_post_loop
         in
-          (ENew (e1, e2), TArr (t2, i), j1 %%+ j2, st)
+          (ENew (e1, e2), TArr (t2, len), j1 %%+ j2 %%+ (IToReal (cost, dummy), len %+ N1), st)
         end
       | EBinOp (EBRead (), e1, e2) =>
         let
@@ -1316,7 +1331,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ERead_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (ERead (e1, e2), t, j1 %%+ j2, st)
+          (ERead (e1, e2), t, j1 %%+ j2 %%+ Tn C_Read, st)
         end
       | EBinOp (EBMapPtr (), e1, e2) =>
         let
@@ -1330,7 +1345,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EMapPtr then (e1 %: t1, e2 %: TInt) else (e1, e2)
           val (e1, e2) = if !anno_EMapPtr_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (EBMapPtr (), e1, e2), t, j1 %%+ j2, st)
+          (EBinOp (EBMapPtr (), e1, e2), t, j1 %%+ j2 %%+ Tn C_MapPtr, st)
         end
       | EBinOp (opr as EBVectorGet (), e1, e2) =>
         let
@@ -1343,7 +1358,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EVectorGet then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorGet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (opr, e1, e2), t, j1 %%+ j2, st)
+          (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ Tn C_VectorGet, st)
         end
       | EBinOp (opr as EBVectorPushBack (), e1, e2) =>
         let

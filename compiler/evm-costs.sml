@@ -1,101 +1,77 @@
 structure EVMCosts = struct
 
-open Util
-open EVM1
-
-infixr 0 $
-         
-val G_base = 2
-val G_verylow = 3
-val G_low = 5
-val G_mid = 8
-val G_high = 10
-val G_sset = 20000
-val G_logtopic = 375
-val G_logdata = 8
-val G_sha3word = 6
-val G_memory = 3
+val C_base = 2
+val C_verylow = 3
+val C_low = 5
+val C_mid = 8
+val C_high = 10
+val C_sset = 20000
+val C_logtopic = 375
+val C_logdata = 8
+val C_sha3word = 6
+val C_memory = 3
                    
-fun G_inst b =
-  case b of
-      POP () => G_base
-                  
-    | ADD () => G_verylow
-    | SUB () => G_verylow
-    | LT () => G_verylow
-    | GT () => G_verylow
-    | SLT () => G_verylow
-    | SGT () => G_verylow
-    | EQ () => G_verylow
-    | ISZERO () => G_verylow
-    | AND () => G_verylow
-    | OR () => G_verylow
-    | BYTE () => G_verylow
-    | MLOAD () => G_verylow
-    | MSTORE () => G_verylow
-    | MSTORE8 () => G_verylow
-    | PUSH _ => G_verylow
-    | DUP _ => G_verylow
-    | SWAP _ => G_verylow
-                  
-    | MUL () => G_low
-    | DIV () => G_low
-    | SDIV () => G_low
-    | MOD () => G_low
-                  
-    | JUMPI () => G_high
-                    
-    | SHA3 () => 30
-    | SLOAD () => 200
-    | SSTORE () => G_sset (* can't do value-sensitive analysis, so we'll just use the highest cost *)
-    | JUMPDEST () => 1
-    | LOG n => 375 + n * G_logtopic
-    (* extensions (noops) *)
-    | VALUE_AppT _ => 0
-    | VALUE_AppI _ => 0
-    | VALUE_Pack _ => 0
-    | VALUE_PackI _ => 0
-    | VALUE_Fold _ => 0
-    | VALUE_AscType _ => 0
-    | UNPACK _ => 0
-    | UNPACKI _ => 0
-    | UNFOLD _ => 0
-    | NAT2INT _ => 0
-    | INT2NAT _ => 0
-    | BYTE2INT _ => 0
-    (* | PRINTC _ => 0 *)
-    (* | PACK_SUM _ => 0 *)
-    | ASCTIME _ => 0
-    | ASCSPACE _ => 0
-    | MARK_PreArray2ArrayPtr _ => 0
-    | MARK_PreTuple2TuplePtr _ => 0
-    (* | MARK_inj _ => 0 *)
-    | MACRO_init_free_ptr _ => raise Impossible $ "G_inst() on MACRO_init_free_ptr"
-    | MACRO_tuple_malloc _ => raise Impossible $ "G_inst() on MACRO_tuple_malloc"
-    | MACRO_tuple_assign _ => raise Impossible $ "G_inst() on MACRO_tuple_assign"
-    | MACRO_printc _ => raise Impossible $ "G_inst() on MACRO_printc"
-    | MACRO_array_malloc _ => raise Impossible $ "G_inst() on MACRO_array_malloc"
-    | MACRO_array_init_assign _ => raise Impossible $ "G_inst() on MACRO_array_init_assign"
-    | MACRO_array_init_len _ => raise Impossible $ "G_inst() on MACRO_array_init_len"
-    | MACRO_int2byte _ => raise Impossible $ "G_inst() on MACRO_int2byte"
-    | MACRO_inj _ => raise Impossible $ "G_inst() on MACRO_inj"
-    | MACRO_br_sum _ => raise Impossible $ "G_inst() on MACRO_br_sum"
-    | MACRO_map_ptr _ => raise Impossible $ "G_inst() on MACRO_map_ptr"
-    | MACRO_vector_ptr _ => raise Impossible $ "G_inst() on MACRO_vector_ptr"
-    | MACRO_vector_push_back _ => raise Impossible $ "G_inst() on MACRO_vector_push_back"
-                                        
-fun G_insts insts =
-  case insts of
-      ISCons bind =>
-      let
-        val (i, is) = unBind bind
-      in
-        G_inst i + G_insts is
-      end
-    | JUMP () => G_mid
-    | RETURN () => 0
-    (* only for debug/printing purpose *)
-    | ISDummy _ => 0
-    | MACRO_halt _ => raise Impossible $ "G_insts() on MACRO_halt"
-                           
+val C_POP = C_base
+              
+val C_ADD = C_verylow
+val C_SUB = C_verylow
+val C_LT = C_verylow
+val C_GT = C_verylow
+val C_SLT = C_verylow
+val C_SGT = C_verylow
+val C_EQ = C_verylow
+val C_ISZERO = C_verylow
+val C_AND = C_verylow
+val C_OR = C_verylow
+val C_BYTE = C_verylow
+val C_MLOAD = C_verylow
+val C_MSTORE = C_verylow
+val C_MSTORE8 = C_verylow
+val C_PUSH = C_verylow
+val C_DUP = C_verylow
+val C_SWAP = C_verylow
+                
+val C_MUL = C_low
+val C_DIV = C_low
+val C_SDIV = C_low
+val C_MOD = C_low
+              
+val C_JUMPI = C_high
+                
+val C_SHA3 = 30
+val C_SLOAD = 200
+val C_SSTORE = C_sset (* can't do value-sensitive analysis, so we'll just use the highest cost *)
+val C_JUMPDEST = 1
+val C_VALUE_AppT = 0
+val C_VALUE_AppI = 0
+val C_VALUE_Pack = 0
+val C_VALUE_PackI = 0
+val C_VALUE_Fold = 0
+val C_VALUE_AscType = 0
+val C_UNPACK = 0
+val C_UNPACKI = 0
+val C_UNFOLD = 0
+val C_NAT2INT = 0
+val C_INT2NAT = 0
+val C_BYTE2INT = 0
+(* val C_PRINTC = 0 *)
+(* val C_PACK_SUM = 0 *)
+val C_ASCTIME = 0
+val C_ASCSPACE = 0
+val C_MARK_PreArray2ArrayPtr = 0
+val C_MARK_PreTuple2TuplePtr = 0
+                                 
+val C_JUMP = C_mid
+val C_RETURN = 0
+val C_ISDummy = 0
+                      
+fun C_LOG n = 375 + n * C_logtopic
+                         
+val C_set_reg = C_PUSH + C_MSTORE
+val C_array_init_assign = 3 * C_DUP + C_ADD + C_MSTORE
+                                                
+val C_New_loop_test = 2 * C_PUSH + C_DUP + C_ISZERO + C_JUMPI
+val C_New_loop = C_New_loop_test + 2 * C_PUSH + C_UNPACKI + C_POP + C_SWAP + C_SUB + C_array_init_assign + C_JUMP
+val C_New_post_loop = C_UNPACKI + 3 * C_POP + C_SWAP + C_MARK_PreArray2ArrayPtr + C_set_reg
+                                                                                
 end

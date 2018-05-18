@@ -125,11 +125,95 @@ fun assert_base_storage_ty t =
                | BTByte () => ())
       | _ => raise Impossible "not a base storage type"
 
+fun C_inst b =
+  case b of
+      POP () => C_POP
+                  
+    | ADD () => C_ADD
+    | SUB () => C_SUB
+    | LT () => C_LT
+    | GT () => C_GT
+    | SLT () => C_SLT
+    | SGT () => C_SGT
+    | EQ () => C_EQ
+    | ISZERO () => C_ISZERO
+    | AND () => C_AND
+    | OR () => C_OR
+    | BYTE () => C_BYTE
+    | MLOAD () => C_MLOAD
+    | MSTORE () => C_MSTORE
+    | MSTORE8 () => C_MSTORE8
+    | PUSH _ => C_PUSH
+    | DUP _ => C_DUP
+    | SWAP _ => C_SWAP
+                  
+    | MUL () => C_MUL
+    | DIV () => C_DIV
+    | SDIV () => C_SDIV
+    | MOD () => C_MOD
+                  
+    | JUMPI () => C_JUMPI
+                    
+    | SHA3 () => C_SHA3
+    | SLOAD () => C_SLOAD
+    | SSTORE () => C_SSTORE
+    | JUMPDEST () => C_JUMPDEST
+    (* extensions (noops) *)
+    | VALUE_AppT _ => C_VALUE_AppT
+    | VALUE_AppI _ => C_VALUE_AppI
+    | VALUE_Pack _ => C_VALUE_Pack
+    | VALUE_PackI _ => C_VALUE_PackI
+    | VALUE_Fold _ => C_VALUE_Fold
+    | VALUE_AscType _ => C_VALUE_AscType
+    | UNPACK _ => C_UNPACK
+    | UNPACKI _ => C_UNPACKI
+    | UNFOLD _ => C_UNFOLD
+    | NAT2INT _ => C_NAT2INT
+    | INT2NAT _ => C_INT2NAT
+    | BYTE2INT _ => C_BYTE2INT
+    (* | PRINTC _ => C_PRINTC *)
+    (* | PACK_SUM _ => C_PACK_SUM *)
+    | ASCTIME _ => C_ASCTIME
+    | ASCSPACE _ => C_ASCSPACE
+    | MARK_PreArray2ArrayPtr _ => C_MARK_PreArray2ArrayPtr
+    | MARK_PreTuple2TuplePtr _ => C_MARK_PreTuple2TuplePtr
+    (* | MARK_inj _ => C_MARK_inj *)
+                                    
+    | LOG n => C_LOG n
+                           
+    | MACRO_init_free_ptr _ => raise Impossible $ "C_inst() on MACRO_init_free_ptr"
+    | MACRO_tuple_malloc _ => raise Impossible $ "C_inst() on MACRO_tuple_malloc"
+    | MACRO_tuple_assign _ => raise Impossible $ "C_inst() on MACRO_tuple_assign"
+    | MACRO_printc _ => raise Impossible $ "C_inst() on MACRO_printc"
+    | MACRO_array_malloc _ => raise Impossible $ "C_inst() on MACRO_array_malloc"
+    | MACRO_array_init_assign _ => raise Impossible $ "C_inst() on MACRO_array_init_assign"
+    | MACRO_array_init_len _ => raise Impossible $ "C_inst() on MACRO_array_init_len"
+    | MACRO_int2byte _ => raise Impossible $ "C_inst() on MACRO_int2byte"
+    | MACRO_inj _ => raise Impossible $ "C_inst() on MACRO_inj"
+    | MACRO_br_sum _ => raise Impossible $ "C_inst() on MACRO_br_sum"
+    | MACRO_map_ptr _ => raise Impossible $ "C_inst() on MACRO_map_ptr"
+    | MACRO_vector_ptr _ => raise Impossible $ "C_inst() on MACRO_vector_ptr"
+    | MACRO_vector_push_back _ => raise Impossible $ "C_inst() on MACRO_vector_push_back"
+                                        
+fun C_insts insts =
+  case insts of
+      ISCons bind =>
+      let
+        val (i, is) = unBind bind
+      in
+        C_inst i + C_insts is
+      end
+    | JUMP () => C_JUMP
+    | RETURN () => C_RETURN
+    (* only for debug/printing purpose *)
+    | ISDummy _ => C_ISDummy
+    | MACRO_halt _ => raise Impossible $ "C_insts() on MACRO_halt"
+                           
 local
   fun dummy_inline_macro_inst b = inline_macro_inst (fn _ => PUSH1nat 0, fn _ => PUSH1nat 0, 0, fn _ => 0, TUnit) b
 in
-val G_inst = fn b => sum $ map G_inst $ dummy_inline_macro_inst b
-val G_insts = fn b => G_insts $ inline_macro_insts (dummy_inline_macro_inst, fn _ => PUSH1nat 0, 0) b
+val C_inst = fn b => sum $ map C_inst $ dummy_inline_macro_inst b
+val C_insts = fn b => C_insts $ inline_macro_insts (dummy_inline_macro_inst, fn _ => PUSH1nat 0, 0) b
 end
 
 fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, tctx), rctx, sctx, st : idx)) inst =
@@ -161,7 +245,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         ((itctx, rctx, t :: sctx, st))
       end
     fun err () = raise Impossible $ "unknown case in tc_inst(): " ^ (EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctx_names itctx) inst)
-    val time_ref = ref $ to_real $ G_inst inst
+    val time_ref = ref $ to_real $ C_inst inst
     val space_ref = ref N0
     val ishift_ref = ref 0
     fun add_time n = unop_ref (fn i => i %+ to_real n) time_ref
@@ -436,7 +520,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, sctx) = assert_cons sctx
         val _ = assert_TByte $ whnf itctx t0
-        val () = add_time G_logdata
+        val () = add_time C_logdata
       in
         ((itctx, rctx, TUnit :: sctx, st))
       end
@@ -538,7 +622,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                     TState x => assert_fst_true $ st_name2ty @!! x
                   | _ => assert_TMap $ assert_TCell t1
         val () = assert_TInt t0
-        val () = add_time $ 2 * G_sha3word
+        val () = add_time $ 2 * C_sha3word
       in
         ((itctx, rctx, t :: sctx, st))
       end
@@ -547,7 +631,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, t1, sctx) = assert_cons2 sctx
         val vec = assert_TState t0
         val offset = assert_TNat t1
-        val () = add_time G_sha3word
+        val () = add_time C_sha3word
       in
         ((itctx, rctx, TVectorPtr (vec, offset) :: sctx, st))
       end
@@ -691,7 +775,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         val () = is_eq_stack itctx (sctx, sctx')
         val () = is_eq_st ictx (st, st')
       in
-        (Tn (G_insts insts) %%+ i, 0)
+        (Tn (C_insts insts) %%+ i, 0)
       end
     (* | ISHalt t => *)
     (*   let *)
@@ -705,9 +789,9 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         val t = kc_against_KType itctx t
         val () = is_eq_stack itctx (sctx, [t])
       in
-        (Tn $ G_insts insts, 0)
+        (Tn $ C_insts insts, 0)
       end
-    | ISDummy _ => (Tn $ G_insts insts, 0)
+    | ISDummy _ => (Tn $ C_insts insts, 0)
     | RETURN () => err ()
     | ISCons bind =>
       let
@@ -729,7 +813,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                     val () = is_eq_st ictx (st, st')
                     val (i1, ni) = tc_insts (itctx, rctx, sctx, st) I
                   in
-                    (Tn (G_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
+                    (Tn (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
                   end
                 | TiBool i =>
                   let
@@ -745,7 +829,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                     val () = is_eq_st ictx (st, st')
                     val (i1, ni) = tc_insts (itctx, rctx, t2 :: sctx, st) I
                   in
-                    (Tn (G_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
+                    (Tn (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
                   end
                 | t1 => raise Impossible $ "tc()/JUMPI wrong type of t1: " ^ str_t t1
             end
@@ -760,7 +844,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val () = is_eq_st ictx (st, st')
               val (i1, ni) = tc_insts (itctx, rctx, TProd (TiBoolConst false, tl) :: sctx, st) I
             in
-              (Tn (G_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
+              (Tn (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
             end
           | ASCTIME i =>
             let
@@ -769,7 +853,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val i = shiftn_i_i ni i
               val () = check_prop (i' %<= i)
             in
-              (Tn (G_inst inst) %%+ (i, j), ni)
+              (Tn (C_inst inst) %%+ (i, j), ni)
             end
           | ASCSPACE i =>
             let
@@ -778,7 +862,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val i = shiftn_i_i ni i
               val () = check_prop (i' %<= i)
             in
-              (Tn (G_inst inst) %%+ (j, i), ni)
+              (Tn (C_inst inst) %%+ (j, i), ni)
             end
           | _ =>
             let

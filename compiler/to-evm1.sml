@@ -477,6 +477,8 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
         case e1 of
             EBinOp (EBNew (), e1, e2) =>
             let
+              open EVMCosts
+              fun to_real n = IToReal (N n, dummy)
               val (I_e1, st) = compile (e1, st) 
               val (I_e2, st) = compile (e2, st)
               val (t, len, _) = assert_TArrayPtr t
@@ -514,7 +516,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         array_init_assign @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
                         JUMP ())
-                    val block = ((st, rctx, [TNat (INat 32 %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], (IToReal (FIV i %* INat 8) %+ T1 %+ i_e, space_e)), loop_code)
+                    val block = ((st, rctx, [TNat (INat 32 %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], (IToReal (FIV i %* INat C_New_loop) %+ to_real (C_New_loop_test + C_New_post_loop) %+ i_e, space_e)), loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -531,7 +533,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         set_reg r @@
                         cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len)), st) e)
                     val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N32 %=? N0) %= Itrue
-                    val block = ((st, rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], (T1 %+ i_e, space_e)), post_loop_code)
+                    val block = ((st, rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], (to_real C_New_post_loop %+ i_e, space_e)), post_loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -956,7 +958,7 @@ fun test1 dirname =
                  (IConst (ICTime t, _), IConst (ICNat s, _)) =>
                  let
                    val total_mem = s + num_regs + 1
-                   fun C_mem a = G_memory * a + a * a div 512
+                   fun C_mem a = C_memory * a + a * a div 512
                    open TimeType
                    val total_gas = t + fromInt (C_mem total_mem)
                  in
