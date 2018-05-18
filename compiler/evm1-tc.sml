@@ -775,7 +775,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         val () = is_eq_stack itctx (sctx, sctx')
         val () = is_eq_st ictx (st, st')
       in
-        (Tn (C_insts insts) %%+ i, 0)
+        (TN (C_insts insts) %%+ i, 0)
       end
     (* | ISHalt t => *)
     (*   let *)
@@ -789,9 +789,9 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         val t = kc_against_KType itctx t
         val () = is_eq_stack itctx (sctx, [t])
       in
-        (Tn $ C_insts insts, 0)
+        (TN $ C_insts insts, 0)
       end
-    | ISDummy _ => (Tn $ C_insts insts, 0)
+    | ISDummy _ => (TN $ C_insts insts, 0)
     | RETURN () => err ()
     | ISCons bind =>
       let
@@ -813,7 +813,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                     val () = is_eq_st ictx (st, st')
                     val (i1, ni) = tc_insts (itctx, rctx, sctx, st) I
                   in
-                    (Tn (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
+                    (TN (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
                   end
                 | TiBool i =>
                   let
@@ -829,7 +829,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                     val () = is_eq_st ictx (st, st')
                     val (i1, ni) = tc_insts (itctx, rctx, t2 :: sctx, st) I
                   in
-                    (Tn (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
+                    (TN (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
                   end
                 | t1 => raise Impossible $ "tc()/JUMPI wrong type of t1: " ^ str_t t1
             end
@@ -844,7 +844,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val () = is_eq_st ictx (st, st')
               val (i1, ni) = tc_insts (itctx, rctx, TProd (TiBoolConst false, tl) :: sctx, st) I
             in
-              (Tn (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
+              (TN (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
             end
           | ASCTIME i =>
             let
@@ -853,7 +853,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val i = shiftn_i_i ni i
               val () = check_prop (i' %<= i)
             in
-              (Tn (C_inst inst) %%+ (i, j), ni)
+              (TN (C_inst inst) %%+ (i, j), ni)
             end
           | ASCSPACE i =>
             let
@@ -862,7 +862,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val i = shiftn_i_i ni i
               val () = check_prop (i' %<= i)
             in
-              (Tn (C_inst inst) %%+ (j, i), ni)
+              (TN (C_inst inst) %%+ (j, i), ni)
             end
           | _ =>
             let

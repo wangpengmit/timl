@@ -3,6 +3,8 @@ structure MicroTiMLCosts = struct
 open EVMCosts
 open Operators
 
+val C_Var = C_PUSH
+val C_Const = C_PUSH
 val C_Let = C_set_reg
 val C_Proj = C_PUSH + C_ADD + C_MLOAD
 val C_Printc = 5 * C_PUSH + C_MSTORE + C_ADD + C_LOG 0 + C_logdata
@@ -47,5 +49,18 @@ val C_map_ptr = C_PUSH + C_MSTORE + C_PUSH + C_MSTORE + C_PUSH + C_PUSH + C_SHA3
 val C_MapPtr = C_map_ptr
 val C_vector_ptr = C_PUSH + C_MSTORE + C_PUSH + C_PUSH + C_SHA3 + C_ADD
 val C_VectorGet = C_SWAP + C_vector_ptr + C_SLOAD
+val C_vector_push_back = C_DUP * 2 + C_SLOAD + C_SWAP + C_DUP + C_PUSH + C_ADD + C_SWAP + C_SSTORE + C_SWAP * 2 + C_vector_ptr + C_SSTORE
+val C_VectorPushBack = C_vector_push_back + C_PUSH
+val C_VectorLen = C_SLOAD
+val C_VectorClear = C_PUSH + C_SWAP + C_SSTORE + C_PUSH
+val C_VectorSet = C_SWAP + C_vector_ptr + C_SSTORE + C_PUSH
+val C_StorageSet = C_SWAP + C_SSTORE + C_PUSH
+val C_State = C_PUSH
+fun C_Nat opr =
+  case opr of
+      EBNAdd () => C_ADD
+    | EBNMult () => C_MUL
+    | EBNDiv () => C_SWAP + C_DIV
+    | EBNBoundedMinus () => C_SWAP + C_SUB
                  
 end

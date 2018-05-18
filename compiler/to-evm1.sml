@@ -273,7 +273,7 @@ fun impl_expr_un_op opr =
     | EUPrintc () => printc
     (* | EUPrint () => [PRINT] *)
     | EUStorageGet () => [SLOAD ()]
-    | EUVectorClear () => [PUSH1nat 0, SWAP1, SSTORE (), PUSH1 WTT]
+    | EUVectorClear () => [PUSH1nat 0, SWAP1, SSTORE (), PUSH1 WTT] (* should also zero out the contents, in order to save storage *)
     | EUVectorLen () => [SLOAD ()]
                         
 fun impl_nat_expr_bin_op opr =
