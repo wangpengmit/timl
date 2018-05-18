@@ -951,6 +951,9 @@ fun assert_TCell t =
 
 infix 6 %%+
 
+fun to_real n = IToReal (N n, dummy)
+fun Tn n = (to_real n, N0)
+
 val anno_EVar = ref false
 val anno_EProj = ref false
 val anno_EFold = ref false
@@ -1077,14 +1080,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EProj then e %: t_e else e
           val e = if !anno_EProj_state then e %~ st else e
         in
-          (EProj (proj, e), choose (t1, t2) proj, i, st)
+          (EProj (proj, e), choose (t1, t2) proj, i %%+ Tn C_Proj, st)
         end
       | EUnOp (EUTiML (EUPrintc ()), e) =>
         let
           val (e, i, st) = tc_against_ty (ctx, st) (e, TByte)
           val e = if !anno_EPrintc_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUPrintc ()), e), TUnit, i, st)
+          (EUnOp (EUTiML (EUPrintc ()), e), TUnit, i %%+ Tn C_Printc, st)
         end
       (* | EUnOp (EUTiML EUPrint, e) => *)
       (*   let *)
@@ -1099,7 +1102,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EUPrim then e %: t_e else e
           val e = if !anno_EUPrim_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i, st)
+          (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i %%+ Tn C_UPrim opr, st)
         end
       | EUnOp (EUTiML (EUArrayLen ()), e) =>
         let
@@ -1111,7 +1114,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EArrayLen then e %: t else e
           val e = if !anno_EArrayLen_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUArrayLen ()), e), TNat i, j, st)
+          (EUnOp (EUTiML (EUArrayLen ()), e), TNat i, j %%+ Tn C_ArrayLen, st)
         end
       | EUnOp (EUTiML (EUNat2Int ()), e) =>
         let
@@ -1123,7 +1126,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_ENat2Int then e %: t else e
           val e = if !anno_ENat2Int_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUNat2Int ()), e), TInt, j, st)
+          (EUnOp (EUTiML (EUNat2Int ()), e), TInt, j %%+ Tn C_Nat2Int, st)
         end
       | EUnOp (EUTiML (EUInt2Nat ()), e) =>
         let
@@ -1132,7 +1135,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = println "end Int2Nat"
           val e = if !anno_EInt2Nat_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUInt2Nat ()), e), TSomeNat (), j, st)
+          (EUnOp (EUTiML (EUInt2Nat ()), e), TSomeNat (), j %%+ Tn C_Int2Nat, st)
         end
       | EUnOp (opr as EUTiML (EUStorageGet ()), e) =>
         let
@@ -1142,7 +1145,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EStorageGet then e %: t_e else e
           val e = if !anno_EStorageGet_state then e %~ st else e
         in
-          (EUnOp (opr, e), t, j, st)
+          (EUnOp (opr, e), t, j %%+ Tn C_StorageGet, st)
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
@@ -1151,7 +1154,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EInj then e %: t else e
           val e = if !anno_EInj_state then e %~ st else e
         in
-          (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i, st)
+          (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i %%+ Tn C_Inj, st)
         end
       | EUnOp (EUFold t', e) =>
         let
@@ -1169,7 +1172,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EFold then e %: t else e
           val e = if !anno_EFold_state then e %~ st else e
         in
-          (EFold (t', e), t', i, st)
+          (EFold (t', e), t', i %%+ Tn C_Fold, st)
         end
       | EUnOp (EUUnfold (), e) =>
         let
@@ -1182,7 +1185,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EUnfold then e %: t_e else e
           val e = if !anno_EUnfold_state then e %~ st else e
         in
-          (EUnfold e, TAppITs (subst0_t_t t t1) args, i, st)
+          (EUnfold e, TAppITs (subst0_t_t t t1) args, i %%+ Tn C_Unfold, st)
         end
       | EBinOp (EBApp (), e1, e2) =>
         let

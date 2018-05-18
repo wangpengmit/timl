@@ -11,8 +11,10 @@ val G_low = 5
 val G_mid = 8
 val G_high = 10
 val G_sset = 20000
+val G_logtopic = 375
 val G_logdata = 8
 val G_sha3word = 6
+val G_memory = 3
                    
 fun G_inst b =
   case b of
@@ -47,7 +49,7 @@ fun G_inst b =
     | SLOAD () => 200
     | SSTORE () => G_sset (* can't do value-sensitive analysis, so we'll just use the highest cost *)
     | JUMPDEST () => 1
-    | LOG _ => 375
+    | LOG n => 375 + n * G_logtopic
     (* extensions (noops) *)
     | VALUE_AppT _ => 0
     | VALUE_AppI _ => 0

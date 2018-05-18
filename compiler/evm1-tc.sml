@@ -125,9 +125,6 @@ fun assert_base_storage_ty t =
                | BTByte () => ())
       | _ => raise Impossible "not a base storage type"
 
-fun to_real n = IToReal (N n, dummy)
-fun Tn n = (to_real n, N0)
-
 local
   fun dummy_inline_macro_inst b = inline_macro_inst (fn _ => PUSH1nat 0, fn _ => PUSH1nat 0, 0, fn _ => 0, TUnit) b
 in

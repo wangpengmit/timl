@@ -12,7 +12,7 @@ structure UnitTestBasic1 = struct
 (* val y = x + 1 *)
 
 fun f x = x + 1
-(* val a = f 253 *)
+val a = f 253
 (* val a = f 0xdd *)
           
 (* fun f x y = x + y *)

@@ -873,14 +873,16 @@ fun test1 dirname =
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
     fun print_time_space (i, j) =
         let
-          val () = println "Time:"
-          val () = println $ ToString.str_i Gctx.empty [] $ simp_i i
-          val () = println "Space:"
-          val () = println $ ToString.str_i Gctx.empty [] $ simp_i j
+          val () = print "Time:"
+          val i = simp_i i
+          val () = println $ ToString.str_i Gctx.empty [] i
+          val () = print "Space:"
+          val j = simp_i j
+          val () = println $ ToString.str_i Gctx.empty [] j
         in
-          ()
+          (i, j)
         end
-    val () = print_time_space i
+    val _ = print_time_space i
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
@@ -903,7 +905,7 @@ fun test1 dirname =
     val () = println "Finished MicroTiML typechecking #2"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
-    val () = print_time_space i
+    val _ = print_time_space i
                      
     val () = println "Started CC ..."
     val e = cc e
@@ -919,13 +921,12 @@ fun test1 dirname =
     val () = println "Finished MicroTiML typechecking #4"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
-    val () = print_time_space i
+    val _ = print_time_space i
                      
     open EVM1ExportPP
     val () = println "Started Code Generation ..."
     val (prog, num_regs) = cg_prog (st_name2int, init_st) e
     val () = println "Finished Code Generation"
-    val () = println $ "# of registers: " ^ str_int num_regs
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
     (* val () = println prog_str *)
@@ -947,9 +948,21 @@ fun test1 dirname =
     val st_int2name = invert_map st_name2int
     val (i, (vcs, admits)) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
-    val () = check_vcs vcs
+    (* val () = check_vcs vcs *)
     val () = println "Finished EVM1 typechecking"
-    val () = print_time_space i
+    val () = println $ "num-of-registers: " ^ str_int num_regs
+    val i = print_time_space i
+    val () = case i of
+                 (IConst (ICTime t, _), IConst (ICNat s, _)) =>
+                 let
+                   val total_mem = s + num_regs + 1
+                   fun C_mem a = G_memory * a + a * a div 512
+                   open TimeType
+                   val total_gas = t + fromInt (C_mem total_mem)
+                 in
+                   println $ "Gas-bound: " ^ str_time total_gas 
+                 end
+               | _ => ()
 
     val () = println "ToEVM1.UnitTest passed"
   in
