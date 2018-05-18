@@ -16,5 +16,6 @@ val C_tuple_malloc = 3 * G_PUSH + G_MLOAD + G_DUP + G_ADD + G_LOG 0 + G_MSTORE
 val C_Inj = 2 * G_PUSH + C_tuple_malloc + 2 * G_SWAP + 2 * G_DUP + 2 * G_MSTORE + G_ADD
 val C_Fold = 0
 val C_Unfold = 0
+val C_set_reg = G_PUSH + G_MSTORE
     
 end

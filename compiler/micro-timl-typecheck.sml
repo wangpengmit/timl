@@ -1255,8 +1255,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = is_eq_ty itctx (t_e2, t1)
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
           val (e1, e2) = if !anno_EApp_state then (e1 %~ st_e1, e2 %~ st_e2) else (e1, e2)
+          val C_App_CC = C_set_reg + G_JUMP
+          val C_App_CPS = 
+          val cost = C_App_CC
+              case !phase of
+                  PhCC => C_App_CC
+                | PhCPS => C_App_CC + C_App_CPS
         in
-          (EApp (e1, e2), t2, i1 %%+ i2 %%+ (T1, N0) %%+ i, st)
+          (EApp (e1, e2), t2, i1 %%+ i2 %%+ (T cost, N0) %%+ i, st)
         end
       | EBinOp (EBPair (), e1, e2) =>
         let
