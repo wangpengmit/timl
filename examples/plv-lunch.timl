@@ -1,0 +1,10 @@
+structure PLVLunch = struct
+
+val x = 1
+(* fun f y = x + y *)
+val f = fn y => x + y
+val a = f 64
+
+(* val () = __&halt a *)
+                
+end
