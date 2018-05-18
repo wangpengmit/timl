@@ -364,9 +364,9 @@ fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
     close_box ();
     space ();
     open_vbox_noindent ();
-    str $ str_i st;
+    str $ "Pre: " ^ str_i st;
     comma ();
-    str "{";
+    str "Regs: {";
     Rctx.appi (fn (r, t) =>
               (str $ str_reg r;
                str ": "; pp_t t;
@@ -374,7 +374,7 @@ fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
               )) rctx;
     str "}";
     comma ();
-    str "[";
+    str "Stack: [";
     (* space (); *)
     app (fn t =>
             (pp_t t;
@@ -382,8 +382,10 @@ fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
         )) ts;
     str "]";
     comma ();
-    str $ str_i i;
+    str $ "Time: " ^ str_i i;
     comma ();
+    str "Body: ";
+    space ();
     pp_insts insts;
     str ")";
     close_box ();

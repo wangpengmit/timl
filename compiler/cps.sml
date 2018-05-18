@@ -139,9 +139,9 @@ fun assert_and_reduce_letxx e =
 
 val whnf = fn t => whnf ([], []) t
                        
-fun blowup_time (i : idx, j : idx) = i %* ITime (TimeType.fromInt 999) %+ j
-fun blowup_time_t (j : idx) = j %* ITime (TimeType.fromInt 888)
-fun blowup_time_i (j : idx) = j %* ITime (TimeType.fromInt 777)
+fun blowup_time (i : idx, j : idx) = i %+ j
+fun blowup_time_t (j : idx) = j
+fun blowup_time_i (j : idx) = j
 
 (* CPS conversion on types *)
 fun cps_ty_visitor_vtable cast () =

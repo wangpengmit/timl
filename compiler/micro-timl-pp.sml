@@ -628,6 +628,26 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
       (*     str $ str_int l; *)
       (*     close_box () *)
       (*   ) *)
+      | EUnOp (EUTiML (EUProj (ProjFst ())), e) =>
+        (
+          open_hbox ();
+          str "EFst";
+          space ();
+          str "(";
+          pp_e e;
+          str ")";
+          close_box ()
+        )
+      | EUnOp (EUTiML (EUProj (ProjSnd ())), e) =>
+        (
+          open_hbox ();
+          str "ESnd";
+          space ();
+          str "(";
+          pp_e e;
+          str ")";
+          close_box ()
+        )
       | EUnOp (opr, e) =>
         (
           open_hbox ();

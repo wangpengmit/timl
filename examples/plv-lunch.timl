@@ -2,9 +2,11 @@ structure PLVLunch = struct
 
 val x = 1
 (* fun f y = x + y *)
-val f = fn y => x + y
+val f = fn y => (x + y) using 0.0
 val a = f 64
-
-(* val () = __&halt a *)
+val () = __&halt (a + 2)
+(* val b = a + 2 *)
+                
+(* val () = __&halt b *)
                 
 end
