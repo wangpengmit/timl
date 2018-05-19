@@ -1317,6 +1317,23 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (ENew (e1, e2), TArr (t2, len), j1 %%+ j2 %%+ (IToReal (cost, dummy), len %+ N1), st)
         end
+      | ENewArrayValues (t, es) =>
+        let
+          val t = kc_against_kind itctx (t, KType ())
+          val (eis, st) =
+              foldl (fn (e, (eis, st)) =>
+                        let
+                          val (e, i, st) = tc_against_ty (ctx, st) (e, t)
+                          val e = if !anno_ENewArrayValues_state then e %~ st else e
+                        in
+                          ((e, i) :: eis, st)
+                        end) ([], st) es
+          val (es, is) = unzip $ rev eis
+          val i = combine_IBAdd_Time_Nat is
+          val len = length es
+        in
+          (ENewArrayValues (t, es), TArr (t, INat len), i %%+ (to_real $ C_NewArrayValues len, N $ len + 1), st)
+        end
       | EBinOp (EBRead (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
@@ -1921,22 +1938,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (e, t, i_e, st)
         end
-      | ENewArrayValues (t, es) =>
-        let
-          val t = kc_against_kind itctx (t, KType ())
-          val (eis, st) =
-              foldl (fn (e, (eis, st)) =>
-                        let
-                          val (e, i, st) = tc_against_ty (ctx, st) (e, t)
-                          val e = if !anno_ENewArrayValues_state then e %~ st else e
-                        in
-                          ((e, i) :: eis, st)
-                        end) ([], st) es
-          val (es, is) = unzip $ rev eis
-          val i = combine_IBAdd_Time_Nat is
-        in
-          (ENewArrayValues (t, es), TArr (t, INat $ length es), i, st)
-        end
       | EHalt (e, t) =>
         let
           val t = kc_against_kind itctx (t, KType ())
@@ -1944,7 +1945,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EHalt then e %: t_e else e
           val e = if !anno_EHalt_state then e %~ st else e
         in
-          (EHalt (e, t), t, i_e, st)
+          (EHalt (e, t), t, i_e %%+ TN C_Halt, st)
         end
       | EAbsConstr _ => err ()
       | EAppConstr _ => err ()
