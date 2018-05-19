@@ -38,7 +38,7 @@ val C_tuple_malloc = 3 * C_PUSH + C_MLOAD + C_DUP + C_ADD + C_LOG 0 + C_MSTORE
 val C_Inj = 2 * C_PUSH + C_tuple_malloc + 2 * C_SWAP + 2 * C_DUP + 2 * C_MSTORE + C_ADD
 val C_Fold = 0
 val C_Unfold = 0
-val C_Unpack = 0
+val C_Unpack = C_set_reg
 val C_tuple_assign = C_DUP + C_MSTORE
 val C_Pair = C_tuple_malloc + C_PUSH + C_ADD + 2 * (C_PUSH + 2 * C_SWAP + C_SUB + C_tuple_assign) + C_MARK_PreTuple2TuplePtr
 val C_array_malloc = C_PUSH + C_MLOAD + C_PUSH + C_ADD + C_DUP + C_SWAP + C_PUSH + C_MUL + C_ADD + C_PUSH + C_MSTORE
@@ -62,5 +62,20 @@ fun C_Nat opr =
     | EBNMult () => C_MUL
     | EBNDiv () => C_SWAP + C_DIV
     | EBNBoundedMinus () => C_SWAP + C_SUB
+fun C_NatCmp opr =
+    case opr of
+      NCLt () => C_GT
+    | NCGt () => C_LT
+    | NCLe () => C_LT + C_ISZERO
+    | NCGe () => C_GT + C_ISZERO
+    | NCEq () => C_EQ
+    | NCNEq () => C_EQ + C_ISZERO
+val C_Write = C_SWAP * 2 + C_array_ptr
+val C_br_sum = C_DUP + C_MLOAD + C_SWAP + C_JUMPI
+val C_Case_branch_prelude = C_PUSH + C_ADD + C_MLOAD + C_set_reg
+val C_Case = C_PUSH + C_br_sum + C_Case_branch_prelude
+val C_Ite = C_ISZERO + C_PUSH + C_JUMPI
+val C_Ifi_branch_prelude = C_set_reg
+val C_Ifi = C_ISZERO + C_PUSH + C_SWAP + C_PUSH + C_JUMPI + C_Ifi_branch_prelude
                  
 end

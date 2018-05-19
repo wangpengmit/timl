@@ -1039,11 +1039,11 @@ val anno_EVectorClear_state = ref false
 val allow_substate_call = ref false
 
 datatype phase =
-         PhMicroTiML of unit
-         | PhCPS of unit
-         | PhCC of unit
+         PhBeforeCPS of unit
+         | PhBeforeCC of unit
+         | PhBeforeCodeGen of unit
 
-val phase = ref $ PhMicroTiML ()
+val phase = ref $ PhBeforeCPS ()
 
 fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
   let
@@ -1266,14 +1266,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = is_eq_ty itctx (t_e2, t1)
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
           val (e1, e2) = if !anno_EApp_state then (e1 %~ st_e1, e2 %~ st_e2) else (e1, e2)
-          val C_App_CC = C_set_reg + C_JUMP
-          val C_App_CPS = C_Unpack + 2 * (C_Proj + C_Let) + C_Pair
-          val C_MicroTiML = 99999
+          val C_App_BeforeCodeGen = C_set_reg + C_JUMP
+          val C_App_BeforeCC = C_Unpack + 2 * (C_Proj + C_Let) + C_Pair
+          val C_App_BeforeCPS = 99999
           val cost = 
               case !phase of
-                  PhCC () => C_App_CC
-                | PhCPS () => C_App_CC + C_App_CPS
-                | PhMicroTiML () => C_App_CC + C_App_CPS + C_MicroTiML
+                  PhBeforeCodeGen () => C_App_BeforeCodeGen
+                | PhBeforeCC () => C_App_BeforeCodeGen + C_App_BeforeCC
+                | PhBeforeCPS () => C_App_BeforeCodeGen + C_App_BeforeCC + C_App_BeforeCPS
         in
           (EApp (e1, e2), t2, i1 %%+ i2 %%+ (to_real cost, N0) %%+ i, st)
         end
@@ -1458,7 +1458,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ENatCmp_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
           val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
         in
-          (EBinOp (EBNatCmp opr, e1, e2), t, j1 %%+ j2, st)
+          (EBinOp (EBNatCmp opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_NatCmp opr), st)
         end
       | ETriOp (ETWrite (), e1, e2, e3) =>
         let
@@ -1479,7 +1479,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2, e3) = if !anno_EWrite then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
           val (e1, e2, e3) = if !anno_EWrite_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
-          (EWrite (e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3, st)
+          (EWrite (e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN C_Write, st)
         end
       | ECase data =>
         let
@@ -1497,7 +1497,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_ECase then e %: t_e else e
           val e = if !anno_ECase_state then e %~ st else e
         in
-          (MakeECase (e, (name1, e1), (name2, e2)), t1, i %%+ IMaxPair (i1, i2), st1)
+          (MakeECase (e, (name1, e1), (name2, e2)), t1, i %%+ TN C_Case %%+ IMaxPair (i1, i2), st1)
         end
       | ETriOp (ETIte (), e, e1, e2) =>
         let
@@ -1512,7 +1512,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e2 = if !anno_EIte_e2_time then e2 |># i2 else e2
           val e = if !anno_EIte_state then e %~ st else e
         in
-          (ETriOp (ETIte (), e, e1, e2), t, i %%+ IMaxPair (i1, i2), st1)
+          (ETriOp (ETIte (), e, e1, e2), t, i %%+ TN C_Ite %%+ IMaxPair (i1, i2), st1)
         end
       | EIfi data =>
         let
@@ -1530,7 +1530,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EIfi then e %: t_e else e
           val e = if !anno_EIfi_state then e %~ st else e
         in
-          (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %%+ IMaxPair (i1, i2), st1)
+          (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %%+ TN C_Ifi %%+ IMaxPair (i1, i2), st1)
         end
       | EAbs (pre_st, bind) =>
         let
@@ -1696,7 +1696,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e1 = if !anno_EUnpack then e1 %: t_e1 else e1
           val e1 = if !anno_EUnpack_state then e1 %~ st_e1 else e1
         in
-          (MakeEUnpack (e1, tname, ename, e2), t2, i1 %%+ i2, st)
+          (MakeEUnpack (e1, tname, ename, e2), t2, i1 %%+ TN C_Unpack %%+ i2, st)
         end
       | EUnpackI data =>
         let
@@ -1720,7 +1720,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e1 = if !anno_EUnpackI then e1 %: t_e1 else e1
           val e1 = if !anno_EUnpackI_state then e1 %~ st_e1 else e1
         in
-          (MakeEUnpackI (e1, iname, ename, e2), t2, i1 %%+ i2, st)
+          (MakeEUnpackI (e1, iname, ename, e2), t2, i1 %%+ TN C_Unpack %%+ i2, st)
         end
       | EPackIs (t, is, e) =>
         let
