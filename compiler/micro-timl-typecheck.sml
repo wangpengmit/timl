@@ -1266,16 +1266,45 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = is_eq_ty itctx (t_e2, t1)
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
           val (e1, e2) = if !anno_EApp_state then (e1 %~ st_e1, e2 %~ st_e2) else (e1, e2)
-          val C_App_BeforeCodeGen = C_set_reg + C_JUMP
-          val C_App_BeforeCC = C_Unpack + 2 * (C_Proj + C_Let) + C_Pair
-          val C_App_BeforeCPS = 99999
+          val C_App_BeforeCPS = 99999 + C_App_BeforeCC + C_App_BeforeCodeGen
           val cost = 
               case !phase of
                   PhBeforeCodeGen () => C_App_BeforeCodeGen
-                | PhBeforeCC () => C_App_BeforeCodeGen + C_App_BeforeCC
-                | PhBeforeCPS () => C_App_BeforeCodeGen + C_App_BeforeCC + C_App_BeforeCPS
+                | PhBeforeCC () => C_App_BeforeCC
+                | PhBeforeCPS () => C_App_BeforeCPS
         in
           (EApp (e1, e2), t2, i1 %%+ i2 %%+ (to_real cost, N0) %%+ i, st)
+        end
+      | EAbs ((* is_rec,  *)pre_st, bind) =>
+        let
+          val pre_st = sc_against_sort ictx (pre_st, SState)
+          val (t1 : mtiml_ty, (name, e)) = unEAbs bind
+          val t1 = kc_against_kind itctx (t1, KType ())
+          val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
+          val e = if !anno_EAbs then e %: t2 |># i else e
+          val e = if !anno_EAbs_state then e %~ post_st else e
+          (* val n = length $ free_evars e - {0} - if is_rec then {1} else {} *)
+          (* val C_Abs_BeforeCC = 2 * (C_Let * C_Proj) + C_Let + C_Pair + n * (C_Let + C_TupleProj) + C_Pair + C_Tuple n *)
+          (* val C_Abs_BeforeCPS = 2 * (C_Let + C_Proj) + C_Let + C_App_BeforeCC + C_Abs_BeforeCC *)
+          (* val cost = *)
+          (*     case !phase of *)
+          (*         PhBeforeCodeGen => 0 *)
+          (*       | PhBeforeCC => C_Abs_BeforeCC *)
+          (*       | PhBeforeCPS => C_Abs_BeforeCPS *)
+        in
+          (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), TN0, st)
+        end
+      | ERec data =>
+        let
+          val (t, (name, e)) = unBindAnnoName data
+          val () = println $ "tc() on: " ^ fst name
+          val () = case snd $ collect_EAbsIT e of
+                       EAbs _ => ()
+                     | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"
+          val t = kc_against_kind itctx (t, KType ())
+          val (e, _) = tc_against_ty_time_space (add_typing_full (fst name, t) ctx, IEmptyState) (e, t, TN0)
+        in
+          (MakeERec (name, t, e), t, TN0, st)
         end
       | EBinOp (EBPair (), e1, e2) =>
         let
@@ -1548,29 +1577,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EIfi_state then e %~ st else e
         in
           (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %%+ TN C_Ifi %%+ IMaxPair (i1, i2), st1)
-        end
-      | EAbs (pre_st, bind) =>
-        let
-          val pre_st = sc_against_sort ictx (pre_st, SState)
-          val (t1 : mtiml_ty, (name, e)) = unEAbs bind
-          val t1 = kc_against_kind itctx (t1, KType ())
-          val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
-          val e = if !anno_EAbs then e %: t2 |># i else e
-          val e = if !anno_EAbs_state then e %~ post_st else e
-        in
-          (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), TN0, st)
-        end
-      | ERec data =>
-        let
-          val (t, (name, e)) = unBindAnnoName data
-          val () = println $ "tc() on: " ^ fst name
-          val () = case snd $ collect_EAbsIT e of
-                       EAbs _ => ()
-                     | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"
-          val t = kc_against_kind itctx (t, KType ())
-          val (e, _) = tc_against_ty_time_space (add_typing_full (fst name, t) ctx, IEmptyState) (e, t, TN0)
-        in
-          (MakeERec (name, t, e), t, TN0, st)
         end
       | EAbsT data =>
         let

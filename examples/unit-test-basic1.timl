@@ -1,5 +1,12 @@
 structure UnitTestBasic1 = struct
 
+val x = 1
+(* fun f y = x + y *)
+val f = fn y => x + y
+val a = f 64
+val () = __&halt (a + 2)
+(* val b = a + 2 *)
+
 (* val a = "abc" *)
           
 (* val () = __&printc #"a" *)
@@ -11,8 +18,8 @@ structure UnitTestBasic1 = struct
 (* val x = 1 + 2 *)
 (* val y = x + 1 *)
 
-fun f x = x + 1
-val a = f 253
+(* fun f x = x + 1 *)
+(* val a = f 253 *)
 (* val a = f 0xdd *)
           
 (* fun f x y = x + y *)
