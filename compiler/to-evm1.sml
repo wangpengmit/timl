@@ -868,6 +868,9 @@ fun test1 dirname =
     open TestUtil
     val init_st = IState $ StMap.map (fn _ => INat 0) st_name2ty
     val () = println "Started MicroTiML typechecking #1 ..."
+    val e = remove_untypable_extensions e
+    val (e, _) = LiveEVars.live_evars e
+    val e = set_EAbs_is_rec e
     val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #1"

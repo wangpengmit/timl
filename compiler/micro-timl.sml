@@ -43,6 +43,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TAppT of ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
          | TMap of ('var, 'bsort, 'idx, 'sort) ty
          | TState of string
+         | TTuple of ('var, 'bsort, 'idx, 'sort) ty list
          (* used by compiler/pair-alloc *)
          | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool)
          (* used by compiler/code-gen *)
@@ -96,6 +97,8 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EBuiltin of string * 'ty
          | ELet of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          | ENewArrayValues of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr list
+         | ETuple of ('var, 'idx, 'sort, 'kind, 'ty) expr list
+         | ETupleProj of ('var, 'idx, 'sort, 'kind, 'ty) expr * int
          (* extensions from MicroTiML *)
          | ELetIdx of 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr ibind
          | ELetType of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr tbind

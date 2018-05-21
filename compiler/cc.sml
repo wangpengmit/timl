@@ -315,9 +315,9 @@ fun ceil_half n = (n + 1) div 2
 open ContUtil
        
 (* convert lists to Unsafe.Array to support random access *)
-fun make_Record_k make_Prod make_Unit ls return =
+fun make_Tuple_k make_Prod make_Unit ls return =
     let
-      val make_Record = make_Record make_Prod make_Unit
+      val make_Tuple = make_Tuple make_Prod make_Unit
       val len = length ls
       val () = if len = 0 then return make_Unit else ()
       val () = if len = 1 then return $ hd ls else ()
@@ -325,27 +325,27 @@ fun make_Record_k make_Prod make_Unit ls return =
       val fst_half = take len_fst_half ls
       val snd_half = drop len_fst_half ls
     in
-      make_Prod (make_Record fst_half, make_Record snd_half)
+      make_Prod (make_Tuple fst_half, make_Tuple snd_half)
     end
 
-and make_Record make_Prod make_Unit ls = callret $ make_Record_k make_Prod make_Unit ls
+and make_Tuple make_Prod make_Unit ls = callret $ make_Tuple_k make_Prod make_Unit ls
 
-fun TRecord a = make_Record TProd TUnit a
-fun ERecord a = make_Record EPair ETT a
+fun TTuple a = make_Tuple TProd TUnit a
+fun ETuple a = make_Tuple EPair ETT a
 
-fun ERecordProj_k (len, i) e return =
+fun ETupleProj_k (len, i) e return =
     let
       val () = if len = 0 then return ETT else ()
       val () = if len = 1 then return e else ()
       val len_fst_half = ceil_half len
     in
       if i < len_fst_half then
-        ERecordProj (len_fst_half, i) $ EFst e
+        ETupleProj (len_fst_half, i) $ EFst e
       else
-        ERecordProj (len - len_fst_half, i - len_fst_half) $ ESnd e
+        ETupleProj (len - len_fst_half, i - len_fst_half) $ ESnd e
     end
 
-and ERecordProj (len, i) e = callret $ ERecordProj_k (len, i) e
+and ETupleProj (len, i) e = callret $ ETupleProj_k (len, i) e
       
 infixr 0 %$
 fun a %$ b = EApp (a, b)
@@ -663,7 +663,7 @@ and cc_ERec e_all outer_binds bind =
       val betas = map inl free_ivars @ map inr free_tvars
       (* val betas = diff eq_bind betas outer_inner_binds *) (* no need when we use e_all to collect free vars *)
       val () = println $ "cc(): after getting free vars"
-      val t_env = TRecord sigmas
+      val t_env = TTuple sigmas
       val t_z = cc_t t_z
       val t_arrow = cont_type ((st, TProd (t_env, t_z)), i)
       val z_code = fresh_evar ()
@@ -677,7 +677,7 @@ and cc_ERec e_all outer_binds bind =
           end
       val def_x = EPack (cc_t t_x, t_env, EPair (EAppITs_binds (EV z_code, betas @ outer_binds), EV z_env))
       val len_ys = length ys
-      val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ERecordProj (len_ys, i) $ EV z_env)) ys
+      val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ETupleProj (len_ys, i) $ EV z_env)) ys
       val () = println $ "cc(): before ELetManyClose()"
       val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, e)
       val () = println $ "cc(): after ELetManyClose()"
@@ -693,7 +693,7 @@ and cc_ERec e_all outer_binds bind =
       fun decorate_code_name s = "code_" ^ s
       val v_code = ERec $ close0_e_e_anno ((z_code,  decorate_code_name $ fst name_x, t_rawcode), e)
       fun EV_anno (y, anno) = EAscType (EV y, anno)
-      val v_env = ERecord $ map EV_anno ys_anno
+      val v_env = ETuple $ map EV_anno ys_anno
       val x_code = fresh_evar ()
       val () = println $ "cc(): before close_TForallITs()#2"
       val e = EPack (cc_t $ close_TForallITs (outer_binds, t_x), t_env, EPair (EAppITs_binds (EV x_code(* v_code *), betas), v_env))

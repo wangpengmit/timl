@@ -958,6 +958,47 @@ val T : TimeType.time -> idx = ITime
 fun to_real n = IToReal (N n, dummy)
 fun TN n = (to_real n, N0)
 
+fun set_EAbs_is_rec_expr_visitor_vtable cast () =
+  let
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun set_flag bind =
+      let
+        val (name, e) = unBindAnno bind
+        val (binds, e) = collect_EAbsIT e
+        val (_, st, body) = assert_EAbs e
+        val e = EAbs (true, st, body)
+      in
+        EBindAnno (name, EAbsITs (binds, e))
+      end
+    fun visit_ERec this env bind =
+      let
+        val bind = set_flag bind
+        val bind = #visit_ERec vtable this env bind (* call super*)
+      in
+        ERec bind
+      end
+  in
+    override_visit_ERec vtable visit_ERec
+  end
+fun new_set_EAbs_is_rec_expr_visitor params = new_expr_visitor set_EAbs_is_rec_expr_visitor_vtable params
+fun set_EAbs_is_rec b =
+  let
+    val visitor as (ExprVisitor vtable) = new_set_EAbs_is_rec_expr_visitor ()
+  in
+    #visit_expr vtable visitor () b
+  end
+
 val anno_EVar = ref false
 val anno_EProj = ref false
 val anno_EFold = ref false
@@ -1198,7 +1239,33 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EUnfold e, TAppITs (subst0_t_t t t1) args, i %%+ TN C_Unfold, st)
         end
-      | EBinOp (EBApp (), e1, e2) =>
+      | ECase data =>
+        let
+          val (e, (name1, e1), (name2, e2), n_live_vars) = unECase data
+          val (e, t_e, i, st) = tc (ctx, st) e
+          val t_e = whnf itctx t_e
+          val (t1, t2) = case t_e of
+                             TBinOp (TBSum (), t1, t2) => (t1, t2)
+                           | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
+          val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
+          val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
+          val e2 = if !anno_ECase_e2_time then e2 |># i2 else e2
+          val () = is_eq_ty itctx (t1, t2)
+          val () = is_eq_idx ictx (st2, st1)
+          val e = if !anno_ECase then e %: t_e else e
+          val e = if !anno_ECase_state then e %~ st else e
+          val C_Case_branch_prelude = C_PUSH + C_ADD + C_MLOAD + C_set_reg
+          val C_Case_BeforeCodeGen = C_PUSH + C_br_sum + C_Case_branch_prelude
+          val C_Case_BeforeCPS = C_Case_BeforeCodeGen + C_Let + C_Abs_BeforeCC n_live_vars
+          val cost =
+              case !phase of
+                  PhBeforeCodeGen => (C_Case_BeforeCodeGen, 0)
+                | PhBeforeCC => (C_Case_BeforeCodeGen, 0)
+                | PhBeforeCPS => (C_Case_BeforeCPS, M_Abs_BeforeCC n_live_vars)
+        in
+          (MakeECase (e, (name1, e1), (name2, e2)), t1, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, i2), st1)
+        end
+      | EBinOp (EBApp n_live_vars, e1, e2) =>
         let
           val (e1, t_e1, i1, st) = tc (ctx, st) e1
           val st_e1 = st
@@ -1266,16 +1333,17 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = is_eq_ty itctx (t_e2, t1)
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
           val (e1, e2) = if !anno_EApp_state then (e1 %~ st_e1, e2 %~ st_e2) else (e1, e2)
-          val C_App_BeforeCPS = 99999 + C_App_BeforeCC + C_App_BeforeCodeGen
+          val C_App_BeforeCPS = C_App_BeforeCodeGen + C_App_BeforeCC + C_Let + C_Pair + C_Let + C_Abs_BeforeCC n_live_vars
+          val M_App_BeforeCPS = M_App_BeforeCC + 2 + M_Abs_BeforeCC n_live_vars
           val cost = 
               case !phase of
-                  PhBeforeCodeGen () => C_App_BeforeCodeGen
-                | PhBeforeCC () => C_App_BeforeCC
-                | PhBeforeCPS () => C_App_BeforeCPS
+                  PhBeforeCodeGen () => (C_App_BeforeCodeGen, 0)
+                | PhBeforeCC () => (C_App_BeforeCC, M_App_BeforeCC)
+                | PhBeforeCPS () => (C_App_BeforeCPS, M_App_BeforeCPS)
         in
-          (EApp (e1, e2), t2, i1 %%+ i2 %%+ (to_real cost, N0) %%+ i, st)
+          (EApp (e1, e2), t2, i1 %%+ i2 %%+ mapPair' to_real N cost %%+ i, st)
         end
-      | EAbs ((* is_rec,  *)pre_st, bind) =>
+      | EAbs (is_rec, pre_st, bind) =>
         let
           val pre_st = sc_against_sort ictx (pre_st, SState)
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind
@@ -1283,16 +1351,50 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
           val e = if !anno_EAbs then e %: t2 |># i else e
           val e = if !anno_EAbs_state then e %~ post_st else e
-          (* val n = length $ free_evars e - {0} - if is_rec then {1} else {} *)
-          (* val C_Abs_BeforeCC = 2 * (C_Let * C_Proj) + C_Let + C_Pair + n * (C_Let + C_TupleProj) + C_Pair + C_Tuple n *)
-          (* val C_Abs_BeforeCPS = 2 * (C_Let + C_Proj) + C_Let + C_App_BeforeCC + C_Abs_BeforeCC *)
-          (* val cost = *)
-          (*     case !phase of *)
-          (*         PhBeforeCodeGen => 0 *)
-          (*       | PhBeforeCC => C_Abs_BeforeCC *)
-          (*       | PhBeforeCPS => C_Abs_BeforeCPS *)
+          fun free_evars_expr_visitor_vtable cast output : ('this, int, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable =
+            let
+              fun extend_e this env name = (env + 1, name)
+              fun visit_var this env data =
+                ((case data of
+                    ID (n, _) => if n >= env then output $ n - env
+                                 else ()
+                   | QID _ => raise Impossible "free_evars/QID");
+                 data)
+            in
+              default_expr_visitor_vtable
+                cast
+                extend_noop
+                extend_noop
+                extend_noop
+                extend_e
+                visit_var
+                visit_noop
+                visit_noop
+                visit_noop
+                visit_noop
+            end
+          fun new_free_evars_expr_visitor params = new_expr_visitor free_evars_expr_visitor_vtable params
+          fun free_evars b =
+            let
+              val r = ref []
+              fun output n = push_ref r n
+              val visitor as (ExprVisitor vtable) = new_free_evars_expr_visitor output
+              val _ = #visit_expr vtable visitor 0 b
+              val fvars = !r
+            in
+              ISet.to_set fvars
+            end
+          val excluded = [0] + if is_rec then [1] else [] (* argument and (optionally) self-reference are not free evars *)
+          val n_fvars = ISet.numItems (free_evars e @%-- excluded)
+          val C_Abs_BeforeCPS = C_Abs_BeforeCC n_fvars + 2 * (C_Let + C_Proj) + C_Let + C_App_BeforeCC
+          val M_Abs_BeforeCPS = M_Abs_BeforeCC n_fvars + M_App_BeforeCC
+          val cost =
+              case !phase of
+                  PhBeforeCodeGen => (0, 0)
+                | PhBeforeCC => (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+                | PhBeforeCPS => (C_Abs_BeforeCPS, M_Abs_BeforeCPS)
         in
-          (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), TN0, st)
+          (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), mapPair' to_real N cost, st)
         end
       | ERec data =>
         let
@@ -1526,24 +1628,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2, e3) = if !anno_EWrite_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
           (EWrite (e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN C_Write, st)
-        end
-      | ECase data =>
-        let
-          val (e, (name1, e1), (name2, e2)) = unECase data
-          val (e, t_e, i, st) = tc (ctx, st) e
-          val t_e = whnf itctx t_e
-          val (t1, t2) = case t_e of
-                             TBinOp (TBSum (), t1, t2) => (t1, t2)
-                           | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
-          val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
-          val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
-          val e2 = if !anno_ECase_e2_time then e2 |># i2 else e2
-          val () = is_eq_ty itctx (t1, t2)
-          val () = is_eq_idx ictx (st2, st1)
-          val e = if !anno_ECase then e %: t_e else e
-          val e = if !anno_ECase_state then e %~ st else e
-        in
-          (MakeECase (e, (name1, e1), (name2, e2)), t1, i %%+ TN C_Case %%+ IMaxPair (i1, i2), st1)
         end
       | ETriOp (ETIte (), e, e1, e2) =>
         let

@@ -12,9 +12,27 @@ datatype 'name binder = Binder of 'name
 datatype 't outer = Outer of 't
 datatype 'p rebind = Rebind of 'p
            
+type 'env ctx = {outer : 'env, current : 'env ref}
+fun env2ctx env = {outer = env, current = ref env}
+fun visit_abs visit_'p env (Abs p1) =
+  Abs $ visit_'p (env2ctx env) p1
+fun visit_binder extend (ctx : 'env ctx) (Binder x) =
+  let
+    val env = !(#current ctx)
+    val (env, x) = extend env x
+    val () = #current ctx := env
+  in
+    Binder x
+  end
+fun visit_outer visit_'t (ctx : 'env ctx) (Outer t1) = Outer $ visit_'t (#outer ctx) t1
+fun visit_rebind visit_'p (ctx : 'env ctx) (Rebind p1) = Rebind $ visit_'p {outer = !(#current ctx), current = #current ctx} p1
+    
 type 't inner = ('t outer) rebind
 type ('p, 't) bind = ('p * 't inner) abs
 
+fun visit_inner x = (visit_rebind o visit_outer) x
+fun visit_bind visit_'p = visit_abs o visit_pair visit_'p o visit_inner
+                                             
 datatype 'p tele =
          TeleNil
          | TeleCons of 'p * 'p tele rebind
@@ -43,27 +61,6 @@ fun unBindAnno t =
     ((name, anno), t)
   end
                                       
-type 'env ctx = {outer : 'env, current : 'env ref}
-
-fun env2ctx env = {outer = env, current = ref env}
-
-fun visit_abs visit_'p env (Abs p1) =
-  Abs $ visit_'p (env2ctx env) p1
-
-fun visit_binder extend (ctx : 'env ctx) (Binder x) =
-  let
-    val env = !(#current ctx)
-    val (env, x) = extend env x
-    val () = #current ctx := env
-  in
-    Binder x
-  end
-fun visit_outer visit_'t (ctx : 'env ctx) (Outer t1) = Outer $ visit_'t (#outer ctx) t1
-fun visit_rebind visit_'p (ctx : 'env ctx) (Rebind p1) = Rebind $ visit_'p {outer = !(#current ctx), current = #current ctx} p1
-    
-fun visit_inner x = (visit_rebind o visit_outer) x
-fun visit_bind visit_'p = visit_abs o visit_pair visit_'p o visit_inner
-                                             
 fun visit_bind_simp extend = visit_bind (visit_binder extend)
 fun visit_bind_anno extend visit_'anno = visit_bind (visit_pair (visit_binder extend) (visit_outer visit_'anno))
 
