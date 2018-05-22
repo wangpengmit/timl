@@ -78,8 +78,8 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EUnOp of 'ty expr_un_op * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | EBinOp of expr_bin_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | ETriOp of expr_tri_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr
-         | ECase of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * int(*num of live vars afterwards*)
-         | EAbs of 'idx(*pre-condition*) * ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno
+         | ECase of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
+         | EAbs of 'idx(*pre-condition*) * ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno * int(*is recursive?*)
          | ERec of ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno
          | EAbsT of ('kind, ('var, 'idx, 'sort, 'kind, 'ty) expr) tbind_anno
          | EAppT of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty
@@ -110,7 +110,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EMatchSum of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind list
          | EMatchPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ebind
          | EMatchUnfold of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
-         | EIfi of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * int(*num of live vars afterwards*)
+         | EIfi of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          (* introduced by compiler/CPS *)
          | EHalt of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty
          (* introduced by compiler/pair-alloc *)

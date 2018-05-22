@@ -1024,7 +1024,7 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        visit_EBinOp : 'this -> 'env -> expr_bin_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_ETriOp : 'this -> 'env -> expr_tri_op * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_ECase : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
-       visit_EAbs : 'this -> 'env -> 'idx * ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       visit_EAbs : 'this -> 'env -> 'idx * ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno * int -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_ERec : 'this -> 'env -> ('ty, ('var, 'idx, 'sort, 'kind, 'ty) expr) ebind_anno -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EAbsT : 'this -> 'env -> ('kind, ('var, 'idx, 'sort, 'kind, 'ty) expr) tbind_anno -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EAppT : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
@@ -2188,13 +2188,13 @@ fun default_expr_visitor_vtable
       in
         ECase (e, e1, e2)
       end
-    fun visit_EAbs this env (i, bind) =
+    fun visit_EAbs this env (i, bind, b) =
       let
         val vtable = cast this
         val i = #visit_idx vtable this env i
         val bind = visit_ebind_anno this (#visit_ty vtable this) (#visit_expr vtable this) env bind
       in
-        EAbs (i, bind)
+        EAbs (i, bind, b)
       end
     fun visit_EAbsConstr this env data =
       let

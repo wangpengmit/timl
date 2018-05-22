@@ -103,6 +103,7 @@ datatype expr_un_op =
          | EUStorageGet of unit
          | EUVectorClear of unit
          | EUVectorLen of unit
+         | EUAnnoLiveVars of int(*num of live vars afterwards*)
 
 fun str_expr_const c =
   case c of
@@ -174,7 +175,7 @@ datatype nat_cmp =
          | NCNEq of unit
                       
 datatype expr_bin_op =
-         EBApp of int(*num of live vars afterwards*)
+         EBApp of unit
          | EBPair of unit
          | EBNew of unit
          | EBRead of unit
@@ -282,7 +283,7 @@ fun pretty_str_expr_bin_op opr =
 
 datatype expr_tri_op =
          ETWrite of unit
-         | ETIte of int(*num of live vars afterwards*)
+         | ETIte of unit
          | ETVectorSet of unit
 
 fun str_expr_tri_op opr =

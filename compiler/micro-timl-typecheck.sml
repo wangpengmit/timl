@@ -1267,7 +1267,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EUnfold e, TAppITs (subst0_t_t t t1) args, i %%+ TN (C_Unfold + C_Var + C_Let), st)
         end
-      | ETriOp (ETIte n_live_vars, e, e1, e2) =>
+      | ETriOp (ETIte (), e, e1, e2) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
@@ -1277,23 +1277,28 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t, i1, st1) = tc (ctx, st) e1
           val (e2, i2, st2) = tc_against_ty (ctx, st) (e2, t)
           val () = is_eq_idx ictx (st2, st1)
-          val e2 = if !anno_EIte_e2_time then e2 |># i2 else e2
-          val e = if !anno_EIte_state then e %~ st else e
           val C_br_sum = C_DUP + C_MLOAD + C_SWAP + C_JUMPI
           val C_Ite_BeforeCodeGen = C_ISZERO + C_PUSH + C_JUMPI
-          val C_Ite_BeforeCPS = C_Ite_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC
-          val M_Ite_BeforeCPS = M_Abs_BeforeCC n_live_vars + M_App_BeforeCC
-          val cost =
+          val (cost, e2) =
               case !phase of
-                  PhBeforeCodeGen => (C_Ite_BeforeCodeGen, 0)
-                | PhBeforeCC => (C_Ite_BeforeCodeGen, 0)
-                | PhBeforeCPS => (C_Ite_BeforeCPS, M_Ite_BeforeCPS)
+                  PhBeforeCodeGen => ((C_Ite_BeforeCodeGen, 0), e2)
+                | PhBeforeCC => ((C_Ite_BeforeCodeGen, 0), e2)
+                | PhBeforeCPS =>
+                  let
+                    val (e2, n_live_vars) = assert_EAnnoLiveVars e2
+                    val C_Ite_BeforeCPS = C_Ite_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC
+                    val M_Ite_BeforeCPS = M_Abs_BeforeCC n_live_vars + M_App_BeforeCC
+                  in
+                    ((C_Ite_BeforeCPS, M_Ite_BeforeCPS), e2)
+                  end
+          val e2 = if !anno_EIte_e2_time then e2 |># i2 else e2
+          val e = if !anno_EIte_state then e %~ st else e
         in
           (ETriOp (ETIte (), e, e1, e2), t, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, i2), st1)
         end
       | ECase data =>
         let
-          val (e, (name1, e1), (name2, e2), n_live_vars) = unECase data
+          val (e, (name1, e1), (name2, e2)) = unECase data
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
           val (t1, t2) = case t_e of
@@ -1301,24 +1306,29 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                            | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
           val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
           val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
-          val e2 = if !anno_ECase_e2_time then e2 |># i2 else e2
           val () = is_eq_ty itctx (t1, t2)
           val () = is_eq_idx ictx (st2, st1)
-          val e = if !anno_ECase then e %: t_e else e
-          val e = if !anno_ECase_state then e %~ st else e
           val C_Case_branch_prelude = C_PUSH + C_ADD + C_MLOAD + C_set_reg
           val C_Case_BeforeCodeGen = C_Var + C_PUSH + C_br_sum + C_Case_branch_prelude
-          val C_Case_BeforeCPS = C_Case_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC
-          val M_Case_BeforeCPS = M_Abs_BeforeCC n_live_vars + M_App_BeforeCC
-          val cost =
+          val (cost, e2) =
               case !phase of
-                  PhBeforeCodeGen => (C_Case_BeforeCodeGen, 0)
-                | PhBeforeCC => (C_Case_BeforeCodeGen, 0)
-                | PhBeforeCPS => (C_Case_BeforeCPS, M_Case_BeforeCPS)
+                  PhBeforeCodeGen => ((C_Case_BeforeCodeGen, 0), e2)
+                | PhBeforeCC => ((C_Case_BeforeCodeGen, 0), e2)
+                | PhBeforeCPS =>
+                  let
+                    val (e2, n_live_vars) = assert_EAnnoLiveVars e2
+                    val C_Case_BeforeCPS = C_Case_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC
+                    val M_Case_BeforeCPS = M_Abs_BeforeCC n_live_vars + M_App_BeforeCC
+                  in
+                    ((C_Case_BeforeCPS, M_Case_BeforeCPS), e2)
+                  end
+          val e2 = if !anno_ECase_e2_time then e2 |># i2 else e2
+          val e = if !anno_ECase then e %: t_e else e
+          val e = if !anno_ECase_state then e %~ st else e
         in
           (MakeECase (e, (name1, e1), (name2, e2)), t1, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, i2), st1)
         end
-      | EBinOp (EBApp n_live_vars, e1, e2) =>
+      | EBinOp (EBApp (), e1, e2) =>
         let
           val (e1, t_e1, i1, st) = tc (ctx, st) e1
           val st_e1 = st
@@ -1384,19 +1394,24 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                   end
                 | _ => raise MTCError "EApp"
           val () = is_eq_ty itctx (t_e2, t1)
+          val (cost, e2) = 
+              case !phase of
+                  PhBeforeCodeGen () => ((C_App_BeforeCodeGen, 0), e2)
+                | PhBeforeCC () => ((C_App_BeforeCC, M_App_BeforeCC), e2)
+                | PhBeforeCPS () =>
+                  let
+                    val (e2, n_live_vars) = assert_EAnnoLiveVars e2
+                    val C_App_BeforeCPS = C_App_BeforeCodeGen + C_App_BeforeCC + (C_Let + C_Pair + 2 * C_Var) + C_Abs_BeforeCC n_live_vars
+                    val M_App_BeforeCPS = M_App_BeforeCC + 2 + M_Abs_BeforeCC n_live_vars
+                  in
+                    ((C_App_BeforeCPS, M_App_BeforeCPS), e2)
+                  end
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
           val (e1, e2) = if !anno_EApp_state then (e1 %~ st_e1, e2 %~ st_e2) else (e1, e2)
-          val C_App_BeforeCPS = C_App_BeforeCodeGen + C_App_BeforeCC + (C_Let + C_Pair + 2 * C_Var) + C_Abs_BeforeCC n_live_vars
-          val M_App_BeforeCPS = M_App_BeforeCC + 2 + M_Abs_BeforeCC n_live_vars
-          val cost = 
-              case !phase of
-                  PhBeforeCodeGen () => (C_App_BeforeCodeGen, 0)
-                | PhBeforeCC () => (C_App_BeforeCC, M_App_BeforeCC)
-                | PhBeforeCPS () => (C_App_BeforeCPS, M_App_BeforeCPS)
         in
           (EApp (e1, e2), t2, i1 %%+ i2 %%+ mapPair' to_real N cost %%+ i, st)
         end
-      | EAbs (is_rec, pre_st, bind) =>
+      | EAbs (pre_st, bind, is_rec) =>
         let
           val pre_st = sc_against_sort ictx (pre_st, SState)
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind

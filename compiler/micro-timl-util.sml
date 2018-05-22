@@ -57,7 +57,7 @@ fun ENew (e1, e2) = EBinOp (EBNew (), e1, e2)
 fun ERead (e1, e2) = EBinOp (EBRead (), e1, e2)
 fun EWrite (e1, e2, e3) = ETriOp (ETWrite (), e1, e2, e3)
                                       
-fun MakeEAbs (i, name, t, e) = EAbs (i, EBindAnno ((name, t), e))
+fun MakeEAbs (i, name, t, e) = EAbs (i, EBindAnno ((name, t), e), false)
 fun MakeEAbsI (name, s, e) = EAbsI $ IBindAnno ((name, s), e)
 fun MakeEUnpack (e1, tname, ename, e2) = EUnpack (e1, TBind (tname, EBind (ename, e2)))
 fun MakeEAbsT (name, k, e) = EAbsT $ TBindAnno ((name, k), e)
