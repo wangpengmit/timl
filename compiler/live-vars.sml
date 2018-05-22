@@ -1,6 +1,6 @@
-structure LiveEVars = struct
+structure LiveVars = struct
 
-fun live_evars_expr_visitor_vtable cast () =
+fun live_vars_expr_visitor_vtable cast () =
   let
     val extend_i = extend_noop
     val extend_t = extend_noop
@@ -494,11 +494,11 @@ fun live_evars_expr_visitor_vtable cast () =
     }
   end
 
-fun new_live_evars_expr_visitor params = new_expr_visitor live_evars_expr_visitor_vtable params
-fun live_evars b =
+fun new_live_vars_expr_visitor params = new_expr_visitor live_vars_expr_visitor_vtable params
+fun live_vars b =
   let
     val env = ref []
-    val visitor as (ExprVisitor vtable) = new_live_evars_expr_visitor ()
+    val visitor as (ExprVisitor vtable) = new_live_vars_expr_visitor ()
     val b = #visit_expr vtable visitor env b
   in
     (b, !env)
