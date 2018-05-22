@@ -174,7 +174,7 @@ datatype nat_cmp =
          | NCNEq of unit
                       
 datatype expr_bin_op =
-         EBApp of unit
+         EBApp of int(*num of live vars afterwards*)
          | EBPair of unit
          | EBNew of unit
          | EBRead of unit
@@ -221,7 +221,7 @@ fun str_nat_cmp opr =
                     
 fun str_expr_bin_op opr =
   case opr of
-      EBApp () => "app"
+      EBApp _ => "app"
     | EBPair () => "pair"
     | EBNew () => "new"
     | EBRead () => "read"
@@ -268,7 +268,7 @@ fun pretty_str_nat_cmp opr =
                     
 fun pretty_str_expr_bin_op opr =
   case opr of
-      EBApp () => "$"
+      EBApp _ => "$"
     | EBPair () => "pair"
     | EBNew () => "new"
     | EBRead () => "read"
@@ -282,13 +282,13 @@ fun pretty_str_expr_bin_op opr =
 
 datatype expr_tri_op =
          ETWrite of unit
-         | ETIte of unit
+         | ETIte of int(*num of live vars afterwards*)
          | ETVectorSet of unit
 
 fun str_expr_tri_op opr =
   case opr of
       ETWrite () => "write"
-    | ETIte () => "ite"
+    | ETIte _ => "ite"
     | ETVectorSet () => "vector_set"
                   
 datatype expr_EI =

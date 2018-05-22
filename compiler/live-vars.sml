@@ -152,12 +152,6 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EVar $ #visit_var vtable this env data
       end
-    fun visit_EVarConstr this env data =
-      let
-        val vtable = cast this
-      in
-        EVarConstr $ #visit_cvar vtable this env data
-      end
     fun visit_EConst this env data = EConst data
     fun visit_un_op this env opr = 
       let
@@ -208,13 +202,6 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EAbs (i, bind)
       end
-    fun visit_EAbsConstr this env data =
-      let
-        val vtable = cast this
-        val data = visit_bind (visit_triple (visit_list $ visit_tbinder this) (visit_list $ visit_ibinder this) (visit_ebinder this)) (#visit_expr vtable this) env data
-      in
-        EAbsConstr data
-      end
     fun visit_ERec this env data =
       let
         val vtable = cast this
@@ -257,17 +244,6 @@ fun live_vars_expr_visitor_vtable cast () =
         val i = #visit_idx vtable this env i
       in
         EAppI (e, i, n_lvars)
-      end
-    fun visit_EAppConstr this env data = 
-      let
-        val vtable = cast this
-        val (e1, ts, is, e2) = data
-        val e2 = #visit_expr vtable this env e2
-        val e1 = #visit_expr vtable this env e1
-        val ts = visit_list (#visit_ty vtable this) env ts
-        val is = visit_list (#visit_idx vtable this) env is
-      in
-        EAppConstr (e1, ts, is, e2)
       end
     fun visit_EPack this env data = 
       let
@@ -358,73 +334,47 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         ELet (e, bind)
       end
-    fun visit_ELetIdx this env data =
+    fun visit_ELetIdx this env (i, bind) =
       let
-        val vtable = cast this
-        val (i, bind) = data
-        val i = #visit_idx vtable this env i
-        val bind = visit_ibind this (#visit_expr vtable this) env bind
+        val (_, e) = unBindSimp bind
       in
-        ELetIdx (i, bind)
+        #visit_expr (cast this) this env $ subst0_i_e i e
       end
-    fun visit_ELetType this env data =
+    fun visit_ELetType this env (t, bind) =
+      let
+        val (_, e) = unBindSimp bind
+      in
+        #visit_expr (cast this) this env $ subst0_t_e t e
+      end
+    fun visit_ELetConstr this env (e1, bind) =
+      let
+        val (_, e2) = unBindSimp bind
+        val e = subst0_c_e e1 e2
+        val e = eval_constr e
+      in
+        #visit_expr (cast this) this env e
+      end
+    fun visit_EHalt this env (e, t) =
       let
         val vtable = cast this
-        val (t, bind) = data
+        val e = #visit_expr vtable this env e
         val t = #visit_ty vtable this env t
-        val bind = visit_tbind this (#visit_expr vtable this) env bind
       in
-        ELetType (t, bind)
-      end
-    fun visit_ELetConstr this env data =
-      let
-        val vtable = cast this
-        val (e, bind) = data
-        val bind = visit_cbind this (#visit_expr vtable this) env bind
-        val e = #visit_expr vtable this env e
-      in
-        ELetConstr (e, bind)
-      end
-    fun visit_EMatchSum this env data =
-      let
-        val vtable = cast this
-        val (e, branches) = data
-        val e = #visit_expr vtable this env e
-        val branches = (visit_list o visit_ebind this) (#visit_expr vtable this) env branches
-      in
-        EMatchSum (e, branches)
-      end
-    fun visit_EMatchPair this env data =
-      let
-        val vtable = cast this
-        val (e, branch) = data
-        val e = #visit_expr vtable this env e
-        val branch = (visit_ebind this o visit_ebind this) (#visit_expr vtable this) env branch
-      in
-        EMatchPair (e, branch)
-      end
-    fun visit_EMatchUnfold this env data =
-      let
-        val vtable = cast this
-        val (e, branch) = data
-        val e = #visit_expr vtable this env e
-        val branch = visit_ebind this (#visit_expr vtable this) env branch
-      in
-        EMatchUnfold (e, branch)
+        EHalt (e, t)
       end
     fun visit_EMallocPair this env (a, b) =
       let
         val vtable = cast this
-        val a = #visit_expr vtable this env a
         val b = #visit_expr vtable this env b
+        val a = #visit_expr vtable this env a
       in
         EMallocPair (a, b)
       end
     fun visit_EPairAssign this env (e1, proj, e2) =
       let
         val vtable = cast this
-        val e1 = #visit_expr vtable this env e1
         val e2 = #visit_expr vtable this env e2
+        val e1 = #visit_expr vtable this env e1
       in
         EPairAssign (e1, proj, e2)
       end
@@ -435,14 +385,13 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EProjProtected (proj, e)
       end
-    fun visit_EHalt this env (e, t) =
-      let
-        val vtable = cast this
-        val e = #visit_expr vtable this env e
-        val t = #visit_ty vtable this env t
-      in
-        EHalt (e, t)
-      end
+    fun err name = raise Impossible $ "live_vars/" ^ name
+    fun visit_EMatchSum this env data = err "EMatchSum"
+    fun visit_EMatchPair this env data = err "EMatchPair"
+    fun visit_EMatchUnfold this env data = err "EMatchUnfold"
+    fun visit_EVarConstr this env data = err "EVarConstr"
+    fun visit_EAbsConstr this env data = err "EAbsConstr"
+    fun visit_EAppConstr this env data = err "EAppConstr"
   in
     {
       visit_expr = visit_expr,

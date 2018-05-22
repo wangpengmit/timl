@@ -137,7 +137,7 @@ datatype exp =
 
 fun EIte (e1, e2, e3, r) = ETriOp (ETIte (), e1, e2, e3, r)
 (* fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r) *)
-fun EApp (e1, e2, r) = EBinOp (EBApp (), e1, e2, r)
+fun EApp (e1, e2, r) = EBinOp (EBApp 0, e1, e2, r)
 fun short_id id = ((NONE, id), false)
 fun PnShortVar (x, r) = PnConstr (short_id (x, r), [], NONE, r)
 (* fun EIte (e, e1, e2, r) = Case (e, (NONE, NONE), [(PShortVar ("true", r), e1), (PShortVar ("false", r), e2)], r) *)

@@ -76,7 +76,7 @@ type ('this, 'env) expr_visitor_vtable =
        visit_PnAlias : 'this -> 'env ctx -> ename binder * ptrn * region -> T.ptrn,
        visit_PnConstr : 'this -> 'env ctx -> ((cvar * ptrn_constr_tag) * bool) outer * iname binder list * ptrn * region -> T.ptrn,
        visit_PnAnno : 'this -> 'env ctx -> ptrn * mtype outer -> T.ptrn,
-       visit_EApp : 'this -> 'env -> expr * expr -> T.expr,
+       visit_EApp : 'this -> 'env -> int * expr * expr -> T.expr,
        visit_EPair : 'this -> 'env -> expr * expr -> T.expr,
        visit_EAdd : 'this -> 'env -> expr * expr -> T.expr,
        visit_ENatAdd : 'this -> 'env -> expr * expr -> T.expr,
@@ -195,7 +195,7 @@ fun default_expr_visitor_vtable
         val data = (e1, e2)
       in
         case opr of
-            EBApp () => #visit_EApp vtable this env data
+            EBApp n => #visit_EApp vtable this env (n, e1, e2)
           | EBPair () => #visit_EPair vtable this env data
           | EBNew () => #visit_ENew vtable this env data
           | EBRead () => #visit_ERead vtable this env data
@@ -206,11 +206,11 @@ fun default_expr_visitor_vtable
     fun visit_EApp this env data =
       let
         val vtable = cast this
-        val (e1, e2) = data
+        val (n, e1, e2) = data
         val e1 = #visit_expr vtable this env e1
         val e2 = #visit_expr vtable this env e2
       in
-        T.EBinOp (EBApp (), e1, e2)
+        T.EBinOp (EBApp n, e1, e2)
       end
     fun visit_EPair this env data =
       let

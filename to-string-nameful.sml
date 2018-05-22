@@ -342,7 +342,7 @@ fun strn_e e =
     | EUnOp (opr, e, _) => sprintf "($ $)" [str_expr_un_op opr, strn_e e]
     | EBinOp (opr, e1, e2) =>
       (case opr of
-           EBApp () => sprintf "($ $)" [strn_e e1, strn_e e2]
+           EBApp _ => sprintf "($ $)" [strn_e e1, strn_e e2]
          | EBPair () =>
            let
              val es = collect_Pair e

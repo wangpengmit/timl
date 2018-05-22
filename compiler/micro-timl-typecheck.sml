@@ -1994,8 +1994,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (e1, (name, e2)) = unELetConstr data
           val e = subst0_c_e e1 e2
-          (* val () = println "After subst0_c_e:" *)
-          (* val () = println $ ExportPP.pp_e_to_string $ ExportPP.export (ctx_names ctx) e *)
           val e = eval_constr e
         in
           tc (ctx, st) e
