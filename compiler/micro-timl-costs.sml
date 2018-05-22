@@ -3,7 +3,7 @@ structure MicroTiMLCosts = struct
 open EVMCosts
 open Operators
 
-val C_Var = C_PUSH
+val C_Var = max C_get_reg C_PUSH
 val C_Const = C_PUSH
 val C_Let = C_set_reg
 val C_Proj = C_PUSH + C_ADD + C_MLOAD
@@ -77,9 +77,11 @@ val C_Ifi_branch_prelude = C_set_reg
 val C_Ifi = C_ISZERO + C_PUSH + C_SWAP + C_PUSH + C_JUMPI + C_Ifi_branch_prelude
 fun C_NewArrayValues n = C_PUSH + C_DUP + C_array_malloc + C_SWAP + C_array_init_len + C_PUSH + n * (C_SWAP * 2 + C_array_init_assign + C_SWAP + C_POP + C_SWAP + C_PUSH + C_ADD) + C_POP + C_MARK_PreArray2ArrayPtr
 val C_Halt = C_PUSH + C_SWAP + C_DUP + C_MSTORE + C_PUSH + C_SWAP + C_RETURN
-val C_App_BeforeCodeGen = C_set_reg + C_JUMP
-val C_App_BeforeCC = C_App_BeforeCodeGen + C_Unpack + 2 * (C_Proj + C_Let) + C_Pair
+                                                                      
+fun C_Abs_BeforeCC n_free_vars = C_Let + C_Pair + C_Var + C_Tuple n_free_vars + n_free_vars * C_Var
+fun M_Abs_BeforeCC n_free_vars = 2 + n_free_vars
+val C_App_BeforeCodeGen = 2 * C_Var + C_set_reg + C_JUMP
+val C_App_BeforeCC = C_App_BeforeCodeGen + C_Unpack + 2 * (C_Let + C_Proj + C_Var) + C_Var + (C_Pair + C_Var)
 val M_App_BeforeCC = 2
-fun C_Abs_BeforeCC n_free_vars = 2 * (C_Let * C_Proj) + C_Let + C_Pair + n * (C_Let + C_TupleProj) + C_Pair + C_Tuple n_free_vars
-fun M_Abs_BeforeCC n_free_vars = 4 + n_free_vars
+                       
 end

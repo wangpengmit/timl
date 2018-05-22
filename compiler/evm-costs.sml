@@ -67,6 +67,7 @@ val C_ISDummy = 0
                       
 fun C_LOG n = 375 + n * C_logtopic
                          
+val C_get_reg = C_PUSH + C_MLOAD
 val C_set_reg = C_PUSH + C_MSTORE
 val C_array_init_assign = 3 * C_DUP + C_ADD + C_MSTORE
                                                 
