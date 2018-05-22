@@ -92,6 +92,10 @@ datatype prim_expr_un_op =
          (* | EUPInt2Str of unit *)
          (* | EUPStrLen of unit *)
 
+datatype expr_anno =
+         EALiveVars of int (* num of live vars afterwards *)
+         | EABodyOfRecur of unit (* this is the body of a recursive function *)
+                          
 datatype expr_un_op =
          EUProj of projector
          | EUPrim of prim_expr_un_op
@@ -103,7 +107,7 @@ datatype expr_un_op =
          | EUStorageGet of unit
          | EUVectorClear of unit
          | EUVectorLen of unit
-         | EUAnnoLiveVars of int(*num of live vars afterwards*)
+         | EUAnno of expr_anno
 
 fun str_expr_const c =
   case c of

@@ -1411,10 +1411,13 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EApp (e1, e2), t2, i1 %%+ i2 %%+ mapPair' to_real N cost %%+ i, st)
         end
-      | EAbs (pre_st, bind, is_rec) =>
+      | EAbs (pre_st, bind) =>
         let
           val pre_st = sc_against_sort ictx (pre_st, SState)
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind
+          val (is_rec, e) = case e of
+                                EUnOp (EUAnno (EABodyOfRecur ()), e) => (true, e)
+                              | _ => (false, e)
           val t1 = kc_against_kind itctx (t1, KType ())
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
           fun C_Abs_Inner_BeforeCC n_free_vars = 2 * (C_Let + C_Proj + C_Var) + (C_Let + C_Pair + 2 * C_Var) + n_free_vars * (C_Let + C_TupleProj + C_Var)

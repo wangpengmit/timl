@@ -1,5 +1,10 @@
 structure LiveVars = struct
 
+open Util
+open VisitorUtil
+       
+infixr 0 $
+         
 fun live_vars_expr_visitor_vtable cast () =
   let
     val extend_i = extend_noop
@@ -184,7 +189,7 @@ fun live_vars_expr_visitor_vtable cast () =
           in
             EBinOp (EBApp n_lvars, e1, e2)
           end
-          _ =>
+        | _ =>
           let
             val vtable = cast this
             val e2 = #visit_expr vtable this env e2
