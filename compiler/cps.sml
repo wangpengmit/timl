@@ -630,6 +630,25 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         cps (e, t_e) (c, i_c)
       end
+    | S.ETriOp (ETIte (), e, e1, e2) =>
+      (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
+      let
+        val (e, st_e) = assert_EAscState e
+        val t_res = t_e
+        val t_e = TBool
+        val t_res = cps_t t_res
+        val x_k = fresh_evar ()
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
+        val y = fresh_evar ()
+        val c = ETriOp (ETIte (), EV y, e1, e2)
+        val c = ELetClose ((x_k, "k", k), c)
+        val t_y = cps_t t_e
+        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
+        val i_c = IMaxPair (i_e1, i_e2)
+      in
+        cps (e, t_e) (c, i_c)
+      end
     | S.EIfi (e, bind1, bind2) =>
       (* [[ ifi e (x.e1) (x.e2) ]](k) = [[e]](\y. ifi y (x. [[e1]](k)) (x. [[e2]](k))) *)
       let
@@ -647,25 +666,6 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
         val y = fresh_evar ()
         val c = EIfiClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
-        val c = ELetClose ((x_k, "k", k), c)
-        val t_y = cps_t t_e
-        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
-        val i_c = IMaxPair (i_e1, i_e2)
-      in
-        cps (e, t_e) (c, i_c)
-      end
-    | S.ETriOp (ETIte (), e, e1, e2) =>
-      (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
-      let
-        val (e, st_e) = assert_EAscState e
-        val t_res = t_e
-        val t_e = TBool
-        val t_res = cps_t t_res
-        val x_k = fresh_evar ()
-        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
-        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
-        val y = fresh_evar ()
-        val c = ETriOp (ETIte (), EV y, e1, e2)
         val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))

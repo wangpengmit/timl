@@ -114,9 +114,9 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          (* introduced by compiler/CPS *)
          | EHalt of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty
          (* introduced by compiler/pair-alloc *)
-         | EMallocPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr (* These two expressions are only here to determine the types. They have no runtime behavior and should always be values. They are used to avoid type annotations here which could be large. *)
-         | EPairAssign of ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
-         | EProjProtected of projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
+         (* | EMallocPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr (* These two expressions are only here to determine the types. They have no runtime behavior and should always be values. They are used to avoid type annotations here which could be large. *) *)
+         (* | EPairAssign of ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr *)
+         (* | EProjProtected of projector * ('var, 'idx, 'sort, 'kind, 'ty) expr *)
 
 (*********** utilities ***************)    
 
