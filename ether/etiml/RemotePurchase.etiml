@@ -1,0 +1,8 @@
+(*
+Suppose the good's price is P.
+1. Buyer and seller each puts up 2P as deposits.
+2. If timeout before next step, both can get back their money.
+3. Seller signal 'Shipped'. From this point on, neither can get any money back unless the transaction goes through. It's unclear whose hand the good is in now. A lose-lose situation hopefully will disincentivise each party from abandoning the transaction.
+4. Buyer signal 'Received'.
+5. Buyer can withdraw P. Seller can withdraw 3P.
+*)
