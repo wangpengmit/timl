@@ -623,7 +623,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
   (*  expensive (it walks the entire Kitty array looking for cats belonging to owner),*)
   (*  but it also returns a dynamic array, which is only supported for web3 calls, and*)
   (*  not contract-to-contract calls.*)
-  external fun tokensOfOwner (_owner : address) view returns(ownerTokens : vector uint256) =
+  external fun tokensOfOwner {len : Nat | len > 0} (_owner : address) view pre {kitties : len} post {kitties : len} returns (ownerTokens : vector uint256) using $(16 + len * 11) =
     let tokenCount : uint256 = balanceOf(_owner);
 
     if (tokenCount == 0) then

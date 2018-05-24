@@ -1,10 +1,10 @@
 pragma etiml ^0.1
 
 structure Util = struct
-
+  fun add b a = a + b
   fun subBy b a = a - b
-  fun addBy b a = a + b
-
+  val op+= = add
+  val op-= subBy
 end
 
 contract MyToken = contract
@@ -12,18 +12,17 @@ contract MyToken = contract
   open Util
 
   (* This creates an array with all balances *)
-  (* 'amap' stands for 'address mapping' *)
-  public val balanceOf : amap uint256 = amap_empty
+  public val balanceOf : map address uint256
 
   (* Initializes contract with initial supply tokens to the creator of the contract *)
-  fun init (initialSupply : uint256) =
-    amap_set balanceOf msg_sender initialSupply           (* Give the creator all initial tokens *)
+  fun init (initialSupply : uint256) using 11.0 =
+    set balanceOf[msg_sender] initialSupply           (* Give the creator all initial tokens *)
 
   (* Send coins *)
-  fun transfer (_to : address, _value : uint256) =
-    require(amap_get balanceOf msg_sender >= _value);           (* Check if the sender has enough *)
-    require(amap_get balanceOf _to + _value >= amap_get balanceOf _to); (* Check for overflows *)
-    amap_modify balanceOf msg_sender (subBy _value);                    (* Subtract from the sender *)
-    amap_modify balanceOf _to (addBy _value)                     (* Add the same to the recipient *)
+  fun transfer (_to : address, _value : uint256) using 23.0 =
+    require(balanceOf[msg_sender] >= _value);           (* Check if the sender has enough *)
+    require(balanceOf[_to] + _value >= balanceOf[_to]); (* Check for overflows *)
+    modify balanceOf[msg_sender] -= _value;                    (* Subtract from the sender *)
+    modify balanceOf[_to] += _value                     (* Add the same to the recipient *)
 
 end

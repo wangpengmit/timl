@@ -35,13 +35,13 @@ endinterface
 
 contract Congress = contract inheritedfrom (owned, tokenRecipient)
   (* Contract Variables and events *)
-  public val minimumQuorum : ref uint = ref 0
-  public val debatingPeriodInMinutes : ref uint = ref 0
-  public val majorityMargin : ref int = ref 0
-  public val proposals : vector Proposal = vector_empty
-  public val numProposals : ref uint = ref 0
-  public val memberId : amap uint = amap_empty
-  public val members : vector Member = vector_empty
+  public val minimumQuorum : ref uint
+  public val debatingPeriodInMinutes : ref uint
+  public val majorityMargin : ref int
+  public val proposals : vector Proposal
+  public val numProposals : ref uint
+  public val memberId : map address uint
+  public val members : vector Member
 
   event ProposalAdded(proposalID : uint, recipient : address, amount : uint, description : string)
   event Voted(proposalID : uint, position : bool, voter : address, justification : string)
@@ -60,7 +60,7 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
     currentResult : ref int,
     proposalHash : bytes32,
     votes : vector Vote,
-    voted : amap bool,
+    voted : map address bool,
   }
 
   type Member = {
@@ -77,7 +77,7 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
 
   (* Modifier that allows only shareholders to vote and create new proposals *)
   fun onlyMembers k =
-    require(amap_get memberId msg.sender != 0);
+    require(memberId[msg.sender] != 0);
     k ()
 
   (**
@@ -103,14 +103,14 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
    * @param memberName public name for that member
    *)
   public fun addMember (targetMember : address, memberName : string) guardedby onlyOwner =
-    let id : ref uint = ref $ amap_get memberId targetMember;
+    let id : ref uint = ref $ memberId[targetMember];
     if !id = 0 then
-      amap_set memberId targetMember (vector_length members);
-      id := vector_length members;
-      vector_push_back members (zero_value Memeber)
+      set memberId[targetMember] length members;
+      id := length members;
+      push_back members (zero_value Memeber)
     endif;
 
-    vector_set members id (Member {member: targetMember, memberSince: now, name: memberName});
+    set members[id] Member {member: targetMember, memberSince: now, name: memberName};
     MembershipChanged(targetMember, true)
 
    (**
@@ -120,12 +120,12 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
     *
     * @param targetMember ethereum address to be removed
     *)
-  public fun removeMember (targetMember : address) guardedby onlyOwner =
-    require(amap_get memberId targetMember != 0);
-    for (i : uint = amap_get memberId targetMember; i<members.length-1; inc)
-      vector_set members i (vector_get members (i+1))
+  public fun removeMember {len : Nat | len > 0} (targetMember : address) pre {members : len} post {members : len-1} using $(4 + len * 3) guarded_by onlyOwner =
+    require(memberId[targetMember] != 0);
+    for (i : uint = memberId[targetMember]; i < length members - 1; inc)
+      set members[i] members[i+1]
     endfor;
-    vector_remove_back members
+    remove_back members
 
   (**
    * Change voting rules
@@ -166,8 +166,8 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
     )
         guardedby onlyMembers 
         returns uint =
-    let proposalID = vector_length proposals;
-    vector_push_back proposals (Proposal {
+    let proposalID = length proposals;
+    push_back proposals (Proposal {
       recipient = beneficiary,
       amount = weiAmount,
       description = jobDescription,
@@ -224,7 +224,7 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
         transactionBytecode : bytes
     )
         returns bool =
-    let storage p : Proposal = amap_get proposals proposalNumber;
+    let storage p : Proposal = proposals[proposalNumber];
     p.proposalHash = keccak256(beneficiary, weiAmount, transactionBytecode)
 
   (**
@@ -243,9 +243,9 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
     )
         guardedby onlyMembers
         returns uint =
-    let storage p : Proposal = amap_get proposals proposalNumber;         (* Get the proposal *)
-    require(not (amap_get ap.voted msg.sender));         (* If has already voted, cancel *)
-    amap_set p.voted msg.sender true;                    (* Set this voter as having voted *)
+    let storage p : Proposal = proposals[proposalNumber];         (* Get the proposal *)
+    require(not (ap.voted[msg.sender]));         (* If has already voted, cancel *)
+    set p.voted[msg.sender] true;                    (* Set this voter as having voted *)
     modify p.numberOfVotes inc;                              (* Increase the number of votes *)
     if supportsProposal then                         (* If they support the proposal *)
       modify p.currentResult inc                          (* Increase score *)
@@ -266,7 +266,7 @@ contract Congress = contract inheritedfrom (owned, tokenRecipient)
    * @param transactionBytecode optional: if the transaction contained a bytecode, you need to send it
    *)
   public fun executeProposal (proposalNumber : uint, transactionBytecode : bytes) =
-    let storage p : Proposal = amap_get proposals proposalNumber;
+    let storage p : Proposal = proposals[proposalNumber];
 
     require(now > p.votingDeadline                                            (* If it is past the voting deadline *)
       && not p.executed                                                         (* and it has not already been executed *)
