@@ -124,6 +124,16 @@ fun cg_ty_visitor_vtable cast () =
           end
         | _ => #visit_TBinOp vtable this env data (* call super *)
     val vtable = override_visit_TBinOp vtable visit_TBinOp
+    fun visit_ty this env t =
+      case t of
+          TTuple ts =>
+          let
+            val cg_t = #visit_ty (cast this) this env
+          in
+            TMemTuplePtr (map cg_t ts, N 0)
+          end
+        | _ => #visit_ty vtable this env t (* call super *)
+    val vtable = override_visit_ty vtable visit_ty
     fun visit_TArr this env (data as (t, i)) =
       let
         val cg_t = #visit_ty (cast this) this env

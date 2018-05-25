@@ -573,6 +573,7 @@ fun default_ty_visitor_vtable
           | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
           | TPreTuple (ts, i, i2) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, #visit_idx vtable this env i2)
           | TTuplePtr (ts, i, b) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, b)
+          | TTuple ts => TTuple (visit_list (#visit_ty vtable this) env ts)
           | TMap t => TMap $ #visit_ty vtable this env t
           | TState x =>  TState x
           | TVectorPtr (x, i) => TVectorPtr (x, #visit_idx vtable this env i)
@@ -2118,6 +2119,7 @@ fun default_expr_visitor_vtable
           | EProjProtected data => #visit_EProjProtected vtable this env data
           | EHalt data => #visit_EHalt vtable this env data
           | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_list (#visit_expr vtable this) env es)
+          | ETuple es => ETuple (map (#visit_expr vtable this env) es)
           | EIfi (e, e1, e2) =>
             EIfi
               (#visit_expr vtable this env e,
@@ -2149,6 +2151,8 @@ fun default_expr_visitor_vtable
           | EUFold t => EUFold $ on_t t
           | EUUnfold () => EUUnfold ()
           | EUTiML opr => EUTiML opr
+          | EUAnno a => EUAnno a
+          | EUTupleProj n => EUTupleProj n
       end
     fun visit_EUnOp this env data = 
       let

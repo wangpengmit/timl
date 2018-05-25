@@ -108,6 +108,7 @@ fun live_vars_expr_visitor_vtable cast () =
           | EProjProtected data => #visit_EProjProtected vtable this env data
           | EHalt data => #visit_EHalt vtable this env data
           | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, mapr (#visit_expr vtable this env) es)
+          | ETuple es => ETuple (mapr (#visit_expr vtable this env) es)
           | EIfi (e, bind1, bind2) =>
             let
               val n_lvars = ISet.numItems (!env)
@@ -187,6 +188,8 @@ fun live_vars_expr_visitor_vtable cast () =
           | EUFold t => EUFold $ on_t t
           | EUUnfold () => EUUnfold ()
           | EUTiML opr => EUTiML opr
+          | EUAnno a => EUAnno a
+          | EUTupleProj n => EUTupleProj n
       end
     fun visit_EUnOp this env data = 
       let

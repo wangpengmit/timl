@@ -409,6 +409,12 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TTuplePtr (ts, i, b), KType ())
       end
+    | TTuple ts =>
+      let
+        val ts = map (kc_against_KType ctx) ts
+      in
+        (TTuple ts, KType ())
+      end
     | TPreTuple (ts, i, i2) =>
       let
         val ts = map (kc_against_KType ctx) ts
@@ -1122,6 +1128,17 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EProj (proj, e), choose (t1, t2) proj, i %%+ TN (C_Proj + C_Var + C_Let), st)
         end
+      | EUnOp (EUTupleProj n, e) =>
+        let
+          val (e, t_e, i, st) = tc (ctx, st) e
+          val t_e = whnf itctx t_e
+          val ts = assert_TTuple t_e
+          (*here*)
+          val e = if !anno_EProj then e %: t_e else e
+          val e = if !anno_EProj_state then e %~ st else e
+        in
+          (EProj (proj, e), choose (t1, t2) proj, i %%+ TN (C_Proj + C_Var + C_Let), st)
+        end
       | EUnOp (EUTiML (EUPrintc ()), e) =>
         let
           val (e, i, st) = tc_against_ty (ctx, st) (e, TByte)
@@ -1416,6 +1433,22 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EPair_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EPair (e1, e2), TProd (t1, t2), i1 %%+ i2 %%+ (to_real $ C_Pair + 2 * C_Var + C_Let, N 2), st)
+        end
+      | ETuple es =>
+        let
+          val (ls, st) = foldl (fn (e, (acc, st)) =>
+                                           let val res as (e, t, i, st) = tc (ctx, st) e
+                                           in (res :: acc, st) end) ([], st) es
+          fun get_e (e, t, i, st) =
+            let
+              val e = if !anno_EPair then e %: t else e
+            in
+              if !anno_EPair_state then e %~ st else e
+            end
+          val len = length es
+          val i = combine_IBAdd_Time_Nat $ map #3 ls
+        in
+          (ETuple (map get_e ls), TTuple (map #2 ls), i %%+ (to_real $ C_Tuple + len * C_Var + C_Let, N len), st)
         end
       | EBinOp (EBPrim opr, e1, e2) =>
         let
@@ -1903,6 +1936,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = is_eq_idx ictx (st, st')
         in
           (EAscState (e, st'), t, i, st')
+        end
+      | EUnOp (EUAnno a, e) =>
+        let
+          val (e, t, i, st) = tc (ctx, st) e
+        in
+          (EUnOp (EUAnno a, e), t, i, st)
         end
       | ENever t =>
         let

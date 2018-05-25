@@ -288,6 +288,16 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           str ")";
           close_box ()
         )
+      | TTuple ts =>
+        (
+          open_hbox ();
+          str "TTuple";
+          space ();
+          str "(";
+          app (fn t => (pp_t t; comma ())) ts;
+          str ")";
+          close_box ()
+        )
       | TPreTuple (ts, i, i2) =>
         (
           open_hbox ();
@@ -421,18 +431,6 @@ fun pp_t_to_os_fn params os d t = withPP ("", 80, os) (fn s => pp_t params s d t
 fun pp_t_to_string_fn params d t =
   pp_to_string "pp_t_to_string.tmp" (fn os => pp_t_to_os_fn params os d t)
                               
-fun str_inj opr =
-  case opr of
-      InjInl () => "inl"
-    | InjInr () => "inr"
-
-fun str_expr_un_op str_t opr =
-  case opr of
-     EUInj (opr, t) => sprintf "($, $)" [str_inj opr, str_t t]
-    | EUFold t => sprintf "(fold $)" [str_t t]
-    | EUUnfold () => "unfold"
-    | EUTiML opr => Operators.str_expr_un_op opr
-
 fun get_bind b = mapFst binder2str $ unBind b
 fun get_bind_anno b =
   let
@@ -446,12 +444,19 @@ fun str_inj opr =
       InjInl () => "inl"
     | InjInr () => "inr"
 
+fun str_expr_anno a =
+  case a of
+      EALiveVars n => "live_vars " ^ str_int n
+    | EABodyOfRecur () => "body_of_recur"
+                            
 fun str_expr_un_op str_t opr =
   case opr of
-     EUInj (opr, t) => sprintf "($, $)" [str_inj opr, str_t t]
-    | EUFold t => sprintf "(fold $)" [str_t t]
+     EUInj (opr, t) => sprintf "inj ($, $)" [str_inj opr, str_t t]
+    | EUFold t => sprintf "fold $" [str_t t]
     | EUUnfold () => "unfold"
     | EUTiML opr => Operators.str_expr_un_op opr
+    | EUAnno a => str_expr_anno a
+    | EUTupleProj n => "proj " ^ str_int n
 
 fun str_expr_tri_op opr =
   case opr of
@@ -1160,6 +1165,16 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           app (fn e => (pp_e e; comma ())) es;
           str ")";
           close_box ();
+          close_box ()
+        )
+      | ETuple es =>
+        (
+          open_hbox ();
+          str "ETuple";
+          space ();
+          str "(";
+          app (fn e => (pp_e e; comma ())) es;
+          str ")";
           close_box ()
         )
       | ELetIdx (i, branch) =>
