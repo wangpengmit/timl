@@ -1,6 +1,7 @@
 structure MicroTiMLTypecheck = struct
 
 open MicroTiMLCosts
+open EvalConstr
 open UVar
 open UVarExprUtil
 open PostTypecheck
@@ -40,12 +41,15 @@ infix 6 @--
 fun m @-- m' = StMapU.sub m m'
                           
 infix 6 @++
-infix  9 @!!
+infix 9 @!!
          
 infix 6 @%++
         
 infix 6 @%!!
-infix  6 @%+
+infix 6 @%+
+         
+infix 6 @%--
+fun a @%-- b = ISet.difference (a, ISetU.fromList b)
          
 fun is_wf_basic_sort_BSUVar data = BSUVar data
     
@@ -860,55 +864,6 @@ fun add_typing_full (name, t) (ictx, tctx, ectx) = (ictx, tctx, (name, new_lazy_
 
 open Unbound
        
-fun eval_constr_expr_visitor_vtable cast () =
-  let
-    val vtable = 
-        default_expr_visitor_vtable
-          cast
-          extend_noop
-          extend_noop
-          extend_noop
-          extend_noop
-          visit_noop
-          visit_noop
-          visit_noop
-          visit_noop
-          visit_noop
-    fun visit_EAppConstr this env (e1, ts, is, e2) =
-      let
-        val vtable = cast this
-        val e1 = #visit_expr vtable this env e1
-        val ts = map (#visit_ty vtable this env) ts
-        val is = map (#visit_idx vtable this env) is
-        val e2 = #visit_expr vtable this env e2
-      in
-        case e1 of
-            EAbsConstr data =>
-            let
-              val ((tnames, inames, ename), e) = unBind data
-              val di = length is
-              val e = fst $ foldl (fn (v, (b, dt)) => (subst_t_e (IDepth di, TDepth dt) dt v b, dt - 1)) (e, length ts - 1) ts
-              val e = fst $ foldl (fn (v, (b, di)) => (subst_i_e di di v b, di - 1)) (e, di - 1) is
-              val e = subst0_e_e e2 e
-            in
-              #visit_expr vtable this env e
-            end
-          | _ => EAppConstr (e1, ts, is, e2)
-      end
-    val vtable = override_visit_EAppConstr vtable visit_EAppConstr
-  in
-    vtable
-  end
-
-fun new_eval_constr_expr_visitor params = new_expr_visitor eval_constr_expr_visitor_vtable params
-    
-fun eval_constr b =
-  let
-    val visitor as (ExprVisitor vtable) = new_eval_constr_expr_visitor ()
-  in
-    #visit_expr vtable visitor () b
-  end
-
 fun smart_EAscType (e, t) =
     let
       val (e, is) = collect_EAscTime e
@@ -974,19 +929,18 @@ fun set_EAbs_is_rec_expr_visitor_vtable cast () =
           visit_noop
     fun set_flag bind =
       let
-        val (name, e) = unBindAnno bind
+        val (name_anno, e) = unBindAnno bind
         val (binds, e) = collect_EAbsIT e
-        val (_, st, body) = assert_EAbs e
-        val e = EAbs (true, st, body)
+        val (st, (anno, (name, body))) = assert_EAbs e
+        val e = EAbs (st, EBindAnno ((name, anno), EAnnoBodyOfRecur body))
       in
-        EBindAnno (name, EAbsITs (binds, e))
+        BindAnno (name_anno, EAbsITs (binds, e))
       end
     fun visit_ERec this env bind =
       let
         val bind = set_flag bind
-        val bind = #visit_ERec vtable this env bind (* call super*)
       in
-        ERec bind
+        #visit_ERec vtable this env bind (* call super*)
       end
   in
     override_visit_ERec vtable visit_ERec
@@ -999,7 +953,7 @@ fun set_EAbs_is_rec b =
     #visit_expr vtable visitor () b
   end
 
-fun free_evars_expr_visitor_vtable cast output : ('this, int, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable =
+fun free_evars_expr_visitor_vtable cast output =
   let
     fun extend_e this env name = (env + 1, name)
     fun visit_var this env data =
@@ -1030,7 +984,7 @@ fun free_evars b =
     val _ = #visit_expr vtable visitor 0 b
     val fvars = !r
   in
-    ISet.to_set fvars
+    ISetU.to_set fvars
   end
               
 val anno_EVar = ref false
@@ -1277,13 +1231,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t, i1, st1) = tc (ctx, st) e1
           val (e2, i2, st2) = tc_against_ty (ctx, st) (e2, t)
           val () = is_eq_idx ictx (st2, st1)
-          val C_br_sum = C_DUP + C_MLOAD + C_SWAP + C_JUMPI
           val C_Ite_BeforeCodeGen = C_ISZERO + C_PUSH + C_JUMPI
           val (cost, e2) =
               case !phase of
-                  PhBeforeCodeGen => ((C_Ite_BeforeCodeGen, 0), e2)
-                | PhBeforeCC => ((C_Ite_BeforeCodeGen, 0), e2)
-                | PhBeforeCPS =>
+                  PhBeforeCodeGen () => ((C_Ite_BeforeCodeGen, 0), e2)
+                | PhBeforeCC () => ((C_Ite_BeforeCodeGen, 0), e2)
+                | PhBeforeCPS () =>
                   let
                     val (e2, n_live_vars) = assert_EAnnoLiveVars e2
                     val C_Ite_BeforeCPS = C_Ite_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC
@@ -1312,9 +1265,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val C_Case_BeforeCodeGen = C_Var + C_PUSH + C_br_sum + C_Case_branch_prelude
           val (cost, e2) =
               case !phase of
-                  PhBeforeCodeGen => ((C_Case_BeforeCodeGen, 0), e2)
-                | PhBeforeCC => ((C_Case_BeforeCodeGen, 0), e2)
-                | PhBeforeCPS =>
+                  PhBeforeCodeGen () => ((C_Case_BeforeCodeGen, 0), e2)
+                | PhBeforeCC () => ((C_Case_BeforeCodeGen, 0), e2)
+                | PhBeforeCPS () =>
                   let
                     val (e2, n_live_vars) = assert_EAnnoLiveVars e2
                     val C_Case_BeforeCPS = C_Case_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC
@@ -1420,24 +1373,25 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                               | _ => (false, e)
           val t1 = kc_against_kind itctx (t1, KType ())
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
+          val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
+          val n_fvars = ISet.numItems (free_evars e @%-- excluded)
           fun C_Abs_Inner_BeforeCC n_free_vars = 2 * (C_Let + C_Proj + C_Var) + (C_Let + C_Pair + 2 * C_Var) + n_free_vars * (C_Let + C_TupleProj + C_Var)
           fun M_Abs_Inner_BeforeCC n_free_vars = 2
           val C_Abs_Inner_BeforeCPS = C_Abs_Inner_BeforeCC n_fvars + 2 * (C_Let + C_Proj + C_Var) + C_App_BeforeCC
           val M_Abs_Inner_BeforeCPS = M_Abs_Inner_BeforeCC n_fvars + M_App_BeforeCC
           val extra_inner_cost =
-              PhBeforeCodeGen => (0, 0)
-            | PhBeforeCC => (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
-            | PhBeforeCPS => (C_Abs_Inner_BeforeCPS, M_Abs_Inner_BeforeCPS)
+              case !phase of
+                  PhBeforeCodeGen () => (0, 0)
+                | PhBeforeCC () => (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
+                | PhBeforeCPS () => (C_Abs_Inner_BeforeCPS, M_Abs_Inner_BeforeCPS)
           val i = i %%+ mapPair' to_real N extra_inner_cost              
           val e = if !anno_EAbs then e %: t2 |># i else e
           val e = if !anno_EAbs_state then e %~ post_st else e
-          val excluded = [0] + if is_rec then [1] else [] (* argument and (optionally) self-reference are not free evars *)
-          val n_fvars = ISet.numItems (free_evars e @%-- excluded)
           val cost =
               case !phase of
-                  PhBeforeCodeGen => (0, 0)
-                | PhBeforeCC => (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
-                | PhBeforeCPS => (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+                  PhBeforeCodeGen () => (0, 0)
+                | PhBeforeCC () => (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+                | PhBeforeCPS () => (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
         in
           (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), mapPair' to_real N cost, st)
         end
@@ -1489,7 +1443,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ENew then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ENew_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
           val C_New_pre_loop = 2 * C_SWAP + 2 * C_DUP + C_array_malloc + C_array_init_len + 2 * C_PUSH + C_JUMP
-          val cost = N C_New_pre_loop %+ N C_New_loop_test %+ N C_New_loop %* len %+ N C_New_post_loop + N (2 * C_Var + C_Let)
+          val cost = N C_New_pre_loop %+ N C_New_loop_test %+ N C_New_loop %* len %+ N C_New_post_loop %+ N (2 * C_Var + C_Let)
         in
           (ENew (e1, e2), TArr (t2, len), j1 %%+ j2 %%+ (IToReal (cost, dummy), len %+ N1), st)
         end

@@ -103,6 +103,15 @@ fun assert_fst_false p =
       (false, a) => a
     | _ => raise Impossible "assert_fst_false"
                                                           
+fun assert_EAbs e =
+  case e of
+      EAbs (st, bind) => (st, unBindAnnoName bind)
+    | _ => raise assert_fail "assert_EAbs"
+fun assert_EAnnoLiveVars e =
+  case e of
+      EUnOp (EUAnno (EALiveVars n), e) => (e, n)
+    | _ => raise assert_fail "assert_EAnnoLiveVars"
+                 
 infix 6 @++
 fun m @++ m' = StMapU.union m m'
                             

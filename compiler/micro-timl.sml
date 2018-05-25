@@ -63,12 +63,18 @@ datatype injector =
          InjInl of unit
          | InjInr of unit
 
+datatype expr_anno =
+         EALiveVars of int (* num of live vars afterwards *)
+         | EABodyOfRecur of unit (* this is the body of a recursive function *)
+                          
 (* unary term operators *)
 datatype 'ty expr_un_op =
          EUInj of injector * 'ty
          | EUFold of 'ty
          | EUUnfold of unit
          | EUTiML of Operators.expr_un_op
+         | EUAnno of expr_anno
+         | EUTupleProj of int
 
 (* term *)
 datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
@@ -98,7 +104,6 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | ELet of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          | ENewArrayValues of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr list
          | ETuple of ('var, 'idx, 'sort, 'kind, 'ty) expr list
-         | ETupleProj of ('var, 'idx, 'sort, 'kind, 'ty) expr * int
          (* extensions from MicroTiML *)
          | ELetIdx of 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr ibind
          | ELetType of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr tbind

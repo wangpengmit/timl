@@ -102,11 +102,6 @@ fun assert_TArrayPtr t =
       TArrayPtr a => a
     | _ => raise assert_fail $ "assert_TArrayPtr; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                  
-fun assert_EAbs e =
-  case e of
-      EAbs (st, bind) => (st, unBindAnnoName bind)
-    | _ => raise assert_fail "assert_EAbs"
-                 
 fun assert_EAscType e =
   let
     val (e, is) = collect_EAscTime e
@@ -182,12 +177,6 @@ fun EAppIT (e, arg) =
       | inr t => EAppT (e, t)
 fun EAppITs (f, args) = foldl (swap EAppIT) f args
                      
-fun EAbsIT (bind, e) =
-    case bind of
-        inl bind => EAbsI $ IBindAnno (bind, e)
-      | inr bind => EAbsT $ TBindAnno (bind, e)
-fun EAbsITs (binds, e) = foldr EAbsIT e binds
-                                      
 fun TForallIT (bind, e) =
     case bind of
         inl bind => TForallI $ IBindAnno (bind, e)

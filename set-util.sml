@@ -5,8 +5,10 @@ structure Set = S
 infixr 0 $
 
 fun to_set ls = S.addList (S.empty, ls)
-                          
+val fromList = to_set
+                 
 val to_list = S.listItems
+val toList = to_list
                 
 fun member x s = S.member (s, x)
                           

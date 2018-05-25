@@ -320,6 +320,14 @@ fun compile st_name2int ectx e =
       in
         compile e1 @ compile e2 @ tuple_malloc [t1, t2] @ [PUSH_tuple_offset (2*32), ADD ()] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB (), SWAP1] @ tuple_assign) @ [MARK_PreTuple2TuplePtr ()]
       end
+    | ETuple es =>
+      let
+        val (es, ts) = unzip $ map assert_EAscType es
+        val ts = map cg_t ts
+        val len = length es
+      in
+        concatMap compile es @ tuple_malloc ts @ [PUSH_tuple_offset (len * 32), ADD ()] @ concatRepeat len ([PUSH1nat 32, SWAP1, SUB (), SWAP1] @ tuple_assign) @ [MARK_PreTuple2TuplePtr ()]
+      end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
         val (e, t_e) = assert_EAscType e
@@ -361,6 +369,9 @@ fun compile st_name2int ectx e =
     | EUnOp (EUTiML opr, e) =>
       compile e @
       impl_expr_un_op opr
+    | EUnOp (EUTupleProj n, e) =>
+      compile e @
+      [PUSH_tuple_offset $ 32 * n, ADD (), MLOAD ()]
     | EBinOp (EBNat opr, e1, e2) =>
       compile e1 @ 
       compile e2 @

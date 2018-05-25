@@ -1,9 +1,18 @@
 structure LiveVars = struct
 
 open Util
+open Unbound
+open Binders
 open VisitorUtil
+open EvalConstr
+open MicroTiMLLongId
+open MicroTiMLUtil
+open MicroTiML
        
 infixr 0 $
+
+infix 6 @%-
+val op@%- = ISet.delete
          
 fun live_vars_expr_visitor_vtable cast () =
   let
@@ -28,25 +37,33 @@ fun live_vars_expr_visitor_vtable cast () =
     fun visit_ebind this f env bind =
       let
         val (name, b) = unBindSimp bind
-        val () = unop_ref (fn s => ISet.map add s) env
+        val () = unop_ref (fn s => ISet.map inc s) env
         val b = f env b
         val () = unop_ref (fn s => ISet.map dec (s @%- 0)) env
       in
-        EBind (name, b)
+        BindSimp (name, b)
       end
     fun visit_ebind_anno this f_anno f env bind =
       let
         val ((name, anno), b) = unBindAnno bind
-        val bind = visit_ebind this f env $ EBind (name, b)
+        val bind = visit_ebind this f env $ BindSimp (name, b)
         val (name, b) = unBindSimp bind
-        val anno = f env anno
+        val anno = f_anno env anno
       in
-        EBindAnno ((name, anno), b)
+        BindAnno ((name, anno), b)
       end
                                                 
-    fun output env n = push_ref env n
-    fun output_set env s = ISet.app (push_ref env) s
+    fun output env n = binop_ref (curry ISet.add) env n
+    fun output_set env s = ISet.app (output env) s
+    fun mapr f = foldr (fn (x, acc) => f x :: acc) []
                                     
+    fun add_AnnoLiveVars (bind, n) =
+      let
+        val (name, e) = unBindSimp bind
+      in
+        BindSimp (name, EAnnoLiveVars (e, n))
+      end
+        
     fun visit_expr this env data =
       let
         val vtable = cast this
@@ -91,10 +108,11 @@ fun live_vars_expr_visitor_vtable cast () =
           | EProjProtected data => #visit_EProjProtected vtable this env data
           | EHalt data => #visit_EHalt vtable this env data
           | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, mapr (#visit_expr vtable this env) es)
-          | EIfi (e, bind1, bind2, _) =>
+          | EIfi (e, bind1, bind2) =>
             let
               val n_lvars = ISet.numItems (!env)
               val new_env = ref ISet.empty
+              (* todo: the continuation variable is also used and should be counted as live *)
               val bind1 = visit_ebind this (#visit_expr vtable this) new_env bind1
               val () = output_set env (!new_env)
               val () = new_env := ISet.empty
@@ -102,7 +120,7 @@ fun live_vars_expr_visitor_vtable cast () =
               val () = output_set env (!new_env)
               val e = #visit_expr vtable this env e
             in
-              EIfi (e, bind1, bind2, n_lvars)
+              EIfi (e, bind1, add_AnnoLiveVars (bind2, n_lvars))
             end
           | EState x => EState x
       end
@@ -113,14 +131,15 @@ fun live_vars_expr_visitor_vtable cast () =
             val n_lvars = ISet.numItems (!env)
             val vtable = cast this
             val new_env = ref ISet.empty
-            val e1 = #visit_expr vtable this new_env e1
-            val () = output_set env (!new_env)
-            val () = new_env := ISet.empty
+            (* todo: the continuation variable is also used and should be counted as live *)
             val e2 = #visit_expr vtable this new_env e2
             val () = output_set env (!new_env)
-            val e = #visit_expr vtable this env e
+            val () = new_env := ISet.empty
+            val e3 = #visit_expr vtable this new_env e3
+            val () = output_set env (!new_env)
+            val e1 = #visit_expr vtable this env e1
           in
-            ETriOp (ETIte n_lvars, e, e1, e2)
+            ETriOp (ETIte (), e1, e2, EAnnoLiveVars (e3, n_lvars))
           end
         | _ =>
           let
@@ -131,11 +150,12 @@ fun live_vars_expr_visitor_vtable cast () =
           in
             ETriOp (opr, e1, e2, e3)
           end
-    fun visit_ECase this env (e, e1, e2, _) =
+    fun visit_ECase this env (e, e1, e2) =
       let
         val n_lvars = ISet.numItems (!env)
         val vtable = cast this
         val new_env = ref ISet.empty
+        (* todo: the continuation variable is also used and should be counted as live *)
         val e1 = visit_ebind this (#visit_expr vtable this) new_env e1
         val () = output_set env (!new_env)
         val () = new_env := ISet.empty
@@ -143,13 +163,12 @@ fun live_vars_expr_visitor_vtable cast () =
         val () = output_set env (!new_env)
         val e = #visit_expr vtable this env e
       in
-        ECase (e, e1, e2, n_lvars)
+        ECase (e, e1, add_AnnoLiveVars (e2, n_lvars))
       end
     fun visit_var this env data =
       ((case data of
-            ID (n, _) => if n >= env then output env $ n - env
-                         else ()
-          | QID _ => raise Impossible "free_evars/QID");
+            ID (n, _) => output env n
+          | QID _ => raise Impossible "live_evars/QID");
        data)
     fun visit_EVar this env data =
       let
@@ -187,7 +206,7 @@ fun live_vars_expr_visitor_vtable cast () =
             val e2 = #visit_expr vtable this env e2
             val e1 = #visit_expr vtable this env e1
           in
-            EBinOp (EBApp n_lvars, e1, e2)
+            EBinOp (EBApp (), e1, EAnnoLiveVars (e2, n_lvars))
           end
         | _ =>
           let
@@ -202,6 +221,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val vtable = cast this
         val i = #visit_idx vtable this env i
         val new_env = ref ISet.empty
+        (* todo: the continuation variable is also used and should be counted as live *)
         val bind = visit_ebind_anno this (#visit_ty vtable this) (#visit_expr vtable this) new_env bind
         val () = output_set env (!new_env)
       in
@@ -223,14 +243,14 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EAbsT data
       end
-    fun visit_EAppT this env (e, t, _) = 
+    fun visit_EAppT this env (e, t) = 
       let
         val n_lvars = ISet.numItems (!env)
         val vtable = cast this
         val e = #visit_expr vtable this env e
         val t = #visit_ty vtable this env t
       in
-        EAppT (e, t, n_lvars)
+        EAppT (EAnnoLiveVars (e, n_lvars), t)
       end
     fun visit_EAbsI this env data =
       let
@@ -241,14 +261,14 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EAbsI data
       end
-    fun visit_EAppI this env (e, i, _) = 
+    fun visit_EAppI this env (e, i) = 
       let
         val n_lvars = ISet.numItems (!env)
         val vtable = cast this
         val e = #visit_expr vtable this env e
         val i = #visit_idx vtable this env i
       in
-        EAppI (e, i, n_lvars)
+        EAppI (EAnnoLiveVars (e, n_lvars), i)
       end
     fun visit_EPack this env data = 
       let
@@ -451,7 +471,7 @@ fun live_vars_expr_visitor_vtable cast () =
 fun new_live_vars_expr_visitor params = new_expr_visitor live_vars_expr_visitor_vtable params
 fun live_vars b =
   let
-    val env = ref []
+    val env = ref ISet.empty
     val visitor as (ExprVisitor vtable) = new_live_vars_expr_visitor ()
     val b = #visit_expr vtable visitor env b
   in

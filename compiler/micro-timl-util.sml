@@ -231,5 +231,17 @@ fun a %~ b = EAscState (a, b)
 fun EAscTimeSpace (e, (i, j)) = e |> i |# j
 fun a |># b = EAscTimeSpace (a, b)
 
+fun EAnno (e, a) = EUnOp (EUAnno a, e)
+fun EAnnoLiveVars (e, n) = EAnno (e, EALiveVars n)
+fun EAnnoBodyOfRecur e = EAnno (e, EABodyOfRecur ())
+                                 
+fun EAbsIT (bind, e) =
+    case bind of
+        inl bind => EAbsI $ IBindAnno (bind, e)
+      | inr bind => EAbsT $ TBindAnno (bind, e)
+fun EAbsITs (binds, e) = foldr EAbsIT e binds
+
+fun ETupleProj (e, n) = EUnOp (EUTupleProj n, e)
+  
 end
                                  

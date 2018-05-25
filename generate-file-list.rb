@@ -196,6 +196,7 @@ compiler/micro-timl-util-timl.sml
 compiler/timl-to-micro-timl.sml
 compiler/evm-costs.sml
 compiler/micro-timl-costs.sml
+compiler/eval-constr.sml
 compiler/live-vars.sml
 compiler/micro-timl-typecheck.sml
 compiler/micro-timl-locally-nameless.sml

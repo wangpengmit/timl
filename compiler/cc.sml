@@ -312,41 +312,6 @@ val ETT = EConst (ECTT ())
 
 fun ceil_half n = (n + 1) div 2
 
-open ContUtil
-       
-(* convert lists to Unsafe.Array to support random access *)
-fun make_Tuple_k make_Prod make_Unit ls return =
-    let
-      val make_Tuple = make_Tuple make_Prod make_Unit
-      val len = length ls
-      val () = if len = 0 then return make_Unit else ()
-      val () = if len = 1 then return $ hd ls else ()
-      val len_fst_half = ceil_half len
-      val fst_half = take len_fst_half ls
-      val snd_half = drop len_fst_half ls
-    in
-      make_Prod (make_Tuple fst_half, make_Tuple snd_half)
-    end
-
-and make_Tuple make_Prod make_Unit ls = callret $ make_Tuple_k make_Prod make_Unit ls
-
-fun TTuple a = make_Tuple TProd TUnit a
-fun ETuple a = make_Tuple EPair ETT a
-
-fun ETupleProj_k (len, i) e return =
-    let
-      val () = if len = 0 then return ETT else ()
-      val () = if len = 1 then return e else ()
-      val len_fst_half = ceil_half len
-    in
-      if i < len_fst_half then
-        ETupleProj (len_fst_half, i) $ EFst e
-      else
-        ETupleProj (len - len_fst_half, i - len_fst_half) $ ESnd e
-    end
-
-and ETupleProj (len, i) e = callret $ ETupleProj_k (len, i) e
-      
 infixr 0 %$
 fun a %$ b = EApp (a, b)
 
@@ -677,7 +642,7 @@ and cc_ERec e_all outer_binds bind =
           end
       val def_x = EPack (cc_t t_x, t_env, EPair (EAppITs_binds (EV z_code, betas @ outer_binds), EV z_env))
       val len_ys = length ys
-      val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ETupleProj (len_ys, i) $ EV z_env)) ys
+      val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ETupleProj (EV z_env, i))) ys
       val () = println $ "cc(): before ELetManyClose()"
       val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, e)
       val () = println $ "cc(): after ELetManyClose()"
