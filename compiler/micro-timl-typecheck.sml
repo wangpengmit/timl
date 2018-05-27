@@ -1,6 +1,7 @@
 structure MicroTiMLTypecheck = struct
 
 open MicroTiMLCosts
+open MicroTiMLVisitor2
 open EvalConstr
 open UVar
 open UVarExprUtil
@@ -167,15 +168,15 @@ fun check_same_domain pre_st st =
     in
       (pre_map, st_map)
     end
-fun check_sub_map ictx (pre_st, st) =
+fun check_sub_map (pre_st, st) =
   StMap.appi (fn (k, v) => check_prop $ v %= st @!! k) pre_st
              
-fun is_eq_idx ctx (i, i') =
+fun is_eq_idx (i, i') =
     if is_state i orelse is_state i' then
       let
         val (m, m') = check_same_domain i i'
       in
-        check_sub_map ctx (m, m')
+        check_sub_map (m, m')
       end
     else
       check_prop (i %= i')
@@ -184,7 +185,7 @@ open Bind
        
 val open_s = open_sorting
                
-fun is_eq_sort ctx (s, s') =
+fun is_eq_sort (s, s') =
   case (s, s') of
       (SBasic (bs, _), SBasic (bs', _)) =>
       is_eq_basic_sort (bs, bs')
@@ -214,25 +215,6 @@ fun is_eq_sort ctx (s, s') =
       end
     | _ => raise MTCError "is_eq_sort"
                                        
-fun is_eq_kind (k, k') =
-  case (k, k') of
-      (KType (), KType ()) => ()
-    | (KArrow (b, k), KArrow (b', k')) =>
-      let
-        val () = is_eq_basic_sort (b, b')
-        val () = is_eq_kind (k, k')
-      in
-        ()
-      end
-    | (KArrowT (k1, k2), KArrowT (k1', k2')) =>
-      let
-        val () = is_eq_kind (k1, k1')
-        val () = is_eq_kind (k2, k2')
-      in
-        ()
-      end
-    | _ => raise MTCError "can't unify kinds" 
-       
 fun get_ty_const_kind c = KType ()
   (* case c of *)
   (*     TCUnit => KType *)
@@ -269,6 +251,320 @@ fun add_kinding_it new (ictx, tctx) = (ictx, new :: tctx)
 fun ictx_names ictx = map fst ictx
 fun itctx_names (ictx, tctx) = (map fst ictx, map fst tctx)
                                  
+(* (***************** the "subst_i_t" visitor  **********************)     *)
+
+(* fun subst_i_ty_visitor_vtable cast ((subst_i_i, subst_i_s), d, x, v) : ('this, int, 'var, 'basic_sort, 'idx, 'sort, 'var, 'basic_sort, 'idx2, 'sort2) ty_visitor_vtable = *)
+(*   let *)
+(*     fun extend_i this env _ = env + 1 *)
+(*     fun visit_idx this env b = subst_i_i (d + env) (x + env) v b *)
+(*     fun visit_sort this env b = subst_i_s (d + env) (x + env) v b *)
+(*   in *)
+(*     default_ty_visitor_vtable *)
+(*       cast *)
+(*       extend_i *)
+(*       extend_noop *)
+(*       visit_noop *)
+(*       visit_noop *)
+(*       visit_idx *)
+(*       visit_sort *)
+(*   end *)
+
+(* fun new_subst_i_ty_visitor params = new_ty_visitor subst_i_ty_visitor_vtable params *)
+    
+(* fun subst_i_t_fn substs d x v b = *)
+(*   let *)
+(*     val visitor as (TyVisitor vtable) = new_subst_i_ty_visitor (substs, d, x, v) *)
+(*   in *)
+(*     #visit_ty vtable visitor 0 b *)
+(*   end *)
+
+fun ctx_names (ictx, tctx, ectx(* , _ *)) = (map fst ictx, map fst tctx, [], map fst ectx)
+                                   
+fun is_sub_map_k eq (m, m') return =
+  (Rctx.appi (fn (k, v) =>
+                 case Rctx.find (m', k) of
+                     SOME v' => if eq (v, v') then () else return false
+                   | NONE => return false
+             ) m;
+   true)
+fun is_sub_map eq (m, m') = ContUtil.callret $ is_sub_map_k eq (m, m')
+                                             
+fun assert_sub_map err eq (m, m') =
+  Rctx.appi (fn (k, v) =>
+                case Rctx.find (m', k) of
+                    SOME v' => eq (v, v')
+                  | NONE => raise err ()
+            ) m
+
+fun is_eq_list msg f a = ListPair.appEq f a handle ListPair.UnequalLengths => raise Impossible msg
+
+(* fun is_eq_ty_visitor2_vtable cast () = *)
+(*     let *)
+(*       fun adapt f this env a a' = (f (a, a'); a) *)
+(*       val vtable =        *)
+(*           default_ty_visitor2_vtable *)
+(*             cast *)
+(*             extend_noop *)
+(*             extend_noop *)
+(*             (adapt eq_var) *)
+(*             (adapt is_eq_basic_sort) *)
+(*             (adapt is_eq_idx) *)
+(*             (adapt is_eq_sort) *)
+(*       fun visit2_ibind_anno get_sort this visit_anno visit_body env bind bind' = *)
+(*           let *)
+(*             val (a, (name, t)) = unBindAnnoName bind *)
+(*             val (a', (name', t')) = unBindAnnoName bind' *)
+(*             val a = visit_anno env a a' *)
+(*             val () = open_sorting (fst name, get_sort a) *)
+(*             val t = visit_body env t t' *)
+(*             val () = close () *)
+(*           in *)
+(*             IBindAnno ((name, a), t) *)
+(*           end *)
+(*       val vtable = override_visit2_ibind_anno_sort vtable $ visit2_ibind_anno id *)
+(*       val vtable = override_visit2_ibind_anno_bsort vtable $ visit2_ibind_anno (fn bs => SBasic (bs, dummy)) *)
+(*     in *)
+(*       vtable *)
+(*     end *)
+
+(* fun new_is_eq_ty_visitor2 a = new_ty_visitor2 is_eq_ty_visitor2_vtable a *)
+
+(* fun is_eq_ty (ctx as (ictx, tctx)) (t, t') = *)
+(*   let *)
+(*     val t = whnf ctx t *)
+(*     val t' = whnf ctx t' *)
+(*     fun t_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t *)
+(*     fun t'_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t' *)
+(*     val assert_b = fn b => flip assert_b_m b $ (fn () => sprintf "Can't unify types:\n$\nand\n$\n" [t_str (), t'_str ()]) *)
+(*     (* val () = println $ sprintf "comparing types:\n  $  $" [ *) *)
+(*     (*       t_str (), *) *)
+(*     (*       t'_str () *) *)
+(*     (*     ] *) *)
+(*     fun err msg = *)
+(*         raise MTCError $ sprintf "Error: $\nin is_eq_ty() with\n  $  $" *)
+(*               [ *)
+(*                 msg, *)
+(*                 ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t, *)
+(*                 ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t' *)
+(*               ] *)
+(*     val visitor2 as (TyVisitor2 vtable) = new_is_eq_ty_visitor2 () *)
+(*   in *)
+(*     ignore $ #visit2_ty vtable visitor2 () t t' *)
+(*     handle Visitor2Error msg => err msg *)
+(*   end *)
+
+(* fun is_eq_kind (k, k') = *)
+(*     let *)
+(*       val visitor2 as (TyVisitor2 vtable) = new_is_eq_ty_visitor2 () *)
+(*     in *)
+(*       ignore $ #visit2_kind vtable visitor2 () k k' *)
+(*       handle Visitor2Error msg => raise MTCError $ "Can't unify kinds because: " ^ msg *)
+(*     end *)
+    
+(* fun is_sub_rctx ctx (rctx, rctx_abs) = *)
+(*   assert_sub_map (fn () => Impossible "is_sub_rctx()") (fn (t_abs, t) => is_eq_ty ctx (t, t_abs)) (rctx_abs, rctx) *)
+  
+(* fun is_eq_tys ctx a = is_eq_list "is_eq_tys()/unequal-lengths" (is_eq_ty ctx) a *)
+
+fun is_eq_kind (k, k') =
+  case (k, k') of
+      (KType (), KType ()) => ()
+    | (KArrow (b, k), KArrow (b', k')) =>
+      let
+        val () = is_eq_basic_sort (b, b')
+        val () = is_eq_kind (k, k')
+      in
+        ()
+      end
+    | (KArrowT (k1, k2), KArrowT (k1', k2')) =>
+      let
+        val () = is_eq_kind (k1, k1')
+        val () = is_eq_kind (k2, k2')
+      in
+        ()
+      end
+    | _ => raise MTCError "can't unify kinds"
+       
+fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
+    let
+      val t = whnf ctx t
+      val t' = whnf ctx t'
+      fun t_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t
+      fun t'_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
+      val assert_b = fn b => flip assert_b_m b $ (fn () => sprintf "Can't unify types:\n$\nand\n$\n" [t_str (), t'_str ()])
+      (* val () = println $ sprintf "comparing types:\n  $  $" [ *)
+      (*       t_str (), *)
+      (*       t'_str () *)
+      (*     ] *)
+      fun err () =
+          raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
+                [
+                  ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t,
+                  ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
+                ]
+    in
+      case (t, t') of
+          (TVar (x, _), TVar (x', _)) => assert_b (eq_var (x, x'))
+        | (TConst c, TConst c') => assert_b (c = c')
+        | (TBinOp (opr, t1, t2), TBinOp (opr', t1', t2')) =>
+          let
+            val () = assert_b (opr = opr')
+            val () = is_eq_ty ctx (t1, t1')
+            val () = is_eq_ty ctx (t2, t2')
+          in
+            ()
+          end
+        | (TArrow ((i1, t1), (i, j), (i2, t2)), TArrow ((i1', t1'), (i', j'), (i2', t2'))) =>
+          let
+            val () = is_eq_idx (i1, i1')
+            val () = is_eq_ty ctx (t1, t1')
+            val () = is_eq_idx (i, i')
+            val () = is_eq_idx (j, j')
+            val () = is_eq_idx (i2, i2')
+            val () = is_eq_ty ctx (t2, t2')
+          in
+            ()
+          end
+        | (TQuanI (q, data), TQuanI (q', data')) =>
+          let
+            val () = assert_b (q = q')
+            val (s, (name, t)) = unTQuanI data
+            val (s', (_, t')) = unTQuanI data'
+            val () = is_eq_sort (s, s')
+            val () = open_close add_sorting_it (fst name, s) ctx (fn ctx => is_eq_ty ctx (t, t'))
+          in
+            ()
+          end
+        | (TQuan (q, data), TQuan (q', data')) =>
+          let
+            val () = assert_b (q = q')
+            val (k, (name, t)) = unTQuan data
+            val (k', (_, t')) = unTQuan data'
+            val () = is_eq_kind (k, k')
+            val () = is_eq_ty (add_kinding_it (fst name, k) ctx) (t, t')
+          in
+            ()
+          end
+        | (TRec data, TRec data') =>
+          let
+            val (k, (name, t)) = unTQuan data
+            val (k', (_, t')) = unTQuan data'
+            val () = is_eq_kind (k, k')
+            val () = is_eq_ty (add_kinding_it (fst name, k) ctx) (t, t')
+          in
+            ()
+          end
+        | (TNat i, TNat i') => is_eq_idx (i, i')
+        | (TiBool i, TiBool i') => is_eq_idx (i, i')
+        | (TArr (t, i), TArr (t', i')) =>
+          let
+            val () = is_eq_ty ctx (t, t')
+            val () = is_eq_idx (i, i')
+          in
+            ()
+          end
+        | (TArrayPtr (t, i, i2), TArrayPtr (t', i', i2')) =>
+          let
+            val () = is_eq_ty ctx (t, t')
+            val () = is_eq_idx (i, i')
+            val () = is_eq_idx (i2, i2')
+          in
+            ()
+          end
+        | (TPreArray (t, i, i2, b), TPreArray (t', i', i2', b')) =>
+          let
+            val () = is_eq_ty ctx (t, t')
+            val () = is_eq_idx (i, i')
+            val () = is_eq_idx (i2, i2')
+            val () = assert_b (b = b')
+          in
+            ()
+          end
+        | (TTuplePtr (ts, i, b), TTuplePtr (ts', i', b')) =>
+          let
+            val () = is_eq_tys ctx (ts, ts')
+            val () = is_eq_idx (i, i')
+            val () = assert_b (b = b')
+          in
+            ()
+          end
+        | (TTuple ts, TTuple ts') => is_eq_tys ctx (ts, ts')
+        | (TPreTuple (ts, i, i2), TPreTuple (ts', i', i2')) =>
+          let
+            val () = is_eq_tys ctx (ts, ts')
+            val () = is_eq_idx (i, i')
+            val () = is_eq_idx (i2, i2')
+          in
+            ()
+          end
+        | (TAbsT data, TAbsT data') =>
+          let
+            val (k, (name, t)) = unTAbsT data
+            val (k', (_, t')) = unTAbsT data'
+            val () = is_eq_kind (k, k')
+            val () = is_eq_ty (add_kinding_it (fst name, k) ctx) (t, t')
+          in
+            ()
+          end
+        | (TAppT (t1, t2), TAppT (t1', t2')) =>
+          let
+            val () = is_eq_ty ctx (t1, t1')
+            val () = is_eq_ty ctx (t2, t2')
+          in
+            ()
+          end
+        | (TAbsI data, TAbsI data') =>
+          let
+            val (b, (name, t)) = unTAbsI data
+            val (b', (_, t')) = unTAbsI data'
+            val () = is_eq_basic_sort (b, b')
+            val () = open_close add_sorting_it (fst name, BasicSort b) ctx (fn ctx => is_eq_ty ctx (t, t'))
+          in
+            ()
+          end
+        | (TAppI (t, i), TAppI (t', i')) =>
+          let
+            val () = is_eq_ty ctx (t, t')
+            val () = is_eq_idx (i, i')
+          in
+            ()
+          end
+        | (TProdEx ((t1, b1), (t2, b2)), TProdEx ((t1', b1'), (t2', b2'))) =>
+          let
+            val () = is_eq_ty ctx (t1, t1')
+            val () = is_eq_ty ctx (t2, t2')
+            val () = assert_b (b1 = b1')
+            val () = assert_b (b2 = b2')
+          in
+            ()
+          end
+        | (TArrowTAL (rctx, i), TArrowTAL (rctx', i')) =>
+          let
+            val () = assert_b $ Rctx.numItems rctx = Rctx.numItems rctx'
+            val () = is_sub_rctx ctx (rctx, rctx')
+            val () = is_eq_idx (i, i')
+          in
+            ()
+          end
+        | (TArrowEVM (st, rctx, ts, (j, i)), TArrowEVM (st', rctx', ts', (j', i'))) =>
+          let
+            val () = is_eq_idx (st, st')
+            val () = assert_b $ Rctx.numItems rctx = Rctx.numItems rctx'
+            val () = is_sub_rctx ctx (rctx, rctx')
+            val () = is_eq_tys ctx (ts, ts')
+            val () = is_eq_idx (j, j')
+            val () = is_eq_idx (i, i')
+          in
+            ()
+          end
+        | _ => err ()
+    end
+
+and is_sub_rctx ctx (rctx, rctx_abs) =
+  assert_sub_map (fn () => Impossible "is_sub_rctx()") (fn (t_abs, t) => is_eq_ty ctx (t, t_abs)) (rctx_abs, rctx)
+  
+and is_eq_tys ctx a = is_eq_list "is_eq_tys()/unequal-lengths" (is_eq_ty ctx) a
+
 fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
   let
     (* val kc = kc st_types *)
@@ -483,234 +779,6 @@ and kc_against_kind ctx (t, k) =
 
 and kc_against_KType ctx t = kc_against_kind ctx (t, KType ())
                                              
-(* (***************** the "subst_i_t" visitor  **********************)     *)
-
-(* fun subst_i_ty_visitor_vtable cast ((subst_i_i, subst_i_s), d, x, v) : ('this, int, 'var, 'basic_sort, 'idx, 'sort, 'var, 'basic_sort, 'idx2, 'sort2) ty_visitor_vtable = *)
-(*   let *)
-(*     fun extend_i this env _ = env + 1 *)
-(*     fun visit_idx this env b = subst_i_i (d + env) (x + env) v b *)
-(*     fun visit_sort this env b = subst_i_s (d + env) (x + env) v b *)
-(*   in *)
-(*     default_ty_visitor_vtable *)
-(*       cast *)
-(*       extend_i *)
-(*       extend_noop *)
-(*       visit_noop *)
-(*       visit_noop *)
-(*       visit_idx *)
-(*       visit_sort *)
-(*   end *)
-
-(* fun new_subst_i_ty_visitor params = new_ty_visitor subst_i_ty_visitor_vtable params *)
-    
-(* fun subst_i_t_fn substs d x v b = *)
-(*   let *)
-(*     val visitor as (TyVisitor vtable) = new_subst_i_ty_visitor (substs, d, x, v) *)
-(*   in *)
-(*     #visit_ty vtable visitor 0 b *)
-(*   end *)
-
-fun ctx_names (ictx, tctx, ectx(* , _ *)) = (map fst ictx, map fst tctx, [], map fst ectx)
-                                   
-fun is_sub_map_k eq (m, m') return =
-  (Rctx.appi (fn (k, v) =>
-                 case Rctx.find (m', k) of
-                     SOME v' => if eq (v, v') then () else return false
-                   | NONE => return false
-             ) m;
-   true)
-fun is_sub_map eq (m, m') = ContUtil.callret $ is_sub_map_k eq (m, m')
-                                             
-fun assert_sub_map err eq (m, m') =
-  Rctx.appi (fn (k, v) =>
-                case Rctx.find (m', k) of
-                    SOME v' => eq (v, v')
-                  | NONE => raise err ()
-            ) m
-
-fun is_eq_list msg f a = ListPair.appEq f a handle ListPair.UnequalLengths => raise Impossible msg
-
-fun eq_t a = MicroTiMLVisitor2.eq_t_fn (curry Equal.eq_var, Equal.eq_bs, Equal.eq_i, Equal.eq_s) a
-                                                                                    
-fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
-    let
-      val t = whnf ctx t
-      val t' = whnf ctx t'
-      fun t_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t
-      fun t'_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
-      val assert_b = fn b => flip assert_b_m b $ (fn () => sprintf "Can't unify types:\n$\nand\n$\n" [t_str (), t'_str ()])
-      (* val () = println $ sprintf "comparing types:\n  $  $" [ *)
-      (*       t_str (), *)
-      (*       t'_str () *)
-      (*     ] *)
-      fun err () =
-          raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
-                [
-                  ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t,
-                  ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
-                ]
-    in
-      case (t, t') of
-          (TVar (x, _), TVar (x', _)) => assert_b (eq_var (x, x'))
-        | (TConst c, TConst c') => assert_b (c = c')
-        | (TBinOp (opr, t1, t2), TBinOp (opr', t1', t2')) =>
-          let
-            val () = assert_b (opr = opr')
-            val () = is_eq_ty ctx (t1, t1')
-            val () = is_eq_ty ctx (t2, t2')
-          in
-            ()
-          end
-        | (TArrow ((i1, t1), (i, j), (i2, t2)), TArrow ((i1', t1'), (i', j'), (i2', t2'))) =>
-          let
-            val () = is_eq_idx ictx (i1, i1')
-            val () = is_eq_ty ctx (t1, t1')
-            val () = is_eq_idx ictx (i, i')
-            val () = is_eq_idx ictx (j, j')
-            val () = is_eq_idx ictx (i2, i2')
-            val () = is_eq_ty ctx (t2, t2')
-          in
-            ()
-          end
-        | (TQuanI (q, data), TQuanI (q', data')) =>
-          let
-            val () = assert_b (q = q')
-            val (s, (name, t)) = unTQuanI data
-            val (s', (_, t')) = unTQuanI data'
-            val () = is_eq_sort ictx (s, s')
-            val () = open_close add_sorting_it (fst name, s) ctx (fn ctx => is_eq_ty ctx (t, t'))
-          in
-            ()
-          end
-        | (TQuan (q, data), TQuan (q', data')) =>
-          let
-            val () = assert_b (q = q')
-            val (k, (name, t)) = unTQuan data
-            val (k', (_, t')) = unTQuan data'
-            val () = is_eq_kind (k, k')
-            val () = is_eq_ty (add_kinding_it (fst name, k) ctx) (t, t')
-          in
-            ()
-          end
-        | (TRec data, TRec data') =>
-          let
-            val (k, (name, t)) = unTQuan data
-            val (k', (_, t')) = unTQuan data'
-            val () = is_eq_kind (k, k')
-            val () = is_eq_ty (add_kinding_it (fst name, k) ctx) (t, t')
-          in
-            ()
-          end
-        | (TNat i, TNat i') => is_eq_idx ictx (i, i')
-        | (TiBool i, TiBool i') => is_eq_idx ictx (i, i')
-        | (TArr (t, i), TArr (t', i')) =>
-          let
-            val () = is_eq_ty ctx (t, t')
-            val () = is_eq_idx ictx (i, i')
-          in
-            ()
-          end
-        | (TArrayPtr (t, i, i2), TArrayPtr (t', i', i2')) =>
-          let
-            val () = is_eq_ty ctx (t, t')
-            val () = is_eq_idx ictx (i, i')
-            val () = is_eq_idx ictx (i2, i2')
-          in
-            ()
-          end
-        | (TPreArray (t, i, i2, b), TPreArray (t', i', i2', b')) =>
-          let
-            val () = is_eq_ty ctx (t, t')
-            val () = is_eq_idx ictx (i, i')
-            val () = is_eq_idx ictx (i2, i2')
-            val () = assert_b (b = b')
-          in
-            ()
-          end
-        | (TTuplePtr (ts, i, b), TTuplePtr (ts', i', b')) =>
-          let
-            val () = is_eq_tys ctx (ts, ts')
-            val () = is_eq_idx ictx (i, i')
-            val () = assert_b (b = b')
-          in
-            ()
-          end
-        | (TPreTuple (ts, i, i2), TPreTuple (ts', i', i2')) =>
-          let
-            val () = is_eq_tys ctx (ts, ts')
-            val () = is_eq_idx ictx (i, i')
-            val () = is_eq_idx ictx (i2, i2')
-          in
-            ()
-          end
-        | (TAbsT data, TAbsT data') =>
-          let
-            val (k, (name, t)) = unTAbsT data
-            val (k', (_, t')) = unTAbsT data'
-            val () = is_eq_kind (k, k')
-            val () = is_eq_ty (add_kinding_it (fst name, k) ctx) (t, t')
-          in
-            ()
-          end
-        | (TAppT (t1, t2), TAppT (t1', t2')) =>
-          let
-            val () = is_eq_ty ctx (t1, t1')
-            val () = is_eq_ty ctx (t2, t2')
-          in
-            ()
-          end
-        | (TAbsI data, TAbsI data') =>
-          let
-            val (b, (name, t)) = unTAbsI data
-            val (b', (_, t')) = unTAbsI data'
-            val () = is_eq_basic_sort (b, b')
-            val () = open_close add_sorting_it (fst name, BasicSort b) ctx (fn ctx => is_eq_ty ctx (t, t'))
-          in
-            ()
-          end
-        | (TAppI (t, i), TAppI (t', i')) =>
-          let
-            val () = is_eq_ty ctx (t, t')
-            val () = is_eq_idx ictx (i, i')
-          in
-            ()
-          end
-        | (TProdEx ((t1, b1), (t2, b2)), TProdEx ((t1', b1'), (t2', b2'))) =>
-          let
-            val () = is_eq_ty ctx (t1, t1')
-            val () = is_eq_ty ctx (t2, t2')
-            val () = assert_b (b1 = b1')
-            val () = assert_b (b2 = b2')
-          in
-            ()
-          end
-        | (TArrowTAL (rctx, i), TArrowTAL (rctx', i')) =>
-          let
-            val () = assert_b $ Rctx.numItems rctx = Rctx.numItems rctx'
-            val () = is_sub_rctx ctx (rctx, rctx')
-            val () = is_eq_idx ictx (i, i')
-          in
-            ()
-          end
-        | (TArrowEVM (st, rctx, ts, (j, i)), TArrowEVM (st', rctx', ts', (j', i'))) =>
-          let
-            val () = is_eq_idx ictx (st, st')
-            val () = assert_b $ Rctx.numItems rctx = Rctx.numItems rctx'
-            val () = is_sub_rctx ctx (rctx, rctx')
-            val () = is_eq_tys ctx (ts, ts')
-            val () = is_eq_idx ictx (j, j')
-            val () = is_eq_idx ictx (i, i')
-          in
-            ()
-          end
-        | _ => err ()
-    end      
-
-and is_sub_rctx ctx (rctx, rctx_abs) =
-  assert_sub_map (fn () => Impossible "is_sub_rctx()") (fn (t_abs, t) => is_eq_ty ctx (t, t_abs)) (rctx_abs, rctx)
-  
-and is_eq_tys ctx a = is_eq_list "is_eq_tys()/unequal-lengths" (is_eq_ty ctx) a
-
 fun forget_i_t a = shift_i_t_fn (forget_i_i, forget_i_s) a
 fun forget_t_t a = shift_t_t_fn forget_var a
                                
@@ -1251,7 +1319,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                            | _ => raise MTCError $ "EIte: shoud be bool but got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
           val (e1, t, i1, st1) = tc (ctx, st) e1
           val (e2, i2, st2) = tc_against_ty (ctx, st) (e2, t)
-          val () = is_eq_idx ictx (st2, st1)
+          val () = is_eq_idx (st2, st1)
           val C_Ite_BeforeCodeGen = C_ISZERO + C_PUSH + C_JUMPI
           val (cost, e2) =
               case !phase of
@@ -1281,7 +1349,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
           val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
           val () = is_eq_ty itctx (t1, t2)
-          val () = is_eq_idx ictx (st2, st1)
+          val () = is_eq_idx (st2, st1)
           val C_Case_branch_prelude = C_PUSH + C_ADD + C_MLOAD + C_set_reg
           val C_Case_BeforeCodeGen = C_Var + C_PUSH + C_br_sum + C_Case_branch_prelude
           val (cost, e2) =
@@ -1321,7 +1389,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
               val () = if not $ ISet.member(pre_vars, 0) andalso SMap.numItems diff_map + ISet.numItems diff_vars > 0 then
                          raise Impossible "callee's precondition is bigger than current state"
                        else ()
-              val () = check_sub_map (("__F", SState) :: ictx) (pre_map, st_map)
+              val () = check_sub_map (pre_map, st_map)
               val diff_vars = ISet.map dec diff_vars
               val diff_map = SMap.map forget01_i_i diff_map
             in
@@ -1343,21 +1411,21 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                             (pre_map, st_map, (ISet.difference (st_vars, pre_vars), vars_info, st_map @-- pre_map))
                           end
                       val (pre_map, st_map, diff) = check_sub_domain pre_st st
-                      val () = check_sub_map ictx (pre_map, st_map)
+                      val () = check_sub_map (pre_map, st_map)
                       val st = IUnion_simp (compose_state diff, post_st)
                     in
                       (data, st, (e1, t_e1))
                     end
                   else
                     let
-                      val () = is_eq_idx ictx (st, pre_st)
+                      val () = is_eq_idx (st, pre_st)
                     in
                       (data, post_st, (e1, t_e1))
                     end
                 | TQuanI (Forall (), bind) =>
                   let
                     val ((_, s), t) = unBindAnno bind
-                    val () = is_eq_sort ictx (s, SState)
+                    val () = is_eq_sort (s, SState)
                     val ((pre_st, _), _, _) = assert_TArrow t
                     val diff = check_sub_state pre_st st
                     val t = subst0_i_t diff t
@@ -1677,7 +1745,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
           val e2 = if !anno_EIfi_e2_time then e2 |># i2 else e2
           val () = is_eq_ty itctx (t1, t2)
-          val () = is_eq_idx ictx (st2, st1)
+          val () = is_eq_idx (st2, st1)
           val e = if !anno_EIfi then e %: t_e else e
           val e = if !anno_EIfi_state then e %~ st else e
         in
@@ -1937,7 +2005,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (e, t, i, st) = tc (ctx, st) e
           val st' = sc_against_sort ictx (st', SState)
-          val () = is_eq_idx ictx (st, st')
+          val () = is_eq_idx (st, st')
         in
           (EAscState (e, st'), t, i, st')
         end

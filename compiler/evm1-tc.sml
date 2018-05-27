@@ -759,7 +759,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         (* val () = println $ "vars': " ^ ISetU.str_set str_int vars' *)
         val () = assert_b "vars == vars'" $ (ISet.equal (vars, vars'))
         val () = assert_b "is_eq_st/is_same_domain" $ (StMapU.is_same_domain m m')
-        val () = check_sub_map ictx (m, m')
+        val () = check_sub_map (m, m')
       in
         ()
       end

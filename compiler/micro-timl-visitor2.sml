@@ -157,6 +157,78 @@ fun override_visit2_TAppI (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        extend_t = #extend_t record
   }
 
+fun override_visit2_ibind_anno_sort (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2_vtable) new : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2_vtable =
+  {
+       visit2_kind = #visit2_kind record,
+       visit2_KType = #visit2_KType record,
+       visit2_KArrow = #visit2_KArrow record,
+       visit2_KArrowT = #visit2_KArrowT record,
+       visit2_ty = #visit2_ty record,
+       visit2_TVar = #visit2_TVar record,
+       visit2_TConst = #visit2_TConst record,
+       visit2_TBinOp = #visit2_TBinOp record,
+       visit2_TArrow = #visit2_TArrow record,
+       visit2_TAbsI = #visit2_TAbsI record,
+       visit2_TAppI = #visit2_TAppI record,
+       visit2_TQuan = #visit2_TQuan record,
+       visit2_TQuanI = #visit2_TQuanI record,
+       visit2_TRec = #visit2_TRec record,
+       visit2_TNat = #visit2_TNat record,
+       visit2_TArr = #visit2_TArr record,
+       visit2_TAbsT = #visit2_TAbsT record,
+       visit2_TAppT = #visit2_TAppT record,
+       visit2_TProdEx = #visit2_TProdEx record,
+       visit2_TArrowTAL = #visit2_TArrowTAL record,
+       visit2_var = #visit2_var record,
+       visit2_bsort = #visit2_bsort record,
+       visit2_idx = #visit2_idx record,
+       visit2_sort = #visit2_sort record,
+       visit2_ty_const = #visit2_ty_const record,
+       visit2_ty_bin_op = #visit2_ty_bin_op record,
+       visit2_quan = #visit2_quan record,
+       visit2_ibind_anno_bsort = #visit2_ibind_anno_bsort record,
+       visit2_ibind_anno_sort = new,
+       visit2_tbind_anno = #visit2_tbind_anno record,
+       extend_i = #extend_i record,
+       extend_t = #extend_t record
+  }
+
+fun override_visit2_ibind_anno_bsort (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2_vtable) new : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2_vtable =
+  {
+       visit2_kind = #visit2_kind record,
+       visit2_KType = #visit2_KType record,
+       visit2_KArrow = #visit2_KArrow record,
+       visit2_KArrowT = #visit2_KArrowT record,
+       visit2_ty = #visit2_ty record,
+       visit2_TVar = #visit2_TVar record,
+       visit2_TConst = #visit2_TConst record,
+       visit2_TBinOp = #visit2_TBinOp record,
+       visit2_TArrow = #visit2_TArrow record,
+       visit2_TAbsI = #visit2_TAbsI record,
+       visit2_TAppI = #visit2_TAppI record,
+       visit2_TQuan = #visit2_TQuan record,
+       visit2_TQuanI = #visit2_TQuanI record,
+       visit2_TRec = #visit2_TRec record,
+       visit2_TNat = #visit2_TNat record,
+       visit2_TArr = #visit2_TArr record,
+       visit2_TAbsT = #visit2_TAbsT record,
+       visit2_TAppT = #visit2_TAppT record,
+       visit2_TProdEx = #visit2_TProdEx record,
+       visit2_TArrowTAL = #visit2_TArrowTAL record,
+       visit2_var = #visit2_var record,
+       visit2_bsort = #visit2_bsort record,
+       visit2_idx = #visit2_idx record,
+       visit2_sort = #visit2_sort record,
+       visit2_ty_const = #visit2_ty_const record,
+       visit2_ty_bin_op = #visit2_ty_bin_op record,
+       visit2_quan = #visit2_quan record,
+       visit2_ibind_anno_bsort = new,
+       visit2_ibind_anno_sort = #visit2_ibind_anno_sort record,
+       visit2_tbind_anno = #visit2_tbind_anno record,
+       extend_i = #extend_i record,
+       extend_t = #extend_t record
+  }
+
 (***************** the default visitor2  **********************)    
 
 open VisitorUtil
@@ -577,12 +649,12 @@ fun default_ty_visitor2_vtable
   end
 
 datatype ('env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2 =
-         TyVisitor of (('env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2_interface
+         TyVisitor2 of (('env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2_interface
 
 fun ty_visitor2_impls_interface (this : ('env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2) :
     (('env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'var3, 'bsort3, 'idx3, 'sort3) ty_visitor2_interface =
   let
-    val TyVisitor vtable = this
+    val TyVisitor2 vtable = this
   in
     vtable
   end
@@ -591,7 +663,7 @@ fun new_ty_visitor2 vtable params =
   let
     val vtable = vtable ty_visitor2_impls_interface params
   in
-    TyVisitor vtable
+    TyVisitor2 vtable
   end
     
 (***************** the "eq_t" visitor  **********************)    
@@ -613,7 +685,7 @@ fun new_eq_t_visitor2 a = new_ty_visitor2 eq_t_visitor2_vtable a
     
 fun eq_t_fn params b b' =
   let
-    val visitor2 as (TyVisitor vtable) = new_eq_t_visitor2 params
+    val visitor2 as (TyVisitor2 vtable) = new_eq_t_visitor2 params
   in
     (#visit2_ty vtable visitor2 () b b'; true)
     handle Visitor2Error msg => false

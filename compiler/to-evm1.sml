@@ -857,14 +857,13 @@ fun test1 dirname =
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
     val (st_name2ty, st_name2int) = TypeCheck.get_st_types ()
     fun check_vcs vcs = 
-        (* case VCSolver.vc_solver filename vcs of *)
-        (*     [] => () *)
-        (*   | vcs => *)
-        (*     raise curry TypeCheck.Error dummy $ (* str_error "Error" filename dummy *) [sprintf "Typecheck Error: $ Unproved obligations:" [str_int $ length vcs], ""] @ ( *)
-        (*       (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *) *)
-        (*       concatMap (VCSolver.print_unsat true filename) vcs *)
-    (*     ) *)
-      ()
+        case VCSolver.vc_solver filename vcs of
+            [] => ()
+          | vcs =>
+            raise curry TypeCheck.Error dummy $ (* str_error "Error" filename dummy *) [sprintf "Typecheck Error: $ Unproved obligations:" [str_int $ length vcs], ""] @ (
+              (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *)
+              concatMap (VCSolver.print_unsat true filename) vcs
+            )
     val () = check_vcs vcs
     val () = println "Finished TiML typechecking"
                      
@@ -895,7 +894,7 @@ fun test1 dirname =
     val e = set_EAbs_is_rec e
     val () = phase := PhBeforeCPS ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
-    val () = check_vcs vcs
+    (* val () = check_vcs vcs *)
     val () = println "Finished MicroTiML typechecking #1"
     open ExportPP
     val () = println "Type:"
@@ -931,7 +930,7 @@ fun test1 dirname =
     val () = phase := PhBeforeCC ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
-    val () = check_vcs vcs
+    (* val () = check_vcs vcs *)
     val () = println "Finished MicroTiML typechecking #2"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
@@ -948,7 +947,7 @@ fun test1 dirname =
     val () = println "Started MicroTiML typechecking #3 ..."
     val () = phase := PhBeforeCodeGen ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), init_st) e
-    val () = check_vcs vcs
+    (* val () = check_vcs vcs *)
     val () = println "Finished MicroTiML typechecking #3"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
