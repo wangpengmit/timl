@@ -428,13 +428,6 @@ and cc_t_arrow t =
       t
     end
 
-fun cc_expr_un_op opr =
-    case opr of
-        EUInj (inj, t) => EUInj (inj, cc_t t)
-      | EUFold t => EUFold $ cc_t t
-      | EUUnfold () => opr
-      | EUTiML _ => opr
-
 fun apply_TForallIT b args =
     case (b, args) of
         (TQuanI (Forall (), bind), inl v :: args) =>

@@ -529,7 +529,9 @@ fun assert_sub_map err eq (m, m') =
             ) m
 
 fun is_eq_list msg f a = ListPair.appEq f a handle ListPair.UnequalLengths => raise Impossible msg
-                                                                                              
+
+fun eq_t a = MicroTiMLVisitor2.eq_t_fn (curry Equal.eq_var, Equal.eq_bs, Equal.eq_i, Equal.eq_s) a
+                                                                                    
 fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
     let
       val t = whnf ctx t
@@ -541,6 +543,12 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
       (*       t_str (), *)
       (*       t'_str () *)
       (*     ] *)
+      fun err () =
+          raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
+                [
+                  ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t,
+                  ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
+                ]
     in
       case (t, t') of
           (TVar (x, _), TVar (x', _)) => assert_b (eq_var (x, x'))
@@ -695,11 +703,7 @@ fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
           in
             ()
           end
-        | _ => raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
-                     [
-                       ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t,
-                       ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
-                     ]
+        | _ => err ()
     end      
 
 and is_sub_rctx ctx (rctx, rctx_abs) =
@@ -1133,11 +1137,11 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
           val ts = assert_TTuple t_e
-          (*here*)
+          val t = assert_SOME $ nth_error ts n 
           val e = if !anno_EProj then e %: t_e else e
           val e = if !anno_EProj_state then e %~ st else e
         in
-          (EProj (proj, e), choose (t1, t2) proj, i %%+ TN (C_Proj + C_Var + C_Let), st)
+          (EUnOp (EUTupleProj n, e), t, i %%+ TN (C_TupleProj + C_Var + C_Let), st)
         end
       | EUnOp (EUTiML (EUPrintc ()), e) =>
         let
@@ -1309,7 +1313,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
               val st = shift_i_i st
               val (pre_vars, pre_vars_info, pre_map) = decompose_state pre_st
               val (st_vars, st_vars_info, st_map) = decompose_state st
-              val pre_vars_minus_0 = ISet.delete (pre_vars, 0)
+              val pre_vars_minus_0 = ISetU.delete (pre_vars, 0)
               val () = assert_b "check_sub_state()/isSubset" $ ISet.isSubset (pre_vars_minus_0, st_vars)
               val diff_vars = ISet.difference (st_vars, pre_vars_minus_0)
               val () = assert_b "check_sub_state()/is_sub_domain" $ SMapU.is_sub_domain pre_map st_map
@@ -1448,7 +1452,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val len = length es
           val i = combine_IBAdd_Time_Nat $ map #3 ls
         in
-          (ETuple (map get_e ls), TTuple (map #2 ls), i %%+ (to_real $ C_Tuple + len * C_Var + C_Let, N len), st)
+          (ETuple (map get_e ls), TTuple (map #2 ls), i %%+ (to_real $ C_Tuple len + len * C_Var + C_Let, N len), st)
         end
       | EBinOp (EBPrim opr, e1, e2) =>
         let

@@ -319,6 +319,7 @@ fun compile st_name2int ectx e =
     | EUnOp (EUFold t, e) => compile e @ [VALUE_Fold $ Inner $ cg_t t]
     | EAscType (e, t) => compile e @ [VALUE_AscType $ Inner $ cg_t t]
     | EAscState (e, st) => compile e
+    | EUnOp (EUAnno _, e) => compile e
     | ENever t => PUSH_value $ VNever $ cg_t t
     | EBuiltin (name, t) => PUSH_value $ VBuiltin (name, cg_t t)
     | EBinOp (EBPair (), e1, e2) =>
@@ -703,6 +704,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | EAscSpace (e, i) => ASCSPACE (Inner i) @:: cg_e params e
     | EAscType (e, _) => cg_e params e
     | EAscState (e, _) => cg_e params e
+    | ETuple _ => err ()
     | EBinOp (EBPair (), _, _) => err ()
     | EBinOp (EBNew (), _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
@@ -891,6 +893,7 @@ fun test1 dirname =
     val () = println "Started MicroTiML typechecking #1 ..."
     val (e, _) = LiveVars.live_vars e
     val e = set_EAbs_is_rec e
+    val () = phase := PhBeforeCPS ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #1"
@@ -925,6 +928,7 @@ fun test1 dirname =
     (* val () = println e_str *)
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
+    val () = phase := PhBeforeCC ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
     val () = check_vcs vcs
@@ -941,10 +945,11 @@ fun test1 dirname =
     val () = write_file (join_dir_file' dirname $ "unit-test-after-cc.tmp", e_str)
     (* val () = println e_str *)
     (* val () = println "" *)
-    val () = println "Started MicroTiML typechecking #4 ..."
+    val () = println "Started MicroTiML typechecking #3 ..."
+    val () = phase := PhBeforeCodeGen ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = check_vcs vcs
-    val () = println "Finished MicroTiML typechecking #4"
+    val () = println "Finished MicroTiML typechecking #3"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
     val _ = print_time_space i

@@ -12,7 +12,7 @@ open MicroTiML
 infixr 0 $
 
 infix 6 @%-
-val op@%- = ISet.delete
+val op@%- = ISetU.delete
          
 fun live_vars_expr_visitor_vtable cast () =
   let

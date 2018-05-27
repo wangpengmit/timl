@@ -515,6 +515,23 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         cps (e1, t_e1) (c, i_c)
       end
+    | S.ETuple es =>
+      let
+        val ts = assert_TTuple t_e
+        val ets = zip (es, ts)
+        val xs_names_es = mapi (fn (i, (e, t)) => (fresh_evar (), "x" ^ str_int (i+1), assert_EAscState e, t)) ets
+        val xs = map #1 xs_names_es
+        val ek = k $$ ETuple (map EV xs)
+        fun f ((x, name, (e, st_e), t), (ek, i_ek)) =
+            let
+              val t_x = cps_t t
+              val ek = EAbs (st_e %++ F, close0_e_e_anno ((x, name, t_x), ek))
+            in
+              cps (e, t) (ek, i_ek)
+            end
+      in
+        foldr f (ek, j_k) xs_names_es
+      end
     | S.EBinOp (opr, e1, e2) =>
       (* [[ e1 o e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. k (x1 o x2))) *)
       let
@@ -995,6 +1012,7 @@ fun check_CPSed_expr e =
     | EAscTime (e, _) => loop e
     | EAscSpace (e, _) => loop e
     | EBinOp (EBPair (), _, _) => err ()
+    | ETuple _ => err ()
     | EBinOp (EBNew (), _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
@@ -1018,8 +1036,8 @@ fun check_CPSed_expr e =
     | EAppI _ => err ()
     | EPack _ => err ()
     | EPackI _ => err ()
-    | EAscState _ => err ()
     | EAscType _ => err ()
+    | EAscState _ => err ()
     | ENever _ => err ()
     | EBuiltin _ => err ()
     | ENewArrayValues _ => err ()
@@ -1068,6 +1086,7 @@ and check_value e =
       EConst _ => ()
     | EState _ => ()
     | EBinOp (EBPair (), e1, e2) => (check_value e1; check_value e2)
+    | ETuple es => app check_value es
     | EUnOp (EUInj _, e) => check_value e
     | EAbs (_, bind) =>
       let
@@ -1093,6 +1112,7 @@ and check_value e =
     | EUnOp (EUFold _, e) => check_value e
     | EAscType (e, _) => check_value e
     | EAscState (e, _) => check_value e
+    | EUnOp (EUAnno _, e) => check_value e
     | EAppT (e, _) => check_value e
     | EAppI (e, _) => check_value e
     | ERec data =>
@@ -1106,6 +1126,7 @@ and check_value e =
     | EBuiltin _ => ()
     | EUnOp (EUUnfold (), _) => err ()
     | EUnOp (EUTiML _, _) => err ()
+    | EUnOp (EUTupleProj _, _) => err ()
     | EBinOp (EBApp (), _, _) => err ()
     | EBinOp (EBNew (), _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()

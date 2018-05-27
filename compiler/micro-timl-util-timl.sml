@@ -102,6 +102,10 @@ fun assert_fst_false p =
   case p of
       (false, a) => a
     | _ => raise Impossible "assert_fst_false"
+fun assert_TTuple t =
+  case t of
+      TTuple a => a
+    | _ => raise assert_fail $ "assert_TTuple failed; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                                                           
 fun assert_EAbs e =
   case e of
