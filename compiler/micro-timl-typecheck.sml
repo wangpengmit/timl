@@ -1,5 +1,5 @@
 structure MicroTiMLTypecheck = struct
- 
+
 open MicroTiMLCosts
 open MicroTiMLVisitor2
 open EvalConstr
