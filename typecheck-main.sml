@@ -1,6 +1,7 @@
 structure TypeCheckMain = struct
 structure U = UnderscoredExpr
 open CollectUVar
+open MicroTiMLCosts
 open RedundantExhaust
 open Region
 open Pervasive
@@ -1100,7 +1101,10 @@ fun assert_TMap err t =
   case t of
       TMap a => a
     | _ => err ()
-    
+
+               
+fun TN n = (to_real n, N0 dummy)
+             
 fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (idx * idx) * idx StMap.map =
   let
     val (ctx, st) = ctx_st
@@ -1193,7 +1197,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val e = EAppTs (e, t_args)
             val e = EAppIs (e, i_args)
           in
-            (e, t, (T0 dummy, N0 dummy), st)
+            (e, t, TN C_EVar, st)
           end
         | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), (T0 r, N0 r), st)
         | U.EUnOp (opr, e, r) =>
