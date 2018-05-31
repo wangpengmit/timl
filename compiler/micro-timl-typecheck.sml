@@ -988,7 +988,6 @@ infix 6 %%+
 val N : nat -> idx = INat
 val T : TimeType.time -> idx = ITime
                 
-fun to_real n = IToReal (N n, dummy)
 fun TN n = (to_real n, N0)
 
 fun set_EAbs_is_rec_expr_visitor_vtable cast () =
@@ -1183,7 +1182,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                val e = e_input
                val e = if !anno_EVar then e %: t else e
              in
-               (e, t, TN0, st)
+               (e, t, TN C_EVar, st) 
              end
            | NONE => raise MTCError "Unbound term variable"
         )

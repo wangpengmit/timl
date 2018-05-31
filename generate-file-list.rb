@@ -165,6 +165,8 @@ subst-uvar.sml
 update-expr.sml
 sortcheck.sml
 topo-sort-fn.sml
+compiler/evm-costs.sml
+compiler/micro-timl-costs.sml
 typecheck-main.sml
 trivial-solver.sml
 derived-trans.sml
@@ -194,8 +196,6 @@ compiler/post-process.sml
 compiler/export-pp.sml
 compiler/micro-timl-util-timl.sml
 compiler/timl-to-micro-timl.sml
-compiler/evm-costs.sml
-compiler/micro-timl-costs.sml
 compiler/eval-constr.sml
 compiler/live-vars.sml
 compiler/micro-timl-typecheck.sml

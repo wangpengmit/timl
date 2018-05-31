@@ -86,5 +86,7 @@ fun M_Abs_BeforeCC n_free_vars = 2 + n_free_vars
 val C_App_BeforeCodeGen = 2 * C_Var + C_set_reg + C_JUMP
 val C_App_BeforeCC = C_App_BeforeCodeGen + C_Unpack + 2 * (C_Let + C_Proj + C_Var) + C_Var + (C_Pair + C_Var)
 val M_App_BeforeCC = 2
-                       
+
+val C_EVar = 0 (* each computation is responsible for accounting for reading from variables, so here the cost is zero *)
+    
 end

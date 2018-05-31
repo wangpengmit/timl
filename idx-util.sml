@@ -103,6 +103,7 @@ fun collect_IBinOp_left opr i =
 val collect_IBAdd = collect_IBinOp (IBAdd ())
 val collect_IBAdd_left = collect_IBinOp_left (IBAdd ())
 val collect_IBMult = collect_IBinOp (IBMult ())
+val collect_IBMax = collect_IBinOp (IBMax ())
 
 fun combine_IBinOp f init is = foldl' (fn (i, acc) => f (acc, i)) init is
 fun combine_IBinOp_nonempty f is = foldl_nonempty (fn (i, acc) => f (acc, i)) is
@@ -113,6 +114,7 @@ fun combine_IBAdd_Nat is = combine_IBAdd (N0 dummy) is
 fun combine_IBAdd_nonempty (i, is) = combine_IBinOp_nonempty op%+ (i :: is)
 fun combine_IBMult one is = combine_IBinOp op%* one is
 fun combine_IBMult_nonempty (i, is) = combine_IBinOp_nonempty op%* (i :: is)
+fun combine_IBMax_nonempty (i, is) = combine_IBinOp_nonempty IMax (i :: is)
                                             
 fun collect_PBinConn opr i =
   case i of

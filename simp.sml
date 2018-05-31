@@ -119,23 +119,26 @@ local
 	        else if eq_i i2 (T0 dummy) orelse eq_i i2 (INat (0, dummy)) then
                   mark i1
 	        else
-                  (case (i1, i2) of
-                       (IBinOp (opr, i1, i2), IBinOp (opr', i1', i2')) =>
-                       if opr = opr' then
-                         if opr = IBAdd () orelse opr = IBMult () then
-                           if eq_i i1 i1' then
-                             mark $ IBinOp (opr, i1, IBinOp (IBMax (), i2, i2'))
-                           else if eq_i i2 i2' then
-                             mark $ IBinOp (opr, IBinOp (IBMax (), i1, i1'), i2)
-                           else def ()
-                         else if opr = IBApp () then
-                           if eq_i i1 i1' then
-                             mark $ IBinOp (opr, i1, IBinOp (IBMax (), i2, i2'))
-                           else def ()
-                         else def ()
-                       else def ()
-                     | _ => def ()
-                  )
+                  let
+                    fun def () = reduce_IBinOps (collect_IBMax, combine_IBMax_nonempty, Int.max, TimeType.max) i
+                  in
+                    case (i1, i2) of
+                        (IBinOp (opr, i1, i2), IBinOp (opr', i1', i2')) =>
+                        if opr = opr' then
+                          if opr = IBAdd () orelse opr = IBMult () then
+                            if eq_i i1 i1' then
+                              mark $ IBinOp (opr, i1, IBinOp (IBMax (), i2, i2'))
+                            else if eq_i i2 i2' then
+                              mark $ IBinOp (opr, IBinOp (IBMax (), i1, i1'), i2)
+                            else def ()
+                          else if opr = IBApp () then
+                            if eq_i i1 i1' then
+                              mark $ IBinOp (opr, i1, IBinOp (IBMax (), i2, i2'))
+                            else def ()
+                          else def ()
+                        else def ()
+                      | _ => def ()
+                  end
 	      | IBMin () =>
 	        if eq_i i1 i2 then
                   mark i1

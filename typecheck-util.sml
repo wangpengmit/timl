@@ -596,4 +596,6 @@ fun open_close add ns ctx f =
     ret
   end
 
+fun to_real n = IToReal (INat (n, dummy), dummy)
+                        
 end
