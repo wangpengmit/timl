@@ -1199,7 +1199,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (e, t, TN C_EVar, st)
           end
-        | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), (T0 r, N0 r), st)
+        | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), TN C_EConst, st)
         | U.EUnOp (opr, e, r) =>
           (case opr of
 	       EUProj proj => 
@@ -1209,13 +1209,13 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t2 = fresh_mt gctx (sctx, kctx) r
                  val (e, d, st) = check_mtype ctx_st (e, TProd (t1, t2)) 
                in 
-                 (EUnOp (opr, e, r), choose (t1, t2) proj, d, st)
+                 (EUnOp (opr, e, r), choose (t1, t2) proj, d %%+ TN C_EProj, st)
 	       end
              | EUPrintc () =>
                let
                  val (e, d, st) = check_mtype ctx_st (e, TByte r) 
                in
-                 (EUnOp (opr, e, r), TUnit r, d, st)
+                 (EUnOp (opr, e, r), TUnit r, d %%+ TN C_EPrintc, st)
                end
              (* | EUPrint => *)
              (*   let *)
@@ -1227,7 +1227,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                let
                  val (e, d, st) = check_mtype ctx_st (e, TBase (get_prim_expr_un_op_arg_ty opr, r)) 
                in
-                 (EUnOp (EUPrim opr, e, r), TBase (get_prim_expr_un_op_res_ty opr, r), d, st)
+                 (EUnOp (EUPrim opr, e, r), TBase (get_prim_expr_un_op_res_ty opr, r), d %%+ TN (C_EUPrim opr), st)
                end
 	     | EUArrayLen () =>
                let
@@ -1236,7 +1236,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val i = fresh_i gctx sctx BSNat r
                  val (e, d, st) = check_mtype ctx_st (e, TArray (t, i))
                in
-                 (EUnOp (opr, e, r), TNat (i, r), d, st)
+                 (EUnOp (opr, e, r), TNat (i, r), d %%+ TN C_EArrayLen, st)
                end
 	     | EUNat2Int () =>
                let
@@ -1244,14 +1244,14 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val i = fresh_i gctx sctx BSNat r
                  val (e, d, st) = check_mtype ctx_st (e, TNat (i, r))
                in
-                 (EUnOp (opr, e, r), TInt r, d, st)
+                 (EUnOp (opr, e, r), TInt r, d %%+ TN C_ENat2Int, st)
                end
 	     | EUInt2Nat () =>
                let
                  val r = U.get_region_e e_all
                  val (e, d, st) = check_mtype ctx_st (e, TInt r)
                in
-                 (EUnOp (opr, e, r), TVar $ QID $ qid_add_r r SOME_NAT_ID, d, st)
+                 (EUnOp (opr, e, r), TVar $ QID $ qid_add_r r SOME_NAT_ID, d %%+ TN C_EInt2Nat, st)
                end
              | EUStorageGet () =>
                let
@@ -1260,7 +1260,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t = whnf_mt true gctx kctx t
                  val t = assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
                in
-                 (EUnOp (opr, e, r), t, j, st)
+                 (EUnOp (opr, e, r), t, j %%+ TN C_EStorageGet, st)
                end
              | EUVectorLen () =>
                let
@@ -1268,7 +1268,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t = whnf_mt true gctx kctx t
                  val (_, _, len) = get_vector (fn () => r) t
                in
-                 (EUnOp (opr, e, r), TNat (len, r), j, st)
+                 (EUnOp (opr, e, r), TNat (len, r), j %%+ TN C_EVectorLen, st)
                end
              | EUVectorClear () =>
                let
@@ -1276,7 +1276,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t = whnf_mt true gctx kctx t
                  val (x, _, _) = get_vector (fn () => r) t
                in
-                 (EUnOp (opr, e, r), TUnit r, j, st @+ (x, N0 r))
+                 (EUnOp (opr, e, r), TUnit r, j %%+ TN C_EVectorClear, st @+ (x, N0 r))
                end
           )
 	| U.EBinOp (opr, e1, e2) =>
@@ -1286,14 +1286,14 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val (e1, t1, d1, st) = get_mtype (ctx, st) e1
 	         val (e2, t2, d2, st) = get_mtype (ctx, st) e2
                in
-	         (EPair (e1, e2), TProd (t1, t2), d1 %%+ d2, st)
+	         (EPair (e1, e2), TProd (t1, t2), d1 %%+ d2 %%+ (to_real C_EPair, N 2), st)
 	       end
 	     | EBApp () =>
 	       let
                  val r1 = U.get_region_e e1
-                 val (e1, t1, (d1, j1), st) = get_mtype (ctx, st) e1
+                 val (e1, t1, d1, st) = get_mtype (ctx, st) e1
                  val t1 = whnf_mt true gctx kctx t1
-                 val ((pre_st, t2), (d, j), (post_st, t)) =
+                 val ((pre_st, t2), d, (post_st, t)) =
                      case t1 of
                          TArrow a => a
                        | t1 =>
@@ -1313,7 +1313,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                              raise Error (r1, "type mismatch:" ::
                                               indent ["expect: _ -- _ --> _",
                                                       "got: " ^ str_mt gctxn skctxn t1])
-                 val (e2, t2', (d2, j2), st) = get_mtype (ctx, st) e2
+                 val (e2, t2', d2, st) = get_mtype (ctx, st) e2
                  (* todo: if I swap (t2, t2'), unify_mt() has a bug that it unifies the index arguments too eagerly *)
                  val () = unify_mt (get_region_e e2) gctx (sctx, kctx) (t2, t2')
                  fun check_submap pre_st st =
@@ -1326,17 +1326,19 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val () = check_submap pre_st st
                  val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
                  val st = st @++ post_st
+                 val (e2, n_live_vars) = assert_EAnnoLiveVars e2                             
                in
-                 (EApp (e1, e2), t, (d1 %+ d2 %+ T1 r1 %+ d, j1 %+ j2 %+ j), st) 
+                 (EApp (e1, e2), t, d1 %%+ d2 %%+ (to_real $ C_App_BeforeCPS n_live_vars, N $ M_App_BeforeCPS n_live_vars) %%+ d, st) 
 	       end
 	     | EBNew () =>
                let
                  val r = U.get_region_e e_all
-                 val i = fresh_i gctx sctx BSTime r
-                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (i, r))
+                 val len = fresh_i gctx sctx BSTime r
+                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (len, r))
                  val (e2, t, d2, st) = get_mtype (ctx, st) e2
+                 val cost = N C_ENew_order0 %+ N C_ENew_order1 %* len
                in
-                 (EBinOp (opr, e1, e2), TArray (t, i), d1 %%+ d2, st)
+                 (EBinOp (opr, e1, e2), TArray (t, i), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %+ N1), st)
                end
 	     | EBRead () =>
                let
@@ -1348,7 +1350,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
                  val () = write_lt (i2, i1, r)
                in
-                 (EBinOp (opr, e1, e2), t, d1 %%+ d2, st)
+                 (EBinOp (opr, e1, e2), t, d1 %%+ d2 %%+ TN C_ERead, st)
                end
 	     | EBNat opr =>
                let
@@ -1361,13 +1363,13 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val () = if opr = EBNBoundedMinus () then write_le (i2, i1, r) else ()
                  val i = interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Error (r, ["Can only divide by a nat whose index is a constant, not: " ^ str_i gctxn sctxn i2]))
                in
-                 (EBinOp (EBNat opr, e1, e2), TNat (i, r), d1 %%+ d2 %%+ (T1 r, N0 r), st)
+                 (EBinOp (EBNat opr, e1, e2), TNat (i, r), d1 %%+ d2 %%+ TN (C_ENat opr), st)
                end
 	     | EBPrim opr =>
 	       let
                  val (e1, d1, st) = check_mtype (ctx, st) (e1, TBase (get_prim_expr_bin_op_arg1_ty opr, dummy))
 	         val (e2, d2, st) = check_mtype (ctx, st) (e2, TBase (get_prim_expr_bin_op_arg2_ty opr, dummy)) in
-	         (EBinOp (EBPrim opr, e1, e2), TBase (get_prim_expr_bin_op_res_ty opr, dummy), d1 %%+ d2 %%+ (T1 dummy, N0 dummy), st)
+	         (EBinOp (EBPrim opr, e1, e2), TBase (get_prim_expr_bin_op_res_ty opr, dummy), d1 %%+ d2 %%+ TN (C_EBPrim opr), st)
 	       end
              | EBNatCmp opr =>
                let
@@ -1377,7 +1379,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (i1, r))
                  val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
                in
-                 (EBinOp (EBNatCmp opr, e1, e2), TiBool (interp_nat_cmp r opr (i1, i2), r), d1 %%+ d2, st)
+                 (EBinOp (EBNatCmp opr, e1, e2), TiBool (interp_nat_cmp r opr (i1, i2), r), d1 %%+ d2 %%+ TN (C_ENatCmp opr), st)
                end
              | EBMapPtr () =>
                let
@@ -1395,7 +1397,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                            | _ => assert_TMap err $ assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
                  val (e2, j2, st) = check_mtype (ctx, st) (e2, TInt r)
                in
-                 (EBinOp (opr, e1, e2), t, j1 %%+ j2, st)
+                 (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ TN C_EMapPtr, st)
                end
              | EBVectorGet () =>
                let
@@ -1407,7 +1409,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val (x, t, len) = get_vector (fn () => get_region_e e1) t1
                  val () = write_lt (i, len, r)
                in
-                 (EBinOp (opr, e1, e2), t, j1 %%+ j2, st)
+                 (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ TN C_EVectorGet, st)
                end
              | EBVectorPushBack () =>
                let
@@ -1418,7 +1420,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val (x, t, len) = get_vector (fn () => get_region_e e1) t1
                  val () = unify_mt r gctx (sctx, kctx) (t2, t)
                in
-                 (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2, st @+ (x, len %+ N1 r))
+                 (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2 %%+ TN C_EVectorPushBack, st @+ (x, len %+ N1 r))
                end
              | EBStorageSet () =>
                let
@@ -1428,10 +1430,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t = assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
                  val (e2, j2, st) = check_mtype (ctx, st) (e2, t)
                in
-                 (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2, st)
+                 (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2 %%+ TN C_EStorageSet, st)
                end
           )
-        | U.EState (x, r) => (EState (x, r), TState (x, r), (T0 r, N0 r), st)
+        | U.EState (x, r) => (EState (x, r), TState (x, r), TN C_EState, st)
         | U.EGet (x, es, r) =>
           let
             val () = if null es then raise Error (r, ["no offsets"]) else ()
@@ -1495,7 +1497,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val () = unify_mt r gctx (sctx, kctx) (t3, t)
             val () = write_lt (i, len, r)
           in
-            (ETriOp (ETVectorSet (), e1, e2, e3), TUnit r, j1 %%+ j2 %%+ j3, st)
+            (ETriOp (ETVectorSet (), e1, e2, e3), TUnit r, j1 %%+ j2 %%+ j3 %%+ TN C_EVectorSet, st)
           end
 	| U.ETriOp (ETWrite (), e1, e2, e3) =>
           let
@@ -1508,7 +1510,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val () = write_lt (i2, i1, r)
             val (e3, d3, st) = check_mtype (ctx, st) (e3, t)
           in
-            (ETriOp (ETWrite (), e1, e2, e3), TUnit r, d1 %%+ d2 %%+ d3, st)
+            (ETriOp (ETWrite (), e1, e2, e3), TUnit r, d1 %%+ d2 %%+ d3 %%+ TN C_EWrite, st)
           end
 	| U.ETriOp (ETIte (), e, e1, e2) =>
           let
@@ -1517,8 +1519,9 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e1, t, d1, st1) = get_mtype (ctx, st) e1
             val (e2, d2, st2) = check_mtype (ctx, st) (e2, t)
             val () = unify_state r gctxn sctxn (st2, st1)
+            val (e2, n_live_vars) = assert_EAnnoLiveVars e2
           in
-            (ETriOp (ETIte (), e, e1, e2), t, d %%+ smart_max_pair d1 d2, st1)
+            (ETriOp (ETIte (), e, e1, e2), t, d %%+ (to_real $ C_Ite_BeforeCPS n_live_vars, N $ M_Ite_BeforeCPS n_live_vars) %%+ smart_max_pair d1 d2, st1)
           end
 	| U.EEI (opr, e, i) =>
           (case opr of
@@ -1582,7 +1585,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t = check_kind_Type gctx (skctx, t)
 	         val (e, _, d, st) = get_mtype (ctx, st) e
                in
-	         (EET (opr, e, t), t, d, st)
+	         (EET (opr, e, t), t, d %%+ TN C_Halt, st)
 	       end
           )
 	| U.ET (opr, t, r) =>
@@ -1592,7 +1595,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	         val t = check_kind_Type gctx (skctx, t)
 	         val () = write_prop (PFalse dummy, U.get_region_e e_all)
                in
-	         (ENever (t, r), t, (T0 r, N0 r), st)
+	         (ENever (t, r), t, TN C_ENever, st)
                end
 	     | ETBuiltin name => 
                let
@@ -1600,7 +1603,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	         val () = if !is_builtin_enabled then ()
                           else raise Error (r, ["builtin keyword is only available in standard library"])
                in
-	         (EBuiltin (name, t, r), t, TN0 r, st)
+	         (EBuiltin (name, t, r), t, TN C_EBuiltin, st)
                end
           )
         | U.ENewArrayValues (t, es, r) =>
@@ -1612,7 +1615,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val ds = rev ds
             val d = combine_IBAdd_Time_Nat ds
           in
-            (ENewArrayValues (t, es, r), TArray (t, INat (length es, r)), d, st)
+            (ENewArrayValues (t, es, r), TArray (t, INat (length es, r)), d %%+ (to_real $ C_ENewArrayValues len, N $ len + 1), st)
           end
 	| U.EAbs (pre_st, bind) => 
 	  let

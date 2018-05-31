@@ -1186,7 +1186,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
              end
            | NONE => raise MTCError "Unbound term variable"
         )
-      | EConst c => (e_input, get_expr_const_type c, TN $ C_Const + C_Let, st)
+      | EConst c => (e_input, get_expr_const_type c, TN C_EConst, st)
       | EUnOp (EUTiML (EUProj proj), e) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e
@@ -1197,7 +1197,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EProj then e %: t_e else e
           val e = if !anno_EProj_state then e %~ st else e
         in
-          (EProj (proj, e), choose (t1, t2) proj, i %%+ TN (C_Proj + C_Var + C_Let), st)
+          (EProj (proj, e), choose (t1, t2) proj, i %%+ TN C_EProj, st)
         end
       | EUnOp (EUTupleProj n, e) =>
         let
@@ -1215,7 +1215,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e, i, st) = tc_against_ty (ctx, st) (e, TByte)
           val e = if !anno_EPrintc_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUPrintc ()), e), TUnit, i %%+ TN (C_Printc + C_Var + C_Let), st)
+          (EUnOp (EUTiML (EUPrintc ()), e), TUnit, i %%+ TN C_EPrintc, st)
         end
       | EUnOp (EUTiML (EUPrim opr), e) =>
         let
@@ -1224,7 +1224,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EUPrim then e %: t_e else e
           val e = if !anno_EUPrim_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i %%+ TN (C_UPrim opr + C_Var + C_Let), st)
+          (EUnOp (EUTiML (EUPrim opr), e), get_prim_expr_un_op_res_ty opr, i %%+ TN (C_EUPrim opr), st)
         end
       | EUnOp (EUTiML (EUArrayLen ()), e) =>
         let
@@ -1236,7 +1236,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EArrayLen then e %: t else e
           val e = if !anno_EArrayLen_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUArrayLen ()), e), TNat i, j %%+ TN (C_ArrayLen + C_Var + C_Let), st)
+          (EUnOp (EUTiML (EUArrayLen ()), e), TNat i, j %%+ TN C_EArrayLen, st)
         end
       | EUnOp (EUTiML (EUNat2Int ()), e) =>
         let
@@ -1248,7 +1248,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_ENat2Int then e %: t else e
           val e = if !anno_ENat2Int_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUNat2Int ()), e), TInt, j %%+ TN (C_Nat2Int + C_Var + C_Let), st)
+          (EUnOp (EUTiML (EUNat2Int ()), e), TInt, j %%+ TN C_ENat2Int, st)
         end
       | EUnOp (EUTiML (EUInt2Nat ()), e) =>
         let
@@ -1257,7 +1257,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val () = println "end Int2Nat"
           val e = if !anno_EInt2Nat_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUInt2Nat ()), e), TSomeNat (), j %%+ TN (C_Int2Nat + C_Var + C_Let), st)
+          (EUnOp (EUTiML (EUInt2Nat ()), e), TSomeNat (), j %%+ TN C_EInt2Nat, st)
         end
       | EUnOp (opr as EUTiML (EUStorageGet ()), e) =>
         let
@@ -1267,7 +1267,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EStorageGet then e %: t_e else e
           val e = if !anno_EStorageGet_state then e %~ st else e
         in
-          (EUnOp (opr, e), t, j %%+ TN (C_StorageGet + C_Var + C_Let), st)
+          (EUnOp (opr, e), t, j %%+ TN C_EStorageGet, st)
         end
       | EUnOp (EUInj (inj, t'), e) =>
         let
@@ -1319,7 +1319,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t, i1, st1) = tc (ctx, st) e1
           val (e2, i2, st2) = tc_against_ty (ctx, st) (e2, t)
           val () = is_eq_idx (st2, st1)
-          val C_Ite_BeforeCodeGen = C_ISZERO + C_PUSH + C_JUMPI
           val (cost, e2) =
               case !phase of
                   PhBeforeCodeGen () => ((C_Ite_BeforeCodeGen, 0), e2)
@@ -1327,10 +1326,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 | PhBeforeCPS () =>
                   let
                     val (e2, n_live_vars) = assert_EAnnoLiveVars e2
-                    val C_Ite_BeforeCPS = C_Ite_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC
-                    val M_Ite_BeforeCPS = M_Abs_BeforeCC n_live_vars + M_App_BeforeCC
                   in
-                    ((C_Ite_BeforeCPS, M_Ite_BeforeCPS), e2)
+                    ((C_Ite_BeforeCPS n_live_vars, M_Ite_BeforeCPS n_live_vars), e2)
                   end
           val e2 = if !anno_EIte_e2_time then e2 |># i2 else e2
           val e = if !anno_EIte_state then e %~ st else e
@@ -1442,10 +1439,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 | PhBeforeCPS () =>
                   let
                     val (e2, n_live_vars) = assert_EAnnoLiveVars e2
-                    val C_App_BeforeCPS = C_App_BeforeCodeGen + C_App_BeforeCC + (C_Let + C_Pair + 2 * C_Var) + C_Abs_BeforeCC n_live_vars
-                    val M_App_BeforeCPS = M_App_BeforeCC + 2 + M_Abs_BeforeCC n_live_vars
                   in
-                    ((C_App_BeforeCPS, M_App_BeforeCPS), e2)
+                    ((C_App_BeforeCPS n_live_vars, M_App_BeforeCPS n_live_vars), e2)
                   end
           val e1 = if !anno_EApp then e1 %: t_e1 else e1
           val (e1, e2) = if !anno_EApp_state then (e1 %~ st_e1, e2 %~ st_e2) else (e1, e2)
@@ -1503,7 +1498,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EPair then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EPair_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EPair (e1, e2), TProd (t1, t2), i1 %%+ i2 %%+ (to_real $ C_Pair + 2 * C_Var + C_Let, N 2), st)
+          (EPair (e1, e2), TProd (t1, t2), i1 %%+ i2 %%+ (to_real C_EPair, N 2), st)
         end
       | ETuple es =>
         let
@@ -1533,7 +1528,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = EBinOpPrim (opr, e1, e2)
           val t = get_prim_expr_bin_op_res_ty opr
         in
-          (e, t, i1 %%+ i2 %%+ TN (C_BPrim opr + 2 * C_Var + C_Let), st)
+          (e, t, i1 %%+ i2 %%+ TN (C_EBPrim opr), st)
         end
       | EBinOp (EBNew (), e1, e2) =>
         let
@@ -1546,8 +1541,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val (e1, e2) = if !anno_ENew then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ENew_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
-          val C_New_pre_loop = 2 * C_SWAP + 2 * C_DUP + C_array_malloc + C_array_init_len + 2 * C_PUSH + C_JUMP
-          val cost = N C_New_pre_loop %+ N C_New_loop_test %+ N C_New_loop %* len %+ N C_New_post_loop %+ N (2 * C_Var + C_Let)
+          val cost = N C_ENew_order0 %+ N C_ENew_order1 %* len
         in
           (ENew (e1, e2), TArr (t2, len), j1 %%+ j2 %%+ (IToReal (cost, dummy), len %+ N1), st)
         end
@@ -1566,7 +1560,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i = combine_IBAdd_Time_Nat is
           val len = length es
         in
-          (ENewArrayValues (t, es), TArr (t, INat len), i %%+ (to_real $ C_NewArrayValues len + len * C_Var + C_Let, N $ len + 1), st)
+          (ENewArrayValues (t, es), TArr (t, INat len), i %%+ (to_real $ C_ENewArrayValues len, N $ len + 1), st)
         end
       | EBinOp (EBRead (), e1, e2) =>
         let
@@ -1582,7 +1576,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ERead_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (ERead (e1, e2), t, j1 %%+ j2 %%+ TN (C_Read + 2 * C_Var + C_Let), st)
+          (ERead (e1, e2), t, j1 %%+ j2 %%+ TN C_ERead, st)
         end
       | EBinOp (EBMapPtr (), e1, e2) =>
         let
@@ -1596,7 +1590,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EMapPtr then (e1 %: t1, e2 %: TInt) else (e1, e2)
           val (e1, e2) = if !anno_EMapPtr_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (EBMapPtr (), e1, e2), t, j1 %%+ j2 %%+ TN (C_MapPtr + 2 * C_Var + C_Let), st)
+          (EBinOp (EBMapPtr (), e1, e2), t, j1 %%+ j2 %%+ TN C_EMapPtr, st)
         end
       | EBinOp (opr as EBVectorGet (), e1, e2) =>
         let
@@ -1609,7 +1603,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EVectorGet then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorGet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_VectorGet + 2 * C_Var + C_Let), st)
+          (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ TN C_EVectorGet, st)
         end
       | EBinOp (opr as EBVectorPushBack (), e1, e2) =>
         let
@@ -1621,7 +1615,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EVectorPushBack then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorPushBack_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2 %%+ TN (C_VectorPushBack + 2 * C_Var + C_Let), st @%+ (x, len %+ N1))
+          (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2 %%+ TN C_EVectorPushBack, st @%+ (x, len %+ N1))
         end
       | EUnOp (opr as EUTiML (EUVectorLen ()), e) =>
         let
@@ -1630,7 +1624,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EVectorLen then e %: t else e
           val e = if !anno_EVectorLen_state then e %~ st else e
         in
-          (EUnOp (opr, e), TNat len, j %%+ TN (C_VectorLen + C_Var + C_Let), st)
+          (EUnOp (opr, e), TNat len, j %%+ TN C_EVectorLen, st)
         end
       | EUnOp (opr as EUTiML (EUVectorClear ()), e) =>
         let
@@ -1639,7 +1633,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EVectorClear then e %: t else e
           val e = if !anno_EVectorClear_state then e %~ st else e
         in
-          (EUnOp (opr, e), TUnit, j %%+ TN (C_VectorClear + C_Var + C_Let), st @%+ (x, N0))
+          (EUnOp (opr, e), TUnit, j %%+ TN C_EVectorClear, st @%+ (x, N0))
         end
       | ETriOp (opr as ETVectorSet (), e1, e2, e3) =>
         let
@@ -1656,7 +1650,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2, e3) = if !anno_EVectorSet then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
           val (e1, e2, e3) = if !anno_EVectorSet_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
-          (ETriOp (opr, e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN (C_VectorSet + 3 * C_Var + C_Let), st)
+          (ETriOp (opr, e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN C_EVectorSet, st)
         end
       | EBinOp (opr as EBStorageSet (), e1, e2) =>
         let
@@ -1668,9 +1662,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EStorageSet then (e1 %: t1, e2 %: t) else (e1, e2)
           val (e1, e2) = if !anno_EStorageSet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2 %%+ TN (C_StorageSet + 2 * C_Var + C_Let), st)
+          (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2 %%+ TN C_EStorageSet, st)
         end
-      | EState x => (EState x, TState x, TN $ C_State + C_Let, st)
+      | EState x => (EState x, TState x, TN C_EState, st)
       | EBinOp (EBNat opr, e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
@@ -1690,7 +1684,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ENat_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
           val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
         in
-          (EBinOp (EBNat opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_Nat opr + 2 * C_Var + C_Let), st)
+          (EBinOp (EBNat opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_ENat opr), st)
         end
       | EBinOp (EBNatCmp opr, e1, e2) =>
         let
@@ -1709,7 +1703,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ENatCmp_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
           val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
         in
-          (EBinOp (EBNatCmp opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_NatCmp opr + 2 * C_Var + C_Let), st)
+          (EBinOp (EBNatCmp opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_ENatCmp opr), st)
         end
       | ETriOp (ETWrite (), e1, e2, e3) =>
         let
@@ -1730,7 +1724,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2, e3) = if !anno_EWrite then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
           val (e1, e2, e3) = if !anno_EWrite_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
-          (EWrite (e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN (C_Write + 3 * C_Var + C_Let), st)
+          (EWrite (e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN C_EWrite, st)
         end
       | EIfi data =>
         let
@@ -2019,13 +2013,13 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t = kc_against_kind itctx (t, KType ())
           val () = check_prop (PFalse dummy)
         in
-          (ENever t, t, TN $ C_Never + C_Let, st)
+          (ENever t, t, TN C_ENever, st)
         end
       | EBuiltin (name, t) =>
         let
           val t = kc_against_kind itctx (t, KType ())
         in
-          (EBuiltin (name, t), t, TN $ C_Builtin + C_Let, st)
+          (EBuiltin (name, t), t, TN C_EBuiltin, st)
         end
       (* | ELet data => *)
       (*   let *)
