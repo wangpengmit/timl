@@ -1112,7 +1112,6 @@ and check_value e =
     | EUnOp (EUFold _, e) => check_value e
     | EAscType (e, _) => check_value e
     | EAscState (e, _) => check_value e
-    | EUnOp (EUAnno _, e) => check_value e
     | EAppT (e, _) => check_value e
     | EAppI (e, _) => check_value e
     | ERec data =>

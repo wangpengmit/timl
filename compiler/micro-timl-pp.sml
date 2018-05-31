@@ -444,18 +444,12 @@ fun str_inj opr =
       InjInl () => "inl"
     | InjInr () => "inr"
 
-fun str_expr_anno a =
-  case a of
-      EALiveVars n => "live_vars " ^ str_int n
-    | EABodyOfRecur () => "body_of_recur"
-                            
 fun str_expr_un_op str_t opr =
   case opr of
      EUInj (opr, t) => sprintf "inj ($, $)" [str_inj opr, str_t t]
     | EUFold t => sprintf "fold $" [str_t t]
     | EUUnfold () => "unfold"
     | EUTiML opr => Operators.str_expr_un_op opr
-    | EUAnno a => str_expr_anno a
     | EUTupleProj n => "proj " ^ str_int n
 
 fun str_expr_tri_op opr =

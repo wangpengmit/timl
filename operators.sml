@@ -83,6 +83,10 @@ fun choose (t1, t2) proj =
       ProjFst () => t1
     | ProjSnd () => t2
                                  
+datatype expr_anno =
+         EALiveVars of int (* num of live vars afterwards *)
+         | EABodyOfRecur of unit (* this is the body of a recursive function *)
+                              
 (* primitive unary term operators *)
 datatype prim_expr_un_op =
          EUPIntNeg of unit
@@ -103,6 +107,7 @@ datatype expr_un_op =
          | EUStorageGet of unit
          | EUVectorClear of unit
          | EUVectorLen of unit
+         | EUAnno of expr_anno
 
 fun str_expr_const c =
   case c of
@@ -128,6 +133,11 @@ fun str_prim_expr_un_op opr =
     (* | EUPInt2Str => "int2str" *)
     (* | EUPStrLen => "str_len" *)
                    
+fun str_expr_anno a =
+  case a of
+      EALiveVars n => "live_vars " ^ str_int n
+    | EABodyOfRecur () => "body_of_recur"
+                            
 fun str_expr_un_op opr = 
   case opr of
       EUProj opr => str_proj opr
@@ -140,6 +150,7 @@ fun str_expr_un_op opr =
     | EUStorageGet () => "storage_get"
     | EUVectorClear () => "vector_clear"
     | EUVectorLen () => "vector_len"
+    | EUAnno a => str_expr_anno a
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =

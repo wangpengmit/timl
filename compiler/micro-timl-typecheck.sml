@@ -1452,21 +1452,17 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val pre_st = sc_against_sort ictx (pre_st, SState)
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind
           val (is_rec, e) = case e of
-                                EUnOp (EUAnno (EABodyOfRecur ()), e) => (true, e)
+                                EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
                               | _ => (false, e)
           val t1 = kc_against_kind itctx (t1, KType ())
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
           val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
           val n_fvars = ISet.numItems (free_evars e @%-- excluded)
-          fun C_Abs_Inner_BeforeCC n_free_vars = 2 * (C_Let + C_Proj + C_Var) + (C_Let + C_Pair + 2 * C_Var) + n_free_vars * (C_Let + C_TupleProj + C_Var)
-          fun M_Abs_Inner_BeforeCC n_free_vars = 2
-          val C_Abs_Inner_BeforeCPS = C_Abs_Inner_BeforeCC n_fvars + 2 * (C_Let + C_Proj + C_Var) + C_App_BeforeCC
-          val M_Abs_Inner_BeforeCPS = M_Abs_Inner_BeforeCC n_fvars + M_App_BeforeCC
           val extra_inner_cost =
               case !phase of
                   PhBeforeCodeGen () => (0, 0)
                 | PhBeforeCC () => (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
-                | PhBeforeCPS () => (C_Abs_Inner_BeforeCPS, M_Abs_Inner_BeforeCPS)
+                | PhBeforeCPS () => (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars)
           val i = i %%+ mapPair' to_real N extra_inner_cost              
           val e = if !anno_EAbs then e %: t2 |># i else e
           val e = if !anno_EAbs_state then e %~ post_st else e
@@ -2002,11 +1998,11 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EAscState (e, st'), t, i, st')
         end
-      | EUnOp (EUAnno a, e) =>
+      | EUnOp (EUTiML (EUAnno a), e) =>
         let
           val (e, t, i, st) = tc (ctx, st) e
         in
-          (EUnOp (EUAnno a, e), t, i, st)
+          (EUnOp (EUTiML (EUAnno a), e), t, i, st)
         end
       | ENever t =>
         let

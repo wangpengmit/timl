@@ -231,7 +231,7 @@ fun a %~ b = EAscState (a, b)
 fun EAscTimeSpace (e, (i, j)) = e |> i |# j
 fun a |># b = EAscTimeSpace (a, b)
 
-fun EAnno (e, a) = EUnOp (EUAnno a, e)
+fun EAnno (e, a) = EUnOp (EUTiML (EUAnno a), e)
 fun EAnnoLiveVars (e, n) = EAnno (e, EALiveVars n)
 fun EAnnoBodyOfRecur e = EAnno (e, EABodyOfRecur ())
                                  

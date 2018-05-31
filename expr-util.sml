@@ -45,6 +45,8 @@ fun EVectorSet (e1, e2, e3) = ETriOp (ETVectorSet (), e1, e2, e3)
 fun EMapPtr (e1, e2) = EBinOp (EBMapPtr (), e1, e2)
 fun EStorageSet (e1, e2) = EBinOp (EBStorageSet (), e1, e2)
 fun EStorageGet (e, r) = EUnOp (EUStorageGet (), e, r)
+fun EAnno (e, a, r) = EUnOp (EUAnno a, e, r)
+fun EAnnoBodyOfRecur (e, r) = EAnno (e, EABodyOfRecur (), r)
   
 fun collect_Pair e =
   case e of

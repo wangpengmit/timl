@@ -113,7 +113,7 @@ fun assert_EAbs e =
     | _ => raise assert_fail "assert_EAbs"
 fun assert_EAnnoLiveVars e =
   case e of
-      EUnOp (EUAnno (EALiveVars n), e) => (e, n)
+      EUnOp (EUTiML (EUAnno (EALiveVars n)), e) => (e, n)
     | _ => raise assert_fail "assert_EAnnoLiveVars"
                  
 infix 6 @++

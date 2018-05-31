@@ -2151,7 +2151,6 @@ fun default_expr_visitor_vtable
           | EUFold t => EUFold $ on_t t
           | EUUnfold () => EUUnfold ()
           | EUTiML opr => EUTiML opr
-          | EUAnno a => EUAnno a
           | EUTupleProj n => EUTupleProj n
       end
     fun visit_EUnOp this env data = 

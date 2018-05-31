@@ -63,17 +63,12 @@ datatype injector =
          InjInl of unit
          | InjInr of unit
 
-datatype expr_anno =
-         EALiveVars of int (* num of live vars afterwards *)
-         | EABodyOfRecur of unit (* this is the body of a recursive function *)
-                          
 (* unary term operators *)
 datatype 'ty expr_un_op =
          EUInj of injector * 'ty
          | EUFold of 'ty
          | EUUnfold of unit
          | EUTiML of Operators.expr_un_op
-         | EUAnno of expr_anno
          | EUTupleProj of int
 
 (* term *)
@@ -200,7 +195,6 @@ fun is_value e =
     | EAscTime (e, _) => is_value e
     | EAscSpace (e, _) => is_value e
     | EAscState (e, _) => is_value e
-    | EUnOp (EUAnno _, e) => is_value e
     (* | ELoc _ => true *)
     | EAppT (e, _) => is_value e
     | EAppI (e, _) => is_value e

@@ -86,6 +86,10 @@ fun M_Abs_BeforeCC n_free_vars = 2 + n_free_vars
 val C_App_BeforeCodeGen = 2 * C_Var + C_set_reg + C_JUMP
 val C_App_BeforeCC = C_App_BeforeCodeGen + C_Unpack + 2 * (C_Let + C_Proj + C_Var) + C_Var + (C_Pair + C_Var)
 val M_App_BeforeCC = 2
+fun C_Abs_Inner_BeforeCC n_free_vars = 2 * (C_Let + C_Proj + C_Var) + (C_Let + C_Pair + 2 * C_Var) + n_free_vars * (C_Let + C_TupleProj + C_Var)
+fun M_Abs_Inner_BeforeCC n_free_vars = 2
+fun C_Abs_Inner_BeforeCPS n_fvars = C_Abs_Inner_BeforeCC n_fvars + 2 * (C_Let + C_Proj + C_Var) + C_App_BeforeCC
+fun M_Abs_Inner_BeforeCPS n_fvars = M_Abs_Inner_BeforeCC n_fvars + M_App_BeforeCC
 fun C_App_BeforeCPS n_live_vars = C_App_BeforeCodeGen + C_App_BeforeCC + (C_Let + C_Pair + 2 * C_Var) + C_Abs_BeforeCC n_live_vars
 fun M_App_BeforeCPS n_live_vars = M_App_BeforeCC + 2 + M_Abs_BeforeCC n_live_vars
 

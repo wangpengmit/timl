@@ -285,6 +285,7 @@ fun impl_expr_un_op opr =
     | EUStorageGet () => [SLOAD ()]
     | EUVectorClear () => [PUSH1nat 0, SWAP1, SSTORE (), PUSH1 WTT] (* should also zero out the contents, in order to save storage *)
     | EUVectorLen () => [SLOAD ()]
+    | EUAnno _ => []
                         
 fun impl_nat_expr_bin_op opr =
   case opr of
@@ -319,7 +320,6 @@ fun compile st_name2int ectx e =
     | EUnOp (EUFold t, e) => compile e @ [VALUE_Fold $ Inner $ cg_t t]
     | EAscType (e, t) => compile e @ [VALUE_AscType $ Inner $ cg_t t]
     | EAscState (e, st) => compile e
-    | EUnOp (EUAnno _, e) => compile e
     | ENever t => PUSH_value $ VNever $ cg_t t
     | EBuiltin (name, t) => PUSH_value $ VBuiltin (name, cg_t t)
     | EBinOp (EBPair (), e1, e2) =>

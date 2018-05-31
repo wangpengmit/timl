@@ -1101,9 +1101,13 @@ fun assert_TMap err t =
   case t of
       TMap a => a
     | _ => err ()
-
+fun assert_EAnnoLiveVars err e =
+  case e of
+      EUnOp (EUAnno (EALiveVars n), e, _) => (e, n)
+    | _ => err ()
                
-fun TN n = (to_real n, N0 dummy)
+fun N n = INat (n, dummy)
+fun TN n = (to_real n, N 0)
              
 fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (idx * idx) * idx StMap.map =
   let
@@ -1315,7 +1319,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                                                       "got: " ^ str_mt gctxn skctxn t1])
                  val (e2, t2', d2, st) = get_mtype (ctx, st) e2
                  (* todo: if I swap (t2, t2'), unify_mt() has a bug that it unifies the index arguments too eagerly *)
-                 val () = unify_mt (get_region_e e2) gctx (sctx, kctx) (t2, t2')
+                 val r2 = get_region_e e2
+                 val () = unify_mt r2 gctx (sctx, kctx) (t2, t2')
                  fun check_submap pre_st st =
                    let
                      val pre_st_minus_st = pre_st @-- st
@@ -1326,7 +1331,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val () = check_submap pre_st st
                  val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
                  val st = st @++ post_st
-                 val (e2, n_live_vars) = assert_EAnnoLiveVars e2                             
+                 val (e2, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (r2, ["Should be EAnnoLiveVars"])) e2                             
                in
                  (EApp (e1, e2), t, d1 %%+ d2 %%+ (to_real $ C_App_BeforeCPS n_live_vars, N $ M_App_BeforeCPS n_live_vars) %%+ d, st) 
 	       end
@@ -1338,7 +1343,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val (e2, t, d2, st) = get_mtype (ctx, st) e2
                  val cost = N C_ENew_order0 %+ N C_ENew_order1 %* len
                in
-                 (EBinOp (opr, e1, e2), TArray (t, i), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %+ N1), st)
+                 (EBinOp (opr, e1, e2), TArray (t, len), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %+ N1 dummy), st)
                end
 	     | EBRead () =>
                let
@@ -1519,7 +1524,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e1, t, d1, st1) = get_mtype (ctx, st) e1
             val (e2, d2, st2) = check_mtype (ctx, st) (e2, t)
             val () = unify_state r gctxn sctxn (st2, st1)
-            val (e2, n_live_vars) = assert_EAnnoLiveVars e2
+            val (e2, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e2, ["Should be EAnnoLiveVars"])) e2
           in
             (ETriOp (ETIte (), e, e1, e2), t, d %%+ (to_real $ C_Ite_BeforeCPS n_live_vars, N $ M_Ite_BeforeCPS n_live_vars) %%+ smart_max_pair d1 d2, st1)
           end
@@ -1614,6 +1619,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val es = rev es
             val ds = rev ds
             val d = combine_IBAdd_Time_Nat ds
+            val len = length es
           in
             (ENewArrayValues (t, es, r), TArray (t, INat (length es, r)), d %%+ (to_real $ C_ENewArrayValues len, N $ len + 1), st)
           end
@@ -1634,8 +1640,15 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val post_st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) post_st
             val () = close_n nps
             val () = close_ctx ctxd
+            val (is_rec, e) = case e of
+                                  EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
+                                | _ => (false, e)
+            val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
+            val n_fvars = ISet.numItems (free_evars e @%-- excluded)
+            (* todo: pattern-matching also takes time *)
+            val d = d %%+ (to_real $ C_Abs_Inner_BeforeCPS n_fvars, N $ M_Abs_Inner_BeforeCPS n_fvars)
           in
-	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e)), TArrow ((pre_st, t), d, (post_st, t1)), TN0 dummy, st)
+	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e)), TArrow ((pre_st, t), d, (post_st, t1)), (to_real $ C_Abs_BeforeCC n_fvars, N $ M_Abs_BeforeCC n_fvars), st)
 	  end
 	| U.ELet (return, bind, r) => 
 	  let
@@ -1982,7 +1995,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val e =
                   case rev binds of
                       U.TypingST pn :: binds =>
-                      foldl attach_bind_e (U.MakeEAbs (pre_st, pn, e)) binds
+                      foldl attach_bind_e (U.MakeEAbs (pre_st, pn, U.EAnnoBodyOfRecur (e, U.get_region_e e))) binds
                     | _ => raise Error (r, ["Recursion must have a typing bind as the last bind"])
               fun type_from_ptrn pn =
                 case pn of

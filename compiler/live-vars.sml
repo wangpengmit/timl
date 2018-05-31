@@ -194,7 +194,6 @@ fun live_vars_expr_visitor_vtable cast () =
           | EUFold t => EUFold $ on_t t
           | EUUnfold () => EUUnfold ()
           | EUTiML opr => EUTiML opr
-          | EUAnno a => EUAnno a
           | EUTupleProj n => EUTupleProj n
       end
     fun visit_EUnOp this env data = 
