@@ -941,7 +941,7 @@ fun is_value (e : U.expr) : bool =
            | EUStorageGet () => false
            | EUVectorClear () => false
            | EUVectorLen () => false
-           | EUAnno () => is_value e
+           | EUAnno _ => is_value e
         )
       | EBinOp (opr, e1, e2) =>
         (case opr of
@@ -1652,7 +1652,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                                 | _ => (false, e)
             (* calculation of 'excluded' is more complicated because of patterns *)
             val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
-            val n_fvars = FreeEVars.EVarSet.numItems $ FreeEVars.EVarSet.difference (FreeEVars.free_evars e, FreeEVars.EVarSetU.fromList $ map inl excluded)
+            val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
             (* todo: pattern-matching also takes time *)
             val d = d %%+ (to_real $ C_Abs_Inner_BeforeCPS n_fvars, N $ M_Abs_Inner_BeforeCPS n_fvars)
           in
@@ -2432,7 +2432,8 @@ fun get_sig gctx m =
   case m of
       U.ModComponents (decls, r) =>
       let
-        val (decls, _) = live_evars_decls decls (* todo: live-evar analysis does not cross module boundaries, so there will be under-estimation if there are top-level function applications *)
+        val (decls, _) = LiveVars.live_vars_decls $ Teles decls (* todo: live-evar analysis does not cross module boundaries, so there will be under-estimation if there are top-level function applications *)
+        val decls = unTeles decls
         val (decls, ctxd, nps, ds, _, st) = check_decls gctx (empty_ctx, !st_ref) decls
         val () = StMap.app (fn i => ignore $ forget_above_i_i 0 i handle _ => raise Error (r, ["state can't mention index variables"])) st
         val () = st_ref := st

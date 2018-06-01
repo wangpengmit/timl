@@ -1099,7 +1099,7 @@ and check_value e =
          | EUStorageGet () => err ()
          | EUVectorClear () => err ()
          | EUVectorLen () => err ()
-         | EUAnno () => check_value e
+         | EUAnno _ => check_value e
       )
     | EAbs (_, bind) =>
       let

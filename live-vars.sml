@@ -87,20 +87,20 @@ fun live_vars_expr_visitor_vtable cast () =
         case data of
 	    EVar data => #visit_EVar vtable this env data
           | EConst data => #visit_EConst vtable this env data
-          | EState data => T.EState data
+          | EState data => EState data
           | EUnOp data => #visit_EUnOp vtable this env data
           | EBinOp data => #visit_EBinOp vtable this env data
 	  | ETriOp data => #visit_ETriOp vtable this env data
           | EEI data => #visit_EEI vtable this env data
           | EET data => #visit_EET vtable this env data
           | ET data => #visit_ET vtable this env data
-          | ENewArrayValues (t, es, r) => T.ENewArrayValues (#visit_mtype vtable this env t, visit_list (#visit_expr vtable this) env es, r)
+          | ENewArrayValues (t, es, r) => ENewArrayValues (#visit_mtype vtable this env t, visit_list (#visit_expr vtable this) env es, r)
 	  | EAbs data => #visit_EAbs vtable this env data
 	  | EAbsI data => #visit_EAbsI vtable this env data
 	  | EAppConstr data => #visit_EAppConstr vtable this env data
 	  | ECase data => #visit_ECase vtable this env data
 	  | ELet data => #visit_ELet vtable this env data
-	  (* | ECaseSumbool data => #visit_ECaseSumbool vtable this env data *)
+	  | ECaseSumbool data => #visit_ECaseSumbool vtable this env data
 	  | EIfi (e, bind1, bind2, r) =>
             let
               val lvars = fst env
@@ -114,16 +114,16 @@ fun live_vars_expr_visitor_vtable cast () =
               val () = output_set lvars (!new_lvars)
               val e = #visit_expr vtable this env e
             in
-              T.EIfi (e, bind1, add_AnnoLiveVars (bind2, n_lvars, r), r)
+              EIfi (e, bind1, add_AnnoLiveVars (bind2, n_lvars, r), r)
             end
           | ESetModify (b, x, es, e, r) =>
             let
               val e = #visit_expr vtable this env e
               val es = mapr (#visit_expr vtable this env) es
             in
-              T.ESetModify (b, x, es, e, r)
+              ESetModify (b, x, es, e, r)
             end
-          | EGet (x, es, r) => T.EGet (x, mapr (#visit_expr vtable this env) es, r)
+          | EGet (x, es, r) => EGet (x, mapr (#visit_expr vtable this env) es, r)
       end
     fun visit_var this (lvars, _) data =
       ((case data of
@@ -137,13 +137,13 @@ fun live_vars_expr_visitor_vtable cast () =
         val (var, eia) = data
         val var = #visit_var vtable this env var
       in
-        T.EVar (var, eia)
+        EVar (var, eia)
       end
     fun visit_EConst this env data =
       let
         val vtable = cast this
       in
-        T.EConst data
+        EConst data
       end
     fun visit_EUnOp this env data =
       let
@@ -151,7 +151,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val (opr, e, r) = data
         val e = #visit_expr vtable this env e
       in
-        T.EUnOp (opr, e, r)
+        EUnOp (opr, e, r)
       end
     fun visit_EBinOp this env (opr, e1, e2) =
       let
@@ -170,7 +170,7 @@ fun live_vars_expr_visitor_vtable cast () =
               val e2 = #visit_expr vtable this env e2
               val e1 = #visit_expr vtable this env e1
             in
-              T.EBinOp (opr, e1, e2)
+              EBinOp (opr, e1, e2)
             end
       end
     fun visit_EApp this env (e1, e2) =
@@ -180,7 +180,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e2 = #visit_expr vtable this env e2
         val e1 = #visit_expr vtable this env e1
       in
-        T.EBinOp (EBApp (), e1, EAnnoLiveVars (e2, n_lvars, dummy))
+        EBinOp (EBApp (), e1, EAnnoLiveVars (e2, n_lvars, dummy))
       end
     fun visit_EPair this env data =
       let
@@ -189,7 +189,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e2 = #visit_expr vtable this env e2
         val e1 = #visit_expr vtable this env e1
       in
-        T.EBinOp (EBPair (), e1, e2)
+        EBinOp (EBPair (), e1, e2)
       end
     fun visit_EAdd this env data =
       let
@@ -198,7 +198,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e2 = #visit_expr vtable this env e2
         val e1 = #visit_expr vtable this env e1
       in
-        T.EBinOp (EBAdd, e1, e2)
+        EBinOp (EBAdd, e1, e2)
       end
     fun visit_ENatAdd this env data =
       let
@@ -207,7 +207,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e2 = #visit_expr vtable this env e2
         val e1 = #visit_expr vtable this env e1
       in
-        T.EBinOp (EBNatAdd, e1, e2)
+        EBinOp (EBNatAdd, e1, e2)
       end
     fun visit_ENew this env data =
       let
@@ -216,7 +216,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e2 = #visit_expr vtable this env e2
         val e1 = #visit_expr vtable this env e1
       in
-        T.EBinOp (EBNew (), e1, e2)
+        EBinOp (EBNew (), e1, e2)
       end
     fun visit_ERead this env data =
       let
@@ -225,7 +225,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e2 = #visit_expr vtable this env e2
         val e1 = #visit_expr vtable this env e1
       in
-        T.EBinOp (EBRead (), e1, e2)
+        EBinOp (EBRead (), e1, e2)
       end
     fun visit_ETriOp this env (opr, e1, e2, e3) =
       case opr of
@@ -243,7 +243,7 @@ fun live_vars_expr_visitor_vtable cast () =
             val () = output_set lvars (!new_lvars)
             val e1 = #visit_expr vtable this env e1
           in
-            T.ETriOp (opr, e1, e2, EAnnoLiveVars (e3, n_lvars, dummy))
+            ETriOp (opr, e1, e2, EAnnoLiveVars (e3, n_lvars, dummy))
           end
         | _ =>
           let
@@ -252,7 +252,7 @@ fun live_vars_expr_visitor_vtable cast () =
             val e2 = #visit_expr vtable this env e2
             val e1 = #visit_expr vtable this env e1
           in
-            T.ETriOp (opr, e1, e2, e3)
+            ETriOp (opr, e1, e2, e3)
           end
     fun visit_EEI this env data = 
       let
@@ -264,7 +264,7 @@ fun live_vars_expr_visitor_vtable cast () =
 	    EEIAppI () => #visit_EAppI vtable this env data
 	  | EEIAscTime () => #visit_EAscTime vtable this env data
 	  | EEIAscSpace () =>
-            T.EEI (EEIAscSpace (), #visit_expr vtable this env e, #visit_idx vtable this env i)
+            EEI (EEIAscSpace (), #visit_expr vtable this env e, #visit_idx vtable this env i)
       end
     fun visit_EAppI this env (e, i) = 
       let
@@ -273,7 +273,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val i = #visit_idx vtable this env i
         val e = #visit_expr vtable this env e
       in
-        T.EEI (EEIAppI (), EAnnoLiveVars (e, n_lvars, dummy), i)
+        EEI (EEIAppI (), EAnnoLiveVars (e, n_lvars, dummy), i)
       end
     fun visit_EAscTime this env data = 
       let
@@ -282,7 +282,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e = #visit_expr vtable this env e
         val i = #visit_idx vtable this env i
       in
-        T.EEI (EEIAscTime (), e, i)
+        EEI (EEIAscTime (), e, i)
       end
     fun visit_EET this env data = 
       let
@@ -293,7 +293,7 @@ fun live_vars_expr_visitor_vtable cast () =
         case opr of
 	    EETAppT () => #visit_EAppT vtable this env data
 	  | EETAsc () => #visit_EAsc vtable this env data
-          | EETHalt () => T.EET (opr, #visit_expr vtable this env e, #visit_mtype vtable this env t)
+          | EETHalt () => EET (opr, #visit_expr vtable this env e, #visit_mtype vtable this env t)
       end
     fun visit_EAppT this env (e, t) = 
       let
@@ -302,7 +302,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val t = #visit_mtype vtable this env t
         val e = #visit_expr vtable this env e
       in
-        T.EET (EETAppT (), EAnnoLiveVars (e, n_lvars, dummy), t)
+        EET (EETAppT (), EAnnoLiveVars (e, n_lvars, dummy), t)
       end
     fun visit_EAsc this env data = 
       let
@@ -311,7 +311,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e = #visit_expr vtable this env e
         val t = #visit_mtype vtable this env t
       in
-        T.EET (EETAsc (), e, t)
+        EET (EETAsc (), e, t)
       end
     fun visit_ET this env data = 
       let
@@ -319,7 +319,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val (opr, t, r) = data
         val t = #visit_mtype vtable this env t
       in
-        T.ET (opr, t, r)
+        ET (opr, t, r)
       end
     fun get_num_ebind_pn pn = snd $ PV.count_binder_pn pn
     fun shift n x =
@@ -344,7 +344,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val st = StMap.map (#visit_idx vtable this env) st
         val bind = visit_bind (#visit_expr vtable this) env bind
       in
-        T.EAbs (st, bind)
+        EAbs (st, bind)
       end
     fun visit_EAbsI this (lvars, _) (bind, r) =
       let
@@ -354,7 +354,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val bind = visit_ibind_anno this (#visit_sort vtable this) (#visit_expr vtable this) (new_lvars, true) bind
         val () = output_set lvars (!new_lvars)
       in
-        T.EAbsI (bind, r)
+        EAbsI (bind, r)
       end
     fun visit_EAppConstr this env data = 
       let
@@ -366,7 +366,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e = #visit_expr vtable this env e
         val ot = Option.map (mapSnd (#visit_mtype vtable this env)) ot
       in
-        T.EAppConstr ((var, eia), ts, is, e, ot)
+        EAppConstr ((var, eia), ts, is, e, ot)
       end
     fun visit_return this env (t, i, j) =
       let
@@ -397,7 +397,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val return = visit_return this env return
         val e = #visit_expr vtable this env e
       in
-        T.ECase (EAnnoLiveVars (e, n_lvars, r), return, binds, r)
+        ECase (EAnnoLiveVars (e, n_lvars, r), return, binds, r)
       end
     fun visit_decls visit_decl ctx decls =
       let
@@ -414,21 +414,21 @@ fun live_vars_expr_visitor_vtable cast () =
         val n = get_num_ebind_decls decls
         val () = unop_ref (Set.map (shift n)) lvars
         val e = #visit_expr vtable this env e
-        val decls = visit_decls (#visit_decl vtable this) env decls
+        val decls = visit_decls (#visit_decl vtable this) (env2ctx env) decls
         val bind = Bind (decls, e)
         val return = visit_return this env return
       in
-        T.ELet (return, bind, r)
+        ELet (return, bind, r)
       end
-    (* fun visit_ECaseSumbool this env (e, bind1, bind2, r) = *)
-    (*   let *)
-    (*     val vtable = cast this *)
-    (*     val e = #visit_expr vtable this env e *)
-    (*     val bind1 = visit_ibind this (#visit_expr vtable this) env bind1 *)
-    (*     val bind2 = visit_ibind this (#visit_expr vtable this) env bind2 *)
-    (*   in *)
-    (*     T.ECaseSumbool (e, bind1, bind2, r) *)
-    (*   end *)
+    fun visit_ECaseSumbool this env (e, bind1, bind2, r) =
+      let
+        val vtable = cast this
+        val e = #visit_expr vtable this env e
+        val bind1 = visit_ibind this (#visit_expr vtable this) env bind1
+        val bind2 = visit_ibind this (#visit_expr vtable this) env bind2
+      in
+        ECaseSumbool (e, bind1, bind2, r)
+      end
     fun visit_decl this env data =
       let
         val vtable = cast this
@@ -475,12 +475,13 @@ fun live_vars_expr_visitor_vtable cast () =
     fun visit_DVal this ctx (name, bind, r) =
       let
         val vtable = cast this
+        val _ : bool = snd $ !(#current ctx)
         val (tbinders, e) = unBind $ unOuter bind
         val e = #visit_expr vtable this (#outer ctx) e
         val bind = Outer $ Bind (tbinders, e)
         val name = visit_ebinder this ctx name
       in
-        [T.DVal (name, bind, r)]
+        [DVal (name, bind, r)]
       end
     fun visit_DValPtrn this ctx (pn, e, r) =
       let
@@ -490,7 +491,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val n = get_num_ebind_pn pn
         val () = unop_ref (forget n) lvars
       in
-        [T.DValPtrn (pn, e, r)]
+        [DValPtrn (pn, e, r)]
       end
     fun visit_map f env st = StMap.map (f env) st
     fun visit_stbind this env data =
@@ -498,16 +499,15 @@ fun live_vars_expr_visitor_vtable cast () =
         val vtable = cast this
       in
         case data of
-            SortingST data => T.SortingST $ visit_pair (visit_ibinder this) (visit_outer (#visit_sort vtable this)) env data
-          | TypingST pn => T.TypingST (#visit_ptrn vtable this env pn)
+            SortingST data => SortingST $ visit_pair (visit_ibinder this) (visit_outer (#visit_sort vtable this)) env data
+          | TypingST pn => TypingST (#visit_ptrn vtable this env pn)
       end
     fun get_num_ebind_rec_binds (_, stbinds) =
       sum $ map (fn SortingST _ => 0
-                | TypingST pn => get_num_ebind_pn pn) $ unTeles stbinds
+                | TypingST pn => get_num_ebind_pn pn) $ unTeles $ unRebind stbinds
     fun visit_DRec this ctx (name, bind, r) =
       let
-        val env = !(#current ctx)
-        val lvars = fst env
+        val env as (lvars, _ : bool) = !(#current ctx)
         val vtable = cast this
         val new_lvars = ref Set.empty
         val (p, body) = unBind $ unInner bind
@@ -524,7 +524,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val name = visit_ebinder this ctx name
         val bind = Inner $ Bind (p, body)
       in
-        [T.DRec (name, bind, r)]
+        [DRec (name, bind, r)]
       end
     fun visit_DIdxDef this env data =
       let
@@ -534,7 +534,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val s = visit_outer (visit_option (#visit_sort vtable this)) env s
         val i = visit_outer (#visit_idx vtable this) env i
       in
-        [T.DIdxDef (name, s, i)]
+        [DIdxDef (name, s, i)]
       end
     fun visit_DAbsIdx2 this env data =
       let
@@ -544,7 +544,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val s = visit_outer (#visit_sort vtable this) env s
         val i = visit_outer (#visit_idx vtable this) env i
       in
-        [T.DAbsIdx2 (name, s, i)]
+        [DAbsIdx2 (name, s, i)]
       end
     fun visit_DAbsIdx this env data =
       let
@@ -555,7 +555,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val i = visit_outer (#visit_idx vtable this) env i
         val decls = visit_rebind (visit_decls (#visit_decl vtable this)) env decls
       in
-        [T.DAbsIdx ((name, s, i), decls, r)]
+        [DAbsIdx ((name, s, i), decls, r)]
       end
     fun visit_DTypeDef this env data =
       let
@@ -564,10 +564,10 @@ fun live_vars_expr_visitor_vtable cast () =
         val (name, t) = data
         val name = visit_tbinder this env name
         val t = visit_outer (#visit_mtype vtable this) env t
-        val cnames = map (Binder o CName) $ T.get_constr_names $ unOuter t
+        val cnames = map (Binder o CName) $ get_constr_names $ unOuter t
         val cnames = visit_list (visit_cbinder this) env cnames
       in
-        [T.DTypeDef (name, t)]
+        [DTypeDef (name, t)]
       end
     fun visit_DConstrDef this env data =
       let
@@ -576,27 +576,28 @@ fun live_vars_expr_visitor_vtable cast () =
         val name = visit_cbinder this env name
         val x = visit_outer (#visit_cvar vtable this) env x
       in
-        [T.DConstrDef (name, x)]
+        [DConstrDef (name, x)]
       end
-    fun visit_scoping_ctx m this env (sctx, kctx, cctx, tctx) =
+    fun visit_scoping_ctx m this ctx (sctx, kctx, cctx, tctx) =
       let
-        val _ = visit_list (visit_ibinder this) env $ rev sctx
-        val _ = visit_list (visit_tbinder this) env $ rev kctx
-        val _ = visit_list (visit_cbinder this) env $ rev cctx
-        val _ = visit_list (visit_ebinder this) env $ rev tctx
+        val _ = visit_list (visit_ibinder this) ctx $ rev sctx
+        val _ = visit_list (visit_tbinder this) ctx $ rev kctx
+        val _ = visit_list (visit_cbinder this) ctx $ rev cctx
+        val _ = visit_list (visit_ebinder this) ctx $ rev tctx
         val (m, _) = unInner m
+        val lvars = fst $ !(#current ctx)
         (* 'open' touches all evars in the module, so all of them should be counted as live evars *)
-        val () = appi (fn (i, _) => output $ inr (m, i)) tctx
+        val () = appi (fn (i, _) => output lvars $ inr (m, i)) tctx
       in
         (sctx, kctx, cctx, tctx)
       end
-    fun visit_DOpen this env (m, scp) =
+    fun visit_DOpen this ctx (m, scp) =
       let
         val vtable = cast this
-        val m = visit_inner (#visit_mod_id vtable this) env m
-        val scp = Option.map (visit_scoping_ctx m this env) scp
+        val m = visit_inner (#visit_mod_id vtable this) ctx m
+        val scp = Option.map (visit_scoping_ctx m this ctx) scp
       in
-        [T.DOpen (m, scp)]
+        [DOpen (m, scp)]
       end
         
     fun visit_cvar_tag this env data =
@@ -605,8 +606,7 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         visit_pair (#visit_cvar vtable this) (#visit_ptrn_constr_tag vtable this) env data
       end
-    fun this_impls_ptrn_visitor_interface this :
-        ('this, 'env, cvar * ptrn_constr_tag, mtype, T.cvar * T.ptrn_constr_tag, T.mtype) PV.ptrn_visitor_interface =
+    fun this_impls_ptrn_visitor_interface this =
       let
         val vtable = cast this
       in
@@ -656,7 +656,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val ename = unBinderName $ visit_ebinder this env $ EBinder ename
         val t = unOuter $ visit_outer (#visit_ty vtable this) env $ Outer t
       in
-        T.SpecVal (ename, t)
+        SpecVal (ename, t)
       end
     fun visit_SpecIdx this env data =
       let
@@ -665,7 +665,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val iname = unBinderName $ visit_ibinder this env $ IBinder iname
         val s = unOuter $ visit_outer (#visit_sort vtable this) env $ Outer s
       in
-        T.SpecIdx (iname, s)
+        SpecIdx (iname, s)
       end
     fun visit_SpecType this env data =
       let
@@ -674,7 +674,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val tname = unBinderName $ visit_tbinder this env $ TBinder tname
         val k = unOuter $ visit_outer (#visit_kind vtable this) env $ Outer k
       in
-        T.SpecType (tname, k)
+        SpecType (tname, k)
       end
     fun visit_SpecTypeDef this env data =
       let
@@ -682,10 +682,10 @@ fun live_vars_expr_visitor_vtable cast () =
         val (tname, t) = data
         val tname = unBinderName $ visit_tbinder this env $ TBinder tname
         val t = unOuter $ visit_outer (#visit_mtype vtable this) env $ Outer t
-        val cnames = map (Binder o CName) $ T.get_constr_names t
+        val cnames = map (Binder o CName) $ get_constr_names t
         val cnames = visit_list (visit_cbinder this) env cnames
       in
-        T.SpecTypeDef (tname, t)
+        SpecTypeDef (tname, t)
       end
     fun visit_mod this env data =
       let
@@ -702,7 +702,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val (decls, r) = data
         val decls = unTeles $ visit_decls (#visit_decl vtable this) env $ Teles decls
       in
-        T.ModComponents (decls, r)
+        ModComponents (decls, r)
       end
     fun copy_ctx (ctx : 'env ctx) =
       {outer = #outer ctx, current = copy_ref $ #current ctx}
@@ -714,7 +714,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val m = #visit_mod vtable this ctx' m
         val sg = #visit_sgn vtable this ctx sg
       in
-        T.ModSeal (m, sg)
+        ModSeal (m, sg)
       end
     fun visit_ModTransparentAsc this ctx data =
       let
@@ -724,7 +724,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val m = #visit_mod vtable this ctx m
         val sg = #visit_sgn vtable this ctx' sg
       in
-        T.ModTransparentAsc (m, sg)
+        ModTransparentAsc (m, sg)
       end
   in
     {
@@ -796,24 +796,8 @@ fun live_vars_expr_visitor_vtable cast () =
     }
   end
 
-datatype 'env expr_visitor =
-         ExprVisitor of ('env expr_visitor, 'env) expr_visitor_interface
-
-fun expr_visitor_impls_interface (this : 'env expr_visitor) :
-    ('env expr_visitor, 'env) expr_visitor_interface =
-  let
-    val ExprVisitor vtable = this
-  in
-    vtable
-  end
-
-fun new_live_vars_expr_visitor vtable params =
-  let
-    val vtable = vtable expr_visitor_impls_interface params
-  in
-    ExprVisitor vtable
-  end
-    
+fun new_live_vars_expr_visitor params = new_expr_visitor live_vars_expr_visitor_vtable params
+                                                         
 fun live_vars_e b =
   let
     val lvars = ref Set.empty

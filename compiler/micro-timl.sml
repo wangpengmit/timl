@@ -232,7 +232,7 @@ fun is_value e =
          | EUStorageGet () => false
          | EUVectorClear () => false
          | EUVectorLen () => false
-         | EUAnno () => is_value e
+         | EUAnno _ => is_value e
       )
     | EUnOp (EUTupleProj _, _) => false
     | ETriOp (ETWrite (), _, _, _) => false

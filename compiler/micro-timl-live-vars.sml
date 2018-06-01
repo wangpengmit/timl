@@ -53,6 +53,9 @@ fun live_vars_expr_visitor_vtable cast () =
         BindAnno ((name, anno), b)
       end
                                                 
+    fun output lvars n = binop_ref (curry ISet.add) lvars n
+    fun output_set lvars s = ISet.app (output lvars) s
+                                    
     fun add_AnnoLiveVars (bind, n) =
       let
         val (name, e) = unBindSimp bind

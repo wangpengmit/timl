@@ -49,6 +49,7 @@ fun BindAnno ((name, anno), t) = Bind ((Binder name, Outer anno), t)
 fun unBinder (Binder n) = n
 fun unOuter (Outer t) = t
 fun unBind (Abs (p, Rebind (Outer t))) = (p, t)
+fun unRebind (Rebind p) = p
 fun unInner (Rebind (Outer t)) = t
 fun unTeles t =
   case t of

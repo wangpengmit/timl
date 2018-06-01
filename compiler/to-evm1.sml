@@ -890,7 +890,7 @@ fun test1 dirname =
     open TestUtil
     val init_st = IState $ StMap.map (fn _ => INat 0) st_name2ty
     val () = println "Started MicroTiML typechecking #1 ..."
-    val (e, _) = LiveVars.live_vars e
+    val (e, _) = MicroTiMLLiveVars.live_vars e
     val e = set_EAbs_is_rec e
     val () = phase := PhBeforeCPS ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
