@@ -48,7 +48,7 @@ infix 6 @--
 fun m @-- m' = StMapU.sub m m'
 infix 6 @++
 fun m @++ m' = StMapU.union m m'
-         
+
 val is_builtin_enabled = ref false
 fun turn_on_builtin () = (is_builtin_enabled := true)
 fun turn_off_builtin () = (is_builtin_enabled := false)
@@ -1644,7 +1644,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                                   EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
                                 | _ => (false, e)
             val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
-            val n_fvars = ISet.numItems (free_evars e @%-- excluded)
+            val n_fvars = FreeEVars.EVarSet.numItems $ FreeEVars.EVarSet.difference (FreeEVars.free_evars e, FreeEVars.EVarSetU.fromList $ map inl excluded)
             (* todo: pattern-matching also takes time *)
             val d = d %%+ (to_real $ C_Abs_Inner_BeforeCPS n_fvars, N $ M_Abs_Inner_BeforeCPS n_fvars)
           in

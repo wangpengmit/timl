@@ -63,7 +63,7 @@ end
 print %{
 enumerator.sml
 util.sml
-string-key.sml
+ord-key-util.sml
 list-pair-map.sml
 set-util.sml
 map-util.sml
@@ -167,6 +167,7 @@ sortcheck.sml
 topo-sort-fn.sml
 compiler/evm-costs.sml
 compiler/micro-timl-costs.sml
+free-evars.sml
 typecheck-main.sml
 trivial-solver.sml
 derived-trans.sml

@@ -1037,7 +1037,8 @@ fun free_evars_expr_visitor_vtable cast output =
       ((case data of
             ID (n, _) => if n >= env then output $ n - env
                          else ()
-          | QID _ => raise Impossible "free_evars/QID");
+          | QID _ => raise Impossible "free_evars/QID"
+       );
        data)
   in
     default_expr_visitor_vtable
