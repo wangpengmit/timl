@@ -285,113 +285,6 @@ fun on_e (e : S.expr) : mtiml_expr =
     ret
   end
                  
-and add_constr_decls (dt, e_body) =
-    let
-      val Bind.Bind (name, tbinds) = dt
-      val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
-      val tnames = map fst tname_kinds
-      val tlen = length tname_kinds
-      fun make_constr_bind (pos, (cname, core, _)) =
-        let
-          val (name_sorts, _) = unfold_binds core
-          val inames = map fst name_sorts
-          val ilen = length name_sorts
-          fun IV n = S.IVar (ID (n, dummy), [])
-          fun TV n = S.TVar $ ID (n, dummy)
-          val ts = rev $ Range.map TV (0, tlen)
-          val is = rev $ Range.map IV (0, ilen)
-          fun shiftx_i_dt x n = DerivedTrans.for_dt $ shiftx_i_mt x n
-          fun shiftx_t_dt x n = DerivedTrans.for_dt $ shiftx_t_mt x n
-          val dt = shiftx_t_dt 0 tlen dt
-          val dt = shiftx_i_dt 0 ilen dt
-          val e = make_constr (pos, ts, is, SEV 0, dt)
-          val ename = ("__x", dummy)
-          val e = MakeEAbsConstr (tnames, inames, ename, e)
-        in
-          (cname, e)
-        end
-      val constrs = mapi make_constr_bind constr_decls
-      val e_body = foldr (fn ((name, e), e_body) => MakeELetConstr (e, name, e_body)) e_body constrs
-    in
-      e_body
-    end
-      
-and make_constr (pos, ts, is, e, dt) =
-    let
-      (* open ToStringRaw *)
-      (* open ToString *)
-      (* fun str_var (_, (x, _)) = str_int x *)
-      (* fun str_var x = LongId.str_raw_long_id str_int x *)
-      (* val pp_t = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_raw_i, str_raw_s, const_fun "<kind>") *)
-      val t = TDatatype (dt, dummy)
-      val t_rec = on_mt t
-      (* val () = println "t_rec:" *)
-      (* val () = pp_t t_rec *)
-      val Bind.Bind (name, tbinds) = dt
-      val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
-      val constr_decl as (_, core, _) = nth_error constr_decls pos !! (fn () => raise Impossible "to-micro-timl/AppConstr: nth_error constr_decls")
-      val (name_sorts, (_, result_is)) = unfold_binds core
-      val () = assert (fn () => length is = length name_sorts) "length is = length name_sorts"
-      (* val () = println "result_is:" *)
-      (* val () = println $ str_ls (ToString.str_i Gctx.empty []) result_is *)
-      (* val () = println "is:" *)
-      (* val () = println $ str_ls (ToString.str_i Gctx.empty []) is *)
-      (* val result_is = foldl (fn (v, b) => map (subst_i_i v) b) result_is is *)
-      (* val () = println "result_is after:" *)
-      (* val () = println $ str_ls (ToString.str_i Gctx.empty []) result_is *)
-      val fold_anno = TAppIs (TAppTs (t_rec, map on_mt ts), result_is)
-      (* val () = println "fold_anno:" *)
-      (* val () = println $ PP_E.pp_t_to_string fold_anno *)
-      fun unroll t_rec_apps =
-        let
-          fun collect_until_TRec t =
-            case t of
-                TAppI (t, i) =>
-                let
-                  val (t, args) = collect_until_TRec t
-                in
-                  (t, args @ [inl i])
-                end
-              | TAppT (t, t') =>
-                let
-                  val (t, args) = collect_until_TRec t
-                in
-                  (t, args @ [inr t'])
-                end
-              | TRec bind =>
-                let
-                  val (_, t_body) = unBindAnno bind
-                in
-                  ((t, t_body), [])
-                end
-              | _ => raise Impossible "collect_until_TRec"
-          val ((t_rec, t_body), args) = collect_until_TRec t_rec_apps
-          val t = subst0_t_t t_rec t_body
-          fun TApp (t, arg) =
-            case arg of
-                inl i => TAppI (t, i)
-              | inr t' => TAppT (t, t')
-          val t = foldl (swap TApp) t args
-          val t = normalize_t t
-        in
-          t
-        end
-      val unrolled = unroll fold_anno
-      (* val () = println "unrolled:" *)
-      (* val () = println $ PP_E.pp_t_to_string unrolled *)
-      val inj_anno = unTSums unrolled
-      (* val () = println $ sprintf "$, $" [str_int $ length inj_anno, str_int pos] *)
-      val pack_anno = nth_error inj_anno pos !! (fn () => raise Impossible $ sprintf "to-micro-timl/AppConstr: nth_error inj_anno: $, $" [str_int $ length inj_anno, str_int pos])
-      (* val exists = peel_exists (length is + 1) pack_anno *)
-      val is = is @ [ITT dummy]
-      val e = on_e e
-      val e = EPackIs (pack_anno, is, e)
-      val e = EInj (inj_anno, pos, e)
-      val e = EFold (fold_anno, e)
-    in
-      e
-    end
-
 and on_decls (decls, e_body) =
     case decls of
         TeleNil => on_e e_body
@@ -530,6 +423,113 @@ and on_decls (decls, e_body) =
               end
         end
           
+and add_constr_decls (dt, e_body) =
+    let
+      val Bind.Bind (name, tbinds) = dt
+      val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
+      val tnames = map fst tname_kinds
+      val tlen = length tname_kinds
+      fun make_constr_bind (pos, (cname, core, _)) =
+        let
+          val (name_sorts, _) = unfold_binds core
+          val inames = map fst name_sorts
+          val ilen = length name_sorts
+          fun IV n = S.IVar (ID (n, dummy), [])
+          fun TV n = S.TVar $ ID (n, dummy)
+          val ts = rev $ Range.map TV (0, tlen)
+          val is = rev $ Range.map IV (0, ilen)
+          fun shiftx_i_dt x n = DerivedTrans.for_dt $ shiftx_i_mt x n
+          fun shiftx_t_dt x n = DerivedTrans.for_dt $ shiftx_t_mt x n
+          val dt = shiftx_t_dt 0 tlen dt
+          val dt = shiftx_i_dt 0 ilen dt
+          val e = make_constr (pos, ts, is, SEV 0, dt)
+          val ename = ("__x", dummy)
+          val e = MakeEAbsConstr (tnames, inames, ename, e)
+        in
+          (cname, e)
+        end
+      val constrs = mapi make_constr_bind constr_decls
+      val e_body = foldr (fn ((name, e), e_body) => MakeELetConstr (e, name, e_body)) e_body constrs
+    in
+      e_body
+    end
+      
+and make_constr (pos, ts, is, e, dt) =
+    let
+      (* open ToStringRaw *)
+      (* open ToString *)
+      (* fun str_var (_, (x, _)) = str_int x *)
+      (* fun str_var x = LongId.str_raw_long_id str_int x *)
+      (* val pp_t = MicroTiMLPP.pp_t_fn (str_var, str_bs, str_raw_i, str_raw_s, const_fun "<kind>") *)
+      val t = TDatatype (dt, dummy)
+      val t_rec = on_mt t
+      (* val () = println "t_rec:" *)
+      (* val () = pp_t t_rec *)
+      val Bind.Bind (name, tbinds) = dt
+      val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
+      val constr_decl as (_, core, _) = nth_error constr_decls pos !! (fn () => raise Impossible "to-micro-timl/AppConstr: nth_error constr_decls")
+      val (name_sorts, (_, result_is)) = unfold_binds core
+      val () = assert (fn () => length is = length name_sorts) "length is = length name_sorts"
+      (* val () = println "result_is:" *)
+      (* val () = println $ str_ls (ToString.str_i Gctx.empty []) result_is *)
+      (* val () = println "is:" *)
+      (* val () = println $ str_ls (ToString.str_i Gctx.empty []) is *)
+      (* val result_is = foldl (fn (v, b) => map (subst_i_i v) b) result_is is *)
+      (* val () = println "result_is after:" *)
+      (* val () = println $ str_ls (ToString.str_i Gctx.empty []) result_is *)
+      val fold_anno = TAppIs (TAppTs (t_rec, map on_mt ts), result_is)
+      (* val () = println "fold_anno:" *)
+      (* val () = println $ PP_E.pp_t_to_string fold_anno *)
+      fun unroll t_rec_apps =
+        let
+          fun collect_until_TRec t =
+            case t of
+                TAppI (t, i) =>
+                let
+                  val (t, args) = collect_until_TRec t
+                in
+                  (t, args @ [inl i])
+                end
+              | TAppT (t, t') =>
+                let
+                  val (t, args) = collect_until_TRec t
+                in
+                  (t, args @ [inr t'])
+                end
+              | TRec bind =>
+                let
+                  val (_, t_body) = unBindAnno bind
+                in
+                  ((t, t_body), [])
+                end
+              | _ => raise Impossible "collect_until_TRec"
+          val ((t_rec, t_body), args) = collect_until_TRec t_rec_apps
+          val t = subst0_t_t t_rec t_body
+          fun TApp (t, arg) =
+            case arg of
+                inl i => TAppI (t, i)
+              | inr t' => TAppT (t, t')
+          val t = foldl (swap TApp) t args
+          val t = normalize_t t
+        in
+          t
+        end
+      val unrolled = unroll fold_anno
+      (* val () = println "unrolled:" *)
+      (* val () = println $ PP_E.pp_t_to_string unrolled *)
+      val inj_anno = unTSums unrolled
+      (* val () = println $ sprintf "$, $" [str_int $ length inj_anno, str_int pos] *)
+      val pack_anno = nth_error inj_anno pos !! (fn () => raise Impossible $ sprintf "to-micro-timl/AppConstr: nth_error inj_anno: $, $" [str_int $ length inj_anno, str_int pos])
+      (* val exists = peel_exists (length is + 1) pack_anno *)
+      val is = is @ [ITT dummy]
+      val e = on_e e
+      val e = EPackIs (pack_anno, is, e)
+      val e = EInj (inj_anno, pos, e)
+      val e = EFold (fold_anno, e)
+    in
+      e
+    end
+
 and on_DVal (ename, Outer bind, r) =
     let
       val name = unBinderName ename

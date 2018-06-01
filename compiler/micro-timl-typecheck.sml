@@ -298,272 +298,73 @@ fun assert_sub_map err eq (m, m') =
 
 fun is_eq_list msg f a = ListPair.appEq f a handle ListPair.UnequalLengths => raise Impossible msg
 
-(* fun is_eq_ty_visitor2_vtable cast () = *)
-(*     let *)
-(*       fun adapt f this env a a' = (f (a, a'); a) *)
-(*       val vtable =        *)
-(*           default_ty_visitor2_vtable *)
-(*             cast *)
-(*             extend_noop *)
-(*             extend_noop *)
-(*             (adapt eq_var) *)
-(*             (adapt is_eq_basic_sort) *)
-(*             (adapt is_eq_idx) *)
-(*             (adapt is_eq_sort) *)
-(*       fun visit2_ibind_anno get_sort this visit_anno visit_body env bind bind' = *)
-(*           let *)
-(*             val (a, (name, t)) = unBindAnnoName bind *)
-(*             val (a', (name', t')) = unBindAnnoName bind' *)
-(*             val a = visit_anno env a a' *)
-(*             val () = open_sorting (fst name, get_sort a) *)
-(*             val t = visit_body env t t' *)
-(*             val () = close () *)
-(*           in *)
-(*             IBindAnno ((name, a), t) *)
-(*           end *)
-(*       val vtable = override_visit2_ibind_anno_sort vtable $ visit2_ibind_anno id *)
-(*       val vtable = override_visit2_ibind_anno_bsort vtable $ visit2_ibind_anno (fn bs => SBasic (bs, dummy)) *)
-(*     in *)
-(*       vtable *)
-(*     end *)
-
-(* fun new_is_eq_ty_visitor2 a = new_ty_visitor2 is_eq_ty_visitor2_vtable a *)
-
-(* fun is_eq_ty (ctx as (ictx, tctx)) (t, t') = *)
-(*   let *)
-(*     val t = whnf ctx t *)
-(*     val t' = whnf ctx t' *)
-(*     fun t_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t *)
-(*     fun t'_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t' *)
-(*     val assert_b = fn b => flip assert_b_m b $ (fn () => sprintf "Can't unify types:\n$\nand\n$\n" [t_str (), t'_str ()]) *)
-(*     (* val () = println $ sprintf "comparing types:\n  $  $" [ *) *)
-(*     (*       t_str (), *) *)
-(*     (*       t'_str () *) *)
-(*     (*     ] *) *)
-(*     fun err msg = *)
-(*         raise MTCError $ sprintf "Error: $\nin is_eq_ty() with\n  $  $" *)
-(*               [ *)
-(*                 msg, *)
-(*                 ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t, *)
-(*                 ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t' *)
-(*               ] *)
-(*     val visitor2 as (TyVisitor2 vtable) = new_is_eq_ty_visitor2 () *)
-(*   in *)
-(*     ignore $ #visit2_ty vtable visitor2 () t t' *)
-(*     handle Visitor2Error msg => err msg *)
-(*   end *)
-
-(* fun is_eq_kind (k, k') = *)
-(*     let *)
-(*       val visitor2 as (TyVisitor2 vtable) = new_is_eq_ty_visitor2 () *)
-(*     in *)
-(*       ignore $ #visit2_kind vtable visitor2 () k k' *)
-(*       handle Visitor2Error msg => raise MTCError $ "Can't unify kinds because: " ^ msg *)
-(*     end *)
-    
-(* fun is_sub_rctx ctx (rctx, rctx_abs) = *)
-(*   assert_sub_map (fn () => Impossible "is_sub_rctx()") (fn (t_abs, t) => is_eq_ty ctx (t, t_abs)) (rctx_abs, rctx) *)
-  
-(* fun is_eq_tys ctx a = is_eq_list "is_eq_tys()/unequal-lengths" (is_eq_ty ctx) a *)
-
-fun is_eq_kind (k, k') =
-  case (k, k') of
-      (KType (), KType ()) => ()
-    | (KArrow (b, k), KArrow (b', k')) =>
-      let
-        val () = is_eq_basic_sort (b, b')
-        val () = is_eq_kind (k, k')
-      in
-        ()
-      end
-    | (KArrowT (k1, k2), KArrowT (k1', k2')) =>
-      let
-        val () = is_eq_kind (k1, k1')
-        val () = is_eq_kind (k2, k2')
-      in
-        ()
-      end
-    | _ => raise MTCError "can't unify kinds"
-       
-fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
+fun is_eq_ty_visitor2_vtable cast () =
     let
-      val t = whnf ctx t
-      val t' = whnf ctx t'
-      fun t_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t
-      fun t'_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
-      val assert_b = fn b => flip assert_b_m b $ (fn () => sprintf "Can't unify types:\n$\nand\n$\n" [t_str (), t'_str ()])
-      (* val () = println $ sprintf "comparing types:\n  $  $" [ *)
-      (*       t_str (), *)
-      (*       t'_str () *)
-      (*     ] *)
-      fun err () =
-          raise MTCError $ sprintf "unknown case in is_eq_ty:\n  $  $"
-                [
-                  ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t,
-                  ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
-                ]
+      fun adapt f this env a a' = (f (a, a'); a)
+      val vtable =
+          default_ty_visitor2_vtable
+            cast
+            extend_noop
+            extend_noop
+            (adapt eq_var)
+            (adapt is_eq_basic_sort)
+            (adapt is_eq_idx)
+            (adapt is_eq_sort)
+      fun visit2_ibind_anno get_sort this visit_anno visit_body env bind bind' =
+          let
+            val (a, (name, t)) = unBindAnnoName bind
+            val (a', (name', t')) = unBindAnnoName bind'
+            val a = visit_anno env a a'
+            val () = open_sorting (fst name, get_sort a)
+            val t = visit_body env t t'
+            val () = close ()
+          in
+            IBindAnno ((name, a), t)
+          end
+      val vtable = override_visit2_ibind_anno_sort vtable $ visit2_ibind_anno id
+      val vtable = override_visit2_ibind_anno_bsort vtable $ visit2_ibind_anno (fn bs => SBasic (bs, dummy))
     in
-      case (t, t') of
-          (TVar (x, _), TVar (x', _)) => assert_b (eq_var (x, x'))
-        | (TConst c, TConst c') => assert_b (c = c')
-        | (TBinOp (opr, t1, t2), TBinOp (opr', t1', t2')) =>
-          let
-            val () = assert_b (opr = opr')
-            val () = is_eq_ty ctx (t1, t1')
-            val () = is_eq_ty ctx (t2, t2')
-          in
-            ()
-          end
-        | (TArrow ((i1, t1), (i, j), (i2, t2)), TArrow ((i1', t1'), (i', j'), (i2', t2'))) =>
-          let
-            val () = is_eq_idx (i1, i1')
-            val () = is_eq_ty ctx (t1, t1')
-            val () = is_eq_idx (i, i')
-            val () = is_eq_idx (j, j')
-            val () = is_eq_idx (i2, i2')
-            val () = is_eq_ty ctx (t2, t2')
-          in
-            ()
-          end
-        | (TQuanI (q, data), TQuanI (q', data')) =>
-          let
-            val () = assert_b (q = q')
-            val (s, (name, t)) = unTQuanI data
-            val (s', (_, t')) = unTQuanI data'
-            val () = is_eq_sort (s, s')
-            val () = open_close add_sorting_it (fst name, s) ctx (fn ctx => is_eq_ty ctx (t, t'))
-          in
-            ()
-          end
-        | (TQuan (q, data), TQuan (q', data')) =>
-          let
-            val () = assert_b (q = q')
-            val (k, (name, t)) = unTQuan data
-            val (k', (_, t')) = unTQuan data'
-            val () = is_eq_kind (k, k')
-            val () = is_eq_ty (add_kinding_it (fst name, k) ctx) (t, t')
-          in
-            ()
-          end
-        | (TRec data, TRec data') =>
-          let
-            val (k, (name, t)) = unTQuan data
-            val (k', (_, t')) = unTQuan data'
-            val () = is_eq_kind (k, k')
-            val () = is_eq_ty (add_kinding_it (fst name, k) ctx) (t, t')
-          in
-            ()
-          end
-        | (TNat i, TNat i') => is_eq_idx (i, i')
-        | (TiBool i, TiBool i') => is_eq_idx (i, i')
-        | (TArr (t, i), TArr (t', i')) =>
-          let
-            val () = is_eq_ty ctx (t, t')
-            val () = is_eq_idx (i, i')
-          in
-            ()
-          end
-        | (TArrayPtr (t, i, i2), TArrayPtr (t', i', i2')) =>
-          let
-            val () = is_eq_ty ctx (t, t')
-            val () = is_eq_idx (i, i')
-            val () = is_eq_idx (i2, i2')
-          in
-            ()
-          end
-        | (TPreArray (t, i, i2, b), TPreArray (t', i', i2', b')) =>
-          let
-            val () = is_eq_ty ctx (t, t')
-            val () = is_eq_idx (i, i')
-            val () = is_eq_idx (i2, i2')
-            val () = assert_b (b = b')
-          in
-            ()
-          end
-        | (TTuplePtr (ts, i, b), TTuplePtr (ts', i', b')) =>
-          let
-            val () = is_eq_tys ctx (ts, ts')
-            val () = is_eq_idx (i, i')
-            val () = assert_b (b = b')
-          in
-            ()
-          end
-        | (TTuple ts, TTuple ts') => is_eq_tys ctx (ts, ts')
-        | (TPreTuple (ts, i, i2), TPreTuple (ts', i', i2')) =>
-          let
-            val () = is_eq_tys ctx (ts, ts')
-            val () = is_eq_idx (i, i')
-            val () = is_eq_idx (i2, i2')
-          in
-            ()
-          end
-        | (TAbsT data, TAbsT data') =>
-          let
-            val (k, (name, t)) = unTAbsT data
-            val (k', (_, t')) = unTAbsT data'
-            val () = is_eq_kind (k, k')
-            val () = is_eq_ty (add_kinding_it (fst name, k) ctx) (t, t')
-          in
-            ()
-          end
-        | (TAppT (t1, t2), TAppT (t1', t2')) =>
-          let
-            val () = is_eq_ty ctx (t1, t1')
-            val () = is_eq_ty ctx (t2, t2')
-          in
-            ()
-          end
-        | (TAbsI data, TAbsI data') =>
-          let
-            val (b, (name, t)) = unTAbsI data
-            val (b', (_, t')) = unTAbsI data'
-            val () = is_eq_basic_sort (b, b')
-            val () = open_close add_sorting_it (fst name, BasicSort b) ctx (fn ctx => is_eq_ty ctx (t, t'))
-          in
-            ()
-          end
-        | (TAppI (t, i), TAppI (t', i')) =>
-          let
-            val () = is_eq_ty ctx (t, t')
-            val () = is_eq_idx (i, i')
-          in
-            ()
-          end
-        | (TProdEx ((t1, b1), (t2, b2)), TProdEx ((t1', b1'), (t2', b2'))) =>
-          let
-            val () = is_eq_ty ctx (t1, t1')
-            val () = is_eq_ty ctx (t2, t2')
-            val () = assert_b (b1 = b1')
-            val () = assert_b (b2 = b2')
-          in
-            ()
-          end
-        | (TArrowTAL (rctx, i), TArrowTAL (rctx', i')) =>
-          let
-            val () = assert_b $ Rctx.numItems rctx = Rctx.numItems rctx'
-            val () = is_sub_rctx ctx (rctx, rctx')
-            val () = is_eq_idx (i, i')
-          in
-            ()
-          end
-        | (TArrowEVM (st, rctx, ts, (j, i)), TArrowEVM (st', rctx', ts', (j', i'))) =>
-          let
-            val () = is_eq_idx (st, st')
-            val () = assert_b $ Rctx.numItems rctx = Rctx.numItems rctx'
-            val () = is_sub_rctx ctx (rctx, rctx')
-            val () = is_eq_tys ctx (ts, ts')
-            val () = is_eq_idx (j, j')
-            val () = is_eq_idx (i, i')
-          in
-            ()
-          end
-        | _ => err ()
+      vtable
     end
 
-and is_sub_rctx ctx (rctx, rctx_abs) =
+fun new_is_eq_ty_visitor2 a = new_ty_visitor2 is_eq_ty_visitor2_vtable a
+
+fun is_eq_ty (ctx as (ictx, tctx)) (t, t') =
+  let
+    val t = whnf ctx t
+    val t' = whnf ctx t'
+    fun t_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t
+    fun t'_str () = ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
+    val assert_b = fn b => flip assert_b_m b $ (fn () => sprintf "Can't unify types:\n$\nand\n$\n" [t_str (), t'_str ()])
+    (* val () = println $ sprintf "comparing types:\n  $  $" [ *)
+    (*       t_str (), *)
+    (*       t'_str () *)
+    (*     ] *)
+    fun err msg =
+        raise MTCError $ sprintf "Error: $\nin is_eq_ty() with\n  $  $"
+              [
+                msg,
+                ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t,
+                ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t'
+              ]
+    val visitor2 as (TyVisitor2 vtable) = new_is_eq_ty_visitor2 ()
+  in
+    ignore $ #visit2_ty vtable visitor2 () t t'
+    handle Visitor2Error msg => err msg
+  end
+
+fun is_eq_kind (k, k') =
+    let
+      val visitor2 as (TyVisitor2 vtable) = new_is_eq_ty_visitor2 ()
+    in
+      ignore $ #visit2_kind vtable visitor2 () k k'
+      handle Visitor2Error msg => raise MTCError $ "Can't unify kinds because: " ^ msg
+    end
+    
+fun is_sub_rctx ctx (rctx, rctx_abs) =
   assert_sub_map (fn () => Impossible "is_sub_rctx()") (fn (t_abs, t) => is_eq_ty ctx (t, t_abs)) (rctx_abs, rctx)
   
-and is_eq_tys ctx a = is_eq_list "is_eq_tys()/unequal-lengths" (is_eq_ty ctx) a
+fun is_eq_tys ctx a = is_eq_list "is_eq_tys()/unequal-lengths" (is_eq_ty ctx) a
 
 fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
   let

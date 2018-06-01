@@ -46,6 +46,7 @@ fun EMapPtr (e1, e2) = EBinOp (EBMapPtr (), e1, e2)
 fun EStorageSet (e1, e2) = EBinOp (EBStorageSet (), e1, e2)
 fun EStorageGet (e, r) = EUnOp (EUStorageGet (), e, r)
 fun EAnno (e, a, r) = EUnOp (EUAnno a, e, r)
+fun EAnnoLiveVars (e, n, r) = EAnno (e, EALiveVars n, r)
 fun EAnnoBodyOfRecur (e, r) = EAnno (e, EABodyOfRecur (), r)
   
 fun collect_Pair e =

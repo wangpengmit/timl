@@ -1088,6 +1088,19 @@ and check_value e =
     | EBinOp (EBPair (), e1, e2) => (check_value e1; check_value e2)
     | ETuple es => app check_value es
     | EUnOp (EUInj _, e) => check_value e
+    | EUnOp (EUTiML opr, _) =>
+      (case opr of
+           EUProj _ => err ()
+         | EUArrayLen () => err ()
+         | EUPrim _ => err ()
+         | EUNat2Int () => err ()
+         | EUInt2Nat () => err ()
+         | EUPrintc () => err ()
+         | EUStorageGet () => err ()
+         | EUVectorClear () => err ()
+         | EUVectorLen () => err ()
+         | EUAnno () => check_value e
+      )
     | EAbs (_, bind) =>
       let
         val (_, e) = unBindAnno bind
@@ -1124,7 +1137,6 @@ and check_value e =
     | ENever _ => ()
     | EBuiltin _ => ()
     | EUnOp (EUUnfold (), _) => err ()
-    | EUnOp (EUTiML _, _) => err ()
     | EUnOp (EUTupleProj _, _) => err ()
     | EBinOp (EBApp (), _, _) => err ()
     | EBinOp (EBNew (), _, _) => err ()

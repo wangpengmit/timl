@@ -1,4 +1,4 @@
-structure LiveVars = struct
+structure MicroTiMLLiveVars = struct
 
 open Util
 open Unbound
@@ -34,29 +34,25 @@ fun live_vars_expr_visitor_vtable cast () =
     fun visit_tbind_anno this = visit_bind_anno (#extend_t (cast this) this)
     fun visit_cbind_anno this = visit_bind_anno (#extend_c (cast this) this)
                                                 
-    fun visit_ebind this f (lvars, has_k) bind =
+    fun visit_ebind this f (env as (lvars, _)) bind =
       let
         val (name, b) = unBindSimp bind
-        val () = unop_ref (fn s => ISet.map inc s) lvars
-        val b = f (lvars, has_k) b
+        val () = unop_ref (ISet.map inc) lvars
+        val b = f env b
         val () = unop_ref (fn s => ISet.map dec (s @%- 0)) lvars
       in
         BindSimp (name, b)
       end
-    fun visit_ebind_anno this f_anno f (lvars, has_k) bind =
+    fun visit_ebind_anno this f_anno f (env as (lvars, _)) bind =
       let
         val ((name, anno), b) = unBindAnno bind
-        val bind = visit_ebind this f (lvars, has_k) $ BindSimp (name, b)
+        val bind = visit_ebind this f env $ BindSimp (name, b)
         val (name, b) = unBindSimp bind
-        val anno = f_anno (lvars, has_k) anno
+        val anno = f_anno env anno
       in
         BindAnno ((name, anno), b)
       end
                                                 
-    fun output lvars n = binop_ref (curry ISet.add) lvars n
-    fun output_set lvars s = ISet.app (output lvars) s
-    fun mapr f = foldr (fn (x, acc) => f x :: acc) []
-                                    
     fun add_AnnoLiveVars (bind, n) =
       let
         val (name, e) = unBindSimp bind
@@ -145,7 +141,7 @@ fun live_vars_expr_visitor_vtable cast () =
             val () = output_set lvars (!new_lvars)
             val e1 = #visit_expr vtable this env e1
           in
-            ETriOp (ETIte (), e1, e2, EAnnoLiveVars (e3, n_lvars))
+            ETriOp (opr, e1, e2, EAnnoLiveVars (e3, n_lvars))
           end
         | _ =>
           let
@@ -175,7 +171,8 @@ fun live_vars_expr_visitor_vtable cast () =
     fun visit_var this (lvars, _) data =
       ((case data of
             ID (n, _) => output lvars n
-          | QID _ => raise Impossible "live_evars/QID");
+          | QID _ => raise Impossible "live_evars/QID"
+       );
        data)
     fun visit_EVar this env data =
       let
@@ -256,8 +253,8 @@ fun live_vars_expr_visitor_vtable cast () =
       let
         val n_lvars = num_lvars env
         val vtable = cast this
-        val e = #visit_expr vtable this env e
         val t = #visit_ty vtable this env t
+        val e = #visit_expr vtable this env e
       in
         EAppT (EAnnoLiveVars (e, n_lvars), t)
       end
@@ -275,8 +272,8 @@ fun live_vars_expr_visitor_vtable cast () =
       let
         val n_lvars = num_lvars env
         val vtable = cast this
-        val e = #visit_expr vtable this env e
         val i = #visit_idx vtable this env i
+        val e = #visit_expr vtable this env e
       in
         EAppI (EAnnoLiveVars (e, n_lvars), i)
       end

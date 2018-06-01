@@ -939,8 +939,9 @@ fun is_value (e : U.expr) : bool =
            | EUPrintc () => false
         (* | EUPrint () => false *)
            | EUStorageGet () => false
-    | EUVectorClear () => false
-    | EUVectorLen () => false
+           | EUVectorClear () => false
+           | EUVectorLen () => false
+           | EUAnno () => is_value e
         )
       | EBinOp (opr, e1, e2) =>
         (case opr of
@@ -1281,6 +1282,12 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val (x, _, _) = get_vector (fn () => r) t
                in
                  (EUnOp (opr, e, r), TUnit r, j %%+ TN C_EVectorClear, st @+ (x, N0 r))
+               end
+             | EUAnno _ =>
+               let
+                 val (e, t, i, st) = get_mtype (ctx, st) e
+               in
+                 (EUnOp (opr, e, r), t, i, st)
                end
           )
 	| U.EBinOp (opr, e1, e2) =>
@@ -1643,6 +1650,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (is_rec, e) = case e of
                                   EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
                                 | _ => (false, e)
+            (* calculation of 'excluded' is more complicated because of patterns *)
             val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = FreeEVars.EVarSet.numItems $ FreeEVars.EVarSet.difference (FreeEVars.free_evars e, FreeEVars.EVarSetU.fromList $ map inl excluded)
             (* todo: pattern-matching also takes time *)
@@ -2424,6 +2432,7 @@ fun get_sig gctx m =
   case m of
       U.ModComponents (decls, r) =>
       let
+        val (decls, _) = live_evars_decls decls (* todo: live-evar analysis does not cross module boundaries, so there will be under-estimation if there are top-level function applications *)
         val (decls, ctxd, nps, ds, _, st) = check_decls gctx (empty_ctx, !st_ref) decls
         val () = StMap.app (fn i => ignore $ forget_above_i_i 0 i handle _ => raise Error (r, ["state can't mention index variables"])) st
         val () = st_ref := st

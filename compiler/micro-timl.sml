@@ -220,7 +220,20 @@ fun is_value e =
     | EBinOp (EBMapPtr (), _, _) => false
     | EBinOp (EBStorageSet (), _, _) => false
     | EUnOp (EUUnfold (), _) => false
-    | EUnOp (EUTiML _, _) => false
+    | EUnOp (EUTiML opr, _) =>
+      (case opr of
+           EUProj _ => false
+         | EUArrayLen () => false
+         | EUPrim _ => false
+         | EUNat2Int () => false
+         | EUInt2Nat () => false
+         | EUPrintc () => false
+         (* | EUPrint () => false *)
+         | EUStorageGet () => false
+         | EUVectorClear () => false
+         | EUVectorLen () => false
+         | EUAnno () => is_value e
+      )
     | EUnOp (EUTupleProj _, _) => false
     | ETriOp (ETWrite (), _, _, _) => false
     | ETriOp (ETIte (), _, _, _) => false

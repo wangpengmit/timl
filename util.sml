@@ -175,6 +175,8 @@ fun foldli f = foldlWithIdx (fn (x, acc, n) => f (n, x, acc))
 fun foldrWithIdx start f init xs = fst $ foldl (fn (x, (acc, n)) => (f (x, acc, n), n + 1)) (init, start) xs
 fun mapWithIdx f ls = rev $ foldlWithIdx (fn (x, acc, n) => f (n, x) :: acc) [] ls
 val mapi = mapWithIdx
+fun appi f = ignore o mapi f
+fun mapr f = foldr (fn (x, acc) => f x :: acc) []
 fun enumerate c : ('a, 'b) Enum.enum = fn f => (fn init => List.foldl f init c)
                                  
 fun update i f ls = mapi (fn (i', a) => if i' = i then f a else a) ls

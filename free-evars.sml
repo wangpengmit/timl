@@ -1,3 +1,10 @@
+structure StringIntOrdKey = PairOrdKeyFn (structure Fst = StringOrdKey
+                                          structure Snd = IntOrdKey)
+structure EVarOrdKey = SumOrdKeyFn (structure L = IntOrdKey
+                                  structure R = StringIntOrdKey)
+structure EVarSet = BinarySetFn (EVarOrdKey)
+structure EVarSetU = SetUtilFn (EVarSet)
+
 structure FreeEVars = struct
 
 structure Visitor = ExprVisitorFn (structure S = Expr
@@ -6,13 +13,6 @@ open Visitor
 open VisitorUtil
 open Util
 open LongId
-
-structure StringIntOrdKey = PairOrdKeyFn (structure Fst = StringOrdKey
-                                          structure Snd = IntOrdKey)
-structure EVarOrdKey = SumOrdKeyFn (structure L = IntOrdKey
-                                  structure R = StringIntOrdKey)
-structure EVarSet = BinarySetFn (EVarOrdKey)
-structure EVarSetU = SetUtilFn (EVarSet)
 
 infixr 0 $
                              
@@ -26,22 +26,34 @@ fun free_evars_expr_visitor_vtable cast output =
           | QID ((m, _), (n, _)) => output $ inr (m, n)
        );
        data)
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_e
+          visit_var
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_DOpen this env (data as (m, scp)) =
+      let
+        val r = #visit_DOpen vtable this env data (*call super*)
+        val (m, _) = unInner m
+        (* 'open' touches all evars in the module, so all of them should be counted as free evars *)
+        val () = Option.app (appi (fn (i, _) => output $ inr (m, i)) o #4) scp
+      in
+        r
+      end
+    val vtable = override_visit_DOpen vtable visit_DOpen
   in
-    default_expr_visitor_vtable
-      cast
-      extend_noop
-      extend_noop
-      extend_noop
-      extend_e
-      visit_var
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
+    vtable
   end
 fun new_free_evars_expr_visitor params = new_expr_visitor free_evars_expr_visitor_vtable params
 fun free_evars b =

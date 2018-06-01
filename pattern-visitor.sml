@@ -168,4 +168,56 @@ fun subst_t_pn_fn substs = visit_subst_t_pn_fn substs (env2ctx (IDepth 0, TDepth
 fun substx_t_pn_fn substs = subst_t_pn_fn substs (IDepth 0, TDepth 0) 
 fun subst0_t_pn_fn substs = substx_t_pn_fn substs 0
 
+(***************** the "count_binder" visitor  **********************)    
+    
+fun count_binder_ptrn_visitor_vtable cast () =
+  let
+    fun extend_i this (ni, ne) name = ((ni + 1, ne), name)
+    fun extend_e this (ni, ne) name = ((ni, ne + 1), name)
+  in
+    default_ptrn_visitor_vtable
+      cast
+      extend_i
+      extend_e
+      visit_noop
+      visit_noop
+  end
+
+fun new_count_binder_ptrn_visitor params = new_ptrn_visitor count_binder_ptrn_visitor_vtable params
+    
+fun count_binder_pn b =
+  let
+    val visitor as (PtrnVisitor vtable) = new_count_binder_ptrn_visitor ()
+    val ctx = env2ctx (0, 0)
+    val _ = #visit_ptrn vtable visitor ctx b
+  in
+    !(#current ctx)
+  end
+    
+(***************** the "collect_binder" visitor  **********************)    
+    
+fun collect_binder_ptrn_visitor_vtable cast () =
+  let
+    fun extend_i this (ni, ne) name = ((Name2str name :: ni, ne), name)
+    fun extend_e this (ni, ne) name = ((ni, Name2str name :: ne), name)
+  in
+    default_ptrn_visitor_vtable
+      cast
+      extend_i
+      extend_e
+      visit_noop
+      visit_noop
+  end
+
+fun new_collect_binder_ptrn_visitor params = new_ptrn_visitor collect_binder_ptrn_visitor_vtable params
+    
+fun collect_binder_pn b =
+  let
+    val visitor as (PtrnVisitor vtable) = new_collect_binder_ptrn_visitor ()
+    val ctx = env2ctx ([], [])
+    val _ = #visit_ptrn vtable visitor ctx b
+  in
+    !(#current ctx)
+  end
+    
 end
