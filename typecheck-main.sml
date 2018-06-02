@@ -2025,7 +2025,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               (* val () = println $ sprintf "te[pre] = $" [US.str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
 	      val te = check_kind_Type gctx ((sctx, kctx), te)
               (* val () = println $ sprintf "te[post] = $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
-	      val (e, st) = check_mtype_time_space gctx (add_typing_skct (name, PTMono te) ctx, st) (e, te, TN0 dummy) (* todo: abstraction also takes time and space, so it's not TN0 *)
+	      val (e, i, st) = check_mtype gctx (add_typing_skct (name, PTMono te) ctx, st) (e, te) 
               val (te, poly_te, free_uvars, free_uvar_names) = generalize te
               val e = UpdateExpr.update_e e
               val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
@@ -2034,7 +2034,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val tnames = tnames @ rev free_uvar_names
               val decl = DRec (Binder $ EName (name, r1), Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind TeleNil), ((StMap.empty, StMap.empty), (te, TN0 r), e)), r)
             in
-              (decl, ctx_from_typing (name, poly_te), 0, [TN0 dummy], st)
+              (decl, ctx_from_typing (name, poly_te), 0, [i], st)
 	    end
           | U.DIdxDef (name, Outer s, Outer i) =>
             let
