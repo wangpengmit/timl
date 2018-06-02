@@ -880,11 +880,11 @@ fun test1 dirname =
     val e = trans_e e
     val st_name2ty = StMap.map (mapSnd trans_mt) st_name2ty
     val () = println "Finished translating"
+    open MicroTiMLSimp
+    val e = simp_e e
     open ExportPP
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file (join_dir_file' dirname $ "unit-test-after-translation.tmp", e_str)
-    (* val () = println e_str *)
-    (* val () = println "" *)
                      
     open MicroTiMLTypecheck
     open TestUtil
@@ -922,10 +922,9 @@ fun test1 dirname =
     val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, TN0 dummy)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"
+    val e = simp_e e
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file (join_dir_file' dirname $ "unit-test-after-cps.tmp", e_str)
-    (* val () = println e_str *)
-    (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #2 ..."
     val () = phase := PhBeforeCC ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
@@ -936,10 +935,14 @@ fun test1 dirname =
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
     val _ = print_time_space i
                      
+    val e = simp_e e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
+    val () = write_file (join_dir_file' dirname $ "unit-test-before-cc.tmp", e_str)
     val () = println "Started CC ..."
     val e = cc e
     val e = MicroTiMLPostProcess.post_process e
     val () = println "Finished CC"
+    val e = simp_e e
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file (join_dir_file' dirname $ "unit-test-after-cc.tmp", e_str)
     (* val () = println e_str *)

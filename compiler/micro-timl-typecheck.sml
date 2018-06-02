@@ -1276,6 +1276,51 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), mapPair' to_real N cost, st)
         end
+      | EAbsI data =>
+        let
+          val (s, (name, e)) = unEAbsI data
+          val s = is_wf_sort ictx s
+          val () = assert_b "EAbsI: is_value e" (is_value e)
+          val (e, t, i, _) = open_close add_sorting_full (fst name, s) ctx (fn ctx => tc (ctx, IEmptyState) e)
+          val cost =
+              case !phase of
+                  PhBeforeCodeGen () => TN0
+                | PhBeforeCC () => forget01_i_2i i
+                | PhBeforeCPS () => TN0 (* todo: impl *)
+        in
+          (MakeEAbsI (name, s, e), MakeTForallI (s, name, t), cost, st)
+        end
+      (* | EAbsI _ => *)
+      (*   let *)
+      (*     val (binds, e) = collect_EAbsI e_input *)
+      (*     val regions = map (snd o fst) binds *)
+      (*     val binds = map (mapFst fst) binds *)
+      (*     fun is_wf_sorts ctx binds = *)
+      (*         let *)
+      (*           fun foo ((name, s), (binds, ctx)) = *)
+      (*               let *)
+      (*                 val s = is_wf_sort ctx s *)
+      (*                 val bind = (name, s) *)
+      (*                 val () = open_s bind *)
+      (*               in *)
+      (*                 (bind :: binds, bind :: ctx) *)
+      (*               end *)
+      (*           val (binds, ctx) = foldl foo ([], ctx) binds *)
+      (*           val binds = rev binds *)
+      (*         in *)
+      (*           (binds, ctx) *)
+      (*         end *)
+      (*     val (binds, ictx) = is_wf_sorts ictx binds *)
+      (*     val () = assert_b "EAbsI: is_value e" (is_value e) *)
+      (*     val len_binds = length binds *)
+      (*     val ectx = map (mapSnd (lazy_shift_i_t len_binds (* o trace_noln "." *))) ectx *)
+      (*     val ctx = (ictx, tctx, ectx) *)
+      (*     val (e, t, _) = tc_against_time_space (ctx, IEmptyState) (e, TN0) *)
+      (*     val () = close_n len_binds *)
+      (*     val binds = ListPair.mapEq (fn ((name, anno), r) => ((name, r), anno)) (binds, regions) *)
+      (*   in *)
+      (*     (EAbsIs (binds, e), TForallIs (binds, t), TN0, st) *)
+      (*   end *)
       | ERec data =>
         let
           val (t, (name, e)) = unBindAnnoName data
@@ -1563,67 +1608,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EAppT (e, t1), subst0_t_t t1 t, i, st)
         end
-      | EAbsI _ =>
-        let
-          (* val () = println "tc() on EAbsI" *)
-          val (binds, e) = collect_EAbsI e_input
-          val regions = map (snd o fst) binds
-          val binds = map (mapFst fst) binds
-          (* val () = println "before tc()/EAbsI/is_wf_sorts()" *)
-          fun is_wf_sorts ctx binds =
-              let
-                fun foo ((name, s), (binds, ctx)) =
-                    let
-                      val s = is_wf_sort ctx s
-                      val bind = (name, s)
-                      val () = open_s bind
-                    in
-                      (bind :: binds, bind :: ctx)
-                    end
-                val (binds, ctx) = foldl foo ([], ctx) binds
-                val binds = rev binds
-              in
-                (binds, ctx)
-              end
-          val (binds, ictx) = is_wf_sorts ictx binds
-          (* val () = println "before tc()/EAbsI/is_value()" *)
-          val () = assert_b "EAbsI: is_value e" (is_value e)
-          (* val () = println "before tc()/EAbsI/add_sortings_full()" *)
-          (* val () = println $ sprintf "#ictx=$  #ectx=$" [str_int $ length ictx, str_int $ length ectx] *)
-          val len_binds = length binds
-          val ectx = map (mapSnd (lazy_shift_i_t len_binds (* o trace_noln "." *))) ectx
-          (* val () = println "" *)
-          val ctx = (ictx, tctx, ectx)
-          (* val () = println "before tc()/EAbsI/tc_against_time()" *)
-          val (e, t, _) = tc_against_time_space (ctx, IEmptyState) (e, TN0)
-          val () = close_n len_binds
-          (* val () = println "before tc()/EAbsI/making result" *)
-          val binds = ListPair.mapEq (fn ((name, anno), r) => ((name, r), anno)) (binds, regions)
-          val result = (EAbsIs (binds, e), TForallIs (binds, t), TN0, st)
-          (* val () = println "after tc()/EAbsI/making result" *)
-        in
-          result
-        end
-      (* | EAbsI data => *)
-      (*   let *)
-      (*     val () = println "tc() on EAbsI" *)
-      (*     val (s, (name, e)) = unEAbsI data *)
-      (*     val () = println "before is_wf_sort()" *)
-      (*     val s = is_wf_sort ictx s *)
-      (*     val () = println "before is_value()" *)
-      (*     val () = assert_b "EAbsI: is_value e" (is_value e) *)
-      (*     val () = println "before add_sorting_full()" *)
-      (*     val () = println $ sprintf "#ictx=$  #ectx=$" [str_int $ length ictx, str_int $ length ectx] *)
-      (*     val (e, t) = open_close add_sorting_full (fst name, s) ctx *)
-      (*                             (fn ctx => *)
-      (*                                 (println "before tc_against_time()"; *)
-      (*                                  tc_against_time ctx (e, T0))) *)
-      (*     val () = println "before making result" *)
-      (*     val result = (MakeEAbsI (name, s, e), MakeTForallI (s, name, t), T0) *)
-      (*     val () = println "after making result" *)
-      (*   in *)
-      (*     result *)
-      (*   end *)
       | EAppI (e, i) =>
         let
           val (e, t_e, j, st) = tc (ctx, st) e
