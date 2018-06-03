@@ -35,7 +35,7 @@ val C_ArrayLen = C_PUSH + C_SWAP + C_SUB + C_MLOAD
 val C_Nat2Int = 0
 val C_Int2Nat = 0
 val C_StorageGet = C_SLOAD
-val C_tuple_malloc = 3 * C_PUSH + C_MLOAD + C_DUP + C_ADD + C_LOG 0 + C_MSTORE
+val C_tuple_malloc = C_PUSH + C_MLOAD + C_DUP + C_PUSH + C_ADD + C_PUSH + C_MSTORE
 val C_Inj = 2 * C_PUSH + C_tuple_malloc + 2 * C_SWAP + 2 * C_DUP + 2 * C_MSTORE + C_ADD
 val C_Fold = 0
 val C_Unfold = 0
@@ -81,12 +81,18 @@ val C_Never = C_PUSH
 val C_Builtin = C_PUSH
 val C_Halt = C_PUSH + C_SWAP + C_DUP + C_MSTORE + C_PUSH + C_SWAP + C_RETURN
                                                                       
-fun C_Abs_BeforeCC n_free_vars = C_Let + C_Pair + C_Var + C_Tuple n_free_vars + n_free_vars * C_Var
+val C_EProj = C_Proj + C_Var + C_Let
+val C_EPair = C_Pair + 2 * C_Var + C_Let
+val C_EPack = C_Let + C_Var
+val C_EUnpack = C_Unpack + C_Var
+                 
+fun C_Abs_BeforeCC n_free_vars = (C_Let + C_Tuple n_free_vars + n_free_vars * C_Var) + C_EPair + C_EPack
 fun M_Abs_BeforeCC n_free_vars = 2 + n_free_vars
 val C_App_BeforeCodeGen = 2 * C_Var + C_set_reg + C_JUMP
-val C_App_BeforeCC = C_App_BeforeCodeGen + C_Unpack + 2 * (C_Let + C_Proj + C_Var) + C_Var + (C_Pair + C_Var)
+val C_App_BeforeCC = C_App_BeforeCodeGen + C_EUnpack + 2 * C_EProj + C_EPair
 val M_App_BeforeCC = 2
-fun C_Abs_Inner_BeforeCC n_free_vars = 2 * (C_Let + C_Proj + C_Var) + (C_Let + C_Pair + 2 * C_Var) + n_free_vars * (C_Let + C_TupleProj + C_Var)
+(* fun C_Abs_Inner_BeforeCC n_free_vars = 2 * (C_Let + C_Proj + C_Var) + (C_Let + C_Pair + 2 * C_Var) + n_free_vars * (C_Let + C_TupleProj + C_Var) *)
+fun C_Abs_Inner_BeforeCC n_free_vars = 2 * C_EProj + C_EPair + C_EPack + n_free_vars * (C_Let + C_TupleProj + C_Var)
 fun M_Abs_Inner_BeforeCC n_free_vars = 2
 fun C_Abs_Inner_BeforeCPS n_fvars = C_Abs_Inner_BeforeCC n_fvars + 2 * (C_Let + C_Proj + C_Var) + C_App_BeforeCC
 fun M_Abs_Inner_BeforeCPS n_fvars = M_Abs_Inner_BeforeCC n_fvars + M_App_BeforeCC
@@ -95,7 +101,6 @@ fun M_App_BeforeCPS n_live_vars = M_App_BeforeCC + 2 + M_Abs_BeforeCC n_live_var
 
 val C_EVar = 0 (* each computation is responsible for accounting for reading from variables, so here the cost is zero *)
 val C_EConst = C_Const + C_Let
-val C_EProj = C_Proj + C_Var + C_Let
 val C_EPrintc = C_Printc + C_Var + C_Let
 fun C_EUPrim opr = C_UPrim opr + C_Var + C_Let
 val C_EArrayLen = C_ArrayLen + C_Var + C_Let
@@ -104,7 +109,6 @@ val C_EInt2Nat = C_Int2Nat + C_Var + C_Let
 val C_EStorageGet = C_StorageGet + C_Var + C_Let
 val C_EVectorLen = C_VectorLen + C_Var + C_Let
 val C_EVectorClear = C_VectorClear + C_Var + C_Let
-val C_EPair = C_Pair + 2 * C_Var + C_Let
 val C_New_pre_loop = 2 * C_SWAP + 2 * C_DUP + C_array_malloc + C_array_init_len + 2 * C_PUSH + C_JUMP
 val C_ENew_order0 = C_New_pre_loop + C_New_loop_test + C_New_post_loop + (2 * C_Var + C_Let)
 val C_ENew_order1 = C_New_loop
@@ -125,5 +129,17 @@ fun M_Ite_BeforeCPS n_live_vars = M_Abs_BeforeCC n_live_vars + M_App_BeforeCC
 val C_ENever = C_Never + C_Let
 val C_EBuiltin = C_Builtin + C_Let
 fun C_ENewArrayValues len = C_NewArrayValues len + len * C_Var + C_Let
-    
+
+open Util
+       
+infixr 0 $
+         
+val () = println $ "C_EProj = " ^ str_int C_EProj
+val () = println $ "C_EPair = " ^ str_int C_EPair
+val () = println $ "C_EPack = " ^ str_int C_EPack
+val () = println $ "C_Let = " ^ str_int C_Let
+val () = println $ "C_Var = " ^ str_int C_Var
+val () = println $ "C_Proj = " ^ str_int C_Proj
+val () = println $ "C_Pair = " ^ str_int C_Pair
+                                         
 end

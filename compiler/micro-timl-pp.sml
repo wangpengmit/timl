@@ -500,6 +500,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
     fun add_space a = (space (); a)
     fun str v = PP.string s v
     fun comma () = (str ","; space ())
+    fun colon () = (str ":"; space ())
     fun open_hbox () = PP.openHBox s
     (* fun open_vbox () = PP.openVBox s (PP.Abs 2) *)
     fun open_vbox () = PP.openVBox s (PP.Rel 2)
@@ -803,7 +804,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str $ str_i i;
           comma ();
           str name;
-          comma ();
+          colon ();
           pp_t t;
           close_box ();
           comma ();
@@ -855,7 +856,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           space ();
           str "(";
           str name;
-          comma ();
+          colon ();
           str $ str_k k;
           close_box ();
           comma ();
@@ -920,7 +921,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str "(";
           foldl (fn ((name, s), ()) =>
                     (str $ fst name;
-                     str ":"; space ();
+                     colon ();
                      str $ str_s s;
                      comma ()
                 )) () binds;
@@ -948,7 +949,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
         in
         (
           open_hbox ();
-          str "EAppI";
+          str "EAppIs";
           space ();
           str "(";
           pp_e e;

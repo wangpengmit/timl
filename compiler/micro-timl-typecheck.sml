@@ -962,7 +962,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     val tc_against_time_space = tc_against_time_space st_types
     val tc_against_ty_time_space = tc_against_ty_time_space st_types
     (* val () = print "tc() start: " *)
-    (* val e_input_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input *)
+    val e_input_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input
     (* val () = print $ e_input_str *)
     fun err () = raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
     val itctx = (ictx, tctx)
@@ -1265,6 +1265,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                   PhBeforeCodeGen () => (0, 0)
                 | PhBeforeCC () => (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
                 | PhBeforeCPS () => (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars)
+          val () = println $ "i = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ fst i)
+          val () = println $ "extra = " ^ str_int (fst extra_inner_cost)
+          val () = println $ "n_fvars = " ^ str_int n_fvars
+          val () = println $ "C_Abs_Inner_BeforeCC n_fvars = " ^ str_int (C_Abs_Inner_BeforeCC n_fvars)
           val i = i %%+ mapPair' to_real N extra_inner_cost              
           val e = if !anno_EAbs then e %: t2 |># i else e
           val e = if !anno_EAbs_state then e %~ post_st else e
@@ -1634,7 +1638,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EPack then e %: t_e else e
           val e = if !anno_EPack_state then e %~ st else e
         in
-          (EPack (t', t1, e), t', i %%+ TN (C_Let + C_Var), st)
+          (EPack (t', t1, e), t', i %%+ TN C_EPack, st)
         end
       | EPackI (t', i, e) =>
         let
@@ -1649,7 +1653,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EPackI then e %: t_e else e
           val e = if !anno_EPackI_state then e %~ st else e
         in
-          (EPackI (t', i, e), t', j %%+ TN (C_Let + C_Var), st)
+          (EPackI (t', i, e), t', j %%+ TN C_EPack, st)
         end
       | EUnpack data =>
         let
@@ -1667,7 +1671,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e1 = if !anno_EUnpack then e1 %: t_e1 else e1
           val e1 = if !anno_EUnpack_state then e1 %~ st_e1 else e1
         in
-          (MakeEUnpack (e1, tname, ename, e2), t2, i1 %%+ TN (C_Unpack + C_Var) %%+ i2, st)
+          (MakeEUnpack (e1, tname, ename, e2), t2, i1 %%+ TN C_EUnpack %%+ i2, st)
         end
       | EUnpackI data =>
         let
@@ -1691,7 +1695,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e1 = if !anno_EUnpackI then e1 %: t_e1 else e1
           val e1 = if !anno_EUnpackI_state then e1 %~ st_e1 else e1
         in
-          (MakeEUnpackI (e1, iname, ename, e2), t2, i1 %%+ TN (C_Unpack + C_Let) %%+ i2, st)
+          (MakeEUnpackI (e1, iname, ename, e2), t2, i1 %%+ TN C_EUnpack %%+ i2, st)
         end
       | EPackIs (t, is, e) =>
         let
@@ -1918,12 +1922,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                       | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
                       | MTCError m => raise MTCError (m ^ extra_msg ())
                       | Impossible m => raise Impossible (m ^ extra_msg ())
-    (* val () = println "tc() finished:" *)
-    (* val () = print $ e_input_str *)
+    val () = println "tc() finished:"
+    val () = print $ e_input_str
     (* val () = println "of type:" *)
     (* val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) t *)
-    (* val () = println "of time:" *)
-    (* val () = println $ (* substr 0 100 $  *)ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) i *)
+    val () = println "of time:"
+    val () = println $ (* substr 0 100 $  *)ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) (fst i)
   in
     (e_output, t, i, st)
   end

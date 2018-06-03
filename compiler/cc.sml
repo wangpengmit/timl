@@ -481,9 +481,11 @@ fun cc_expr_visitor_vtable cast () =
                   val z = fresh_evar ()
                   val z_code = fresh_evar ()
                   val z_env = fresh_evar ()
-                  val e = EAppITs (EV z_code, map (map_inr cc_t) itargs) %$ EPair (EV z_env, cc e2)
+                  val p = fresh_evar ()
+                  val p_def = EPair (EV z_env, cc e2)
+                  val e = EAppITs (EV z_code, map (map_inr cc_t) itargs) %$ EV p
                   (* val () = println $ "cc()/EApp: before ELetManyClose()" *)
-                  val e = ELetManyClose ([(z_code, "z_code", EFst $ EV z), (z_env, "z_env", ESnd $ EV z)], e)
+                  val e = ELetManyClose ([(z_code, "z_code", EFst $ EV z), (z_env, "z_env", ESnd $ EV z), (p, "p", p_def)], e)
                   (* val () = println $ "cc()/EApp: after ELetManyClose()" *)
                   val e = EUnpackClose (cc e1, (gamma, "'c"), (z, "z"), e)
                                        (* val () = println "cc() done on EApp" *)
@@ -633,11 +635,13 @@ and cc_ERec e_all outer_binds bind =
           in
             EAppITs (e, map (map_inl_inr (make_var IV) (make_var TV)) binds)
           end
-      val def_x = EPack (cc_t t_x, t_env, EPair (EAppITs_binds (EV z_code, betas @ outer_binds), EV z_env))
+      val p = fresh_evar ()
+      val p_def = EPair (EAppITs_binds (EV z_code, betas @ outer_binds), EV z_env)
+      val def_x = EPack (cc_t t_x, t_env, EV p)
       val len_ys = length ys
       val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ETupleProj (EV z_env, i))) ys
       val () = println $ "cc(): before ELetManyClose()"
-      val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, e)
+      val e = ELetManyClose ((p, "p", p_def) :: (x, fst name_x, def_x) :: ys_defs, e)
       val () = println $ "cc(): after ELetManyClose()"
       val e = EAbsPairClose (st, (z_env, "z_env", t_env), (z, fst name_z, t_z), e)
       val betas_outer_inner_binds = betas @ outer_inner_binds
@@ -651,11 +655,23 @@ and cc_ERec e_all outer_binds bind =
       fun decorate_code_name s = "code_" ^ s
       val v_code = ERec $ close0_e_e_anno ((z_code,  decorate_code_name $ fst name_x, t_rawcode), e)
       fun EV_anno (y, anno) = EAscType (EV y, anno)
+                                       
       val v_env = ETuple $ map EV_anno ys_anno
       val x_code = fresh_evar ()
       val () = println $ "cc(): before close_TForallITs()#2"
       val e = EPack (cc_t $ close_TForallITs (outer_binds, t_x), t_env, EPair (EAppITs_binds (EV x_code(* v_code *), betas), v_env))
       val () = println $ "cc(): after close_TForallITs()#2"
+                    
+      (* val tuple_def = ETuple $ map EV_anno ys_anno *)
+      (* val tuple = fresh_evar () *)
+      (* val x_code = fresh_evar () *)
+      (* val pair_def = EPair (EAppITs_binds (EV x_code(* v_code *), betas), EV tuple) *)
+      (* val pair = fresh_evar () *)
+      (* val () = println $ "cc(): before close_TForallITs()#2" *)
+      (* val e = EPack (cc_t $ close_TForallITs (outer_binds, t_x), t_env, EV pair) *)
+      (* val () = println $ "cc(): after close_TForallITs()#2" *)
+      (* val e = ELetManyClose ([(tuple, "t", tuple_def), (pair, "p", pair_def)], e) *)
+                    
       val x_v_code = (x_code, decorate_code_name $ fst name_x, v_code)
       val () = add_code_block x_v_code
       (* val e = ELetClose (x_v_code, e) *)
