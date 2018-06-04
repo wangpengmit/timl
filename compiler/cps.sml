@@ -3,6 +3,7 @@
 structure CPS = struct
 
 open Expr
+open MicroTiMLCosts
 open CompilerUtil
 open MicroTiMLLongId
 open MicroTiMLLocallyNameless
@@ -287,15 +288,24 @@ fun cps_t t =
     #visit_ty vtable visitor () t
   end
 
+infix 6 %%+
+
+val N : nat -> idx = INat
+val T : TimeType.time -> idx = ITime
+                
+fun to_real n = IToReal (N n, dummy)
+fun TN n = (to_real n, N0)
+
 (* CPS conversion on terms *)
 (* pre: ... |- k : [[t_e]] --j_k-=> unit |> 0 *)
 (* the 'unit' part can be relaxed if e is a value *)
 fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
   let
-    (* val () = println $ "CPS on " ^ (substr 0 400 $ ExportPP.pp_e_to_string $ ExportPP.export ([], [], [], []) e) *)
-    (* [[ \\a.e ]](k) = k (\\a. \\j F. \c {F}. [[e]](c)) *)
+    val () = println $ "CPS on\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) ([], [], [], []) e)
+    val () = println $ sprintf "j_k: $, $" [ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst j_k, ToString.str_i Gctx.empty [] $ Simp.simp_i $ snd j_k]
     val cps_with_frame = cps
     fun cps (e, t_e) (k, j_k) = cps_with_frame (e, t_e, F) (k, j_k)
+    (* [[ \\a.e ]](k) = k (\\a. \\j F. \c {F}. [[e]](c)) *)
     fun cps_EAbsIT (e, t_e) =
       let
         val j1 = fresh_ivar ()
@@ -334,7 +344,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val F = fresh_ivar ()
         val j12 = (IV j1, IV j2)
         val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, j12)
-        val e = EAscTimeSpace (e, blowup_time_space (i, j12))
+        (* val e = EAscTimeSpace (e, blowup_time_space (i, j12)) *)
         val t_e = cps_t t_e
         val t_c = cont_type ((post_st %++ IV F, t_e), j12)
         val t_x = cps_t t_x
@@ -366,7 +376,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       end
     | S.EConst c =>
       (* [[ c ]](k) = k c *)
-      (k $$ EConst c, j_k)
+      (k $$ EConst c, j_k %%+ TN C_EConst)
     | S.EState x =>
       (* [[ x ]](k) = k x *)
       (k $$ EState x, j_k)

@@ -914,12 +914,19 @@ fun test1 dirname =
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
-    (* val () = pp_e $ export ToStringUtil.empty_ctx e *)
-    (* val () = println "" *)
                      
+    infix 0 |>#
+    val e = e |># i
+    val e = simp_e e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
+    val () = write_file (join_dir_file' dirname $ "unit-test-before-cps.tmp", e_str)
     val () = println "Started CPS conversion ..."
     open MicroTiMLUtil
-    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, TN0 dummy)
+    val k = EHaltFun TUnit TUnit
+    val () = phase := PhBeforeCC ()
+    val ((_, t, _, _), _) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) k
+    val (_, j_k, _) = assert_TArrow t
+    val (e, _) = cps (e, TUnit, IEmptyState) (k, j_k)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"
     val e = simp_e e

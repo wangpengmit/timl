@@ -1907,7 +1907,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EHalt then e %: t_e else e
           val e = if !anno_EHalt_state then e %~ st else e
         in
-          (EHalt (e, t), t, i_e %%+ TN C_Halt, st)
+          (EHalt (e, t), t, i_e %%+ TN C_EHalt, st)
         end
       | EAbsConstr _ => err ()
       | EAppConstr _ => err ()
@@ -1924,10 +1924,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                       | Impossible m => raise Impossible (m ^ extra_msg ())
     val () = println "tc() finished:"
     val () = print $ e_input_str
-    (* val () = println "of type:" *)
-    (* val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) t *)
+    val () = println "of type:"
+    val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) $ MicroTiMLSimp.simp_t t
     val () = println "of time:"
-    val () = println $ (* substr 0 100 $  *)ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) (fst i)
+    val () = println $ (* substr 0 100 $  *)ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i
   in
     (e_output, t, i, st)
   end

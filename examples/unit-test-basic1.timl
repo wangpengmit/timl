@@ -4,7 +4,7 @@ structure UnitTestBasic1 = struct
 val f = fn y => 1 + y
 (* fun f y = x + y *)
 (* (* val f = fn y => x + y *) *)
-(* val a = f 64 *)
+val a = f 64
 (* val () = __&halt (a + x) *)
 (* (* val b = a + 2 *) *)
 

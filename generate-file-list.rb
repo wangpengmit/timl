@@ -200,6 +200,7 @@ compiler/micro-timl-util-timl.sml
 compiler/timl-to-micro-timl.sml
 compiler/eval-constr.sml
 compiler/micro-timl-live-vars.sml
+compiler/micro-timl-simp.sml
 compiler/micro-timl-typecheck.sml
 compiler/micro-timl-locally-nameless.sml
 compiler/compiler-util.sml
@@ -221,7 +222,6 @@ compiler/evm1-pp.sml
 compiler/evm1-util.sml
 compiler/evm1-tc.sml
 compiler/evm1-assemble.sml
-compiler/micro-timl-simp.sml
 compiler/to-evm1.sml
 unit-test.sml
 main.sml
