@@ -351,7 +351,7 @@ fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
     fun close_box () = PP.closeBox s
     val (itbinds, ((st, rctx, ts, (j, i)), insts)) = unBind bind
     val itbinds = unTeles itbinds
-    val itbinds = map (map_inl_inr (mapPair' binder2str unOuter) (mapFst binder2str)) itbinds
+    val itbinds = map (map_inl_inr (mapPair' binder2str unOuter) (mapPair' binder2str unOuter)) itbinds
   in
     open_vbox ();
     open_hbox ();

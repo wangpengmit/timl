@@ -215,6 +215,8 @@ fun relabel_evm1_visitor_vtable cast m =
           extend_noop
           visit_noop
           visit_noop
+          visit_noop
+          visit_noop
     val vtable = override_visit_label vtable (ignore_this_env $ relabel_label m)
   in
     vtable

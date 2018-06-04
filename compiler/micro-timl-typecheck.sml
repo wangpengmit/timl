@@ -74,7 +74,9 @@ fun get_sort_type_SUVar gctx ctx data = SUVar data
                              
 (* fun check_prop ctx p = push_ref vcs (ctx, p) *)
 (* fun add_admit p = push_ref admits (ctx, p)                *)
-fun check_prop p = write_prop (p, get_region_p p)
+fun check_prop p =
+  (println $ "write_prop: " ^ (ToString.str_p Gctx.empty [] $ Simp.simp_p p);
+  write_prop (p, get_region_p p))
 fun add_admit p = write_admit (p, get_region_p p)
                          
 structure Sortcheck = SortcheckFn (structure U = Expr
@@ -961,9 +963,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     val tc_against_time = tc_against_time st_types
     val tc_against_time_space = tc_against_time_space st_types
     val tc_against_ty_time_space = tc_against_ty_time_space st_types
-    (* val () = print "tc() start: " *)
+    val () = print "tc() start: "
     val e_input_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input
-    (* val () = print $ e_input_str *)
+    val () = print $ e_input_str
     fun err () = raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
     val itctx = (ictx, tctx)
     fun get_vector t1 =
@@ -1115,9 +1117,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
-          val () = case t_e of
-                             TConst (TCTiML Bool) => ()
-                           | _ => raise MTCError $ "EIte: shoud be bool but got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
+          val () = assert_TBool t_e
           val (e1, t, i1, st1) = tc (ctx, st) e1
           val (e2, i2, st2) = tc_against_ty (ctx, st) (e2, t)
           val () = is_eq_idx (st2, st1)
@@ -1134,7 +1134,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e2 = if !anno_EIte_e2_time then e2 |># i2 else e2
           val e = if !anno_EIte_state then e %~ st else e
         in
-          (ETriOp (ETIte (), e, e1, e2), t, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, i2), st1)
+          (ETriOp (ETIte (), e, e1, e2), t, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, i2 %%+ TN C_JUMPDEST), st1)
         end
       | ECase data =>
         let
@@ -1262,7 +1262,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val n_fvars = ISet.numItems (free_evars e @%-- excluded)
           val extra_inner_cost =
               case !phase of
-                  PhBeforeCodeGen () => (0, 0)
+                  PhBeforeCodeGen () => (0, 0) (* todo: should be: TN C_JUMPDEST *)
                 | PhBeforeCC () => (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
                 | PhBeforeCPS () => (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars)
           val () = println $ "i = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ fst i)

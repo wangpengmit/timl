@@ -98,7 +98,7 @@ datatype ('idx, 'ty) insts =
 
 type 'v rctx = 'v IntBinaryMap.map
                   
-type ('idx, 'sort, 'kind, 'ty) hval = ((ibinder * 'sort outer, tbinder * 'kind) sum tele, ('idx * 'ty rctx * 'ty list * ('idx * 'idx)) * ('idx, 'ty) insts) bind
+type ('idx, 'sort, 'ty, 'kind) hval = ((ibinder * 'sort outer, tbinder * 'kind outer) sum tele, ('idx * 'ty rctx * 'ty list * ('idx * 'idx)) * ('idx, 'ty) insts) bind
 
 infixr 0 $
 
@@ -119,7 +119,7 @@ fun m @+ a = Rctx.insert' (a, m)
 fun m @! k = Rctx.find (m, k)
                         
 fun HCode' (binds, body) =
-  Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, k))) binds, mapSnd (fn code => JUMPDEST () @:: code) body)
+  Bind (Teles $ map (map_inl_inr (fn (name, s) => (IBinder name, Outer s)) (fn (name, k) => (TBinder name, Outer k))) binds, mapSnd (fn code => JUMPDEST () @:: code) body)
 
 fun PUSH1 w = PUSH (1, Inner w)
 fun PUSH1nat n = PUSH1 $ WNat n

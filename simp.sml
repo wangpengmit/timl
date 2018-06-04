@@ -151,6 +151,16 @@ local
                   mark i1
 	        else
                   reduce_IBinOps (collect_IBAdd, combine_IBAdd_nonempty, op+, TimeType.add) i
+              | IBMinus () =>
+	        if eq_i i2 (T0 dummy) orelse eq_i i2 (N0 dummy) then
+                  mark i1
+	        else
+                  (case (i1, i2) of
+                      (IConst (ICNat c1, r), IConst (ICNat c2, _)) => mark $ INat (c1 - c2, r)
+                    | (IConst (ICTime c1, r), IConst (ICTime c2, _)) => mark $ ITime (TimeType.minus (c1, c2), r)
+                    | _ => def ()
+                  )
+              (* | IBMinus () => raise Impossible "simp_p()/MinusI" *)
 	      | IBMult () => 
 	        if eq_i i1 (T0 dummy) then
                   mark $ T0 $ r ()
@@ -248,12 +258,6 @@ local
                        (IConst (ICNat n1, _), IConst (ICNat n2, _)) =>
                        mark $ INat (bounded_minus n1 n2, r ())
                      | _ => def ())
-              | IBMinus () =>
-	        if eq_i i2 (T0 dummy) orelse eq_i i2 (N0 dummy) then
-                  mark i1
-	        else
-                  def ()
-              (* | IBMinus () => raise Impossible "simp_p()/MinusI" *)
               | IBUnion () => def ()
           end
         | IIte (i, i1, i2, r) =>

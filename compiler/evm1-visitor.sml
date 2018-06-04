@@ -4,26 +4,30 @@ open EVM1
 
 infixr 0 $
          
-type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_vtable =
+type ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable =
      {
        visit_word : 'this -> 'env -> 'ty word -> 'ty2 word,
        visit_inst : 'this -> 'env ctx -> ('idx, 'ty) inst -> ('idx2, 'ty2) inst,
        visit_insts : 'this -> 'env -> ('idx, 'ty) insts -> ('idx2, 'ty2) insts,
        visit_idx : 'this -> 'env -> 'idx -> 'idx2,
+       visit_sort : 'this -> 'env -> 'sort -> 'sort2,
        visit_ty : 'this -> 'env -> 'ty -> 'ty2,
+       visit_kind : 'this -> 'env -> 'kind -> 'kind2,
        visit_label : 'this -> 'env -> label -> label,
+       visit_hval : 'this -> 'env -> ('idx, 'sort, 'ty, 'kind) hval -> ('idx2, 'sort2, 'ty2, 'kind2) hval,
+       visit_prog : 'this -> 'env -> ((label * string) * ('idx, 'sort, 'ty, 'kind) hval) list * ('idx, 'ty) insts -> ((label * string) * ('idx2, 'sort2, 'ty2, 'kind2) hval) list * ('idx2, 'ty2) insts,
        extend_i : 'this -> 'env -> iname -> 'env * iname,
        extend_t : 'this -> 'env -> tname -> 'env * tname
      }
        
-type ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_interface =
-     ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_vtable
+type ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_interface =
+     ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable
                                            
-datatype ('env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor =
-         EVM1Visitor of (('env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_interface
+datatype ('env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor =
+         EVM1Visitor of (('env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_interface
 
-fun evm1_visitor_impls_interface (this : ('env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor) :
-    (('env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_interface =
+fun evm1_visitor_impls_interface (this : ('env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor) :
+    (('env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_interface =
   let
     val EVM1Visitor vtable = this
   in
@@ -39,26 +43,34 @@ fun new_evm1_visitor vtable params =
 
 (***************** overrides  **********************)    
 
-fun override_visit_insts (record : ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_vtable) new =
+fun override_visit_insts (record : ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable) new =
   {
     visit_word = #visit_word record,
     visit_inst = #visit_inst record,
     visit_insts = new,
     visit_idx = #visit_idx record,
+    visit_sort = #visit_sort record,
+    visit_kind = #visit_kind record,
     visit_ty = #visit_ty record,
     visit_label = #visit_label record,
+    visit_hval = #visit_hval record,
+    visit_prog = #visit_prog record,
     extend_i = #extend_i record,
     extend_t = #extend_t record
   }
     
-fun override_visit_label (record : ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_vtable) new =
+fun override_visit_label (record : ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable) new =
   {
     visit_word = #visit_word record,
     visit_inst = #visit_inst record,
     visit_insts = #visit_insts record,
     visit_idx = #visit_idx record,
+    visit_sort = #visit_sort record,
+    visit_kind = #visit_kind record,
     visit_ty = #visit_ty record,
     visit_label = new,
+    visit_hval = #visit_hval record,
+    visit_prog = #visit_prog record,
     extend_i = #extend_i record,
     extend_t = #extend_t record
   }
@@ -67,13 +79,20 @@ fun override_visit_label (record : ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_vi
 
 open VisitorUtil
        
+fun visit_sum visit1 visit2 env = map_inl_inr (visit1 env) (visit2 env)
+fun visit_map map visit env = map (visit env)
+fun visit_triple visit1 visit2 visit3 env (a, b, c) = (visit1 env a, visit2 env b, visit3 env c)
+fun visit_tuple_4 visit1 visit2 visit3 visit4 env (a, b, c, d) = (visit1 env a, visit2 env b, visit3 env c, visit4 env d)
+                                  
 fun default_evm1_visitor_vtable
-      (cast : 'this -> ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_interface)
+      (cast : 'this -> ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_interface)
       extend_i
       extend_t
       visit_idx
+      visit_sort
       visit_ty
-    : ('this, 'env, 'idx, 'ty, 'idx2, 'ty2) evm1_visitor_vtable =
+      visit_kind
+    : ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable =
   let
     fun visit_word this env data =
       let
@@ -179,40 +198,68 @@ fun default_evm1_visitor_vtable
           | ISDummy a => ISDummy a
           | MACRO_halt t => MACRO_halt $ #visit_ty vtable this env t
       end
+    fun visit_hval this env data =
+      let
+        val vtable = cast this
+        val extend_i = #extend_i vtable this
+        val extend_t = #extend_t vtable this
+        val visit_idx = #visit_idx vtable this
+        val visit_sort = #visit_sort vtable this
+        val visit_kind = #visit_kind vtable this
+        val visit_ty = #visit_ty vtable this
+        val visit_insts = #visit_insts vtable this
+      in
+        visit_bind
+          (visit_tele $ visit_sum
+                      (visit_pair (visit_binder extend_i) (visit_outer $ visit_sort))
+                      (visit_pair (visit_binder extend_t) (visit_outer $ visit_kind)))
+          (visit_pair (visit_tuple_4 visit_idx
+                                     (visit_map Rctx.map visit_ty)
+                                     (visit_list visit_ty)
+                                     (visit_pair visit_idx visit_idx)) visit_insts) env data
+      end
+    fun visit_prog this env (H, I) =
+      let
+        val vtable = cast this
+        val visit_label = #visit_label vtable this
+        val visit_hval = #visit_hval vtable this
+        val visit_insts = #visit_insts vtable this
+      in
+        (visit_list (visit_pair (visit_pair visit_label return2) visit_hval) env H, visit_insts env I)
+      end
   in
     {
       visit_word = visit_word,
       visit_inst = visit_inst,
       visit_insts = visit_insts,
       visit_idx = visit_idx,
+      visit_sort = visit_sort,
+      visit_kind = visit_kind,
       visit_ty = visit_ty,
       visit_label = visit_noop,
+      visit_hval = visit_hval,
+      visit_prog = visit_prog,
       extend_i = extend_i,
       extend_t = extend_t
     }
   end
 
-fun visit_sum visit1 visit2 env = map_inl_inr (visit1 env) (visit2 env)
-fun visit_map map visit env = map (visit env)
-fun visit_triple visit1 visit2 visit3 env (a, b, c) = (visit1 env a, visit2 env b, visit3 env c)
-fun visit_tuple_4 visit1 visit2 visit3 visit4 env (a, b, c, d) = (visit1 env a, visit2 env b, visit3 env c, visit4 env d)
-                                  
-fun visit_hval (extend_i, extend_t, visit_idx, visit_sort, visit_kind, visit_ty, visit_insts) env (h : ('idx, 'sort, 'kind, 'ty) hval) : ('idx2, 'sort2, 'kind2, 'ty2) hval =
-  visit_bind
-    (visit_tele $ visit_sum
-                (visit_pair (visit_binder extend_i) (visit_outer $ visit_sort))
-                (visit_pair (visit_binder extend_t) visit_kind))
-    (visit_pair (visit_tuple_4 visit_idx
-                               (visit_map Rctx.map visit_ty)
-                               (visit_list visit_ty)
-                               (visit_pair visit_idx visit_idx)) visit_insts) env h
+(* fun visit_hval (extend_i, extend_t, visit_idx, visit_sort, visit_kind, visit_ty, visit_insts) env (h : ('idx, 'sort, 'ty, 'kind) hval) : ('idx2, 'sort2, 'ty2, 'kind2) hval = *)
+(*   visit_bind *)
+(*     (visit_tele $ visit_sum *)
+(*                 (visit_pair (visit_binder extend_i) (visit_outer $ visit_sort)) *)
+(*                 (visit_pair (visit_binder extend_t) visit_kind)) *)
+(*     (visit_pair (visit_tuple_4 visit_idx *)
+(*                                (visit_map Rctx.map visit_ty) *)
+(*                                (visit_list visit_ty) *)
+(*                                (visit_pair visit_idx visit_idx)) visit_insts) env h *)
     
-fun visit_prog (visit_label, visit_hval, visit_insts) env (H, I) =
-  (visit_list (visit_pair (visit_pair visit_label return2) visit_hval) env H, visit_insts env I)
+(* fun visit_prog (visit_label, visit_hval, visit_insts) env (H, I) = *)
+(*   (visit_list (visit_pair (visit_pair visit_label return2) visit_hval) env H, visit_insts env I) *)
 
 (*********** the "export" visitor: convertnig de Bruijn indices to nameful terms ***************)    
 
-fun export_evm1_visitor_vtable cast (omitted, visit_idx, visit_ty) =
+fun export_evm1_visitor_vtable cast (omitted, visit_idx, visit_sort, visit_ty) =
   let
     fun extend_i this (depth, (sctx, kctx)) name = ((depth, (Name2str name :: sctx, kctx)), name)
     fun extend_t this (depth, (sctx, kctx)) name = ((depth, (sctx, Name2str name :: kctx)), name)
@@ -225,7 +272,9 @@ fun export_evm1_visitor_vtable cast (omitted, visit_idx, visit_ty) =
           extend_i
           extend_t
           (only_s visit_idx)
+          (only_s visit_sort)
           (only_sk visit_ty)
+          visit_noop
     fun visit_insts this (depth, ctx) t = 
       let
         val (reached_depth_limit, depth) =
@@ -248,38 +297,40 @@ fun export_evm1_visitor_vtable cast (omitted, visit_idx, visit_ty) =
 
 fun new_export_evm1_visitor params = new_evm1_visitor export_evm1_visitor_vtable params
                                                         
-fun export_inst_fn params ctx e =
+fun export_inst_fn params ctx b =
   let
     val visitor as (EVM1Visitor vtable) = new_export_evm1_visitor params
   in
-    #visit_inst vtable visitor (env2ctx (NONE, ctx)) e
+    #visit_inst vtable visitor (env2ctx (NONE, ctx)) b
   end
 
-fun export_insts_fn params depth ctx e =
+fun export_insts_fn params depth ctx b =
   let
     val visitor as (EVM1Visitor vtable) = new_export_evm1_visitor params
   in
-    #visit_insts vtable visitor (depth, ctx) e
+    #visit_insts vtable visitor (depth, ctx) b
   end
 
-fun export_hval_fn visit_sort params depth h =
+fun export_hval_fn params depth b =
   let
     val visitor as (EVM1Visitor vtable) = new_export_evm1_visitor params
-    fun only_s f (_, (sctx, kctx)) name = f sctx name
   in
-    visit_hval (#extend_i vtable visitor,
-                #extend_t vtable visitor,
-                #visit_idx vtable visitor,
-                (only_s visit_sort),
-                return2,
-                #visit_ty vtable visitor,
-                #visit_insts vtable visitor
-               ) (depth, ([], [])) h
+    #visit_hval vtable visitor (depth, ([], [])) b
   end
 
+fun export_prog_fn params depth_insts depth_heap (H, I) =
+  let
+    val H = case depth_heap of
+                SOME n => take n H
+              | NONE => H
+    val visitor as (EVM1Visitor vtable) = new_export_evm1_visitor params
+  in
+    #visit_prog vtable visitor (depth_insts, ([], [])) (H, I)
+  end
+    
 (***************** the "subst_i_insts" visitor  **********************)    
 
-fun subst_i_evm1_visitor_vtable cast (visit_idx, visit_ty) =
+fun subst_i_evm1_visitor_vtable cast (visit_idx, visit_sort, visit_ty) =
   let
     fun extend_i this env name = (env + 1, name)
   in
@@ -288,7 +339,9 @@ fun subst_i_evm1_visitor_vtable cast (visit_idx, visit_ty) =
       extend_i
       extend_noop
       (ignore_this visit_idx)
+      (ignore_this visit_sort)
       (ignore_this visit_ty)
+      visit_noop
   end
 
 fun new_subst_i_evm1_visitor params = new_evm1_visitor subst_i_evm1_visitor_vtable params
@@ -312,7 +365,9 @@ fun subst_t_evm1_visitor_vtable cast visit_ty =
       extend_i
       extend_t
       visit_noop
+      visit_noop
       (ignore_this visit_ty)
+      visit_noop
   end
 
 fun new_subst_t_evm1_visitor params = new_evm1_visitor subst_t_evm1_visitor_vtable params
@@ -336,7 +391,9 @@ fun shift_i_evm1_visitor_vtable cast ((shift_i, shift_s, shift_t), n) =
       extend_i
       extend_noop
       (do_shift shift_i)
+      (do_shift shift_s)
       (do_shift shift_t)
+      visit_noop
   end
 
 fun new_shift_i_evm1_visitor params = new_evm1_visitor shift_i_evm1_visitor_vtable params
@@ -360,7 +417,9 @@ fun shift_t_evm1_visitor_vtable cast (shift_t, n) =
       extend_noop
       extend_t
       visit_noop
+      visit_noop
       (do_shift shift_t)
+      visit_noop
   end
 
 fun new_shift_t_evm1_visitor params = new_evm1_visitor shift_t_evm1_visitor_vtable params

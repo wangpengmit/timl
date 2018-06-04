@@ -69,10 +69,6 @@ fun assert_TByte t =
   case t of
       TConst (TCTiML (BTByte ())) => ()
     | _ => raise assert_fail "assert_TByte"
-fun assert_TBool t =
-  case t of
-      TConst (TCTiML (BTBool ())) => ()
-    | _ => raise assert_fail "assert_TBool"
 fun assert_TProdEx t =
   case t of
       TProdEx a => a

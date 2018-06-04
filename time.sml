@@ -14,6 +14,7 @@ fun str_time x = toString x
                    
 val time_eq = op==
 val add = op+
+val minus = op-
 val mult = op*
 
 end

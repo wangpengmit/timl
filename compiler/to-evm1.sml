@@ -3,6 +3,7 @@
 structure ToEVM1 = struct
 
 open EVM1Util
+open EVMCosts
 open UVarExprUtil
 open Expr
 open CompilerUtil
@@ -171,7 +172,7 @@ type sort = Expr.sort
 type ty = (Expr.var, basic_sort, idx, sort) ty
 type kind = basic_sort kind
                   
-val heap_ref = ref ([] : ((label * string) * (idx, sort, kind, ty) hval) list)
+val heap_ref = ref ([] : ((label * string) * (idx, sort, ty, kind) hval) list)
 fun output_heap pair = push_ref heap_ref pair
 
 fun IV n = IVar (ID (n, dummy), [])
@@ -459,6 +460,8 @@ val compile = fn (st_name2int, ectx, e, st) =>
                    (I, !st_ref)
                  end
 
+fun to_real n = IToReal (N n, dummy)
+                        
 fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx, mtiml_ty) insts =
   let
     (* val () = print $ "cg_e() started:\n" *)
@@ -500,7 +503,6 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
             EBinOp (EBNew (), e1, e2) =>
             let
               open EVMCosts
-              fun to_real n = IToReal (N n, dummy)
               val (I_e1, st) = compile (e1, st) 
               val (I_e2, st) = compile (e2, st)
               val (t, len, _) = assert_TArrayPtr t
@@ -682,7 +684,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
         val I1 = cg_e (ectx, itctx, rctx, st) e1
         val I2 = cg_e (ectx, itctx, rctx, st) e2
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((st, rctx, [], (i_e2, space_e2)), I2))
+        val hval = HCode' (itbinds, ((st, rctx, [], (i_e2 %+ to_real C_JUMPDEST, space_e2)), I2))
         val l = fresh_label ()
         val () = output_heap ((l, "else_branch"), hval)
       in
@@ -957,6 +959,7 @@ fun test1 dirname =
     val () = println "Started MicroTiML typechecking #3 ..."
     val () = phase := PhBeforeCodeGen ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), init_st) e
+    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
     val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #3"
     (* val () = println "Type:" *)
@@ -964,18 +967,19 @@ fun test1 dirname =
     val _ = print_time_space i
                      
     open EVM1ExportPP
+    val e = simp_e e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
+    val () = write_file (join_dir_file' dirname $ "unit-test-before-code-gen.tmp", e_str)
     val () = println "Started Code Generation ..."
     val (prog, num_regs) = cg_prog (st_name2int, init_st) e
     val () = println "Finished Code Generation"
+    open EVM1Simp
+    val prog = simp_prog prog
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
-    (* val () = println prog_str *)
-    (* val () = println "" *)
     val inlined_prog = inline_macro_prog prog
     val inlined_prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) inlined_prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-inline-macro.tmp", inlined_prog_str)
-    (* val () = println inlined_prog_str *)
-    (* val () = println "" *)
     open EVM1Assemble
     val prog_bytes = ass2str inlined_prog
     val () = write_file (join_dir_file' dirname $ "evm-bytecode.tmp", prog_bytes)

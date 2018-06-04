@@ -902,7 +902,7 @@ fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
                     (new :: ictx, tctx)
                   end
                 | inr (name, k) =>
-                  (ictx, (binder2str name, k) :: tctx)
+                  (ictx, (binder2str name, unOuter k) :: tctx)
           ) ([], []) itbinds
     (* val () = println "before checking rctx" *)
     (* val itctxn = itctx_names itctx *)
@@ -939,7 +939,7 @@ fun tc_prog (num_regs, st_name2ty, st_int2name, init_st) (H, I) =
       let
         val (itbinds, ((st, rctx, sctx, i), _)) = unBind h
         val itbinds = unTeles itbinds
-        val itbinds = map (map_inl_inr (mapPair' unBinderName unOuter) (mapFst unBinderName)) itbinds
+        val itbinds = map (map_inl_inr (mapPair' unBinderName unOuter) (mapPair' unBinderName unOuter)) itbinds
         val t = TForallITs (itbinds, TArrowEVM (st, rctx, sctx, i))
       in
         t
