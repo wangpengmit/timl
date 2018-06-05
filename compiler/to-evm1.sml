@@ -873,11 +873,13 @@ fun test1 dirname =
     val decls = merge_prog prog []
     open TiML2MicroTiML
     val e = SMakeELet (Teles decls, Expr.ETT dummy)
-    val () = println "Simplifying ..."
+    (* val () = println "Simplifying ..." *)
     val e = SimpExpr.simp_e [] e
-    val () = println "Finished simplifying"
-    (* val () = println $ str_e empty ToStringUtil.empty_ctx e *)
-    (* val () = println "" *)
+    (* val () = println "Finished simplifying" *)
+                     
+    (* val e = simp_e e *)
+    (* val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e *)
+    (* val () = write_file (join_dir_file' dirname $ "unit-test-before-translation.tmp", e_str) *)
     val () = println "Started translating ..."
     val e = trans_e e
     val st_name2ty = StMap.map (mapSnd trans_mt) st_name2ty

@@ -1333,9 +1333,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                        EAbs _ => ()
                      | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"
           val t = kc_against_kind itctx (t, KType ())
-          val (e, _) = tc_against_ty_time_space (add_typing_full (fst name, t) ctx, IEmptyState) (e, t, TN0)
+          val (e, i, _) = tc_against_ty (add_typing_full (fst name, t) ctx, IEmptyState) (e, t)
         in
-          (MakeERec (name, t, e), t, TN0, st)
+          (MakeERec (name, t, e), t, i, st)
         end
       | EBinOp (EBPair (), e1, e2) =>
         let
