@@ -9,9 +9,9 @@ val b = f 64
 (* val () = __&halt (a + x) *)
 (* (* val b = a + 2 *) *)
 
-(* val x = 1 *)
+(* (* val x = 1 *) *)
 val a = if __&false then 1 else 0
-(* val () = __&halt (a + x) *)
+(* (* val () = __&halt (a + x) *) *)
 
 (* val a = "abc" *)
           

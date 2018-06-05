@@ -864,6 +864,64 @@ fun remove_var_anno_e b =
     #visit_expr vtable visitor () b
   end
 
+fun combine_non_compute_expr_visitor_vtable cast () =
+  let
+    val vtable = 
+        default_expr_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_ELet this env (data as (e1, bind)) =
+      let
+        val vtable = cast this
+        val e1 = #visit_expr vtable this env e1
+        fun is_non_compute e =
+          let
+            val f = is_non_compute
+          in
+            case e of
+                EVar _ => true
+              | EState _ => true (* todo: why? *)
+              | EAppI (e, _) => f e
+              (* | EPackI (_, _, e) => f e *)
+              | _ => false
+          end
+      in
+        if is_non_compute e1 then
+          let
+            val (_, e2) = unBind bind
+          in
+            #visit_expr vtable this env $ subst0_e_e e1 e2
+          end
+        else
+          let
+            fun visit_ebind this = visit_bind_simp (#extend_e (cast this) this)
+            val bind = visit_ebind this (#visit_expr vtable this) env bind
+          in
+            ELet (e1, bind)
+          end
+      end
+    val vtable = override_visit_ELet vtable visit_ELet
+  in
+    vtable
+  end
+
+fun new_combine_non_compute_expr_visitor params = new_expr_visitor combine_non_compute_expr_visitor_vtable params
+    
+fun combine_non_compute b =
+  let
+    val visitor as (ExprVisitor vtable) = new_combine_non_compute_expr_visitor ()
+  in
+    #visit_expr vtable visitor () b
+  end
+    
 val cc =
  fn e =>
     let
@@ -874,7 +932,9 @@ val cc =
       val decls = rev $ !code_blocks
       val e = ELetManyClose (decls, e)
       val e = remove_var_anno_e e
-      val e = MicroTiMLPostProcess.post_process e
+      val e = ANF.anf e
+      (* val e = MicroTiMLPostProcess.post_process e *)
+      val e = combine_non_compute e
       val e = ExportPP.uniquefy_e ToStringUtil.empty_ctx e
     in
       e

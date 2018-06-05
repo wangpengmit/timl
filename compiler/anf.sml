@@ -3,6 +3,8 @@
 structure ANF = struct
 
 open MicroTiMLVisitor
+open CompilerUtil
+open MicroTiMLLocallyNameless
        
 infixr 0 $
          
@@ -34,35 +36,70 @@ fun anf_decls_expr_visitor_vtable cast output =
           visit_noop
           visit_noop
     fun visit_expr this env e =
-      let
-        fun is_add_decl e =
-          case e of
-              ELet _ => false
-            | EUnpack _ => false
-            | EUnpackI _ => false
-            | ERec bind => false
-            | ECase _ => false
-            | EIfi _ => false
-            | ETriOp (ETIte, _, _, _) => false
-            | EConst c => false
-            | EVar _ => false
-            | EAscType _ => false
-            | EAscTime _ => false
-            | EBinOp (EBApp, _, _) => false
-            | EHalt _ => false
-        val add_decl = is_add_decl e
-        val e = #visit_expr vtable this env e (* call super *)
-      in
-        if add_decl then
+      case e of
+          EAscSpace (e, i) => EAscSpace (anf e, i)
+        | EPackI (t, i, e) => EPackI (t, i, #visit_expr (cast this) this env e)
+        | _ =>
           let
-            val x = fresh_evar ()
-            val () = output $ DLet (x, env, e)
+            fun is_add_decl e =
+              case e of
+                  ELet _ => false
+                | EUnpack _ => false
+                | EUnpackI _ => false
+                | ERec _ => false
+                | ECase _ => false
+                | EIfi _ => false
+                | ETriOp (ETIte (), _, _, _) => false
+                | EVar _ => false
+                | EConst _ => false
+                | EState _ => false
+                | EAscType _ => false
+                | EAscTime _ => false
+                | EAscSpace _ => false
+                | EAscState _ => false
+                | EBinOp (EBApp (), _, _) => false
+                | EHalt _ => false
+                | EUnOp (EUTiML (EUAnno _), _) => false
+                | EUnOp _ => true
+                | EBinOp _ => true
+                | ETriOp _ => true
+                | EAbs _ => true
+                | EAbsT _ => true
+                | EAppT _ => true
+                | EAbsI _ => true
+                | EAppI _ => true
+                | EPack _ => true
+                | EPackI _ => true
+                | ENever _ => true
+                | EBuiltin _ => true
+                | ENewArrayValues _ => true
+                | ETuple _ => true
+                | ELetIdx _ => true
+                | ELetType _ => true
+                | ELetConstr _ => true
+                | EAbsConstr _ => true
+                | EAppConstr _ => true
+                | EVarConstr _ => true
+                | EPackIs _ => true
+                | EMatchSum _ => true
+                | EMatchPair _ => true
+                | EMatchUnfold _ => true
+                | EMallocPair _ => true
+                | EPairAssign _ => true
+                | EProjProtected _ => true
+            val add_decl = is_add_decl e
+            val e = #visit_expr vtable this env e (* call super *)
           in
-            EV x
+            if add_decl then
+              let
+                val x = fresh_evar ()
+                val () = output $ DLet (x, env, e)
+              in
+                EV x
+              end
+            else
+              e
           end
-        else
-          e
-      end
     val vtable = override_visit_expr vtable visit_expr
     fun visit_ELet this env (data as (e1, bind)) =
       let
@@ -112,11 +149,11 @@ fun anf_decls_expr_visitor_vtable cast output =
         val x = fresh_evar ()
         val e = open0_e_e x e
         val (binds, e) = open_collect_EAbsIT e
-        val (t_y, (name_y, e)) = assert_EAbs e
+        val (st, (t_y, (name_y, e))) = assert_EAbs e
         val y = fresh_evar ()
         val e = open0_e_e y e
         val e = anf e
-        val e = EAbs $ close0_e_e_anno ((y, fst name_y, t_y), e)
+        val e = EAbs (st, close0_e_e_anno ((y, fst name_y, t_y), e))
         val e = close_EAbsITs (binds, e)
         val e = ERec $ close0_e_e_anno ((x, fst name_x, t_x), e)
       in
@@ -160,13 +197,13 @@ fun anf_decls_expr_visitor_vtable cast output =
       end
     fun visit_ETriOp this env (data as (opr, e, e1, e2)) =
       case opr of
-          ETIte =>
+          ETIte () =>
           let
             val e = #visit_expr (cast this) this "xc" e
             val e1 = anf e1         
             val e2 = anf e2        
           in
-            ETriOp (ETIte, e, e1, e2)
+            ETriOp (ETIte (), e, e1, e2)
           end
         | _ => #visit_ETriOp vtable this env data (* call super *)
     (* this relies on form invariants after CPS *)

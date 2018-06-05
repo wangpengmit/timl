@@ -205,6 +205,7 @@ compiler/micro-timl-typecheck.sml
 compiler/micro-timl-locally-nameless.sml
 compiler/compiler-util.sml
 compiler/cps.sml
+compiler/anf.sml
 compiler/cc.sml
 # compiler/pair-alloc.sml
 # compiler/tital.sml
