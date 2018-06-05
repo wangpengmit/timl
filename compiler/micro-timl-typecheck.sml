@@ -1262,7 +1262,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val n_fvars = ISet.numItems (free_evars e @%-- excluded)
           val extra_inner_cost =
               case !phase of
-                  PhBeforeCodeGen () => (0, 0) (* todo: should be: TN C_JUMPDEST *)
+                  PhBeforeCodeGen () => (C_Abs_Inner_BeforeCodeGen, 0)
                 | PhBeforeCC () => (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
                 | PhBeforeCPS () => (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars)
           val () = println $ "i = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ fst i)
