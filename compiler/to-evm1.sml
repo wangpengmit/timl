@@ -925,9 +925,10 @@ fun test1 dirname =
     val () = println "Started CPS conversion ..."
     open MicroTiMLUtil
     val k = EHaltFun TUnit TUnit
-    val () = phase := PhBeforeCC ()
-    val ((_, t, _, _), _) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) k
-    val (_, j_k, _) = assert_TArrow t
+    (* val () = phase := PhBeforeCC () *)
+    (* val ((_, t, _, _), _) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) k *)
+    (* val (_, j_k, _) = assert_TArrow t *)
+    val j_k = TN C_EHalt
     val (e, _) = cps (e, TUnit, IEmptyState) (k, j_k)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"

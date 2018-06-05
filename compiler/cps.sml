@@ -66,6 +66,53 @@ fun EHaltFun t_arg t_result = EAbs (IEmptyState, EBindAnno ((("x", dummy), t_arg
 infix 0 %:
 infix 0 |>
 infix 0 |#
+
+fun free_evars_expr_visitor_vtable cast (excluded, output) =
+  let
+    fun visit_var this env var =
+      let
+        val () =
+            case var of
+                QID (_, (x, _)) =>
+                if ISet.member (excluded, x) then ()
+                else output x
+              | _ => ()
+      in
+        var
+      end
+  in
+    default_expr_visitor_vtable
+      cast
+      extend_noop
+      extend_noop
+      extend_noop
+      extend_noop
+      visit_var
+      visit_noop
+      visit_noop
+      visit_noop
+      visit_noop
+  end
+
+fun new_free_evars_expr_visitor params = new_expr_visitor free_evars_expr_visitor_vtable params
+
+fun free_evars_fn excluded output b =
+  let
+    val visitor as (ExprVisitor vtable) = new_free_evars_expr_visitor (excluded, output)
+  in
+    #visit_expr vtable visitor () b
+  end
+
+fun free_vars_0 f b =
+  let
+    val r = ref ISet.empty
+    fun output item = unop_ref (fn s => ISet.add (s, item)) r
+    val _ = f output b
+  in
+    !r
+  end
+
+fun free_evars excluded a = free_vars_0 (free_evars_fn excluded) a
         
 (* smart EApp that converts topmost beta-redex to ELet and creates aliases for e1 and e2 *)
 (* pre: e1 and e2 must be value *)
@@ -358,12 +405,16 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       let
         val (e1, st_e1) = assert_EAscState e1
         val (e1, t_e1) = assert_EAscType e1
+        val (e2, n_live_vars) = assert_EAnnoLiveVars e2
         val (e2, st_e2) = assert_EAscState e2
         val t_e1 = whnf t_e1
         val ((_, t_e2), i, _) = assert_TArrow t_e1
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
         val xk = fresh_evar ()
+        (* EApp explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
+        val n_fvars = ISet.numItems $ free_evars ISet.empty k
+        val j_k = j_k %%+ (to_real $ C_Abs_Inner_BeforeCC n_fvars, N $ M_Abs_Inner_BeforeCC n_fvars)
         val e = EAppIPair (EV x1, j_k) %$ EPair (EV x2, EV xk)
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
@@ -665,6 +716,10 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_e = TBool
         val t_res = cps_t t_res
         val x_k = fresh_evar ()
+        val (e2, n_live_vars) = assert_EAnnoLiveVars e2
+        (* EIte explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
+        val n_fvars = ISet.numItems $ free_evars ISet.empty k
+        val j_k = j_k %%+ (to_real $ C_Abs_Inner_BeforeCC n_fvars, N $ M_Abs_Inner_BeforeCC n_fvars)
         val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
         val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
         val y = fresh_evar ()
@@ -672,7 +727,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
-        val i_c = IMaxPair (i_e1, i_e2)
+        val i_c = mapPair' to_real N (C_Ite_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC, M_Abs_BeforeCC n_live_vars + M_App_BeforeCC) %%+ IMaxPair (i_e1, i_e2 %%+ TN C_JUMPDEST) 
       in
         cps (e, t_e) (c, i_c)
       end
@@ -817,6 +872,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
 
 val cps = fn (e, t_e, F) => fn (k, j_k) =>
              let
+               val (e, _) = MicroTiMLLiveVars.live_vars e
                val (e, i) = cps (e, t_e, F) (k, j_k)
                val e = ExportPP.uniquefy_e ToStringUtil.empty_ctx $ MicroTiMLPostProcess.post_process e
              in
