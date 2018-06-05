@@ -874,7 +874,8 @@ val cc =
       val decls = rev $ !code_blocks
       val e = ELetManyClose (decls, e)
       val e = remove_var_anno_e e
-      val e = ExportPP.uniquefy_e ToStringUtil.empty_ctx $ MicroTiMLPostProcess.post_process e
+      val e = MicroTiMLPostProcess.post_process e
+      val e = ExportPP.uniquefy_e ToStringUtil.empty_ctx e
     in
       e
     end

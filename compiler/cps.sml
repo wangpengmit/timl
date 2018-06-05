@@ -419,11 +419,34 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
         val e = EAbs (st_e2 %++ F, close0_e_e_anno ((x2, "x2", t_x2), e))
-        val (e, i_e) = cps (e2, t_e2) (e, blowup_time_space (i, j_k))
+        val (e, i_e) = cps (e2, t_e2) (e, mapPair' to_real N (C_App_BeforeCC + C_EPair + C_Abs_BeforeCC n_live_vars, M_App_BeforeCC + 2 + M_Abs_BeforeCC n_live_vars) %%+ i %%+ j_k)
         val t_x1 = cps_t t_e1
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e))
       in
         cps (e1, t_e1) (e, i_e)
+      end
+    | S.ETriOp (ETIte (), e, e1, e2) =>
+      (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
+      let
+        val (e, st_e) = assert_EAscState e
+        val t_res = t_e
+        val t_e = TBool
+        val t_res = cps_t t_res
+        val x_k = fresh_evar ()
+        val (e2, n_live_vars) = assert_EAnnoLiveVars e2
+        (* EIte explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
+        val n_fvars = ISet.numItems $ free_evars ISet.empty k
+        val j_k = j_k %%+ (to_real $ C_Abs_Inner_BeforeCC n_fvars, N $ M_Abs_Inner_BeforeCC n_fvars)
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
+        val y = fresh_evar ()
+        val c = ETriOp (ETIte (), EV y, e1, e2)
+        val c = ELetClose ((x_k, "k", k), c)
+        val t_y = cps_t t_e
+        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
+        val i_c = mapPair' to_real N (C_Ite_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC, M_Abs_BeforeCC n_live_vars + M_App_BeforeCC) %%+ IMaxPair (i_e1, i_e2 %%+ TN C_JUMPDEST) 
+      in
+        cps (e, t_e) (c, i_c)
       end
     | S.EConst c =>
       (* [[ c ]](k) = k c *)
@@ -705,29 +728,6 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_y = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
         val i_c = IMaxPair (i_e1, i_e2)
-      in
-        cps (e, t_e) (c, i_c)
-      end
-    | S.ETriOp (ETIte (), e, e1, e2) =>
-      (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
-      let
-        val (e, st_e) = assert_EAscState e
-        val t_res = t_e
-        val t_e = TBool
-        val t_res = cps_t t_res
-        val x_k = fresh_evar ()
-        val (e2, n_live_vars) = assert_EAnnoLiveVars e2
-        (* EIte explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
-        val n_fvars = ISet.numItems $ free_evars ISet.empty k
-        val j_k = j_k %%+ (to_real $ C_Abs_Inner_BeforeCC n_fvars, N $ M_Abs_Inner_BeforeCC n_fvars)
-        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
-        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
-        val y = fresh_evar ()
-        val c = ETriOp (ETIte (), EV y, e1, e2)
-        val c = ELetClose ((x_k, "k", k), c)
-        val t_y = cps_t t_e
-        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
-        val i_c = mapPair' to_real N (C_Ite_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC, M_Abs_BeforeCC n_live_vars + M_App_BeforeCC) %%+ IMaxPair (i_e1, i_e2 %%+ TN C_JUMPDEST) 
       in
         cps (e, t_e) (c, i_c)
       end
