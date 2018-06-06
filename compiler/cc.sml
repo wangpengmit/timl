@@ -699,6 +699,9 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
           val (t_x, (name_x, e)) = unBindAnnoName bind
           val (binds, e) = collect_EAbsIT e
           val (st, (t_y, (name_y, e))) = assert_EAbs e
+          val (e, _) = assert_EAscState e
+          val (e, _) = assert_EAscTimeSpace e
+          val (e, _) = assert_EAscType e
           val e = #visit_expr (cast this) this env e
           val e = EAbs (st, EBindAnno ((name_y, t_y), e))
         in

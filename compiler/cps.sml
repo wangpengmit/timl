@@ -390,7 +390,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val j2 = fresh_ivar ()
         val F = fresh_ivar ()
         val j12 = (IV j1, IV j2)
-        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, j12)
+        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, (to_real C_App_BeforeCC, N M_App_BeforeCC) %%+ j12)
         (* val e = EAscTimeSpace (e, blowup_time_space (i, j12)) *)
         val t_e = cps_t t_e
         val t_c = cont_type ((post_st %++ IV F, t_e), j12)
@@ -639,7 +639,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_x2 = cps_t t_e2
         val e = k $$ EBinOp (opr, EV x1, EV x2)
         val e = EAbs (st_e2 %++ F, close0_e_e_anno ((x2, "x2", t_x2), e))
-        val (e, i_e) = cps (e2, t_e2) (e, j_k)
+        val (e, i_e) = cps (e2, t_e2) (e, j_k(* todo: need to add extra cost here *)) 
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e))
       in
         cps (e1, t_e1) (e, i_e)
