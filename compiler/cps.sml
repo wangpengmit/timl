@@ -340,7 +340,8 @@ infix 6 %%+
 val N : nat -> idx = INat
 val T : TimeType.time -> idx = ITime
                 
-fun to_real n = IToReal (N n, dummy)
+fun IToReal' i = IToReal (i, dummy)
+fun to_real n = IToReal' $ N n
 fun TN n = (to_real n, N0)
 
 (* CPS conversion on terms *)
@@ -639,7 +640,25 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_x2 = cps_t t_e2
         val e = k $$ EBinOp (opr, EV x1, EV x2)
         val e = EAbs (st_e2 %++ F, close0_e_e_anno ((x2, "x2", t_x2), e))
-        val (e, i_e) = cps (e2, t_e2) (e, j_k(* todo: need to add extra cost here *)) 
+        val cost =
+            case opr of
+                EBPair () => (N C_EPair, N 2)
+              | EBPrim opr => (N $ C_EBPrim opr, N 0)
+              | EBNatCmp opr => (N $ C_ENatCmp opr, N 0)
+              | EBNat opr => (N $ C_ENat opr, N 0)
+              | EBApp () => raise Impossible "cps/BinOp/App"
+              | EBNew () =>
+                let
+                  val len = assert_TNat t_e1
+                in
+                  (N C_ENew_order0 %+ N C_ENew_order1 %* len, len %+ N1)
+                end
+              | EBRead () => (N C_ERead, N 0)
+              | EBVectorGet () => (N C_EVectorGet, N 0)
+              | EBVectorPushBack () => (N C_EVectorPushBack, N 0)
+              | EBMapPtr () => (N C_EMapPtr, N 0)
+              | EBStorageSet () => (N C_EStorageSet, N 0)
+        val (e, i_e) = cps (e2, t_e2) (e, j_k %%+ mapFst IToReal' cost) 
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e))
       in
         cps (e1, t_e1) (e, i_e)

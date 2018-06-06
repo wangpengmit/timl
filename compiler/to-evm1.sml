@@ -310,7 +310,7 @@ fun compile st_name2int ectx e =
            SOME (name, v) =>
            (case v of
                 inl r => get_reg r
-              | inr l => PUSH_value $ VLabel l)
+              | inr l => PUSH_value (VLabel l) @ repeat 3 (JUMPDEST ())(*to make gas cost the same as get_reg, for debugging purpose*))
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
     | EConst c => PUSH_value $ VConst $ cg_c c
     | EState x => PUSH_value $ VState $ st_name2int @!! x
