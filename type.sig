@@ -27,7 +27,7 @@ signature TYPE = sig
 	   | TBase of base_type * region
            | TUnit of region
 	   | TProd of mtype * mtype
-	   | TUniI of sort * (name * mtype) Bind.ibind * region
+	   | TUniI of sort * (name * ((idx * idx) * mtype)) Bind.ibind * region
            | TVar of var
            | TAbs of kind * (name * mtype) Bind.tbind * region
            | TApp of mtype * mtype

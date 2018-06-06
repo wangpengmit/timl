@@ -1338,9 +1338,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val () = check_submap pre_st st
                  val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
                  val st = st @++ post_st
-                 val (e2, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (r2, ["Should be EAnnoLiveVars"])) e2                             
+                 val (e2, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (r2, ["Should be EAnnoLiveVars"])) e2
+                 val cost = mapPair' to_real N (C_App_BeforeCPS n_live_vars, M_App_BeforeCPS n_live_vars)
                in
-                 (EApp (e1, e2), t, d1 %%+ d2 %%+ (to_real $ C_App_BeforeCPS n_live_vars, N $ M_App_BeforeCPS n_live_vars) %%+ d, st) 
+                 (EApp (e1, e2), t, d1 %%+ d2 %%+ cost %%+ d, st) 
 	       end
 	     | EBNew () =>
                let
@@ -1540,13 +1541,15 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	       EEIAppI () =>
 	       let 
                  val (e, t, d, st) = get_mtype (ctx, st) e
+                 val (e, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e, ["Should be EAnnoLiveVars"])) e
+                 val cost = mapPair' to_real N (C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars)
                in
                  case t of
-                     TUniI (s, Bind ((arg_name, _), t1), r) =>
+                     TUniI (s, Bind ((arg_name, _), (d2, t1)), r) =>
                      let
                        val i = check_sort gctx (sctx, i, s) 
                      in
-	               (EAppI (e, i), subst_i_mt i t1, d, st)
+	               (EAppI (e, i), subst_i_mt i t1, d %%+ cost %%+ subst_i_2i i d2, st)
                      end
                    | _ =>
                      (* If the type is not in the expected form (maybe due to uvar), we try to unify it with the expected template. This may lose generality because the the inferred argument sort will always be a base sort. *)
@@ -1554,8 +1557,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                        val r = get_region_e e
                        val s = fresh_sort gctx sctx r
                        val arg_name = "_"
-                       val t1 = fresh_mt gctx (add_sorting (arg_name, s) sctx, kctx) r
-                       val t_e = TUniI (s, Bind ((arg_name, r), t1), r)
+                       val sctx' = add_sorting (arg_name, s) sctx
+                       val t1 = fresh_mt gctx (sctx', kctx) r
+                       val d2 = (fresh_i gctx sctx' BSTime r, fresh_i gctx sctx' BSNat r)
+                       val t_e = TUniI (s, Bind ((arg_name, r), (d2, t1)), r)
                        (* val () = println $ "t1 = " ^ str_mt gctxn (sctx_names sctx, names kctx) t1 *)
                        (* val () = println $ "t1 = " ^ str_raw_mt t1 *)
                        (* val () = println $ "t_e = " ^ str_mt gctxn (sctx_names sctx, names kctx) t_e *)
@@ -1566,7 +1571,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                        (* val () = println "after" *)
                        val i = check_sort gctx (sctx, i, s) 
                      in
-	               (EAppI (e, i), subst_i_mt i t1, d, st)
+	               (EAppI (e, i), subst_i_mt i t1, d %%+ cost %%+ subst_i_2i i d2, st)
 	             end
                end
 	     | EEIAscTime () => 
@@ -1647,16 +1652,41 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val post_st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) post_st
             val () = close_n nps
             val () = close_ctx ctxd
-            val (is_rec, e) = case e of
-                                  EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
-                                | _ => (false, e)
+            fun is_rec_body e =
+              case e of
+                  EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
+                | _ => (false, e)
+            val (is_rec, e) = is_rec_body e
             (* calculation of 'excluded' is more complicated because of patterns *)
             val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
             (* todo: pattern-matching also takes time *)
-            val d = d %%+ (to_real $ C_Abs_Inner_BeforeCPS n_fvars, N $ M_Abs_Inner_BeforeCPS n_fvars)
+            val extra_inner_cost = mapPair' to_real N (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars)
+            val d = d %%+ extra_inner_cost
+            val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           in
-	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e)), TArrow ((pre_st, t), d, (post_st, t1)), (to_real $ C_Abs_BeforeCC n_fvars, N $ M_Abs_BeforeCC n_fvars), st)
+	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e)), TArrow ((pre_st, t), d, (post_st, t1)), cost, st)
+	  end
+	| U.EAbsI (bind, r_all) => 
+	  let 
+            val ((iname, s), e) = unBindAnno bind
+            val (name, r) = unName iname
+	    val () = if is_value e then ()
+		     else raise Error (U.get_region_e e, ["The body of a universal abstraction must be a value"])
+            val s = is_wf_sort gctx (sctx, s)
+            val ctxd = ctx_from_sorting (name, s)
+            val ctx = add_ctx ctxd ctx
+            val () = open_ctx ctxd
+	    val (e, t, d, _) = get_mtype (ctx, StMap.empty) e
+            val () = close_ctx ctxd
+            val (is_rec, e) = is_rec_body e
+            val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
+            val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
+            val extra_inner_cost = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
+            val d = d %%+ extra_inner_cost
+            val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+          in
+	    (EAbsI (BindAnno ((iname, s), e), r_all), TUniI (s, Bind ((name, r), (d, t)), r_all), cost, st)
 	  end
 	| U.ELet (return, bind, r) => 
 	  let
@@ -1677,21 +1707,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val e = EAsc (e, shift_ctx_mt ctxd t)
           in
 	    (ELet ((SOME t, SOME $ fst d, SOME $ snd d), Unbound.Bind (Teles decls, e), r), t, d, st)
-	  end
-	| U.EAbsI (bind, r_all) => 
-	  let 
-            val ((iname, s), e) = unBindAnno bind
-            val (name, r) = unName iname
-	    val () = if is_value e then ()
-		     else raise Error (U.get_region_e e, ["The body of a universal abstraction must be a value"])
-            val s = is_wf_sort gctx (sctx, s)
-            val ctxd = ctx_from_sorting (name, s)
-            val ctx = add_ctx ctxd ctx
-            val () = open_ctx ctxd
-	    val (e, t, _, _) = get_mtype (ctx, StMap.empty) e
-            val () = close_ctx ctxd
-          in
-	    (EAbsI (BindAnno ((iname, s), e), r_all), TUniI (s, Bind ((name, r), t), r_all), TN0 r_all, st)
 	  end
 	| U.EAppConstr ((x, eia), ts, is, e, ot) => 
 	  let
@@ -2000,11 +2015,25 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                 case bind of
                     U.SortingST (name, Outer s) => U.MakeEAbsI (unBinderName name, s, e, r)
                   | U.TypingST pn => U.MakeEAbs (StMap.empty, pn, e)
-              val e =
-                  case rev binds of
-                      U.TypingST pn :: binds =>
-                      foldl attach_bind_e (U.MakeEAbs (pre_st, pn, U.EAnnoBodyOfRecur (e, U.get_region_e e))) binds
-                    | _ => raise Error (r, ["Recursion must have a typing bind as the last bind"])
+              val len_binds = length binds
+              val e = foldri (fn (n, bind, e) =>
+                                 let
+                                   val e = if n = len_binds - 1 then
+                                             U.EAnnoBodyOfRecur (e, U.get_region_e e)
+                                           else e
+                                 in
+                                   if n = 0 then
+                                     (case bind of
+                                          U.TypingST pn => U.MakeEAbs (pre_st, pn, e)
+                                        | _ => raise Error (r, ["Recursion must have a typing bind as the last bind"]))
+                                   else attach_bind_e (bind, e)
+                                 end
+                             ) binds e
+              (* val e = *)
+              (*     case rev binds of *)
+              (*         U.TypingST pn :: binds => *)
+              (*         foldl attach_bind_e (U.MakeEAbs (pre_st, pn, e)) binds *)
+              (*       | _ => raise Error (r, ["Recursion must have a typing bind as the last bind"]) *)
               fun type_from_ptrn pn =
                 case pn of
                     U.PnAnno (_, Outer t) => t

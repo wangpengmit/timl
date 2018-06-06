@@ -426,6 +426,19 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         cps (e1, t_e1) (e, i_e)
       end
+    | S.EAppI (e, i) =>
+      (* [[ e[i] ]](k) = [[e]](\x. x[i]{k.j}(k)) *)
+      let
+        val (e, n_live_vars) = assert_EAnnoLiveVars e
+        val (e, st_e) = assert_EAscState e
+        val (e, t_e) = assert_EAscType e
+        val x = fresh_evar ()
+        val c = EAppIPair (EAppI (EV x, i), j_k) %$ k
+        val t_x = cps_t t_e
+        val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
+      in
+        cps (e, t_e) (c, blowup_time_space_i j_k)
+      end
     | S.ETriOp (ETIte (), e, e1, e2) =>
       (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
       let
@@ -518,18 +531,6 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
         cps (e, t_e) (c, blowup_time_space_t j_k)
-      end
-    | S.EAppI (e, i) =>
-      (* [[ e[i] ]](k) = [[e]](\x. x[i]{k.j}(k)) *)
-      let
-        val (e, st_e) = assert_EAscState e
-        val (e, t_e) = assert_EAscType e
-        val x = fresh_evar ()
-        val c = EAppIPair (EAppI (EV x, i), j_k) %$ k
-        val t_x = cps_t t_e
-        val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
-      in
-        cps (e, t_e) (c, blowup_time_space_i j_k)
       end
     | S.EPack (t_pack, t, e) =>
       (* [[ pack <t, e> ]](k) = [[e]](\x. k (pack <t, x>)) *)

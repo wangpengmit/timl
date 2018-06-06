@@ -172,7 +172,8 @@ fun mapPartialWithIdx f xs =
       
 fun foldlWithIdx f init xs = fst $ foldl (fn (x, (acc, n)) => (f (x, acc, n), n + 1)) (init, 0) xs
 fun foldli f = foldlWithIdx (fn (x, acc, n) => f (n, x, acc))
-fun foldrWithIdx start f init xs = fst $ foldl (fn (x, (acc, n)) => (f (x, acc, n), n + 1)) (init, start) xs
+fun foldrWithIdx start f init xs = fst $ foldr (fn (x, (acc, n)) => (f (x, acc, n), n + 1)) (init, start) xs
+fun foldri f = foldrWithIdx 0 (fn (x, acc, n) => f (n, x, acc)) init xs
 fun mapWithIdx f ls = rev $ foldlWithIdx (fn (x, acc, n) => f (n, x) :: acc) [] ls
 val mapi = mapWithIdx
 fun appi f = ignore o mapi f

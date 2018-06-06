@@ -254,23 +254,23 @@ fun pacakge_is_mt vs b =
 fun package_ts_mt vs b =
   fst (foldl (fn (v, (b, x)) => (package_t_mt x v b, x - 1)) (b, length vs - 1) vs)
 
-fun package0_sctx m sctx =
-  foldrWithIdx 0 (fn ((name, s), acc, x) => (name, package_i_s x m s) :: acc) [] sctx
+(* fun package0_sctx m sctx = *)
+(*   foldrWithIdx 0 (fn ((name, s), acc, x) => (name, package_i_s x m s) :: acc) [] sctx *)
 
-fun package0_kctx m sctx_len kctx =
-  foldrWithIdx 0 (fn ((name, k), acc, x) => (name, package_i_ke sctx_len m $ package_t_ke x m k) :: acc) [] kctx
+(* fun package0_kctx m sctx_len kctx = *)
+(*   foldrWithIdx 0 (fn ((name, k), acc, x) => (name, package_i_ke sctx_len m $ package_t_ke x m k) :: acc) [] kctx *)
                
-fun package0_ctx m (sctx, kctx, cctx, tctx) =
-  let
-    val sctx = package0_sctx m sctx
-    val sctx_len = length sctx
-    val kctx = package0_kctx m sctx_len kctx
-    val kctx_len = length kctx
-    val cctx = map (fn (name, c) => (name, package_t_c kctx_len m $ package_i_c sctx_len m c)) cctx
-    val tctx = map (fn (name, t) => (name, package_t_t kctx_len m $ package_i_t sctx_len m t)) tctx
-  in
-    (sctx, kctx, cctx, tctx)
-  end
+(* fun package0_ctx m (sctx, kctx, cctx, tctx) = *)
+(*   let *)
+(*     val sctx = package0_sctx m sctx *)
+(*     val sctx_len = length sctx *)
+(*     val kctx = package0_kctx m sctx_len kctx *)
+(*     val kctx_len = length kctx *)
+(*     val cctx = map (fn (name, c) => (name, package_t_c kctx_len m $ package_i_c sctx_len m c)) cctx *)
+(*     val tctx = map (fn (name, t) => (name, package_t_t kctx_len m $ package_i_t sctx_len m t)) tctx *)
+(*   in *)
+(*     (sctx, kctx, cctx, tctx) *)
+(*   end *)
     
 fun lookup_sort (n : int) (ctx : scontext) : sort option =
   case nth_error ctx n of

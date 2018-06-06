@@ -793,7 +793,7 @@ val T : TimeType.time -> idx = ITime
                 
 fun TN n = (to_real n, N0)
 
-fun set_EAbs_is_rec_expr_visitor_vtable cast () =
+fun set_is_rec_expr_visitor_vtable cast () =
   let
     val vtable = 
         default_expr_visitor_vtable
@@ -809,12 +809,29 @@ fun set_EAbs_is_rec_expr_visitor_vtable cast () =
           visit_noop
     fun set_flag bind =
       let
-        val (name_anno, e) = unBindAnno bind
-        val (binds, e) = collect_EAbsIT e
-        val (st, (anno, (name, body))) = assert_EAbs e
-        val e = EAbs (st, EBindAnno ((name, anno), EAnnoBodyOfRecur body))
+        val (name1, e) = unBindAnno bind
+        val e = case e of
+                    EAbs (st, bind) =>
+                    let
+                      val (name, body) = unBindAnno bind
+                    in
+                      EAbs (st, BindAnno (name, EAnnoBodyOfRecur body))
+                    end
+                  | EAbsI bind =>
+                    let
+                      val (name, body) = unBindAnno bind
+                    in
+                      EAbsI $ BindAnno (name, EAnnoBodyOfRecur body)
+                    end
+                  | EAbsT bind =>
+                    let
+                      val (name, body) = unBindAnno bind
+                    in
+                      EAbsT $ BindAnno (name, EAnnoBodyOfRecur body)
+                    end
+                  | _ => raise Impossible "set_is_rec: other than EAbs/EAbsI/EAbsT"
       in
-        BindAnno (name_anno, EAbsITs (binds, e))
+        BindAnno (name1, e)
       end
     fun visit_ERec this env bind =
       let
@@ -825,10 +842,10 @@ fun set_EAbs_is_rec_expr_visitor_vtable cast () =
   in
     override_visit_ERec vtable visit_ERec
   end
-fun new_set_EAbs_is_rec_expr_visitor params = new_expr_visitor set_EAbs_is_rec_expr_visitor_vtable params
-fun set_EAbs_is_rec b =
+fun new_set_is_rec_expr_visitor params = new_expr_visitor set_is_rec_expr_visitor_vtable params
+fun set_is_rec b =
   let
-    val visitor as (ExprVisitor vtable) = new_set_EAbs_is_rec_expr_visitor ()
+    val visitor as (ExprVisitor vtable) = new_set_is_rec_expr_visitor ()
   in
     #visit_expr vtable visitor () b
   end
@@ -1249,13 +1266,58 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EApp (e1, e2), t2, i1 %%+ i2 %%+ mapPair' to_real N cost %%+ i, st)
         end
+      | EAppI (e, i) =>
+        let
+          val (e, t_e, j, st) = tc (ctx, st) e
+          val t_e = whnf itctx t_e
+          val (s, (_, (j2, t))) = assert_TForallI t_e
+          val i = sc_against_sort ictx (i, s)
+          val (cost, e) = 
+              case !phase of
+                  PhBeforeCodeGen () => ((0, 0), e)
+                | PhBeforeCC () => ((0, 0), e)
+                | PhBeforeCPS () =>
+                  let
+                    val (e, n_live_vars) = assert_EAnnoLiveVars e
+                  in
+                    ((C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars), e)
+                  end
+          val e = if !anno_EAppI then e %: t_e else e
+          val e = if !anno_EAppI_state then e %~ st else e
+        in
+          (EAppI (e, i), subst0_i_t i t, j %%+ mapPair' to_real N cost %%+ subst0_i_2i i j2, st)
+        end
+      | EAbsI data =>
+        let
+          val (s, (name, e)) = unEAbsI data
+          val s = is_wf_sort ictx s
+          val () = assert_b "EAbsI: is_value e" (is_value e)
+          val (e, t, i, _) = open_close add_sorting_full (fst name, s) ctx (fn ctx => tc (ctx, IEmptyState) e)
+          fun is_rec_body e =
+            case e of
+                EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
+              | _ => (false, e)
+          val (is_rec, e) = is_rec_body e
+          val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
+          val n_fvars = ISet.numItems (free_evars e @%-- excluded)
+          val inner_cost =
+              case !phase of
+                  PhBeforeCodeGen () => TN0
+                | PhBeforeCC () => TN0
+                | PhBeforeCPS () => i %%+ mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
+          val cost =
+              case !phase of
+                  PhBeforeCodeGen () => TN0
+                | PhBeforeCC () => forget01_i_2i i
+                | PhBeforeCPS () => mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+        in
+          (MakeEAbsI (name, s, e), MakeTForallI (s, name, inner_cost, t), cost, st)
+        end
       | EAbs (pre_st, bind) =>
         let
           val pre_st = sc_against_sort ictx (pre_st, SState)
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind
-          val (is_rec, e) = case e of
-                                EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
-                              | _ => (false, e)
+          val (is_rec, e) = get_is_rec_body e
           val t1 = kc_against_kind itctx (t1, KType ())
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
           val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
@@ -1279,20 +1341,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 | PhBeforeCPS () => (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
         in
           (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), mapPair' to_real N cost, st)
-        end
-      | EAbsI data =>
-        let
-          val (s, (name, e)) = unEAbsI data
-          val s = is_wf_sort ictx s
-          val () = assert_b "EAbsI: is_value e" (is_value e)
-          val (e, t, i, _) = open_close add_sorting_full (fst name, s) ctx (fn ctx => tc (ctx, IEmptyState) e)
-          val cost =
-              case !phase of
-                  PhBeforeCodeGen () => TN0
-                | PhBeforeCC () => forget01_i_2i i
-                | PhBeforeCPS () => TN0 (* todo: impl *)
-        in
-          (MakeEAbsI (name, s, e), MakeTForallI (s, name, t), cost, st)
         end
       (* | EAbsI _ => *)
       (*   let *)
@@ -1361,7 +1409,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val len = length es
           val i = combine_IBAdd_Time_Nat $ map #3 ls
         in
-          (ETuple (map get_e ls), TTuple (map #2 ls), i %%+ (to_real $ C_Tuple len + len * C_Var + C_Let, N len), st)
+          (ETuple (map get_e ls), TTuple (map #2 ls), i %%+ (to_real $ C_ETuple len, N len), st)
         end
       | EBinOp (EBPrim opr, e1, e2) =>
         let
@@ -1609,19 +1657,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EAppT_state then e %~ st else e
         in
           (EAppT (e, t1), subst0_t_t t1 t, i, st)
-        end
-      | EAppI (e, i) =>
-        let
-          val (e, t_e, j, st) = tc (ctx, st) e
-          val t_e = whnf itctx t_e
-          val (s, (_, t)) = case t_e of
-                                TQuanI (Forall (), data) => unTQuanI data
-                              | _ => raise MTCError "EAppT"
-          val i = sc_against_sort ictx (i, s)
-          val e = if !anno_EAppI then e %: t_e else e
-          val e = if !anno_EAppI_state then e %~ st else e
-        in
-          (EAppI (e, i), subst0_i_t i t, j, st)
         end
       | EPack (t', t1, e) =>
         let

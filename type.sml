@@ -30,7 +30,7 @@ datatype mtype =
 	 | TBase of base_type * region
          | TUnit of region
 	 | TProd of mtype * mtype
-	 | TUniI of sort * (name * mtype) ibind * region
+	 | TUniI of sort * (name * ((idx * idx) * mtype)) ibind * region
          | TVar of var
          | TAbs of kind * (name * mtype) tbind * region
          | TApp of mtype * mtype

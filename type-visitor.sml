@@ -27,7 +27,7 @@ type ('this, 'env) type_visitor_vtable =
        visit_TBase : 'this -> 'env -> base_type * region -> T.mtype,
        visit_TUnit : 'this -> 'env -> region -> T.mtype,
        visit_TProd : 'this -> 'env -> mtype * mtype -> T.mtype,
-       visit_TUniI : 'this -> 'env -> sort * (name * mtype) Bind.ibind * region -> T.mtype,
+       visit_TUniI : 'this -> 'env -> sort * (name * ((idx * idx) * mtype)) Bind.ibind * region -> T.mtype,
        visit_TVar : 'this -> 'env -> var -> T.mtype,
        visit_TAbs : 'this -> 'env -> kind * (name * mtype) Bind.tbind * region -> T.mtype,
        visit_TApp : 'this -> 'env -> mtype * mtype -> T.mtype,
