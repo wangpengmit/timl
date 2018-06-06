@@ -23,6 +23,7 @@ fun shift_t_t a = shift_t_t_fn shift_var a
 val shift01_i_i = shift_i_i
 fun shift01_i_t a = shift_i_t 0 1 a
 fun shift01_t_t a = shift_t_t 0 1 a
+val subst0_i_i = subst_i_i
 fun subst_i_t a = subst_i_t_fn (substx_i_i, substx_i_s) a
 fun subst0_i_t a = subst_i_t 0 0 a
 fun subst_t_t a = subst_t_t_fn (compare_var, shift_var, shiftx_i_i, shiftx_i_s) a

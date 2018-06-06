@@ -24,7 +24,7 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'va
        visit2_TAbsI : 'this -> 'env -> ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TAppI : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TQuan : 'this -> 'env -> unit quan * ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
-       visit2_TQuanI : 'this -> 'env -> unit quan * ('sort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
+       visit2_TQuanI : 'this -> 'env -> unit quan * ('sort, ('idx * 'idx) * ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TRec : 'this -> 'env -> ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TNat : 'this -> 'env -> 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TArr : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
@@ -40,7 +40,7 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'va
        visit2_ty_bin_op : 'this -> 'env -> ty_bin_op -> ty_bin_op -> ty_bin_op,
        visit2_quan : 'this -> 'env -> unit quan -> unit quan -> unit quan,
        visit2_ibind_anno_bsort : 'this -> ('env -> 'bsort -> 'bsort2 -> 'bsort3) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty) -> 'env -> ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('bsort2, ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno -> ('bsort3, ('var3, 'bsort3, 'idx3, 'sort3) ty) ibind_anno,
-       visit2_ibind_anno_sort : 'this -> ('env -> 'sort -> 'sort2 -> 'sort3) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty) -> 'env -> ('sort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('sort2, ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno -> ('sort3, ('var3, 'bsort3, 'idx3, 'sort3) ty) ibind_anno,
+       visit2_ibind_anno_sort : 'this -> ('env -> 'sort -> 'sort2 -> 'sort3) -> ('env -> ('idx * 'idx) * ('var, 'bsort, 'idx, 'sort) ty -> ('idx2 * 'idx2) * ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('idx3 * 'idx3) * ('var3, 'bsort3, 'idx3, 'sort3) ty) -> 'env -> ('sort, ('idx * 'idx) * ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('sort2, ('idx2 * 'idx2) * ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno -> ('sort3, ('idx3 * 'idx3) * ('var3, 'bsort3, 'idx3, 'sort3) ty) ibind_anno,
        visit2_tbind_anno : 'this -> ('env -> 'bsort kind -> 'bsort2 kind -> 'bsort3 kind) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty) -> 'env -> ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('bsort2 kind, ('var2, 'bsort2, 'idx2, 'sort2) ty) tbind_anno -> ('bsort3 kind, ('var3, 'bsort3, 'idx3, 'sort3) ty) tbind_anno,
        extend_i : 'this -> 'env -> iname -> 'env * iname,
        extend_t : 'this -> 'env -> tname -> 'env * tname
@@ -508,7 +508,7 @@ fun default_ty_visitor2_vtable
             TQuanI (q', bind') =>
             let
               val q = #visit2_quan vtable this env q q'
-              val bind = #visit2_ibind_anno_sort vtable this (#visit2_sort vtable this) (#visit2_ty vtable this) env bind bind'
+              val bind = #visit2_ibind_anno_sort vtable this (#visit2_sort vtable this) (visit2_pair (visit2_pair (#visit2_idx vtable this) (#visit2_idx vtable this)) (#visit2_ty vtable this)) env bind bind'
             in
               TQuanI (q, bind)
             end

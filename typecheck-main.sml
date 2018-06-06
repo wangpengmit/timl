@@ -2018,7 +2018,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val e = U.EAscTime (e, fst d)
               fun attach_bind_e (bind, e) =
                 case bind of
-                    U.SortingST (name, Outer s, _) => U.MakeEAbsI (unBinderName name, s, e, r)
+                    U.SortingST (name, Outer s) => U.MakeEAbsI (unBinderName name, s, e, r)
                   | U.TypingST pn => U.MakeEAbs (StMap.empty, pn, e)
               val len_binds = length binds
               val e = foldri (fn (n, bind, e) =>
@@ -2033,7 +2033,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                                         | _ => raise Error (r, ["Recursion must have a typing bind as the last bind"]))
                                    else attach_bind_e (bind, e)
                                  end
-                             ) binds e
+                             ) e binds
               (* val e = *)
               (*     case rev binds of *)
               (*         U.TypingST pn :: binds => *)
@@ -2047,10 +2047,11 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                   | U.PnPair (pn1, pn2) => U.TProd (type_from_ptrn pn1, type_from_ptrn pn2) 
                   | U.PnVar _ => U.TUVar ((), r)
                   | U.PnConstr _ => U.TUVar ((), r) (* todo: pn mustn't introduce index vars *)
+              val IUnderscore2 = (U.IUVar ((), r), U.IUVar ((), r))
               fun attach_bind_t (bind, t) =
                 case bind of
-	            U.SortingST (name, Outer s, i) => U.TUniI (s, Bind (unBinderName name, (unInner i, t)), r)
-	          | U.TypingST pn => U.TArrow ((StMap.empty, type_from_ptrn pn), (U.IUVar ((), r), U.IUVar ((), r)), (StMap.empty, t))
+	            U.SortingST (name, Outer s) => U.TUniI (s, Bind (unBinderName name, (IUnderscore2, t)), r)
+	          | U.TypingST pn => U.TArrow ((StMap.empty, type_from_ptrn pn), IUnderscore2, (StMap.empty, t))
               val te =
                   case rev binds of
                       U.TypingST pn :: binds =>
@@ -2244,7 +2245,7 @@ and is_wf_datatype gctx ctx (Bind (name, tbinds) : U.mtype U.datatype_def, r) : 
                       )
                     | _ => err t
             in
-              (tnames, fold_binds (ns, (t, is)))
+              (tnames, fold_binds (map (mapSnd fst) ns, (t, is)))
             end
           val (_, ibinds) = constr_from_type t
 	in

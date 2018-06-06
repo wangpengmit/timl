@@ -58,6 +58,29 @@ fun whnf ctx t =
       | TVar x => TVar x (* todo: look up type aliasing in ctx *)
       | _ => t
 
+fun TQuanI0 (q, bind) =
+  let
+    val (s, t) = unBindAnno bind
+  in
+    TQuanI (q, BindAnno (s, (TN0 dummy, t)))
+  end
+    
+fun TExistsI bind = TQuanI0 (Exists (), bind)
+fun TExistsI_Many (ctx, t) = foldr (TExistsI o BindAnno) t ctx
+                                         
+fun MakeTExistsI (name, s, t) = MakeTQuanI (Exists (), s, name, TN0 dummy, t)
+fun make_exists name s = TExistsI $ IBindAnno (((name, dummy), s), TUnit)
+                             
+fun TSumbool (s1, s2) =
+  let
+    val name = "__p"
+  in
+    TSum (make_exists name s1, make_exists name s2)
+  end
+                  
+fun TForallI0 bind = TQuanI0 (Forall (), bind)
+fun TForallIs (binds, b) = foldr (TForallI0 o IBindAnno) b binds
+                                           
 fun MakeSubset (name, s, p) = SSubset ((s, dummy), Bind.Bind ((name, dummy), p), dummy)
 local
   fun IV n = IVar (ID (n, dummy), [])
@@ -110,6 +133,19 @@ fun assert_TBool t =
   case t of
       TConst (TCTiML (BTBool ())) => ()
     | _ => raise assert_fail "assert_TBool"
+fun assert_TForallI t =
+  case t of
+      TQuanI (Forall (), bind) => unBindAnno bind
+    | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TExistsI t =
+  case t of
+      TQuanI (Exists _, bind) =>
+      let
+        val (name_s, (_, t)) = unBindAnno bind
+      in
+        (name_s, t)
+      end
+    | _ => raise assert_fail $ "assert_TExistsI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                                                           
 fun assert_EAbs e =
   case e of
@@ -174,4 +210,6 @@ fun a @%+ b = idx_st_add a b
 type mtiml_ty = (Expr.var, basic_sort, idx, sort) ty
 type mtiml_expr = (Expr.var, idx, sort, basic_sort kind, mtiml_ty) expr
 
+fun subst0_i_2i v b = unop_pair (subst0_i_i v) b
+                                
 end

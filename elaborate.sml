@@ -474,7 +474,7 @@ local
             fun f bind =
                 case bind of
 		    BindTyping pn => TypingST (elab_pn pn)
-		  | BindSorting (nm, s, _) => SortingST (Binder $ IName nm, Outer $ elab_s s, Inner (IUnderscore r, IUnderscore r))
+		  | BindSorting (nm, s, _) => SortingST (Binder $ IName nm, Outer $ elab_s s)
             val binds = map f binds
             (* if the function body is a [case] without annotations, copy the return clause from the function signature to the [case] *)
             (* val e = copy_anno (t, d) e *)

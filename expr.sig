@@ -16,7 +16,7 @@ signature EXPR = sig
   type return = mtype option * idx option * idx option
                                    
   datatype stbind = 
-           SortingST of Binders.ibinder * sort Unbound.outer * (idx * idx) Unbound.inner
+           SortingST of Binders.ibinder * sort Unbound.outer
            | TypingST of ptrn
 
   type scoping_ctx = Binders.ibinder list * Binders.tbinder list * Binders.cbinder list * Binders.ebinder list

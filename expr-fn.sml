@@ -25,7 +25,7 @@ type ptrn = (cvar * ptrn_constr_tag, mtype) Pattern.ptrn
 type return = mtype option * idx option * idx option
                                  
 datatype stbind =
-         SortingST of ibinder * sort outer * (idx * idx) inner
+         SortingST of ibinder * sort outer
          | TypingST of ptrn
 
 type scoping_ctx = ibinder list * tbinder list * cbinder list * ebinder list

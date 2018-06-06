@@ -179,7 +179,7 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
         end
       | TQuanI (q, bind) =>
         let
-          val (name, s, t) = get_bind_anno bind
+          val (name, s, ((i, j), t)) = get_bind_anno bind
         in
           open_hbox ();
           str "TQuanI";
@@ -190,6 +190,10 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           str name;
           comma ();
           str $ str_s s;
+          comma ();
+          str $ str_i i;
+          comma ();
+          str $ str_i j;
           comma ();
           pp_t t;
           str ")";

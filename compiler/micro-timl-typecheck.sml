@@ -444,11 +444,15 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       end
     | TQuanI (q, data) =>
       let
-        val (s, (name, t)) = unTQuanI data
+        val (s, (name, ((i, j), t))) = unTQuanI data
         (* val  () = println "before is_wf_sort" *)
         val s = is_wf_sort ictx s
         (* val  () = println "after is_wf_sort" *)
-        val t = open_close add_sorting_it (fst name, s) ctx (fn ctx => kc_against_kind ctx (t, KType ()))
+        val t = open_close add_sorting_it (fst name, s) ctx
+                           (fn ctx =>
+                               ((sc_against_sort ictx (i, STime),
+                                 sc_against_sort ictx (j, SNat)),
+                                kc_against_kind ctx (t, KType ())))
       in
         (TQuanI (q, IBindAnno ((name, s), t)), KType ())
       end
@@ -885,6 +889,11 @@ fun free_evars b =
     ISetU.to_set fvars
   end
               
+fun is_rec_body e =
+  case e of
+      EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
+    | _ => (false, e)
+             
 val anno_EVar = ref false
 val anno_EProj = ref false
 val anno_EFold = ref false
@@ -1239,7 +1248,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                     end
                 | TQuanI (Forall (), bind) =>
                   let
-                    val ((_, s), t) = unBindAnno bind
+                    val ((_, s), (_, t)) = unBindAnno bind
                     val () = is_eq_sort (s, SState)
                     val ((pre_st, _), _, _) = assert_TArrow t
                     val diff = check_sub_state pre_st st
@@ -1270,7 +1279,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (e, t_e, j, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
-          val (s, (_, (j2, t))) = assert_TForallI t_e
+          val ((_, s), (j2, t)) = assert_TForallI t_e
           val i = sc_against_sort ictx (i, s)
           val (cost, e) = 
               case !phase of
@@ -1293,12 +1302,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val s = is_wf_sort ictx s
           val () = assert_b "EAbsI: is_value e" (is_value e)
           val (e, t, i, _) = open_close add_sorting_full (fst name, s) ctx (fn ctx => tc (ctx, IEmptyState) e)
-          fun is_rec_body e =
-            case e of
-                EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
-              | _ => (false, e)
           val (is_rec, e) = is_rec_body e
-          val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
+          val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
           val n_fvars = ISet.numItems (free_evars e @%-- excluded)
           val inner_cost =
               case !phase of
@@ -1317,7 +1322,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val pre_st = sc_against_sort ictx (pre_st, SState)
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind
-          val (is_rec, e) = get_is_rec_body e
+          val (is_rec, e) = is_rec_body e
           val t1 = kc_against_kind itctx (t1, KType ())
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
           val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
@@ -1677,9 +1682,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val t' = kc_against_kind itctx (t', KType ())
           val t' = whnf itctx t'
-          val (s, (_, t)) = case t' of
-                                TQuanI (Exists _, data) => unTQuanI data
-                              | _ => raise MTCError "EPackI"
+          val ((_, s), t) = assert_TExistsI t'
           val i = sc_against_sort ictx (i, s)
           val t_e = subst0_i_t i t
           val (e, j, st) = tc_against_ty (ctx, st) (e, t_e)
@@ -1714,9 +1717,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           fun mismatch header got expect =
             sprintf "Mismatch when checking %:\n  got:    $\n  expect: $\n" [header, got, expect]
           val t_e1 = whnf itctx t_e1
-          val (s, (_, t)) = case t_e1 of
-                                TQuanI (Exists _, data) => unTQuanI data
-                              | _ => raise MTCError $ mismatch "EUnpackI" (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names itctx) t_e1) "TQuanI (Exists, _)"
+          val ((_, s), t) = assert_TExistsI t_e1
           val (e2, t2, i2, st) = open_close add_sorting_full (fst iname, s) ctx (fn ctx => tc (add_typing_full (fst ename, t) ctx, shift_i_i st) e2)
           val t2 = forget01_i_t t2
                    handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names $ add_sorting_it (fst iname, s) itctx) t2))
@@ -1743,9 +1744,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
               end
             | i :: is =>
               let
-                val (_, (_, t')) = case whnf itctx t of
-                                      TQuanI (Exists _, data) => unTQuanI data
-                                    | _ => raise MTCError "EPackIs"
+                val (_, t') = assert_TExistsI $ whnf itctx t
               in
                 tc (ctx, st) $ EPackI (t, i, EPackIs (subst0_i_t i t', is, e))
               end

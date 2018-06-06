@@ -570,7 +570,7 @@ fun default_expr_visitor_vtable
         val vtable = cast this
       in
         case data of
-            SortingST data => T.SortingST $ visit_triple (visit_ibinder this) (visit_outer (#visit_sort vtable this)) (visit_inner (visit_pair (#visit_idx vtable this) (#visit_idx vtable this))) env data
+            SortingST data => T.SortingST $ visit_pair (visit_ibinder this) (visit_outer (#visit_sort vtable this)) env data
           | TypingST pn => T.TypingST (#visit_ptrn vtable this env pn)
       end
     fun visit_DRec this env data =

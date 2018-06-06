@@ -51,9 +51,9 @@ fun unBindAnno2 data =
 
 fun unBindSimp2 bind = mapFst Name2str $ unBindSimp bind
             
-fun TForallIClose (x, t) = TForallI $ close0_i_t_anno (x, t)
-fun TForallICloseMany (xs, b) = foldr TForallIClose b xs
-fun TForallTimeClose ((x, name), t) = TForallIClose ((x, name, STime), t)
+fun TForallIClose0 (x, t) = TForallI0 $ close0_i_t_anno (x, t)
+fun TForallICloseMany (xs, b) = foldr TForallIClose0 b xs
+fun TForallTimeClose0 ((x, name), t) = TForallIClose0 ((x, name, STime), t)
 fun EAbsIClose (x, e) = EAbsI $ close0_i_e_anno (x, e)
 fun EAbsICloseMany (xs, b) = foldr EAbsIClose b xs
 fun EAbsTimeClose ((x, name), e) = EAbsIClose ((x, name, STime), e)
@@ -198,6 +198,9 @@ fun blowup_time_space (i, j) = i %%+ j
 fun blowup_time_space_t j = j
 fun blowup_time_space_i j = j
 
+fun open0_i_2i a i = unop_pair (open0_i_i a) i
+fun open0_i_2it a (i, t) = (open0_i_2i a i, open0_i_t a t)
+                              
 (* CPS conversion on types *)
 fun cps_ty_visitor_vtable cast () =
   let
@@ -214,16 +217,16 @@ fun cps_ty_visitor_vtable cast () =
       let
         (* val () = println $ "cps_t() on: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
         fun cps_t t = #visit_ty (cast this) this env t
-        (* [[ \\a.t ]] = \\a. \\j F. {F, ({F, [[t]]} --j--> void)} -- blowup_time_t(j) --> void *)
-        fun cps_Forall t =
+        (* [[ \\a. i --> t ]] = \\a. \\j F. {F, ({F, [[t]]} --j--> void)} -- blowup_time_t(i, j) --> void *)
+        fun cps_Forall (i, t) =
           let
             val t = cps_t t
             val j1 = fresh_ivar ()
             val j2 = fresh_ivar ()
             val F = fresh_ivar ()
-            val j12 = (IV j1, IV j2)
-            val t = TArrow ((IV F, t), j12, Void)
-            val t = TArrow ((IV F, t), blowup_time_space_t j12, Void)
+            val j = (IV j1, IV j2)
+            val t = TArrow ((IV F, t), j, Void)
+            val t = TArrow ((IV F, t), i %%+ j, Void)
             val t = TForallICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], t)
           in
             t
@@ -239,9 +242,9 @@ fun cps_ty_visitor_vtable cast () =
                   val j1 = fresh_ivar ()
                   val j2 = fresh_ivar ()
                   val F = fresh_ivar ()
-                  val j12 = (IV j1, IV j2)
-                  val t = TProd (t1, TArrow ((st2 %++ IV F, t2), j12, Void))
-                  val t = TArrow ((st1 %++ IV F, t), blowup_time_space (i, j12), Void)
+                  val j = (IV j1, IV j2)
+                  val t = TProd (t1, TArrow ((st2 %++ IV F, t2), j, Void))
+                  val t = TArrow ((st1 %++ IV F, t), blowup_time_space (i, j), Void)
                 in
                   TForallICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], t)
                 end
@@ -250,7 +253,7 @@ fun cps_ty_visitor_vtable cast () =
                   val ((name_a, kd_a), t) = unBindAnno2 bind
                   val a = fresh_tvar ()
                   val t = open0_t_t a t
-                  val t = cps_Forall t
+                  val t = cps_Forall (TN0, t)
                 in
                   TForall $ close0_t_t_anno ((a, name_a, kd_a), t)
                 end
@@ -260,11 +263,11 @@ fun cps_ty_visitor_vtable cast () =
                   val a = fresh_ivar ()
                   (* val () = println $ "a=" ^ str_int (unFree_i a) *)
                   (* val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
-                  val t = open0_i_t a t
+                  val t = open0_i_2it a t
                   (* val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
                   val t = cps_Forall t
                 in
-                  TForallI $ close0_i_t_anno ((a, name_a, s_a), t)
+                  TForallI0 $ close0_i_t_anno ((a, name_a, s_a), t)
                 end
               | TQuan (Exists ex, bind) => 
                 let
@@ -278,13 +281,13 @@ fun cps_ty_visitor_vtable cast () =
                 end
               | TQuanI (Exists ex, bind) => 
                 let
-                  val ((name_a, s_a), t) = unBindAnno2 bind
+                  val ((name_a, s_a), (_, t)) = unBindAnno2 bind
                   val a = fresh_ivar ()
                   val t = open0_i_t a t
                   val t = cps_t t
                   val t = close0_i_t_anno ((a, name_a, s_a), t)
                 in
-                  TQuanI (Exists ex, t)
+                  TExistsI t
                 end
               | TRec bind => 
                 let
@@ -353,19 +356,19 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
     val () = println $ sprintf "j_k: $, $" [ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst j_k, ToString.str_i Gctx.empty [] $ Simp.simp_i $ snd j_k]
     val cps_with_frame = cps
     fun cps (e, t_e) (k, j_k) = cps_with_frame (e, t_e, F) (k, j_k)
-    (* [[ \\a.e ]](k) = k (\\a. \\j F. \c {F}. [[e]](c)) *)
-    fun cps_EAbsIT (e, t_e) =
+    (* [[ \\a. e |> i ]](k) = k (\\a. \\j F. \c {F}. [[e]](c)) *)
+    fun cps_EAbsIT (e, (i, t_e)) =
       let
         val j1 = fresh_ivar ()
         val j2 = fresh_ivar ()
         val F = fresh_ivar ()
         val c = fresh_evar ()
         val () = assert_b_m (fn () => "is_value() on " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)) $ is_value e
-        val j12 = (IV j1, IV j2)
-        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, j12)
-        val e = EAscTimeSpace (e, blowup_time_space_t j12)
+        val j = (IV j1, IV j2)
+        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, j)
+        (* val e = EAscTimeSpace (e, blowup_time_space_t j) *)
         val t_e = cps_t t_e
-        val t_c = cont_type ((IV F, t_e), j12)
+        val t_c = cont_type ((IV F, t_e), j)
         val e = EAbs (IV F, close0_e_e_anno ((c, "c", t_c), e))
         val e = EAbsICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], e)
       in
@@ -378,8 +381,8 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       (* [[ x ]](k) = k x *)
       (k $$ EVar x, j_k)
     | S.EAbs (_, bind) =>
-      (* [[ \x {pre_st}. e {post_st} ]](k) = k (\\j F. \(x, c) {pre_st+F}. [[e]](c) |> blowup_time(i, j))
-         where [i] is the time bound of [e], blowup_time(i,j) = b(i+1)+2i+1+j, [b] is blow-up factor *)
+      (* [[ \x {pre_st}. (e |> i) {post_st} ]](k) = k (\\j F. \(x, c) {pre_st+F}. [[e]](c) |> blowup_time(i, j))
+         where blowup_time(i,j) = b(i+1)+2i+1+j, [b] is blow-up factor *)
       let
         val ((name_x, _), e) = unBindAnno2 bind
         val t_e = whnf t_e
@@ -390,11 +393,11 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val j1 = fresh_ivar ()
         val j2 = fresh_ivar ()
         val F = fresh_ivar ()
-        val j12 = (IV j1, IV j2)
-        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, (to_real C_App_BeforeCC, N M_App_BeforeCC) %%+ j12)
-        (* val e = EAscTimeSpace (e, blowup_time_space (i, j12)) *)
+        val j = (IV j1, IV j2)
+        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, (to_real C_App_BeforeCC, N M_App_BeforeCC) %%+ j)
+        (* val e = EAscTimeSpace (e, blowup_time_space (i, j)) *)
         val t_e = cps_t t_e
-        val t_c = cont_type ((post_st %++ IV F, t_e), j12)
+        val t_c = cont_type ((post_st %++ IV F, t_e), j)
         val t_x = cps_t t_x
         val e = EAbsPairClose (pre_st %++ IV F, (x, name_x, t_x), (c, "c", t_c), e)
         val e = EAbsICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], e)
@@ -415,7 +418,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val xk = fresh_evar ()
         (* EApp explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
         val n_fvars = ISet.numItems $ free_evars ISet.empty k
-        val j_k = j_k %%+ (to_real $ C_Abs_Inner_BeforeCC n_fvars, N $ M_Abs_Inner_BeforeCC n_fvars)
+        val j_k = j_k %%+ mapPair' to_real N (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
         val e = EAppIPair (EV x1, j_k) %$ EPair (EV x2, EV xk)
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
@@ -432,12 +435,18 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val (e, n_live_vars) = assert_EAnnoLiveVars e
         val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
+        val t_e = whnf t_e
+        val (_, (j, _)) = assert_TForallI t_e
         val x = fresh_evar ()
+        (* EAppI explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
+        val n_fvars = ISet.numItems $ free_evars ISet.empty k
+        val n_fvars = ISet.numItems $ free_evars ISet.empty k
+        val j_k = j_k %%+ mapPair' to_real N (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
         val c = EAppIPair (EAppI (EV x, i), j_k) %$ k
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
-        cps (e, t_e) (c, blowup_time_space_i j_k)
+        cps (e, t_e) (c, mapPair' to_real N (C_App_BeforeCC + C_Abs_BeforeCC n_live_vars, M_App_BeforeCC + M_Abs_BeforeCC n_live_vars) %%+ subst0_i_2i i j %%+ j_k)
       end
     | S.ETriOp (ETIte (), e, e1, e2) =>
       (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
@@ -502,7 +511,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val a = fresh_tvar ()
         val e = open0_t_e a e
         val t_e = open0_t_t a t_e
-        val e = cps_EAbsIT (e, t_e)
+        val e = cps_EAbsIT (e, (TN0, t_e))
         val e = EAbsT $ close0_t_e_anno ((a, name_a, kd_a), e)
       in
         (k $$ e, j_k)
@@ -514,7 +523,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val (_, t_e) = assert_TForallI t_e
         val a = fresh_ivar ()
         val e = open0_i_e a e
-        val t_e = open0_i_t a t_e
+        val t_e = open0_i_2it a t_e
         val e = cps_EAbsIT (e, t_e)
         val e = EAbsI $ close0_i_e_anno ((a, name_a, s_a), e)
       in

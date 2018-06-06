@@ -10,11 +10,7 @@ fun KArrows bs k = foldr KArrow k bs
 fun KArrowTs ks k = foldr KArrowT k ks
 fun KArrowTypes n k = KArrowTs (repeat n $ KType ()) k
                           
-fun TForallI bind = TQuanI (Forall (), bind)
 fun TForall bind = TQuan (Forall (), bind)
-fun TExistsI bind = TQuanI (Exists (), bind)
-fun TExistsI_Many (ctx, t) = foldr (TExistsI o BindAnno) t ctx
-fun MakeTExistsI (name, s, t) = TExistsI $ IBindAnno ((name, s), t)
 fun TAbsI_Many (ctx, t) = foldr (TAbsI o BindAnno) t ctx
 fun TAbsT_Many (ctx, t) = foldr (TAbsT o BindAnno) t ctx
 fun TUni bind = TQuan (Forall (), bind)
@@ -69,9 +65,9 @@ fun MakeELetType (t, name, e) = ELetType (t, TBind (name, e))
 fun MakeELetConstr (e1, name, e2) = ELetConstr (e1, CBind (name, e2))
 fun MakeEAbsConstr (tnames, inames, ename, e) = EAbsConstr $ Bind ((map TBinder tnames, map IBinder inames, EBinder ename), e)
 fun MakeECase (e, (name1, e1), (name2, e2)) = ECase (e, EBind (name1, e1), EBind (name2, e2))
-fun MakeTQuanI (q, s, name, t) = TQuanI (q, IBindAnno ((name, s), t))
+fun MakeTQuanI (q, s, name, i, t) = TQuanI (q, IBindAnno ((name, s), (i, t)))
 fun MakeTQuan (q, k, name, t) = TQuan (q, TBindAnno ((name, k), t))
-fun MakeTForallI (s, name, t) = MakeTQuanI (Forall (), s, name, t)
+fun MakeTForallI (s, name, i, t) = MakeTQuanI (Forall (), s, name, i, t)
 fun MakeTForall (s, name, t) = MakeTQuan (Forall (), s, name, t)
 fun EAbsTKind (name, e) = MakeEAbsT (name, KType (), e) 
 fun EAbsTKind_Many (names, e) = foldr EAbsTKind e names
@@ -139,7 +135,6 @@ fun collect_EAbsI e =
     | _ => ([], e)
 
 fun EAbsIs (binds, b) = foldr (EAbsI o IBindAnno) b binds
-fun TForallIs (binds, b) = foldr (TForallI o IBindAnno) b binds
                                
 fun collect_EAbsIT e =
   case e of
@@ -202,15 +197,6 @@ fun collect_EAppI e =
     | _ => (e, [])
 fun EAppIs (f, args) = foldl (swap EAppI) f args
                              
-fun make_exists name s = TExistsI $ IBindAnno (((name, dummy), s), TUnit)
-                             
-fun TSumbool (s1, s2) =
-  let
-    val name = "__p"
-  in
-    TSum (make_exists name s1, make_exists name s2)
-  end
-                  
 fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
                              
 fun assert_TiBool t =

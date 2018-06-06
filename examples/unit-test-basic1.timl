@@ -1,21 +1,22 @@
 structure UnitTestBasic1 = struct
 
-(* val x = 1 *)
-val f = fn y => 1 + y
-(* (* fun f y = 1 + y *) *)
-(* (* val f = fn y => x + y *) *)
-(* fun f y = x + y *)
-val a = f 64
-(* val b = f 64 *)
-(* (* val () = __&halt (a + x) *) *)
-(* val b = a + 2 *)
-(* val b = (a, 2) *)
+(* (* val x = 1 *) *)
+(* val f = fn y => 1 + y *)
+(* (* (* fun f y = 1 + y *) *) *)
+(* (* (* val f = fn y => x + y *) *) *)
+(* (* fun f y = x + y *) *)
+(* val a = f 64 *)
+(* (* val b = f 64 *) *)
+(* (* (* val () = __&halt (a + x) *) *) *)
+(* (* val b = a + 2 *) *)
+(* (* val b = (a, 2) *) *)
 
 (* (* (* (* val x = 1 *) *) *) *)
 (* val a = if __&false then 1 else 0 *)
 (* (* (* (* val () = __&halt (a + x) *) *) *) *)
 
-val f = fn {n : Nat} x => x + 1
+(* val f = fn {n : Nat} x => x + 1 *)
+fun f {n : Nat} x = x + 1
 val a = @f {1}
 
 (* val a = "abc" *)

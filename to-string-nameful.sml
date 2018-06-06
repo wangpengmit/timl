@@ -441,12 +441,11 @@ and strn_decl decl =
           val tnames = (join "" o map (fn nm => sprintf " [$]" [nm])) tnames
           fun f bind =
             case bind of
-                SortingST (name, Outer s, i) =>
+                SortingST (name, Outer s) =>
                 let
                   val name = binder2str name
-                  val (i, j) = unInner i
                 in
-                  sprintf "{$ : $ using $, $}" [name, strn_s s, strn_i i, strn_i j]
+                  sprintf "{$ : $}" [name, strn_s s]
                 end
               | TypingST pn =>
                 sprintf "$" [strn_pn pn]

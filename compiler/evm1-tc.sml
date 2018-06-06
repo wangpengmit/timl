@@ -417,7 +417,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
-        val ((_, s), t2) = assert_TForallI t0
+        val ((_, s), (_, t2)) = assert_TForallI t0
         val i = sc_against_sort ictx (unInner i, s)
         val t = subst0_i_t i t2
       in

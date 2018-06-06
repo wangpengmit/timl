@@ -40,7 +40,7 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_
        visit_ty_bin_op : 'this -> 'env -> ty_bin_op -> ty_bin_op,
        visit_quan : 'this -> 'env -> unit quan -> unit quan,
        visit_ibind_anno_bsort : 'this -> ('env -> 'bsort -> 'bsort2) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty) -> 'env -> ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('bsort2, ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno,
-       visit_ibind_anno_sort : 'this -> ('env -> 'sort -> 'sort2) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty) -> 'env -> ('sort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('sort2, ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno,
+       visit_ibind_anno_sort : 'this -> ('env -> 'sort -> 'sort2) -> ('env -> ('idx * 'idx) * ('var, 'bsort, 'idx, 'sort) ty -> ('idx2 * 'idx2) * ('var2, 'bsort2, 'idx2, 'sort2) ty) -> 'env -> ('sort, ('idx * 'idx) * ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('sort2, ('idx2 * 'idx2) * ('var2, 'bsort2, 'idx2, 'sort2) ty) ibind_anno,
        visit_tbind_anno : 'this -> ('env -> 'bsort kind -> 'bsort2 kind) -> ('env -> ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty) -> 'env -> ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('bsort2 kind, ('var2, 'bsort2, 'idx2, 'sort2) ty) tbind_anno,
        extend_i : 'this -> 'env -> iname -> 'env * iname,
        extend_t : 'this -> 'env -> tname -> 'env * tname
@@ -65,6 +65,241 @@ fun new_ty_visitor vtable params =
     val vtable = vtable ty_visitor_impls_interface params
   in
     TyVisitor vtable
+  end
+
+(***************** the default visitor  **********************)    
+
+open VisitorUtil
+       
+fun default_ty_visitor_vtable
+      (cast : 'this -> ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_interface)
+      extend_i
+      extend_t
+      visit_var
+      visit_bsort
+      visit_idx
+      visit_sort
+    : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable =
+  let
+    fun visit_kind this env data =
+      let
+        val vtable = cast this
+      in
+        case data of
+            KType () => #visit_KType vtable this env ()
+          | KArrow data => #visit_KArrow vtable this env data
+          | KArrowT data => #visit_KArrowT vtable this env data
+      end
+    fun visit_KType this env data = KType ()
+    fun visit_KArrow this env data = 
+      let
+        val vtable = cast this
+        val (b, k) = data
+        val b = #visit_bsort vtable this env b
+        val k = #visit_kind vtable this env k
+      in
+        KArrow (b, k)
+      end
+    fun visit_KArrowT this env data = 
+      let
+        val vtable = cast this
+        val (k1, k2) = data
+        val k1 = #visit_kind vtable this env k1
+        val k2 = #visit_kind vtable this env k2
+      in
+        KArrowT (k1, k2)
+      end
+    fun visit_ty this env data =
+      let
+        val vtable = cast this
+      in
+        case data of
+            TVar data => #visit_TVar vtable this env data
+          | TConst data => #visit_TConst vtable this env data
+          | TBinOp data => #visit_TBinOp vtable this env data
+          | TArrow data => #visit_TArrow vtable this env data
+          | TAbsI data => #visit_TAbsI vtable this env data
+          | TAppI data => #visit_TAppI vtable this env data
+          | TQuan data => #visit_TQuan vtable this env data
+          | TQuanI data => #visit_TQuanI vtable this env data
+          | TRec data => #visit_TRec vtable this env data
+          | TNat data => #visit_TNat vtable this env data
+          | TArr data => #visit_TArr vtable this env data
+          | TAbsT data => #visit_TAbsT vtable this env data
+          | TAppT data => #visit_TAppT vtable this env data
+          | TProdEx data => #visit_TProdEx vtable this env data
+          | TArrowTAL data => #visit_TArrowTAL vtable this env data
+          | TArrowEVM (i1, rctx, ts, i2) =>
+            TArrowEVM (#visit_idx vtable this env i1,
+                       Rctx.map (#visit_ty vtable this env) rctx,
+                       visit_list (#visit_ty vtable this) env ts,
+                       visit_pair (#visit_idx vtable this) (#visit_idx vtable this) env i2)
+          | TiBool idx => TiBool $ #visit_idx vtable this env idx
+          | TPreArray (t, i1, i2, b) => TPreArray (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2, b)
+          | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
+          | TPreTuple (ts, i, i2) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, #visit_idx vtable this env i2)
+          | TTuplePtr (ts, i, b) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, b)
+          | TTuple ts => TTuple (visit_list (#visit_ty vtable this) env ts)
+          | TMap t => TMap $ #visit_ty vtable this env t
+          | TState x =>  TState x
+          | TVectorPtr (x, i) => TVectorPtr (x, #visit_idx vtable this env i)
+      end
+    fun visit_TVar this env data =
+      let
+        val vtable = cast this
+      in
+        TVar $ visit_pair (#visit_var vtable this) (visit_list (#visit_kind vtable this)) env data
+      end
+    fun visit_TConst this env data =
+      let
+        val vtable = cast this
+      in
+        TConst $ #visit_ty_const vtable this env data
+      end
+    fun visit_TBinOp this env data = 
+      let
+        val vtable = cast this
+        val (opr, t1, t2) = data
+        val opr = #visit_ty_bin_op vtable this env opr
+        val t1 = #visit_ty vtable this env t1
+        val t2 = #visit_ty vtable this env t2
+      in
+        TBinOp (opr, t1, t2)
+      end
+    fun visit_TArrow this env data = 
+      let
+        val vtable = cast this
+        val ((i1, t1), i, (i2, t2)) = data
+        val i1 = #visit_idx vtable this env i1
+        val t1 = #visit_ty vtable this env t1
+        val i = visit_pair (#visit_idx vtable this) (#visit_idx vtable this) env i
+        val i2 = #visit_idx vtable this env i2
+        val t2 = #visit_ty vtable this env t2
+      in
+        TArrow ((i1, t1), i, (i2, t2))
+      end
+    fun visit_TAbsI this env data =
+      let
+        val vtable = cast this
+      in
+        TAbsI $ #visit_ibind_anno_bsort vtable this (#visit_bsort vtable this) (#visit_ty vtable this) env data
+      end
+    fun visit_TAppI this env data = 
+      let
+        val vtable = cast this
+        val (t, i) = data
+        val t = #visit_ty vtable this env t
+        val i = #visit_idx vtable this env i
+      in
+        TAppI (t, i)
+      end
+    fun visit_TQuan this env data =
+      let
+        val (q, bind) = data
+        val vtable = cast this
+        val q = #visit_quan vtable this env q
+        val bind = #visit_tbind_anno vtable this (#visit_kind vtable this) (#visit_ty vtable this) env bind
+      in
+        TQuan (q, bind)
+      end
+    fun visit_TQuanI this env data =
+      let
+        val (q, bind) = data
+        val vtable = cast this
+        val q = #visit_quan vtable this env q
+        val bind = #visit_ibind_anno_sort vtable this (#visit_sort vtable this) (visit_pair (visit_pair (#visit_idx vtable this) (#visit_idx vtable this)) (#visit_ty vtable this)) env bind
+      in
+        TQuanI (q, bind)
+      end
+    fun visit_TRec this env data =
+      let
+        val vtable = cast this
+      in
+        TRec $ #visit_tbind_anno vtable this (#visit_kind vtable this) (#visit_ty vtable this) env data
+      end
+    fun visit_TNat this env data = 
+      let
+        val vtable = cast this
+      in
+        TNat $ #visit_idx vtable this env data
+      end
+    fun visit_TArr this env data = 
+      let
+        val vtable = cast this
+        val (t, i) = data
+        val t = #visit_ty vtable this env t
+        val i = #visit_idx vtable this env i
+      in
+        TArr (t, i)
+      end
+    fun visit_TAbsT this env data =
+      let
+        val vtable = cast this
+      in
+        TAbsT $ #visit_tbind_anno vtable this (#visit_kind vtable this) (#visit_ty vtable this) env data
+      end
+    fun visit_TAppT this env data = 
+      let
+        val vtable = cast this
+        val (t1, t2) = data
+        val t1 = #visit_ty vtable this env t1
+        val t2 = #visit_ty vtable this env t2
+      in
+        TAppT (t1, t2)
+      end
+    fun visit_TProdEx this env data = 
+      let
+        val vtable = cast this
+        val ((t1, b1), (t2, b2)) = data
+        val t1 = #visit_ty vtable this env t1
+        val t2 = #visit_ty vtable this env t2
+      in
+        TProdEx ((t1, b1), (t2, b2))
+      end
+    fun visit_TArrowTAL this env data = 
+      let
+        val vtable = cast this
+        val (ts, i) = data
+        val ts = Rctx.map (#visit_ty vtable this env) ts
+        val i = #visit_idx vtable this env i
+      in
+        TArrowTAL (ts, i)
+      end
+    fun default_visit_bind_anno extend this = visit_bind_anno (extend this)
+  in
+    {visit_kind = visit_kind,
+     visit_KType = visit_KType,
+     visit_KArrow = visit_KArrow,
+     visit_KArrowT = visit_KArrowT,
+     visit_ty = visit_ty,
+     visit_TVar = visit_TVar,
+     visit_TConst = visit_TConst,
+     visit_TBinOp = visit_TBinOp,
+     visit_TArrow = visit_TArrow,
+     visit_TAbsI = visit_TAbsI,
+     visit_TAppI = visit_TAppI,
+     visit_TQuan = visit_TQuan,
+     visit_TQuanI = visit_TQuanI,
+     visit_TRec = visit_TRec,
+     visit_TNat = visit_TNat,
+     visit_TArr = visit_TArr,
+     visit_TAbsT = visit_TAbsT,
+     visit_TAppT = visit_TAppT,
+     visit_TProdEx = visit_TProdEx,
+     visit_TArrowTAL = visit_TArrowTAL,
+     visit_var = visit_var,
+     visit_bsort = visit_bsort,
+     visit_idx = visit_idx,
+     visit_sort = visit_sort,
+     visit_ty_const = visit_noop,
+     visit_ty_bin_op = visit_noop,
+     visit_quan = visit_noop,
+     visit_ibind_anno_bsort = default_visit_bind_anno extend_i,
+     visit_ibind_anno_sort = default_visit_bind_anno extend_i,
+     visit_tbind_anno = default_visit_bind_anno extend_t,
+     extend_i = extend_i,
+     extend_t = extend_t
+    }
   end
 
 (* overrides *)
@@ -500,241 +735,6 @@ fun override_visit_TArr (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2
        extend_i = #extend_i record,
        extend_t = #extend_t record
   }
-
-(***************** the default visitor  **********************)    
-
-open VisitorUtil
-       
-fun default_ty_visitor_vtable
-      (cast : 'this -> ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_interface)
-      extend_i
-      extend_t
-      visit_var
-      visit_bsort
-      visit_idx
-      visit_sort
-    : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable =
-  let
-    fun visit_kind this env data =
-      let
-        val vtable = cast this
-      in
-        case data of
-            KType () => #visit_KType vtable this env ()
-          | KArrow data => #visit_KArrow vtable this env data
-          | KArrowT data => #visit_KArrowT vtable this env data
-      end
-    fun visit_KType this env data = KType ()
-    fun visit_KArrow this env data = 
-      let
-        val vtable = cast this
-        val (b, k) = data
-        val b = #visit_bsort vtable this env b
-        val k = #visit_kind vtable this env k
-      in
-        KArrow (b, k)
-      end
-    fun visit_KArrowT this env data = 
-      let
-        val vtable = cast this
-        val (k1, k2) = data
-        val k1 = #visit_kind vtable this env k1
-        val k2 = #visit_kind vtable this env k2
-      in
-        KArrowT (k1, k2)
-      end
-    fun visit_ty this env data =
-      let
-        val vtable = cast this
-      in
-        case data of
-            TVar data => #visit_TVar vtable this env data
-          | TConst data => #visit_TConst vtable this env data
-          | TBinOp data => #visit_TBinOp vtable this env data
-          | TArrow data => #visit_TArrow vtable this env data
-          | TAbsI data => #visit_TAbsI vtable this env data
-          | TAppI data => #visit_TAppI vtable this env data
-          | TQuan data => #visit_TQuan vtable this env data
-          | TQuanI data => #visit_TQuanI vtable this env data
-          | TRec data => #visit_TRec vtable this env data
-          | TNat data => #visit_TNat vtable this env data
-          | TArr data => #visit_TArr vtable this env data
-          | TAbsT data => #visit_TAbsT vtable this env data
-          | TAppT data => #visit_TAppT vtable this env data
-          | TProdEx data => #visit_TProdEx vtable this env data
-          | TArrowTAL data => #visit_TArrowTAL vtable this env data
-          | TArrowEVM (i1, rctx, ts, i2) =>
-            TArrowEVM (#visit_idx vtable this env i1,
-                       Rctx.map (#visit_ty vtable this env) rctx,
-                       visit_list (#visit_ty vtable this) env ts,
-                       visit_pair (#visit_idx vtable this) (#visit_idx vtable this) env i2)
-          | TiBool idx => TiBool $ #visit_idx vtable this env idx
-          | TPreArray (t, i1, i2, b) => TPreArray (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2, b)
-          | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
-          | TPreTuple (ts, i, i2) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, #visit_idx vtable this env i2)
-          | TTuplePtr (ts, i, b) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, b)
-          | TTuple ts => TTuple (visit_list (#visit_ty vtable this) env ts)
-          | TMap t => TMap $ #visit_ty vtable this env t
-          | TState x =>  TState x
-          | TVectorPtr (x, i) => TVectorPtr (x, #visit_idx vtable this env i)
-      end
-    fun visit_TVar this env data =
-      let
-        val vtable = cast this
-      in
-        TVar $ visit_pair (#visit_var vtable this) (visit_list (#visit_kind vtable this)) env data
-      end
-    fun visit_TConst this env data =
-      let
-        val vtable = cast this
-      in
-        TConst $ #visit_ty_const vtable this env data
-      end
-    fun visit_TBinOp this env data = 
-      let
-        val vtable = cast this
-        val (opr, t1, t2) = data
-        val opr = #visit_ty_bin_op vtable this env opr
-        val t1 = #visit_ty vtable this env t1
-        val t2 = #visit_ty vtable this env t2
-      in
-        TBinOp (opr, t1, t2)
-      end
-    fun visit_TArrow this env data = 
-      let
-        val vtable = cast this
-        val ((i1, t1), i, (i2, t2)) = data
-        val i1 = #visit_idx vtable this env i1
-        val t1 = #visit_ty vtable this env t1
-        val i = visit_pair (#visit_idx vtable this) (#visit_idx vtable this) env i
-        val i2 = #visit_idx vtable this env i2
-        val t2 = #visit_ty vtable this env t2
-      in
-        TArrow ((i1, t1), i, (i2, t2))
-      end
-    fun visit_TAbsI this env data =
-      let
-        val vtable = cast this
-      in
-        TAbsI $ #visit_ibind_anno_bsort vtable this (#visit_bsort vtable this) (#visit_ty vtable this) env data
-      end
-    fun visit_TAppI this env data = 
-      let
-        val vtable = cast this
-        val (t, i) = data
-        val t = #visit_ty vtable this env t
-        val i = #visit_idx vtable this env i
-      in
-        TAppI (t, i)
-      end
-    fun visit_TQuan this env data =
-      let
-        val (q, bind) = data
-        val vtable = cast this
-        val q = #visit_quan vtable this env q
-        val bind = #visit_tbind_anno vtable this (#visit_kind vtable this) (#visit_ty vtable this) env bind
-      in
-        TQuan (q, bind)
-      end
-    fun visit_TQuanI this env data =
-      let
-        val (q, bind) = data
-        val vtable = cast this
-        val q = #visit_quan vtable this env q
-        val bind = #visit_ibind_anno_sort vtable this (#visit_sort vtable this) (visit_pair (visit_pair (#visit_idx vtable this) (#visit_idx vtable this)) (#visit_ty vtable this)) env bind
-      in
-        TQuanI (q, bind)
-      end
-    fun visit_TRec this env data =
-      let
-        val vtable = cast this
-      in
-        TRec $ #visit_tbind_anno vtable this (#visit_kind vtable this) (#visit_ty vtable this) env data
-      end
-    fun visit_TNat this env data = 
-      let
-        val vtable = cast this
-      in
-        TNat $ #visit_idx vtable this env data
-      end
-    fun visit_TArr this env data = 
-      let
-        val vtable = cast this
-        val (t, i) = data
-        val t = #visit_ty vtable this env t
-        val i = #visit_idx vtable this env i
-      in
-        TArr (t, i)
-      end
-    fun visit_TAbsT this env data =
-      let
-        val vtable = cast this
-      in
-        TAbsT $ #visit_tbind_anno vtable this (#visit_kind vtable this) (#visit_ty vtable this) env data
-      end
-    fun visit_TAppT this env data = 
-      let
-        val vtable = cast this
-        val (t1, t2) = data
-        val t1 = #visit_ty vtable this env t1
-        val t2 = #visit_ty vtable this env t2
-      in
-        TAppT (t1, t2)
-      end
-    fun visit_TProdEx this env data = 
-      let
-        val vtable = cast this
-        val ((t1, b1), (t2, b2)) = data
-        val t1 = #visit_ty vtable this env t1
-        val t2 = #visit_ty vtable this env t2
-      in
-        TProdEx ((t1, b1), (t2, b2))
-      end
-    fun visit_TArrowTAL this env data = 
-      let
-        val vtable = cast this
-        val (ts, i) = data
-        val ts = Rctx.map (#visit_ty vtable this env) ts
-        val i = #visit_idx vtable this env i
-      in
-        TArrowTAL (ts, i)
-      end
-    fun default_visit_bind_anno extend this = visit_bind_anno (extend this)
-  in
-    {visit_kind = visit_kind,
-     visit_KType = visit_KType,
-     visit_KArrow = visit_KArrow,
-     visit_KArrowT = visit_KArrowT,
-     visit_ty = visit_ty,
-     visit_TVar = visit_TVar,
-     visit_TConst = visit_TConst,
-     visit_TBinOp = visit_TBinOp,
-     visit_TArrow = visit_TArrow,
-     visit_TAbsI = visit_TAbsI,
-     visit_TAppI = visit_TAppI,
-     visit_TQuan = visit_TQuan,
-     visit_TQuanI = visit_TQuanI,
-     visit_TRec = visit_TRec,
-     visit_TNat = visit_TNat,
-     visit_TArr = visit_TArr,
-     visit_TAbsT = visit_TAbsT,
-     visit_TAppT = visit_TAppT,
-     visit_TProdEx = visit_TProdEx,
-     visit_TArrowTAL = visit_TArrowTAL,
-     visit_var = visit_var,
-     visit_bsort = visit_bsort,
-     visit_idx = visit_idx,
-     visit_sort = visit_sort,
-     visit_ty_const = visit_noop,
-     visit_ty_bin_op = visit_noop,
-     visit_quan = visit_noop,
-     visit_ibind_anno_bsort = default_visit_bind_anno extend_i,
-     visit_ibind_anno_sort = default_visit_bind_anno extend_i,
-     visit_tbind_anno = default_visit_bind_anno extend_t,
-     extend_i = extend_i,
-     extend_t = extend_t
-    }
-  end
 
 (***************** the "shift_i_t" visitor  **********************)    
     

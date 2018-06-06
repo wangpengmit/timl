@@ -363,12 +363,12 @@ fun cc_ty_visitor_vtable cast () =
           end
         | TQuanI (q, bind) =>
           let
-            val (s, (name, t)) = unBindAnnoName bind
+            val (s, (name, (_, t))) = unBindAnnoName bind
             val a = fresh_ivar ()
             val t = open0_i_t a t
             val t = cc_t t
           in
-            TQuanI (q, close0_i_t_anno ((a, fst name, s), t))
+            TQuanI0 (q, close0_i_t_anno ((a, fst name, s), t))
           end
         | TRec bind =>
           let
@@ -432,7 +432,7 @@ fun apply_TForallIT b args =
     case (b, args) of
         (TQuanI (Forall (), bind), inl v :: args) =>
         let
-          val (_, (_, b)) = unBindAnnoName bind
+          val (_, (_, (_, b))) = unBindAnnoName bind
         in
           apply_TForallIT (subst0_i_t v b) args
         end

@@ -59,7 +59,7 @@ fun on_mt (t : S.mtype) =
     | S.TArray (t, i) => TArr (on_mt t, i)
     | S.TUnit _ => TUnit
     | S.TProd (t1, t2) => TProd (on_mt t1, on_mt t2)
-    | S.TUniI (s, Bind.Bind (name, t), r) => TQuanI (Forall (), IBindAnno ((name, s), on_mt t))
+    | S.TUniI (s, Bind.Bind (name, (i, t)), r) => TQuanI (Forall (), IBindAnno ((name, s), (i, on_mt t)))
     | S.TVar x => TVar (x, [])
     | S.TApp (t1, t2) => TAppT (on_mt t1, on_mt t2)
     | S.TAbs (k, Bind.Bind (name, t), _) => TAbsT $ TBindAnno ((name, on_k k), on_mt t)
@@ -553,30 +553,31 @@ and on_DRec (name, bind, _) =
       (* val i = i !! (fn () => raise Impossible "to-micro-timl/DRec: i must be SOME") *)
       val tnames = map unBinderName tnames
       val binds = unTeles binds
-      fun on_bind (bind, e) =
-        case bind of
-            S.SortingST (name, Outer s) => S.MakeEAbsI (unBinderName name, s, e, dummy)
-          | S.TypingST pn => S.MakeEAbs (StMap.empty, pn, e)
-      (* val e = foldr on_bind e binds *)
-      val e =
-          case rev binds of
-              S.TypingST pn :: binds => foldl on_bind (S.MakeEAbs (pre, pn, e)) binds
-            | [] => e
-            | _ => raise Impossible "to-micro-timl/DRec: Recursion must have a typing bind as the last bind"
+      val () = assert_nil binds
+      (* fun on_bind (bind, e) = *)
+      (*   case bind of *)
+      (*       S.SortingST (name, Outer s) => S.MakeEAbsI (unBinderName name, s, e, dummy) *)
+      (*     | S.TypingST pn => S.MakeEAbs (StMap.empty, pn, e) *)
+      (* (* val e = foldr on_bind e binds *) *)
+      (* val e = *)
+      (*     case rev binds of *)
+      (*         S.TypingST pn :: binds => foldl on_bind (S.MakeEAbs (pre, pn, e)) binds *)
+      (*       | [] => e *)
+      (*       | _ => raise Impossible "to-micro-timl/DRec: Recursion must have a typing bind as the last bind" *)
       val e = on_e e
-      fun on_bind_t (bind, t) =
-        case bind of
-            S.SortingST (name, Outer s) => S.MakeTUniI (s, unBinderName name, t, dummy)
-          | S.TypingST pn =>
-            case pn of
-                S.PnAnno (_, Outer t1) => S.TArrow ((StMap.empty, t1), TN0 dummy, (StMap.empty, t))
-              | _ => raise Impossible "to-micro-timl/DRec: must be AnnoP"
-      val t = 
-          case rev binds of
-              S.TypingST (S.PnAnno (_, Outer t1)) :: binds =>
-              foldl on_bind_t (S.TArrow ((pre, t1), i, (post, t))) binds
-            | [] => t
-            | _ => raise Impossible "to-micro-timl/DRec: Recursion must have an annotated typing bind as the last bind"
+      (* fun on_bind_t (bind, t) = *)
+      (*   case bind of *)
+      (*       S.SortingST (name, Outer s) => S.MakeTUniI (s, unBinderName name, t, dummy) *)
+      (*     | S.TypingST pn => *)
+      (*       case pn of *)
+      (*           S.PnAnno (_, Outer t1) => S.TArrow ((StMap.empty, t1), TN0 dummy, (StMap.empty, t)) *)
+      (*         | _ => raise Impossible "to-micro-timl/DRec: must be AnnoP" *)
+      (* val t =  *)
+      (*     case rev binds of *)
+      (*         S.TypingST (S.PnAnno (_, Outer t1)) :: binds => *)
+      (*         foldl on_bind_t (S.TArrow ((pre, t1), i, (post, t))) binds *)
+      (*       | [] => t *)
+      (*       | _ => raise Impossible "to-micro-timl/DRec: Recursion must have an annotated typing bind as the last bind" *)
       val t = on_mt t
       val e = MakeERec (name, t, e)
       val t = TUniKind_Many (tnames, t)

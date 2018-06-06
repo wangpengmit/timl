@@ -145,8 +145,8 @@ fun test1 dirname =
       val SUnit = SUnit dummy
       val t = TNat $ IVar (ID (1, dummy), [])
       val s = SSubset ((BSNat, dummy), Bind.Bind (("_VC", dummy), INat (0, dummy) %= IVar (ID (1, dummy), [])), dummy)
-      val t = MakeTForallI (s, ("_VC", dummy), t)
-      val t = MakeTForallI (SNat, ("_i0", dummy), t)
+      val t = MakeTForallI (s, ("_VC", dummy), TN0 dummy, t)
+      val t = MakeTForallI (SNat, ("_i0", dummy), TN0 dummy, t)
       (* val t0 = t *)
       val s_expected = s
       (* val () = println $ "before open_i_s(): " ^ (ExportPP.str_s $ ExportPP.export_s [] s) *)

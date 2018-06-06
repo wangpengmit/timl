@@ -497,6 +497,11 @@ fun assert_b_m msg b = assert_m (const_fun b) msg
 fun assert p msg = assert_m p (const_fun msg)
 fun assert_b msg b = assert (const_fun b) msg
 
+fun assert_nil ls =
+    case ls of
+        [] => ()
+      | x :: xs => raise Impossible "assert_nil fails"
+                            
 fun assert_cons ls =
     case ls of
         x :: xs => (x, xs)
