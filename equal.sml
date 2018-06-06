@@ -136,11 +136,13 @@ fun eq_ls eq (ls1, ls2) = length ls1 = length ls2 andalso List.all eq $ zip (ls1
 fun eq_k ((n, sorts) : kind) (n', sorts') =
   n = n' andalso eq_ls (uncurry eq_bs) (sorts, sorts')
 
+fun eq_2i (j, i) (j', i') = eq_i j j' andalso eq_i i i'
+                                                   
 fun eq_mt t t' = 
     case t of
-	TArrow ((st1, t1), (j, i), (st2, t2)) =>
+	TArrow ((st1, t1), i, (st2, t2)) =>
         (case t' of
-	     TArrow ((st1', t1'), (j', i'), (st2', t2')) => eq_state st1 st1' andalso eq_mt t1 t1' andalso eq_i j j' andalso eq_i i i' andalso eq_state st2 st2' andalso eq_mt t2 t2'
+	     TArrow ((st1', t1'), i', (st2', t2')) => eq_state st1 st1' andalso eq_mt t1 t1' andalso eq_2i i i' andalso eq_state st2 st2' andalso eq_mt t2 t2'
            | _ => false
         )
       | TNat (i, r) =>
@@ -168,9 +170,9 @@ fun eq_mt t t' =
              TProd (t1', t2') => eq_mt t1 t1' andalso eq_mt t2 t2'
            | _ => false
         )
-      | TUniI (s, Bind (_, t), r) =>
+      | TUniI (s, Bind (_, (i, t)), r) =>
         (case t' of
-             TUniI (s', Bind (_, t'), _) => eq_s s s' andalso eq_mt t t'
+             TUniI (s', Bind (_, (i', t')), _) => eq_s s s' andalso eq_2i i i' andalso eq_mt t t'
            | _ => false
         )
       | TSumbool (s1, s2) =>

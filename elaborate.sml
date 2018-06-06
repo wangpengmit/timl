@@ -159,6 +159,8 @@ local
 	  | _ => NONE
       end
 
+  fun IUnderscore r = elab_i (S.IVar (NONE, ("_", r)))
+        
   fun elab_mt t =
       case t of
 	  S.TVar (id as (m, (x, r))) =>
@@ -186,9 +188,10 @@ local
 	| S.TArrow (t1, (j, i), t2, _) => TPureArrow (elab_mt t1, (elab_i j, elab_i i), elab_mt t2)
 	| S.TProd (t1, t2, _) => TProd (elab_mt t1, elab_mt t2)
 	| S.TQuan (quan, binds, t, r) =>
-	  let fun f ((x, s, _), t) =
+	  let
+            fun f ((x, s, _), t) =
 		case quan of
-		    S.Forall () => TUniI (elab_s s, Bind (x, t), r)
+		    S.Forall () => TUniI (elab_s s, Bind (x, ((IUnderscore r, IUnderscore r), t)), r)
 	  in
 	    foldr f (elab_mt t) binds
 	  end
@@ -471,7 +474,7 @@ local
             fun f bind =
                 case bind of
 		    BindTyping pn => TypingST (elab_pn pn)
-		  | BindSorting (nm, s, _) => SortingST (Binder $ IName nm, Outer $ elab_s s)
+		  | BindSorting (nm, s, _) => SortingST (Binder $ IName nm, Outer $ elab_s s, Inner (IUnderscore r, IUnderscore r))
             val binds = map f binds
             (* if the function body is a [case] without annotations, copy the return clause from the function signature to the [case] *)
             (* val e = copy_anno (t, d) e *)

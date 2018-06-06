@@ -402,12 +402,19 @@ fun unify_mt r gctx ctx (t, t') =
         | (TProd (t1, t2), TProd (t1', t2')) =>
           (unify_mt ctx (t1, t1');
            unify_mt ctx (t2, t2'))
-        | (TUniI (s, Bind ((name, _), t1), _), TUniI (s', Bind (_, t1'), _)) =>
+        | (TUniI (s, Bind ((name, _), ((i, j), t1)), _), TUniI (s', Bind (_, ((i', j'), t1')), _)) =>
           let
             val () = is_eqv_sort r gctxn sctxn (s, s')
-            val () = open_close add_sorting_sk (name, s) ctx (fn ctx => unify_mt ctx (t1, t1'))
           in
-            ()
+            open_close add_sorting_sk (name, s) ctx
+                       (fn ctx as (sctx, _) =>
+                           let
+                             val sctxn = sctx_names sctx
+                           in
+                             (unify_i r gctxn sctxn (i, i');
+                              unify_i r gctxn sctxn (j, j');
+                              unify_mt ctx (t1, t1'))
+                           end)
           end
         | (TSumbool (s1, s2), TSumbool (s1', s2')) =>
           (is_eqv_sort r gctxn sctxn (s1, s1');

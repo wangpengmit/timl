@@ -58,7 +58,7 @@ fun str_raw_mt (t : mtype) : string =
     | TArray (t, i) => sprintf "TArray ($, $)" [str_raw_mt t, str_raw_i i]
     | TUnit _ => "TUnit"
     | TProd (t1, t2) => sprintf "TProd ($, $)" [str_raw_mt t1, str_raw_mt t2]
-    | TUniI (s, bind, _) => sprintf "TUniI ($, $)" ["<sort>", str_raw_bind str_raw_mt bind]
+    | TUniI (s, bind, _) => sprintf "TUniI ($, $)" ["<sort>", str_raw_bind (fn ((i, j), t) => sprintf "$, $, $" [str_raw_i i, str_raw_i j, str_raw_mt t]) bind]
     | TVar x => sprintf "TVar ($)" [str_raw_var x]
     | TApp (t1, t2) => sprintf "TApp ($, $)" [str_raw_mt t1, str_raw_mt t2]
     | TAbs (k, bind, _) => sprintf "TAbs ($, $)" ["<kind>", str_raw_bind str_raw_mt bind]

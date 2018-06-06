@@ -240,12 +240,16 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
 	  (TProd (check_higher_kind_Type (ctx, c1),
 	         check_higher_kind_Type (ctx, c2)),
            HType)
-	| U.TUniI (s, Bind ((name, r), c), r_all) => 
+	| U.TUniI (s, Bind ((name, r), ((i, j), t)), r_all) => 
           let
             val s = is_wf_sort gctx (sctx, s)
-            val c = open_close add_sorting_sk (name, s) ctx (fn ctx => check_higher_kind_Type (ctx, c))
+            val t = open_close add_sorting_sk (name, s) ctx
+                               (fn ctx as (sctx, _) =>
+                                   ((check_basic_sort gctx (sctx, i, BSTime),
+                                     check_basic_sort gctx (sctx, j, BSNat)),
+                                    check_higher_kind_Type (ctx, t)))
           in
-	    (TUniI (s, Bind ((name, r), c), r_all),
+	    (TUniI (s, Bind ((name, r), t), r_all),
              HType)
           end
         | U.TAbsI (b, Bind ((name, r1), t), r) =>
@@ -1106,6 +1110,10 @@ fun assert_EAnnoLiveVars err e =
   case e of
       EUnOp (EUAnno (EALiveVars n), e, _) => (e, n)
     | _ => err ()
+fun is_rec_body e =
+  case e of
+      EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
+    | _ => (false, e)
                
 fun N n = INat (n, dummy)
 fun TN n = (to_real n, N 0)
@@ -1181,7 +1189,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             (* val () = println $ str_mt skctxn t *)
             fun insert_idx_args t_all =
               case t_all of
-                  TUniI (s, Bind ((name, _), t), _) =>
+                  TUniI (s, Bind ((name, _), (_, t)), _) =>
                   let
                     (* val bs = fresh_basic_sort () *)
                     (* val i = fresh_i sctx bs r *)
@@ -1543,6 +1551,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val (e, t, d, st) = get_mtype (ctx, st) e
                  val (e, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e, ["Should be EAnnoLiveVars"])) e
                  val cost = mapPair' to_real N (C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars)
+                 fun subst_i_2i v b = unop_pair (subst_i_i v) b
                in
                  case t of
                      TUniI (s, Bind ((arg_name, _), (d2, t1)), r) =>
@@ -1652,10 +1661,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val post_st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) post_st
             val () = close_n nps
             val () = close_ctx ctxd
-            fun is_rec_body e =
-              case e of
-                  EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
-                | _ => (false, e)
             val (is_rec, e) = is_rec_body e
             (* calculation of 'excluded' is more complicated because of patterns *)
             val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
@@ -2013,7 +2018,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val e = U.EAscTime (e, fst d)
               fun attach_bind_e (bind, e) =
                 case bind of
-                    U.SortingST (name, Outer s) => U.MakeEAbsI (unBinderName name, s, e, r)
+                    U.SortingST (name, Outer s, _) => U.MakeEAbsI (unBinderName name, s, e, r)
                   | U.TypingST pn => U.MakeEAbs (StMap.empty, pn, e)
               val len_binds = length binds
               val e = foldri (fn (n, bind, e) =>
@@ -2044,8 +2049,8 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                   | U.PnConstr _ => U.TUVar ((), r) (* todo: pn mustn't introduce index vars *)
               fun attach_bind_t (bind, t) =
                 case bind of
-	            U.SortingST (name, Outer s) => U.TUniI (s, Bind (unBinderName name, t), r)
-	          | U.TypingST pn => U.TArrow ((StMap.empty, type_from_ptrn pn), U.TN0 r, (StMap.empty, t))
+	            U.SortingST (name, Outer s, i) => U.TUniI (s, Bind (unBinderName name, (unInner i, t)), r)
+	          | U.TypingST pn => U.TArrow ((StMap.empty, type_from_ptrn pn), (U.IUVar ((), r), U.IUVar ((), r)), (StMap.empty, t))
               val te =
                   case rev binds of
                       U.TypingST pn :: binds =>

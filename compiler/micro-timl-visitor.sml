@@ -641,7 +641,7 @@ fun default_ty_visitor_vtable
         val (q, bind) = data
         val vtable = cast this
         val q = #visit_quan vtable this env q
-        val bind = #visit_ibind_anno_sort vtable this (#visit_sort vtable this) (#visit_ty vtable this) env bind
+        val bind = #visit_ibind_anno_sort vtable this (#visit_sort vtable this) (visit_pair (visit_pair (#visit_idx vtable this) (#visit_idx vtable this)) (#visit_ty vtable this)) env bind
       in
         TQuanI (q, bind)
       end

@@ -192,6 +192,7 @@ fun forget_i_mt x n b =
         val f = forget_i_mt
         val on_i_i = forget_i_i
         val on_i_s = forget_i_s
+        fun on_pair f1 f2 x n (a1, a2) = (f1 x n a1, f2 x n a2)
       in
         case b of
 	    TArrow ((st1, t1), (i, j), (st2, t2)) => TArrow ((StMap.map (on_i_i x n) st1, f x n t1), (on_i_i x n i, on_i_i x n j), (StMap.map (on_i_i x n) st2, f x n t2))
@@ -200,7 +201,7 @@ fun forget_i_mt x n b =
           | TArray (t, i) => TArray (f x n t, on_i_i x n i)
           | TUnit r => TUnit r
 	  | TProd (t1, t2) => TProd (f x n t1, f x n t2)
-	  | TUniI (s, bind, r) => TUniI (on_i_s x n s, on_i_ibind f x n bind, r)
+	  | TUniI (s, bind, r) => TUniI (on_i_s x n s, on_i_ibind (on_pair (on_pair on_i_i on_i_i) f) x n bind, r)
           | TSumbool (s1, s2) => TSumbool (on_i_s x n s1, on_i_s x n s2)
           | TVar y => TVar y
           | TApp (t1, t2) => TApp (f x n t1, f x n t2)

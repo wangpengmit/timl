@@ -139,7 +139,7 @@ fun strn_tbinds binds =
     fun f bind =
       case bind of
           KindingT name => KindingT name
-        | SortingT (name, s) => SortingT (name, strn_s s)
+        | SortingT (name, (s, (i, j))) => SortingT (name, (strn_s s, (strn_i i, strn_i j)))
     val binds = map f binds
   in
     binds
@@ -292,7 +292,7 @@ and strn_uni (binds, t) =
       fun f bind =
         case bind of
             KindingT name => name
-          | SortingT (name, s) => sprintf "{$ : $}" [name, s]
+          | SortingT (name, (s, (i, j))) => sprintf "{$ : $ using $, $}" [name, s, i, j]
       val binds = map f binds
     in
       sprintf "(forall$, $)" [join_prefix " " binds, strn_mt t]
@@ -321,15 +321,6 @@ fun strn_return return =
                            [default "" $ Option.map (prefix " " o strn_mt) t,
                             default "" $ Option.map (prefix " using " o strn_i) d,
                             default "" $ Option.map (prefix " space " o strn_i) j]
-
-fun strn_sortings binds =
-  let
-    val binds = strn_tbinds (map SortingT binds)
-    fun f bind = case bind of SortingT p => p | _ => raise Impossible "strn_tbinds shouldn't return Kinding"
-    val binds = map f binds
-  in
-    binds
-  end
 
 structure ExprUtil = ExprUtilFn (Expr)
 open ExprUtil
@@ -450,11 +441,12 @@ and strn_decl decl =
           val tnames = (join "" o map (fn nm => sprintf " [$]" [nm])) tnames
           fun f bind =
             case bind of
-                SortingST (name, Outer s) =>
+                SortingST (name, Outer s, i) =>
                 let
                   val name = binder2str name
+                  val (i, j) = unInner i
                 in
-                  sprintf "{$ : $}" [name, strn_s s]
+                  sprintf "{$ : $ using $, $}" [name, strn_s s, strn_i i, strn_i j]
                 end
               | TypingST pn =>
                 sprintf "$" [strn_pn pn]
@@ -504,9 +496,7 @@ and strn_decl decl =
                fun strn_constr_decl ((cname, _), ibinds, _) =
                  let 
                    val (name_sorts, (t, idxs)) = unfold_binds ibinds
-                   val name_sorts = map (mapFst fst) name_sorts
-                   val name_sorts = strn_sortings name_sorts
-                   val name_sorts = map (fn (nm, s) => sprintf "$ : $" [nm, s]) name_sorts
+                   val name_sorts = map (fn (nm, s) => sprintf "$ : $" [fst nm, strn_s s]) name_sorts
                  in
                    sprintf "$ of$ $ ->$$ $" [cname, (join_prefix " " o map (surround "{" "}")) name_sorts, strn_mt t, (join_prefix " " o map (surround "{" "}" o strn_i) o rev) idxs, strn_tnames, name]
                  end

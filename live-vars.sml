@@ -494,14 +494,6 @@ fun live_vars_expr_visitor_vtable cast () =
         [DValPtrn (pn, e, r)]
       end
     fun visit_map f env st = StMap.map (f env) st
-    fun visit_stbind this env data =
-      let
-        val vtable = cast this
-      in
-        case data of
-            SortingST data => SortingST $ visit_pair (visit_ibinder this) (visit_outer (#visit_sort vtable this)) env data
-          | TypingST pn => TypingST (#visit_ptrn vtable this env pn)
-      end
     fun get_num_ebind_rec_binds (_, stbinds) =
       sum $ map (fn SortingST _ => 0
                 | TypingST pn => get_num_ebind_pn pn) $ unTeles $ unRebind stbinds

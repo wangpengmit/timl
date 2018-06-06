@@ -395,7 +395,7 @@ fun default_type_visitor_vtable
         val vtable = cast this
         val (s, bind, r) = data
         val s = #visit_sort vtable this env s
-        val bind = visit_ibind this (#visit_mtype vtable this) env bind
+        val bind = visit_ibind this (visit_pair (visit_pair (#visit_idx vtable this) (#visit_idx vtable this)) (#visit_mtype vtable this)) env bind
       in
         T.TUniI (s, bind, r)
       end

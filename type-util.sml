@@ -8,10 +8,11 @@ infixr 0 $
 
 fun collect_TUniI t =
   case t of
-      TUniI (s, Bind (name, t), _) =>
-      let val (binds, t) = collect_TUniI t
+      TUniI (s, Bind (name, (i, t)), _) =>
+      let
+        val (binds, t) = collect_TUniI t
       in
-        ((name, s) :: binds, t)
+        ((name, (s, i)) :: binds, t)
       end
     | _ => ([], t)
 
