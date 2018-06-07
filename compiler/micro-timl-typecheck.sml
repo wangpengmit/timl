@@ -1296,6 +1296,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EAppI (e, i), subst0_i_t i t, j %%+ mapPair' to_real N cost %%+ subst0_i_2i i j2, st)
         end
+      | EAbsT data =>
+        let
+          val (k, (name, e)) = unEAbsT data
+          val () = assert_b "EAbsT: is_value e" (is_value e)
+          val (e, t, _) = tc_against_time_space (add_kinding_full (fst name, k) ctx, IEmptyState) (e, TN0)
+        in 
+          (MakeEAbsT (name, k, e), MakeTForall (k, name, t), TN0, st)
+        end
       | EAbsI data =>
         let
           val (s, (name, e)) = unEAbsI data
@@ -1659,14 +1667,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EIfi_state then e %~ st else e
         in
           (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %%+ TN C_Ifi %%+ IMaxPair (i1, i2), st1)
-        end
-      | EAbsT data =>
-        let
-          val (k, (name, e)) = unEAbsT data
-          val () = assert_b "EAbsT: is_value e" (is_value e)
-          val (e, t, _) = tc_against_time_space (add_kinding_full (fst name, k) ctx, IEmptyState) (e, TN0)
-        in
-          (MakeEAbsT (name, k, e), MakeTForall (k, name, t), TN0, st)
         end
       | EAppT (e, t1) =>
         let
