@@ -220,7 +220,7 @@ fun is_value e =
     | EBinOp (EBMapPtr (), _, _) => false
     | EBinOp (EBStorageSet (), _, _) => false
     | EUnOp (EUUnfold (), _) => false
-    | EUnOp (EUTiML opr, _) =>
+    | EUnOp (EUTiML opr, e) =>
       (case opr of
            EUProj _ => false
          | EUArrayLen () => false

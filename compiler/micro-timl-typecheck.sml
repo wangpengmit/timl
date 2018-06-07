@@ -1382,7 +1382,25 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (t, (name, e)) = unBindAnnoName data
           val () = println $ "tc() on: " ^ fst name
-          val () = case snd $ collect_EAbsIT e of
+          fun collect_EAbsIT_ignore_BodyOfRecur e =
+            case e of
+                EAbsI data =>
+                let
+                  val (s, (name, e)) = unEAbsI data
+                  val (binds, e) = collect_EAbsIT_ignore_BodyOfRecur e
+                in
+                  (inl (name, s) :: binds, e)
+                end
+              | EAbsT data =>
+                let
+                  val (k, (name, e)) = unEAbsT data
+                  val (binds, e) = collect_EAbsIT_ignore_BodyOfRecur e
+                in
+                  (inr (name, k) :: binds, e)
+                end
+              | EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => collect_EAbsIT_ignore_BodyOfRecur e
+              | _ => ([], e)
+          val () = case snd $ collect_EAbsIT_ignore_BodyOfRecur e of
                        EAbs _ => ()
                      | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"
           val t = kc_against_kind itctx (t, KType ())
