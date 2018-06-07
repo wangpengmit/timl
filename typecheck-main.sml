@@ -1685,7 +1685,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	    val (e, t, d, _) = get_mtype (ctx, StMap.empty) e
             val () = close_ctx ctxd
             val (is_rec, e) = is_rec_body e
-            val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
+            val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
             val extra_inner_cost = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
             val d = d %%+ extra_inner_cost
