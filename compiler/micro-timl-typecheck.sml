@@ -1275,6 +1275,27 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EApp (e1, e2), t2, i1 %%+ i2 %%+ mapPair' to_real N cost %%+ i, st)
         end
+      | EAppT (e, t1) =>
+        let
+          val (e, t_e, j, st) = tc (ctx, st) e
+          val t_e = whnf itctx t_e
+          val ((_, k), (j2, t)) = assert_TForall t_e
+          val t1 = kc_against_kind itctx (t1, k)
+          val (cost, e) = 
+              case !phase of
+                  PhBeforeCodeGen () => ((0, 0), e)
+                | PhBeforeCC () => ((0, 0), e)
+                | PhBeforeCPS () =>
+                  let
+                    val (e, n_live_vars) = assert_EAnnoLiveVars e
+                  in
+                    ((C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars), e)
+                  end
+          val e = if !anno_EAppT then e %: t_e else e
+          val e = if !anno_EAppT_state then e %~ st else e
+        in
+          (EAppT (e, t1), subst0_t_t t1 t, j %%+ mapPair' to_real N cost %%+ j2, st)
+        end
       | EAppI (e, i) =>
         let
           val (e, t_e, j, st) = tc (ctx, st) e
@@ -1300,9 +1321,22 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (k, (name, e)) = unEAbsT data
           val () = assert_b "EAbsT: is_value e" (is_value e)
-          val (e, t, _) = tc_against_time_space (add_kinding_full (fst name, k) ctx, IEmptyState) (e, TN0)
+          val (e, t, i, _) = tc (add_kinding_full (fst name, k) ctx, IEmptyState) e
+          val (is_rec, e) = is_rec_body e
+          val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
+          val n_fvars = ISet.numItems (free_evars e @%-- excluded)
+          val inner_cost =
+              case !phase of
+                  PhBeforeCodeGen () => TN0
+                | PhBeforeCC () => TN0
+                | PhBeforeCPS () => i %%+ mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
+          val cost =
+              case !phase of
+                  PhBeforeCodeGen () => TN0
+                | PhBeforeCC () => forget01_i_2i i
+                | PhBeforeCPS () => mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
         in 
-          (MakeEAbsT (name, k, e), MakeTForall (k, name, t), TN0, st)
+          (MakeEAbsT (name, k, e), MakeTForall (k, name, inner_cost, t), cost, st)
         end
       | EAbsI data =>
         let
@@ -1667,19 +1701,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EIfi_state then e %~ st else e
         in
           (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %%+ TN C_Ifi %%+ IMaxPair (i1, i2), st1)
-        end
-      | EAppT (e, t1) =>
-        let
-          val (e, t_e, i, st) = tc (ctx, st) e
-          val t_e = whnf itctx t_e
-          val (k, (_, t)) = case t_e of
-                                TQuan (Forall (), data) => unTQuan data
-                              | _ => raise MTCError "EAppT"
-          val t1 = kc_against_kind itctx (t1, k)
-          val e = if !anno_EAppT then e %: t_e else e
-          val e = if !anno_EAppT_state then e %~ st else e
-        in
-          (EAppT (e, t1), subst0_t_t t1 t, i, st)
         end
       | EPack (t', t1, e) =>
         let

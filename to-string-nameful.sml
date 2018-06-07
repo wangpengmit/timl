@@ -130,15 +130,15 @@ fun strn_k (n, sorts) : string =
   else
     sprintf "($$$)" [if n = 0 then "" else join " => " (repeat n str_Type) ^ " => ", if null sorts then "" else join " => " (map strn_bs sorts) ^ " => ", str_Type]
 
-datatype 'a bind = 
-         KindingT of string
-         | SortingT of string * 'a
+datatype ('a, 'b) bind = 
+         KindingT of string * 'a
+         | SortingT of string * 'b
 
 fun strn_tbinds binds =
   let
     fun f bind =
       case bind of
-          KindingT name => KindingT name
+          KindingT (name, (i, j)) => KindingT (name, (strn_i i, strn_i j))
         | SortingT (name, (s, (i, j))) => SortingT (name, (strn_s s, (strn_i i, strn_i j)))
     val binds = map f binds
   in
@@ -151,7 +151,7 @@ open TypeUtil
 fun collect_PTUni_TUniI t =
   let
     val (tnames, t) = collect_PTUni t
-    val tnames = map fst tnames
+    val tnames = map (mapFst fst) tnames
     val (binds, t) = collect_TUniI t
     val binds = map (mapFst fst) binds
   in
@@ -291,7 +291,7 @@ and strn_uni (binds, t) =
       val binds = strn_tbinds binds
       fun f bind =
         case bind of
-            KindingT name => name
+            KindingT (name, (i, j)) => sprintf "[$ using $, $]" [name, i, j]
           | SortingT (name, (s, (i, j))) => sprintf "{$ : $ using $, $}" [name, s, i, j]
       val binds = map f binds
     in

@@ -34,7 +34,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TArrow of ('idx * ('var, 'bsort, 'idx, 'sort) ty) * ('idx * 'idx) * ('idx * ('var, 'bsort, 'idx, 'sort) ty)
          | TAbsI of ('bsort, ('var, 'bsort, 'idx, 'sort) ty) ibind_anno
          | TAppI of ('var, 'bsort, 'idx, 'sort) ty * 'idx
-         | TQuan of unit Operators.quan * ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
+         | TQuan of unit Operators.quan * (idx * idx) * ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
          | TQuanI of unit Operators.quan * ('sort, ('idx * 'idx) * ('var, 'bsort, 'idx, 'sort) ty) ibind_anno
          | TRec of ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
          | TNat of 'idx

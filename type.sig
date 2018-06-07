@@ -42,6 +42,6 @@ signature TYPE = sig
 
   datatype ty = 
 	   PTMono of mtype
-	   | PTUni of (name * ty) Bind.tbind * region
+	   | PTUni of (idx * idx) * (name * ty) Bind.tbind * region
 
 end

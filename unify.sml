@@ -541,7 +541,15 @@ fun unify_mt r gctx ctx (t, t') =
 fun unify_t r gctx ctx (t, t') =
   case (t, t') of
       (PTMono t, PTMono t') => unify_mt r gctx ctx (t, t')
-    | (PTUni (Bind ((name, _), t), _), PTUni (Bind (_, t'), _)) => unify_t r gctx (add_kinding_sk (name, Type) ctx) (t, t')
+    | (PTUni ((i, j), Bind ((name, _), t), _), PTUni ((i', j'), Bind (_, t'), _)) =>
+      let
+        val gctxn = gctx_names gctx
+        val sctxn = sctx_names $ #1 ctx
+      in
+        (unify_i r gctxn sctxn (i, i');
+         unify_i r gctxn sctxn (j, j');
+         unify_t r gctx (add_kinding_sk (name, Type) ctx) (t, t'))
+      end
     | _ =>
       let
         val gctxn = gctx_names gctx

@@ -94,7 +94,7 @@ fun get_region_mt t =
 fun get_region_t t = 
   case t of
       PTMono t => get_region_mt t
-    | PTUni (_, r) => r
+    | PTUni (_, _, r) => r
 
 end
 

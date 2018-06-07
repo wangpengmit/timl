@@ -18,10 +18,10 @@ fun collect_TUniI t =
 
 fun collect_PTUni t =
   case t of
-      PTUni (Bind (name, t), _) =>
+      PTUni (i, Bind (name, t), _) =>
       let val (names, t) = collect_PTUni t
       in
-        (name :: names, t)
+        ((name, i) :: names, t)
       end
     | PTMono t => ([], t)
 
@@ -92,7 +92,7 @@ fun get_constr_names t =
       end
     | _ => []
 
-fun PTUni_Many (names, t, r) = foldr (fn (name, t) => (PTUni (Bind (name, t), r))) t names
+fun PTUni_Many (names, t, r) = foldr (fn ((name, i), t) => (PTUni (i, Bind (name, t), r))) t names
 
 fun MakeTUniI (s, name, t, r) = TUniI (s, Bind.Bind (name, t), r)
 

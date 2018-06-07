@@ -122,7 +122,7 @@ fun constr_type (t_var : int LongId.long_id -> mtype) shiftx_long_id ((family, t
     val t = TPureArrow (t, (T0 dummy, N0 dummy), t2)
     val t = foldr (fn ((name, s), t) => TUniI (s, Bind (name, (TN0 dummy, t)), dummy)) t ns
     val t = PTMono t
-    val t = foldr (fn (name, t) => PTUni (Bind (name, t), dummy)) t tnames
+    val t = foldr (fn (name, t) => PTUni (TN0 dummy, Bind (name, t), dummy)) t tnames
   in
     t
   end

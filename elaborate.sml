@@ -517,7 +517,7 @@ local
 
   fun elab_spec spec =
       case spec of
-          S.SpecVal (name, tnames, t, r) => SpecVal (name, foldr (fn (tname, t) => PTUni (Bind (tname, t), combine_region (snd tname) r)) (PTMono $ elab_mt t) tnames)
+          S.SpecVal (name, tnames, t, r) => SpecVal (name, foldr (fn (tname, t) => PTUni ((IUnderscore r, IUnderscore r), Bind (tname, t), combine_region (snd tname) r)) (PTMono $ elab_mt t) tnames)
         | S.SpecIdx (name, sort) => SpecIdx (name, elab_s sort)
         | S.SpecType (tnames, sorts, r) =>
           (case tnames of

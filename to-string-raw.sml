@@ -96,7 +96,7 @@ fun str_raw_mt (t : mtype) : string =
 fun str_raw_t (t : ty) : string =
   case t of
       PTMono t => str_raw_mt t
-    | PTUni (t, _) => sprintf "PTUni ($)" [str_raw_bind str_raw_t t]
+    | PTUni ((i, j), t, _) => sprintf "PTUni ($, $, $)" [str_raw_i i, str_raw_i j, str_raw_bind str_raw_t t]
 
 fun str_raw_e e =
   case e of

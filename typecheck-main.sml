@@ -363,8 +363,11 @@ fun is_wf_type gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.ty) : ty =
     case c of
         U.PTMono t =>
         PTMono (check_kind_Type gctx (ctx, t))
-      | U.PTUni (Bind ((name, r), c), r_all) => 
-	PTUni (Bind ((name, r), is_wf_type gctx (add_kinding_sk (name, Type) ctx, c)), r_all)
+      | U.PTUni ((i, j), Bind ((name, r), c), r_all) => 
+	PTUni (
+          (check_basic_sort gctx (sctx, i, BSTime),
+           check_basic_sort gctx (sctx, j, BSNat)),
+          Bind ((name, r), is_wf_type gctx (add_kinding_sk (name, Type) ctx, c)), r_all)
   end
 
 infix 6 %%+ 

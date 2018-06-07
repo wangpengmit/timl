@@ -45,7 +45,7 @@ datatype mtype =
 
 datatype ty = 
 	 PTMono of mtype
-	 | PTUni of (name * ty) tbind * region
+	 | PTUni of (idx * idx) * (name * ty) tbind * region
 
 end
 
