@@ -1109,10 +1109,6 @@ fun assert_TMap err t =
   case t of
       TMap a => a
     | _ => err ()
-fun assert_EAnnoLiveVars err e =
-  case e of
-      EUnOp (EUAnno (EALiveVars n), e, _) => (e, n)
-    | _ => err ()
 fun is_rec_body e =
   case e of
       EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
@@ -1168,53 +1164,110 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
       end
     fun main () =
       case e_all of
-	  U.EVar (x, eia) =>
+	  U.EVar (x, eia) => raise Impossible "EVar should be surrounded by EAnnoLiveVars"
+	| EALiveVars n_live_vars, U.EVar (x, eia) =>
           let
             val r = U.get_region_long_id x
-            fun insert_type_args t =
-              case t of
-                  PTMono t => (t, [])
-                | PTUni (Bind (_, t), _) =>
-                  let
-                    (* val t_arg = fresh_mt (sctx, kctx) r *)
-                    (* val () = println $ str_mt skctxn t_arg *)
-                    val t_arg = U.TUVar ((), r)
-                    val t_arg = check_kind_Type gctx (skctx, t_arg)
-                    val t = subst_t_t t_arg t
-                    (* val () = println $ str_t skctxn t *)
-                    val (t, t_args) = insert_type_args t
-                  in
-                    (t, t_arg :: t_args)
-                  end
             val t = fetch_type gctx (tctx, x)
-            (* val () = println $ str_t gctxn skctxn t *)
-            val (t, t_args) = insert_type_args t
-            (* val () = println $ str_mt skctxn t *)
-            fun insert_idx_args t_all =
-              case t_all of
-                  TUniI (s, Bind ((name, _), (_, t)), _) =>
-                  let
-                    (* val bs = fresh_basic_sort () *)
-                    (* val i = fresh_i sctx bs r *)
-                    (* val bs =  get_base r sctxn s *)
-                    val i = U.IUVar ((), r)
-                    val i = check_sort gctx (sctx, i, s)
-                    val t = subst_i_mt i t
-                    val (t, i_args) = insert_idx_args t
-                  in
-                    (t, i :: i_args)
-                  end
-                | _ => (t_all, [])
-            val (t, i_args) = if not eia then
-                      insert_idx_args t
-                    else
-                      (t, [])
-            val e = EVar (x, true)
-            val e = EAppTs (e, t_args)
-            val e = EAppIs (e, i_args)
+            (* fun insert_idx_args t_all = *)
+            (*   case t_all of *)
+            (*       TUniI (s, Bind ((name, _), (_, t)), _) => *)
+            (*       let *)
+            (*         (* val bs = fresh_basic_sort () *) *)
+            (*         (* val i = fresh_i sctx bs r *) *)
+            (*         (* val bs =  get_base r sctxn s *) *)
+            (*         val i = U.IUVar ((), r) *)
+            (*         val i = check_sort gctx (sctx, i, s) *)
+            (*         val t = subst_i_mt i t *)
+            (*         val (t, i_args) = insert_idx_args t *)
+            (*       in *)
+            (*         (t, i :: i_args) *)
+            (*       end *)
+            (*     | _ => (t_all, []) *)
+            (* val (t, i_args) = if not eia then *)
+            (*           insert_idx_args t *)
+            (*         else *)
+            (*           (t, []) *)
           in
-            (e, t, TN C_EVar, st)
+            if eia then
+              let
+                fun insert_type_args t =
+                  case t of
+                      PTMono t => (t, TN0, [])
+                    | PTUni (d2, Bind (_, t), _) =>
+                      let
+                        (* val t_arg = fresh_mt (sctx, kctx) r *)
+                        val t_arg = U.TUVar ((), r)
+                        val t_arg = check_kind_Type gctx (skctx, t_arg)
+                        val t = subst_t_t t_arg t
+                        val (t, cost, t_args) = insert_type_args t
+                        val cost = cost %%+ mapPair' to_real N (C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars) %%+ d2
+                      in
+                        (t, cost, t_arg :: t_args)
+                      end
+                val (t, cost, t_args) = insert_type_args t
+                val e = EVar (x, true)
+                val e = EAppTs (e, t_args)
+              in
+                (e, t, TN C_EVar %%+ cost, st)
+              end
+            else
+              let
+                val (t, _) = collect_PTUni t
+                val (_, ibinds) = collect_TUniI t
+                val e = U.EAnnoLiveVars (U.EVar (x, true), n_live_vars, r)
+                val e = U.EAppIs (e, repeat (length ibinds) (U.IUVar ((), r)))
+              in
+                get_mtype (ctx, st) e
+              end
           end
+            
+	    EETAppT () => raise Impossible "get_mtype()/EAppT"
+                       
+	       EEIAppI () =>
+	       let 
+                 fun get_n_live_vars e =
+                   let
+                     val (e, _) = U.collect_EAppI e
+                     val (e, _) = U.collect_EAppT e
+                   in
+                     snd $ U.assert_EAnnoLiveVars (fn () => raise Error (U.get_region_e e, ["Should be EAnnoLiveVars"])) e
+                   end
+                 val n_live_vars = get_n_live_vars e
+                 val (e, t, d, st) = get_mtype (ctx, st) e
+                 val cost = mapPair' to_real N (C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars)
+                 fun subst_i_2i v b = unop_pair (subst_i_i v) b
+               in
+                 case t of
+                     TUniI (s, Bind ((arg_name, _), (d2, t1)), r) =>
+                     let
+                       val i = check_sort gctx (sctx, i, s) 
+                     in
+	               (EAppI (e, i), subst_i_mt i t1, d %%+ cost %%+ subst_i_2i i d2, st)
+                     end
+                   | _ =>
+                     (* If the type is not in the expected form (maybe due to uvar), we try to unify it with the expected template. This may lose generality because the the inferred argument sort will always be a base sort. *)
+	             let 
+                       val r = get_region_e e
+                       val s = fresh_sort gctx sctx r
+                       val arg_name = "_"
+                       val sctx' = add_sorting (arg_name, s) sctx
+                       val t1 = fresh_mt gctx (sctx', kctx) r
+                       val d2 = (fresh_i gctx sctx' BSTime r, fresh_i gctx sctx' BSNat r)
+                       val t_e = TUniI (s, Bind ((arg_name, r), (d2, t1)), r)
+                       (* val () = println $ "t1 = " ^ str_mt gctxn (sctx_names sctx, names kctx) t1 *)
+                       (* val () = println $ "t1 = " ^ str_raw_mt t1 *)
+                       (* val () = println $ "t_e = " ^ str_mt gctxn (sctx_names sctx, names kctx) t_e *)
+                       (* val () = println "before" *)
+                       val () = unify_mt r gctx (sctx, kctx) (t, t_e)
+                       (* val () = println $ "t = " ^ str_mt gctxn (sctx_names sctx, names kctx) t *)
+                       (* val () = println $ "t_e = " ^ (str_mt gctxn (sctx_names sctx, names kctx) $ normalize_mt gctx kctx t_e) *)
+                       (* val () = println "after" *)
+                       val i = check_sort gctx (sctx, i, s) 
+                     in
+	               (EAppI (e, i), subst_i_mt i t1, d %%+ cost %%+ subst_i_2i i d2, st)
+	             end
+               end
         | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), TN C_EConst, st)
         | U.EUnOp (opr, e, r) =>
           (case opr of
@@ -1549,43 +1602,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           end
 	| U.EEI (opr, e, i) =>
           (case opr of
-	       EEIAppI () =>
-	       let 
-                 val (e, t, d, st) = get_mtype (ctx, st) e
-                 val (e, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e, ["Should be EAnnoLiveVars"])) e
-                 val cost = mapPair' to_real N (C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars)
-                 fun subst_i_2i v b = unop_pair (subst_i_i v) b
-               in
-                 case t of
-                     TUniI (s, Bind ((arg_name, _), (d2, t1)), r) =>
-                     let
-                       val i = check_sort gctx (sctx, i, s) 
-                     in
-	               (EAppI (e, i), subst_i_mt i t1, d %%+ cost %%+ subst_i_2i i d2, st)
-                     end
-                   | _ =>
-                     (* If the type is not in the expected form (maybe due to uvar), we try to unify it with the expected template. This may lose generality because the the inferred argument sort will always be a base sort. *)
-	             let 
-                       val r = get_region_e e
-                       val s = fresh_sort gctx sctx r
-                       val arg_name = "_"
-                       val sctx' = add_sorting (arg_name, s) sctx
-                       val t1 = fresh_mt gctx (sctx', kctx) r
-                       val d2 = (fresh_i gctx sctx' BSTime r, fresh_i gctx sctx' BSNat r)
-                       val t_e = TUniI (s, Bind ((arg_name, r), (d2, t1)), r)
-                       (* val () = println $ "t1 = " ^ str_mt gctxn (sctx_names sctx, names kctx) t1 *)
-                       (* val () = println $ "t1 = " ^ str_raw_mt t1 *)
-                       (* val () = println $ "t_e = " ^ str_mt gctxn (sctx_names sctx, names kctx) t_e *)
-                       (* val () = println "before" *)
-                       val () = unify_mt r gctx (sctx, kctx) (t, t_e)
-                       (* val () = println $ "t = " ^ str_mt gctxn (sctx_names sctx, names kctx) t *)
-                       (* val () = println $ "t_e = " ^ (str_mt gctxn (sctx_names sctx, names kctx) $ normalize_mt gctx kctx t_e) *)
-                       (* val () = println "after" *)
-                       val i = check_sort gctx (sctx, i, s) 
-                     in
-	               (EAppI (e, i), subst_i_mt i t1, d %%+ cost %%+ subst_i_2i i d2, st)
-	             end
-               end
 	     | EEIAscTime () => 
 	       let val i = check_basic_sort gctx (sctx, i, BSTime)
 	           val (e, t, j, st) = check_time (ctx, st) (e, i)
@@ -1601,7 +1617,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           )
 	| U.EET (opr, e, t) =>
           (case opr of
-	       EETAppT () => raise Impossible "get_mtype()/EAppT"
 	     | EETAsc () => 
 	       let
                  val t = check_kind_Type gctx (skctx, t)
@@ -1674,27 +1689,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           in
 	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e)), TArrow ((pre_st, t), d, (post_st, t1)), cost, st)
-	  end
-	| U.EAbsI (bind, r_all) => 
-	  let 
-            val ((iname, s), e) = unBindAnno bind
-            val (name, r) = unName iname
-	    val () = if is_value e then ()
-		     else raise Error (U.get_region_e e, ["The body of a universal abstraction must be a value"])
-            val s = is_wf_sort gctx (sctx, s)
-            val ctxd = ctx_from_sorting (name, s)
-            val ctx = add_ctx ctxd ctx
-            val () = open_ctx ctxd
-	    val (e, t, d, _) = get_mtype (ctx, StMap.empty) e
-            val () = close_ctx ctxd
-            val (is_rec, e) = is_rec_body e
-            val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
-            val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
-            val extra_inner_cost = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
-            val d = d %%+ extra_inner_cost
-            val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
-          in
-	    (EAbsI (BindAnno ((iname, s), e), r_all), TUniI (s, Bind ((name, r), (d, t)), r_all), cost, st)
 	  end
 	| U.ELet (return, bind, r) => 
 	  let
@@ -1941,7 +1935,42 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
       val check_decls = check_decls gctx
       val get_mtype = get_mtype gctx
       val check_mtype_time = check_mtype_time gctx
-      fun generalize t = 
+	| U.EAbsI (bind, r_all) => 
+	  let 
+            val ((iname, s), e) = unBindAnno bind
+            val (name, r) = unName iname
+	    val () = if is_value e then ()
+		     else raise Error (U.get_region_e e, ["The body of a universal abstraction must be a value"])
+            val s = is_wf_sort gctx (sctx, s)
+            val ctxd = ctx_from_sorting (name, s)
+            val ctx = add_ctx ctxd ctx
+            val () = open_ctx ctxd
+	    val (e, t, d, _) = get_mtype (ctx, StMap.empty) e
+            val () = close_ctx ctxd
+            val (is_rec, e) = is_rec_body e
+            val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
+            val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
+            val extra_inner_cost = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
+            val d = d %%+ extra_inner_cost
+            val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+          in
+	    (EAbsI (BindAnno ((iname, s), e), r_all), TUniI (s, Bind ((name, r), (d, t)), r_all), cost, st)
+	  end
+      fun add_time n_fvars i_e names = 
+        let
+          val extra_inner_cost = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
+          val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+          val len = length names
+          (*  cost  ...  cost  i_e
+                   extra ... extra              
+           *)
+          val times = int_mapi (fn n => if n = len - 1 then i_e else cost) len
+          val times = map (fn i => i %%+ extra) times
+          val i_e = if len = 0 then i_e else cost
+        in
+          (zip (names, times), i_e)
+        end
+      fun generalize n_fvars i_e t = 
         let
           fun collect_uvar_t_ctx (_, _, cctx, tctx) =
             (* cctx can't contain uvars *)
@@ -1956,10 +1985,11 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
           val free_uvars = dedup op= $ diff op= (map #1 $ collect_uvar_t_mt t) (map #1 $ collect_uvar_t_ctx ctx)
           val t = shiftx_t_mt 0 (length free_uvars) t
           val t = foldli (fn (v, uvar_ref, t) => SubstUVar.substu_t_mt uvar_ref v t) t free_uvars
-          val free_uvar_names = rev $ map (attach_snd dummy) $ Range.map generalized_uvar_name (0, (length free_uvars))
-          val poly_t = PTUni_Many (rev free_uvar_names, PTMono t, dummy)
+          val free_uvar_names = map (attach_snd dummy) $ Range.map generalized_uvar_name (0, (length free_uvars))
+          val (free_uvar_names, i_e) = add_time n_fvars i_e free_uvar_names
+          val poly_t = PTUni_Many (free_uvar_names, PTMono t, dummy)
         in
-          (t, poly_t, free_uvars, free_uvar_names)
+          (t, poly_t, free_uvars, free_uvar_names, i_e)
         end
       (* fun generalize_e free_uvars e =  *)
       (*   let *)
@@ -1983,31 +2013,21 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
             in
               if is_value then 
                 let
-                  val (t, poly_t, free_uvars, free_uvar_names) = generalize t
-                  (* val () = println $ str_ls fst free_uvar_names *)
+                  val n_fvars = EVarSet.numItems $ FreeEVars.free_evars e
+                  val (t, poly_t, free_uvars, free_uvar_names, d) = generalize n_fvars d t
                   val e = UpdateExpr.update_e e
                   val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
                   val e = foldli (fn (v, uvar_ref, e) => SubstUVar.substu_t_e uvar_ref v e) e free_uvars
+                  val (tnames, d) = add_times n_fvars d tnames
                   val poly_t = PTUni_Many (tnames, poly_t, r)
-                  val tnames = tnames @ rev free_uvar_names
+                  val tnames = tnames @ free_uvar_names
                 in
                   (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, ty2mtype poly_t)), r), ctx_from_typing (name, poly_t), 0, [d], st)
                 end
               else if length tnames = 0 then
-                (DVal (ename, Outer $ Unbound.Bind (map (Binder o TName) tnames, EAsc (e, t)), r), ctx_from_typing (name, PTMono t), 0, [d], st)
+                (DVal (ename, Outer $ Unbound.Bind ([], EAsc (e, t)), r), ctx_from_typing (name, PTMono t), 0, [d], st)
               else
                 raise Error (r, ["explicit type variable cannot be generalized because of value restriction"])
-            end
-          | U.DValPtrn (pn, Outer e, r) =>
-            let 
-              val skcctx = (sctx, kctx, cctx) 
-              val (e, t, d, st) = get_mtype (ctx, st) e
-              val (pn, cover, ctxd, nps) = match_ptrn gctx (skcctx, pn, t)
-              val d = shift_ctx_2i ctxd d
-              val st = StMap.map (shift_ctx_i ctxd) st
-	      val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
-            in
-              (DValPtrn (pn, Outer e, r), ctxd, nps, [d], st)
             end
 	  | U.DRec (name, bind, r) =>
             (* a version that delegates most of the work to EAbs and EAbsI *)
@@ -2064,16 +2084,28 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
 	      val te = check_kind_Type gctx ((sctx, kctx), te)
               (* val () = println $ sprintf "te[post] = $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
 	      val (e, i, st) = check_mtype gctx (add_typing_skct (name, PTMono te) ctx, st) (e, te) 
-              val (te, poly_te, free_uvars, free_uvar_names) = generalize te
+              val (te, poly_te, free_uvars, free_uvar_names, i) = generalize n_fvars i te
               val e = UpdateExpr.update_e e
               val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
               val e = foldli (fn (v, uvar_ref, e) => SubstUVar.substu_t_e uvar_ref v e) e free_uvars
+              val (tnames, i) = add_times n_fvars i tnames
               val poly_te = PTUni_Many (tnames, poly_te, r)
-              val tnames = tnames @ rev free_uvar_names
+              val tnames = tnames @ free_uvar_names
               val decl = DRec (Binder $ EName (name, r1), Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind TeleNil), ((StMap.empty, StMap.empty), (te, TN0 r), e)), r)
             in
               (decl, ctx_from_typing (name, poly_te), 0, [i], st)
 	    end
+          | U.DValPtrn (pn, Outer e, r) =>
+            let 
+              val skcctx = (sctx, kctx, cctx) 
+              val (e, t, d, st) = get_mtype (ctx, st) e
+              val (pn, cover, ctxd, nps) = match_ptrn gctx (skcctx, pn, t)
+              val d = shift_ctx_2i ctxd d
+              val st = StMap.map (shift_ctx_i ctxd) st
+	      val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
+            in
+              (DValPtrn (pn, Outer e, r), ctxd, nps, [d], st)
+            end
           | U.DIdxDef (name, Outer s, Outer i) =>
             let
               val (name, r) = unBinderName name

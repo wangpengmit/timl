@@ -133,11 +133,28 @@ fun live_vars_expr_visitor_vtable cast () =
        data)
     fun visit_EVar this env data =
       let
+        val n_lvars = num_lvars env
         val vtable = cast this
         val (var, eia) = data
         val var = #visit_var vtable this env var
       in
-        EVar (var, eia)
+        EAnnoLiveVars (EVar (var, eia), n_lvars, dummy)
+      end
+    fun visit_EAppI this env (e, i) = 
+      let
+        val vtable = cast this
+        val i = #visit_idx vtable this env i
+        val e = #visit_expr vtable this env e
+      in
+        EEI (EEIAppI (), e, i)
+      end
+    fun visit_EAppT this env (e, t) = 
+      let
+        val vtable = cast this
+        val t = #visit_mtype vtable this env t
+        val e = #visit_expr vtable this env e
+      in
+        EET (EETAppT (), e, t)
       end
     fun visit_EConst this env data =
       let
@@ -266,15 +283,6 @@ fun live_vars_expr_visitor_vtable cast () =
 	  | EEIAscSpace () =>
             EEI (EEIAscSpace (), #visit_expr vtable this env e, #visit_idx vtable this env i)
       end
-    fun visit_EAppI this env (e, i) = 
-      let
-        val n_lvars = num_lvars env
-        val vtable = cast this
-        val i = #visit_idx vtable this env i
-        val e = #visit_expr vtable this env e
-      in
-        EEI (EEIAppI (), EAnnoLiveVars (e, n_lvars, dummy), i)
-      end
     fun visit_EAscTime this env data = 
       let
         val vtable = cast this
@@ -294,15 +302,6 @@ fun live_vars_expr_visitor_vtable cast () =
 	    EETAppT () => #visit_EAppT vtable this env data
 	  | EETAsc () => #visit_EAsc vtable this env data
           | EETHalt () => EET (opr, #visit_expr vtable this env e, #visit_mtype vtable this env t)
-      end
-    fun visit_EAppT this env (e, t) = 
-      let
-        val n_lvars = num_lvars env
-        val vtable = cast this
-        val t = #visit_mtype vtable this env t
-        val e = #visit_expr vtable this env e
-      in
-        EET (EETAppT (), EAnnoLiveVars (e, n_lvars, dummy), t)
       end
     fun visit_EAsc this env data = 
       let
