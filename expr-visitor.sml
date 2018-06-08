@@ -37,23 +37,23 @@ type ('this, 'env) expr_visitor_vtable =
        visit_ECaseSumbool : 'this -> 'env -> expr * expr ibind * expr ibind * region -> T.expr,
        
        (* visit_decl : 'this -> 'env ctx -> decl -> T.decl, *)
-       (* visit_DVal : 'this -> 'env ctx -> ename binder * (tname binder list, expr) bind outer * region -> T.decl, *)
+       (* visit_DVal : 'this -> 'env ctx -> ebinder * (tbinder list, expr) bind outer * region -> T.decl, *)
        (* visit_DValPtrn : 'this -> 'env ctx -> ptrn * expr outer * region -> T.decl, *)
-       (* visit_DRec : 'this -> 'env ctx -> ename binder * (tname binder list * stbind tele rebind, (mtype * idx) * expr) bind inner * region -> T.decl, *)
-       (* visit_DIdxDef : 'this -> 'env ctx -> iname binder * sort outer * idx outer -> T.decl, *)
-       (* visit_DAbsIdx2 : 'this -> 'env ctx -> iname binder * sort outer * idx outer -> T.decl, *)
-       (* visit_DAbsIdx : 'this -> 'env ctx -> (iname binder * sort outer * idx outer) * decl tele rebind * region -> T.decl, *)
-       (* visit_DTypeDef : 'this -> 'env ctx -> tname binder * mtype outer -> T.decl, *)
+       (* visit_DRec : 'this -> 'env ctx -> ebinder * (tbinder list * stbind tele rebind, (mtype * idx) * expr) bind inner * region -> T.decl, *)
+       (* visit_DIdxDef : 'this -> 'env ctx -> ibinder * sort outer * idx outer -> T.decl, *)
+       (* visit_DAbsIdx2 : 'this -> 'env ctx -> ibinder * sort outer * idx outer -> T.decl, *)
+       (* visit_DAbsIdx : 'this -> 'env ctx -> (ibinder * sort outer * idx outer) * decl tele rebind * region -> T.decl, *)
+       (* visit_DTypeDef : 'this -> 'env ctx -> tbinder * mtype outer -> T.decl, *)
        (* visit_DOpen : 'this -> 'env ctx -> mod_id outer * scoping_ctx option -> T.decl, *)
        
        visit_decl : 'this -> 'env ctx -> decl -> T.decl list,
-       visit_DVal : 'this -> 'env ctx -> ename binder * (tname binder list, expr) bind outer * region -> T.decl list,
+       visit_DVal : 'this -> 'env ctx -> ebinder * ((tbinder * (idx * idx) outer) list, expr) bind outer * region -> T.decl list,
        visit_DValPtrn : 'this -> 'env ctx -> ptrn * expr outer * region -> T.decl list,
-       visit_DRec : 'this -> 'env ctx -> ename binder * (tname binder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * (idx * idx)) * expr) bind inner * region -> T.decl list,
-       visit_DIdxDef : 'this -> 'env ctx -> iname binder * sort option outer * idx outer -> T.decl list,
-       visit_DAbsIdx2 : 'this -> 'env ctx -> iname binder * sort outer * idx outer -> T.decl list,
-       visit_DAbsIdx : 'this -> 'env ctx -> (iname binder * sort outer * idx outer) * decl tele rebind * region -> T.decl list,
-       visit_DTypeDef : 'this -> 'env ctx -> tname binder * mtype outer -> T.decl list,
+       visit_DRec : 'this -> 'env ctx -> ebinder * ((tbinder * (idx * idx) outer) list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * (idx * idx)) * expr) bind inner * region -> T.decl list,
+       visit_DIdxDef : 'this -> 'env ctx -> ibinder * sort option outer * idx outer -> T.decl list,
+       visit_DAbsIdx2 : 'this -> 'env ctx -> ibinder * sort outer * idx outer -> T.decl list,
+       visit_DAbsIdx : 'this -> 'env ctx -> (ibinder * sort outer * idx outer) * decl tele rebind * region -> T.decl list,
+       visit_DTypeDef : 'this -> 'env ctx -> tbinder * mtype outer -> T.decl list,
        visit_DConstrDef : 'this -> 'env ctx -> cbinder * cvar outer -> T.decl list,
        visit_DOpen : 'this -> 'env ctx -> mod_id inner * scoping_ctx option -> T.decl list,
        
@@ -70,11 +70,11 @@ type ('this, 'env) expr_visitor_vtable =
        visit_ModSeal : 'this -> 'env ctx -> mod * sgn -> T.mod,
        visit_ModTransparentAsc : 'this -> 'env ctx -> mod * sgn -> T.mod,
        visit_ptrn : 'this -> 'env ctx -> ptrn -> T.ptrn,
-       visit_PnVar : 'this -> 'env ctx -> ename binder -> T.ptrn,
+       visit_PnVar : 'this -> 'env ctx -> ebinder -> T.ptrn,
        visit_PnTT : 'this -> 'env ctx -> region -> T.ptrn,
        visit_PnPair : 'this -> 'env ctx -> ptrn * ptrn -> T.ptrn,
-       visit_PnAlias : 'this -> 'env ctx -> ename binder * ptrn * region -> T.ptrn,
-       visit_PnConstr : 'this -> 'env ctx -> ((cvar * ptrn_constr_tag) * bool) outer * iname binder list * ptrn * region -> T.ptrn,
+       visit_PnAlias : 'this -> 'env ctx -> ebinder * ptrn * region -> T.ptrn,
+       visit_PnConstr : 'this -> 'env ctx -> ((cvar * ptrn_constr_tag) * bool) outer * ibinder list * ptrn * region -> T.ptrn,
        visit_PnAnno : 'this -> 'env ctx -> ptrn * mtype outer -> T.ptrn,
        visit_EApp : 'this -> 'env -> expr * expr -> T.expr,
        visit_EPair : 'this -> 'env -> expr * expr -> T.expr,
@@ -551,7 +551,13 @@ fun default_expr_visitor_vtable
         val vtable = cast this
         val (name, bind, r) = data
         val name = visit_ebinder this env name
-        val bind = visit_outer (visit_bind (visit_list (visit_tbinder this)) (#visit_expr vtable this)) env bind
+        val bind = visit_outer (visit_bind
+                                  (visit_list (visit_pair
+                                                 (visit_tbinder this)
+                                                 (visit_outer
+                                                    (visit_pair (#visit_idx vtable this)
+                                                                (#visit_idx vtable this)))))
+                                  (#visit_expr vtable this)) env bind
       in
         [T.DVal (name, bind, r)]
       end
@@ -580,7 +586,11 @@ fun default_expr_visitor_vtable
         val name = visit_ebinder this env name
         val bind =
             visit_inner (
-              visit_bind (visit_pair (visit_list (visit_tbinder this))
+              visit_bind (visit_pair (visit_list (visit_pair
+                                                    (visit_tbinder this)
+                                                    (visit_outer
+                                                       (visit_pair (#visit_idx vtable this)
+                                                                   (#visit_idx vtable this)))))
                                      (visit_rebind (visit_tele (visit_stbind this))))
                          (visit_triple (visit_pair (visit_map $ #visit_idx vtable this)
                                                    (visit_map $ #visit_idx vtable this))

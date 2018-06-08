@@ -87,7 +87,7 @@ fun MakePnAnno (pn, t) = PnAnno (pn, Outer t)
 fun MakeEAbs (st, pn, e) = EAbs (st, Binders.Bind (pn, e))
 fun MakeEAbsI (name, s, e, r) = EAbsI (IBindAnno ((name, s), e), r)
 fun MakeDIdxDef (name, s, i) = DIdxDef (IBinder name, Outer s, Outer i)
-fun MakeDVal (ename, tnames, e, r) = DVal (EBinder ename, Outer $ Unbound.Bind (map TBinder tnames, e), r)
+fun MakeDVal (ename, tnames, e, r) = DVal (EBinder ename, Outer $ Unbound.Bind (map (mapPair' TBinder Outer) tnames, e), r)
 fun MakeDTypeDef (name, t) = DTypeDef (TBinder name, Outer t)
 
 fun assert_EAnnoLiveVars err e =

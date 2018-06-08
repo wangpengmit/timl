@@ -551,7 +551,7 @@ and on_DRec (name, bind, _) =
       val ((tnames, Rebind binds), ((pre, post), (t, i), e)) = Unbound.unBind $ unInner bind
       (* val t = t !! (fn () => raise Impossible "to-micro-timl/DRec: t must be SOME") *)
       (* val i = i !! (fn () => raise Impossible "to-micro-timl/DRec: i must be SOME") *)
-      val tnames = map unBinderName tnames
+      val tnames = map (mapPair' unBinderName unOuter) tnames
       val binds = unTeles binds
       val () = assert_nil binds
       (* fun on_bind (bind, e) = *)

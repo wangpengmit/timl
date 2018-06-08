@@ -15,15 +15,18 @@ structure UnitTestBasic1 = struct
 (* val a = if __&false then 1 else 0 *)
 (* (* (* (* val () = __&halt (a + x) *) *) *) *)
 
-val x = 1
-(* val f = fn {n : Nat} y => y + 1 *)
-(* val f = fn {n : Nat} y => x + y *)
-(* fun f {n : Nat} y = y + 1 *)
-fun f {n : Nat} y = x + y
-val a = @f {1}
-val b = a 1
-val a = @f {1} 1
+(* val x = 1 *)
+(* (* val f = fn {n : Nat} y => y + 1 *) *)
+(* (* val f = fn {n : Nat} y => x + y *) *)
+(* (* fun f {n : Nat} y = y + 1 *) *)
+(* fun f {n : Nat} y = x + y *)
+(* val a = @f {1} *)
+(* val b = a 1 *)
+(* val a = @f {1} 1 *)
 
+val f = fn y => y
+val a = f 1
+           
 (* val a = "abc" *)
           
 (* val () = __&printc #"a" *)

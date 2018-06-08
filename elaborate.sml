@@ -160,7 +160,7 @@ local
       end
 
   fun IUnderscore r = elab_i (S.IVar (NONE, ("_", r)))
-        
+  fun IUnderscore2 r = (IUnderscore r, IUnderscore r)        
   fun elab_mt t =
       case t of
 	  S.TVar (id as (m, (x, r))) =>
@@ -191,7 +191,7 @@ local
 	  let
             fun f ((x, s, _), t) =
 		case quan of
-		    S.Forall () => TUniI (elab_s s, Bind (x, ((IUnderscore r, IUnderscore r), t)), r)
+		    S.Forall () => TUniI (elab_s s, Bind (x, (IUnderscore2 r, t)), r)
 	  in
 	    foldr f (elab_mt t) binds
 	  end
@@ -461,7 +461,7 @@ local
           in
             case pn of
                 PnVar name =>
-                DVal (name, Outer $ Unbound.Bind (map (Binder o TName) tnames, elab e), r)
+                DVal (name, Outer $ Unbound.Bind (map (fn nm => (Binder $ TName nm, Outer $ IUnderscore2 r)) tnames, elab e), r)
               | _ =>
                 if null tnames then
                   DValPtrn (pn, Outer $ elab e, r)
@@ -483,7 +483,7 @@ local
             val j = default (IUVar ((), r)) (Option.map elab_i j)
             val e = elab e
           in
-	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (Binder o TName) tnames, Rebind $ Teles binds), ((elab_state r pre, elab_state r post), (t, (d, j)), e)), r)
+	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (fn nm => (Binder $ TName nm, Outer $ IUnderscore2 r)) tnames, Rebind $ Teles binds), ((elab_state r pre, elab_state r post), (t, (d, j)), e)), r)
           end
         | S.DIdxDef ((name, r), s, i) =>
           let
@@ -517,7 +517,7 @@ local
 
   fun elab_spec spec =
       case spec of
-          S.SpecVal (name, tnames, t, r) => SpecVal (name, foldr (fn (tname, t) => PTUni ((IUnderscore r, IUnderscore r), Bind (tname, t), combine_region (snd tname) r)) (PTMono $ elab_mt t) tnames)
+          S.SpecVal (name, tnames, t, r) => SpecVal (name, foldr (fn (tname, t) => PTUni (IUnderscore2 r, Bind (tname, t), combine_region (snd tname) r)) (PTMono $ elab_mt t) tnames)
         | S.SpecIdx (name, sort) => SpecIdx (name, elab_s sort)
         | S.SpecType (tnames, sorts, r) =>
           (case tnames of

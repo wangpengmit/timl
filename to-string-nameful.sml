@@ -418,8 +418,8 @@ and strn_decl decl =
         let
           val pn = PnVar name
           val (tnames, e) = Unbound.unBind bind
-          val tnames = map binder2str tnames
-          val tnames = (join "" o map (fn nm => sprintf " [$]" [nm])) tnames
+          val tnames = map (mapPair' binder2str unOuter) tnames
+          val tnames = (join "" o map (fn (nm, (i, j)) => sprintf " [$ using $, $]" [nm, strn_i i, strn_i j])) tnames
           val pn = strn_pn pn
           val e = strn_e e
         in
@@ -437,8 +437,8 @@ and strn_decl decl =
           val name = binder2str name
           val ((tnames, Rebind binds), ((pre_st, post_st), (t, (d, j)), e)) = Unbound.unBind $ unInner bind
           val binds = unTeles binds
-          val tnames = map binder2str tnames
-          val tnames = (join "" o map (fn nm => sprintf " [$]" [nm])) tnames
+          val tnames = map (mapPair' binder2str unOuter) tnames
+          val tnames = (join "" o map (fn (nm, (i, j)) => sprintf " [$ using $, $]" [nm, strn_i i, strn_i j])) tnames
           fun f bind =
             case bind of
                 SortingST (name, Outer s) =>

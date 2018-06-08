@@ -389,8 +389,8 @@ fun app f range = foldl (fn (i, ()) => (f i; ())) () range
 
 end
 
-fun int_mapi f n = Range.map f $ zero_to n
-fun int_appi f n = Range.app f $ zero_to n
+fun int_mapi f n = Range.map f $ Range.zero_to n
+fun int_appi f n = Range.app f $ Range.zero_to n
   
 fun repeat_app f n = Range.app (fn _ => f ()) (Range.zero_to n)
 
