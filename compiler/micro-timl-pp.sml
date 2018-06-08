@@ -159,7 +159,7 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           str ")";
           close_box ()
         )
-      | TQuan (q, bind) =>
+      | TQuan (q, (i, j), bind) =>
         let
           val (name, k, t) = get_bind_anno bind
         in
@@ -172,6 +172,10 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           str name;
           comma ();
           str $ str_k k;
+          comma ();
+          str $ str_i i;
+          comma ();
+          str $ str_i j;
           comma ();
           pp_t t;
           str ")";

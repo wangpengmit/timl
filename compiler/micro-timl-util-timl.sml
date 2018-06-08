@@ -65,6 +65,8 @@ fun TQuanI0 (q, bind) =
     TQuanI (q, BindAnno (s, (TN0 dummy, t)))
   end
     
+fun TExists bind = TQuan (Exists (), TN0 dummy, bind)
+                         
 fun TExistsI bind = TQuanI0 (Exists (), bind)
 fun TExistsI_Many (ctx, t) = foldr (TExistsI o BindAnno) t ctx
                                          
@@ -135,17 +137,40 @@ fun assert_TBool t =
     | _ => raise assert_fail "assert_TBool"
 fun assert_TForallI t =
   case t of
-      TQuanI (Forall (), bind) => unBindAnno bind
+      TQuanI (Forall (), bind) =>
+      let
+        val ((name, s), (i, t)) = unBindAnno bind
+      in
+        (name, s, i, t)
+      end
     | _ => raise assert_fail $ "assert_TForallI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TForall t =
+  case t of
+      TQuan (Forall (), i, bind) =>
+      let
+        val ((name, k), t) = unBindAnno bind
+      in
+        (name, k, i, t)
+      end
+    | _ => raise assert_fail $ "assert_TForall; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TExistsI t =
   case t of
       TQuanI (Exists _, bind) =>
       let
-        val (name_s, (_, t)) = unBindAnno bind
+        val ((name, s), (_, t)) = unBindAnno bind
       in
-        (name_s, t)
+        (name, s, t)
       end
     | _ => raise assert_fail $ "assert_TExistsI; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TExists t =
+  case t of
+      TQuan (Exists _, i, bind) =>
+      let
+        val ((name, k), t) = unBindAnno bind
+      in
+        (name, k, t)
+      end
+    | _ => raise assert_fail $ "assert_TExists; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                                                           
 fun assert_EAbs e =
   case e of

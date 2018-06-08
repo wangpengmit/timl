@@ -150,7 +150,11 @@ fun unECase (e, bind1, bind2) =
   in
     (e, (unName name1, e1), (unName name2, e2))
   end
-               
+
+fun sc_against_Time_Nat ictx (i, j) =
+  (sc_against_sort ictx (i, STime),
+   sc_against_sort ictx (j, SNat))
+
 fun is_eq_basic_sort x = unify_bs dummy x
   
 fun BasicSort b = SBasic (b, dummy)
@@ -397,16 +401,15 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TBinOp (opr, t1, t2), get_ty_bin_op_res_kind opr)
       end
-    | TArrow ((i1, t1), (i, j), (i2, t2)) =>
+    | TArrow ((i1, t1), i, (i2, t2)) =>
       let
         val i1 = sc_against_sort ictx (i1, SState)
         val t1 = kc_against_kind ctx (t1, KType ())
-        val i = sc_against_sort ictx (i, STime)
-        val j = sc_against_sort ictx (j, SNat)
+        val i = sc_against_Time_Nat ictx i
         val i2 = sc_against_sort ictx (i2, SState)
         val t2 = kc_against_kind ctx (t2, KType ())
       in
-        (TArrow ((i1, t1), (i, j), (i2, t2)), KType ())
+        (TArrow ((i1, t1), i, (i2, t2)), KType ())
       end
     | TAbsI data =>
       let
@@ -444,24 +447,22 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       end
     | TQuanI (q, data) =>
       let
-        val (s, (name, ((i, j), t))) = unTQuanI data
-        (* val  () = println "before is_wf_sort" *)
+        val (s, (name, (i, t))) = unTQuanI data
         val s = is_wf_sort ictx s
-        (* val  () = println "after is_wf_sort" *)
         val t = open_close add_sorting_it (fst name, s) ctx
-                           (fn ctx =>
-                               ((sc_against_sort ictx (i, STime),
-                                 sc_against_sort ictx (j, SNat)),
+                           (fn ctx as (ictx, _) =>
+                               (sc_against_Time_Nat ictx i,
                                 kc_against_kind ctx (t, KType ())))
       in
         (TQuanI (q, IBindAnno ((name, s), t)), KType ())
       end
-    | TQuan (q, data) =>
+    | TQuan (q, i, data) =>
       let
+        val i = sc_against_Time_Nat ictx i
         val (k, (name, t)) = unTQuan data
         val t = kc_against_kind (add_kinding_it (fst name, k) ctx) (t, KType ())
       in
-        (TQuan (q, TBindAnno ((name, k), t)), KType ())
+        (TQuan (q, i, TBindAnno ((name, k), t)), KType ())
       end
     | TRec data =>
       let
@@ -540,15 +541,14 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TArrowTAL (ts, i), KType ())
       end
-    | TArrowEVM (st, rctx, ts, (time, space)) =>
+    | TArrowEVM (st, rctx, ts, i) =>
       let
         val st = sc_against_sort ictx (st, SState)
         val rctx = Rctx.map (fn t => kc_against_kind ctx (t, KType ())) rctx
         val ts = map (kc_against_KType ctx) ts
-        val time = sc_against_sort ictx (time, STime)
-        val space = sc_against_sort ictx (space, SNat)
+        val i = sc_against_Time_Nat ictx i
       in
-        (TArrowEVM (st, rctx, ts, (time, space)), KType ())
+        (TArrowEVM (st, rctx, ts, i), KType ())
       end
     | TMap t => (TMap $ kc_against_KType ctx t, KType ())
     | TState x => 
@@ -1279,7 +1279,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (e, t_e, j, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
-          val ((_, k), (j2, t)) = assert_TForall t_e
+          val (_, k, j2, t) = assert_TForall t_e
           val t1 = kc_against_kind itctx (t1, k)
           val (cost, e) = 
               case !phase of
@@ -1300,7 +1300,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (e, t_e, j, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
-          val ((_, s), (j2, t)) = assert_TForallI t_e
+          val (_, s, j2, t) = assert_TForallI t_e
           val i = sc_against_sort ictx (i, s)
           val (cost, e) = 
               case !phase of
@@ -1706,9 +1706,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val t' = kc_against_kind itctx (t', KType ())
           val t' = whnf itctx t'
-          val (k, (_, t)) = case t' of
-                                TQuan (Exists _, data) => unTQuan data
-                              | _ => raise MTCError "EPack"
+          val (_, k, t) = assert_TExists t'
           val t1 = kc_against_kind itctx (t1, k)
           val t_e = subst0_t_t t1 t
           val (e, i, st) = tc_against_ty (ctx, st) (e, t_e)
@@ -1721,7 +1719,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val t' = kc_against_kind itctx (t', KType ())
           val t' = whnf itctx t'
-          val ((_, s), t) = assert_TExistsI t'
+          val (_, s, t) = assert_TExistsI t'
           val i = sc_against_sort ictx (i, s)
           val t_e = subst0_i_t i t
           val (e, j, st) = tc_against_ty (ctx, st) (e, t_e)
@@ -1736,9 +1734,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t_e1, i1, st) = tc (ctx, st) e1
           val st_e1 = st
           val t_e1 = whnf itctx t_e1
-          val (k, (_, t)) = case t_e1 of
-                                TQuan (Exists _, data) => unTQuan data
-                              | _ => raise MTCError "EUnpack"
+          val (_, k, t) = assert_TExists t_e1
           val (e2, t2, i2, st) = tc (add_typing_full (fst ename, t) $ add_kinding_full (fst tname, k) ctx, st) e2
           (* val () = println $ "trying to forget: " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t (itctx_names $ add_kinding_it (tname, k) itctx) t2) *)
           val t2 = forget01_t_t t2
@@ -1756,7 +1752,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           fun mismatch header got expect =
             sprintf "Mismatch when checking %:\n  got:    $\n  expect: $\n" [header, got, expect]
           val t_e1 = whnf itctx t_e1
-          val ((_, s), t) = assert_TExistsI t_e1
+          val (_, s, t) = assert_TExistsI t_e1
           val (e2, t2, i2, st) = open_close add_sorting_full (fst iname, s) ctx (fn ctx => tc (add_typing_full (fst ename, t) ctx, shift_i_i st) e2)
           val t2 = forget01_i_t t2
                    handle ForgetError (r, m) => raise ForgetError (r, m ^ " when forgetting type: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names $ add_sorting_it (fst iname, s) itctx) t2))
@@ -1783,7 +1779,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
               end
             | i :: is =>
               let
-                val (_, t') = assert_TExistsI $ whnf itctx t
+                val (_, _, t') = assert_TExistsI $ whnf itctx t
               in
                 tc (ctx, st) $ EPackI (t, i, EPackIs (subst0_i_t i t', is, e))
               end

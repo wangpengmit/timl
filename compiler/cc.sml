@@ -306,8 +306,6 @@ fun free_evars_with_anno excluded a = free_vars_with_anno_0 (free_evars_with_ann
 fun IV (x, s) = IVar (make_Free_i x, [s])
 fun TV (x, k) = TVar (make_Free_t x, [k])
 
-fun TExists bind = TQuan (Exists (), bind)
-                         
 val ETT = EConst (ECTT ())
 
 fun ceil_half n = (n + 1) div 2
@@ -350,25 +348,25 @@ fun cc_ty_visitor_vtable cast () =
       in
       case t of
           TArrow _ => cc_t_arrow t
-        | TQuan (Forall (), _) => cc_t_arrow t
+        | TQuan (Forall (), _, _) => cc_t_arrow t
         | TQuanI (Forall (), _) => cc_t_arrow t
-        | TQuan (q, bind) =>
+        | TQuan (Exists _, _, bind) =>
           let
             val (k, (name, t)) = unBindAnnoName bind
             val a = fresh_tvar ()
             val t = open0_t_t a t
             val t = cc_t t
           in
-            TQuan (q, close0_t_t_anno ((a, fst name, k), t))
+            TExists $ close0_t_t_anno ((a, fst name, k), t)
           end
-        | TQuanI (q, bind) =>
+        | TQuanI (Exists _, bind) =>
           let
             val (s, (name, (_, t))) = unBindAnnoName bind
             val a = fresh_ivar ()
             val t = open0_i_t a t
             val t = cc_t t
           in
-            TQuanI0 (q, close0_i_t_anno ((a, fst name, s), t))
+            TExistsI $ close0_i_t_anno ((a, fst name, s), t)
           end
         | TRec bind =>
           let
@@ -436,7 +434,7 @@ fun apply_TForallIT b args =
         in
           apply_TForallIT (subst0_i_t v b) args
         end
-      | (TQuan (Forall (), bind), inr v :: args) =>
+      | (TQuan (Forall (), _, bind), inr v :: args) =>
         let
           val (_, (_, b)) = unBindAnnoName bind
         in

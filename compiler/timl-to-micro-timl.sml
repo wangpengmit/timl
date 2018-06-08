@@ -534,12 +534,12 @@ and on_DVal (ename, Outer bind, r) =
     let
       val name = unBinderName ename
       val (tnames, e) = Unbound.unBind bind
-      val tnames = map unBinderName tnames
+      val tnames = map (mapPair' unBinderName unOuter) tnames
       val (e, t) = case e of
                        S.EET (EETAsc (), e, t) => (e, SOME t)
                      | _ => (e, NONE)
       val e = on_e e
-      val e = EAbsTKind_Many (tnames, e)
+      val e = EAbsTKind_Many (map fst tnames, e)
       val t = Option.map (curry TUniKind_Many tnames o on_mt) t
     in
       (e, t)

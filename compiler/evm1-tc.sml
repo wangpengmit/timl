@@ -407,7 +407,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
-        val ((_, k), t2) = assert_TForall t0
+        val (_, k, _, t2) = assert_TForall t0
         val t = kc_against_kind itctx (unInner t, k)
         val t = subst0_t_t t t2
       in
@@ -417,7 +417,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
-        val ((_, s), (_, t2)) = assert_TForallI t0
+        val (_, s, _, t2) = assert_TForallI t0
         val i = sc_against_sort ictx (unInner i, s)
         val t = subst0_i_t i t2
       in
@@ -427,7 +427,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val t_pack = kc_against_kind itctx (unInner t_pack, KType ())
         val t_pack = whnf itctx t_pack
-        val ((_, k), t') = assert_TExists t_pack
+        val (_, k, t') = assert_TExists t_pack
         val t = kc_against_kind itctx (unInner t, k)
         val t_v = subst0_t_t t t'
         val (t0, sctx) = assert_cons sctx
@@ -439,7 +439,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val t_pack = kc_against_kind itctx (unInner t_pack, KType ())
         val t_pack = whnf itctx t_pack
-        val ((_, s), t') = assert_TExistsI t_pack
+        val (_, s, t') = assert_TExistsI t_pack
         val i = sc_against_sort ictx (unInner i, s)
         val t_v = subst0_i_t i t'
         val (t0, sctx) = assert_cons sctx
@@ -471,7 +471,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
-        val ((_, k), t) = assert_TExists t0
+        val (_, k, t) = assert_TExists t0
       in
         (add_stack t $ add_kinding_full (binder2str name, k) (itctx, rctx, sctx, st))
       end
@@ -479,7 +479,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
-        val ((_, s), t) = assert_TExistsI t0
+        val (_, s, t) = assert_TExistsI t0
         val new = (binder2str name, s)
         val () = open_with new
       in

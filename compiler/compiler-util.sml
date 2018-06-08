@@ -37,14 +37,6 @@ fun assert_TAbsI t =
   case t of
       TAbsI bind => unBindAnno bind
     | _ => raise assert_fail "assert_TAbsI"
-fun assert_TForall t =
-  case t of
-      TQuan (Forall (), bind) => unBindAnno bind
-    | _ => raise assert_fail $ "assert_TForall; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-fun assert_TExists t =
-  case t of
-      TQuan (Exists _, bind) => unBindAnno bind
-    | _ => raise assert_fail $ "assert_TExists; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TRec t =
   case t of
       TRec bind => unBindAnno bind
@@ -168,7 +160,7 @@ fun EAppITs (f, args) = foldl (swap EAppIT) f args
 fun TForallIT0 (bind, e) =
     case bind of
         inl bind => TForallI0 $ IBindAnno (bind, e)
-      | inr bind => TForall $ TBindAnno (bind, e)
+      | inr bind => TForall (TN0 dummy, TBindAnno (bind, e))
 fun TForallITs (binds, e) = foldr TForallIT0 e binds
                                       
 fun EAscTypeTime (e, arg) =
@@ -188,7 +180,7 @@ fun open_collect_TForallIT_whnf whnf t =
       in
         (inl (x, fst name, s) :: binds, t)
       end
-    | TQuan (Forall (), bind) =>
+    | TQuan (Forall (), _, bind) =>
       let
         val (k, (name, t)) = unBindAnnoName bind
         val x = fresh_tvar ()
@@ -212,7 +204,7 @@ fun collect_TForallIT_open_with_whnf whnf vars t =
       in
         (inl (x, fst name, s) :: binds, t)
       end
-    | TQuan (Forall (), bind) =>
+    | TQuan (Forall (), _, bind) =>
       let
         val (k, (name, t)) = unBindAnnoName bind
         val (x, vars) = case vars of
@@ -253,7 +245,7 @@ fun open_collect_EAbsIT e =
 fun close_TForallIT0 (bind, t) =
     case bind of
         inl (x, name, s) => TForallI0 $ close0_i_t_anno ((x, name, s), t)
-      | inr (x, name, k) => TForall $ close0_t_t_anno ((x, name, k), t)
+      | inr (x, name, k) => TForall (TN0 dummy, close0_t_t_anno ((x, name, k), t))
 fun close_TForallITs (binds, t) = foldr close_TForallIT0 t binds
                                       
 fun close_EAbsIT (bind, e) =
@@ -281,7 +273,7 @@ fun collect_TForallIT b =
       in
         (inl (name, s) :: binds, b)
       end
-    | TQuan (Forall (), bind) =>
+    | TQuan (Forall (), _, bind) =>
       let
         val (k, (name, b)) = unBindAnnoName bind
         val (binds, b) = collect_TForallIT b

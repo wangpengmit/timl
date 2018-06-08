@@ -10,13 +10,13 @@ fun KArrows bs k = foldr KArrow k bs
 fun KArrowTs ks k = foldr KArrowT k ks
 fun KArrowTypes n k = KArrowTs (repeat n $ KType ()) k
                           
-fun TForall bind = TQuan (Forall (), bind)
+fun TForall (i, bind) = TQuan (Forall (), i, bind)
 fun TAbsI_Many (ctx, t) = foldr (TAbsI o BindAnno) t ctx
 fun TAbsT_Many (ctx, t) = foldr (TAbsT o BindAnno) t ctx
-fun TUni bind = TQuan (Forall (), bind)
-fun MakeTUni (name, k, t) = TUni $ TBindAnno ((name, k), t)
-fun TUniKind (name, t) = MakeTUni (name, KType (), t)
-fun TUniKind_Many (names, t) = foldr TUniKind t names
+val TUni = TForall
+fun MakeTUni (name, k, i, t) = TUni (i, TBindAnno ((name, k), t))
+fun TUniKind (name, i, t) = MakeTUni (name, KType (), i, t)
+fun TUniKind_Many (names, t) = foldr (fn ((name, i), t) => TUniKind (name, i, t)) t names
 
 (* val TCString = TCTiML BaseTypes.String *)
 val TCInt = TCTiML (BaseTypes.BTInt ())
@@ -66,9 +66,9 @@ fun MakeELetConstr (e1, name, e2) = ELetConstr (e1, CBind (name, e2))
 fun MakeEAbsConstr (tnames, inames, ename, e) = EAbsConstr $ Bind ((map TBinder tnames, map IBinder inames, EBinder ename), e)
 fun MakeECase (e, (name1, e1), (name2, e2)) = ECase (e, EBind (name1, e1), EBind (name2, e2))
 fun MakeTQuanI (q, s, name, i, t) = TQuanI (q, IBindAnno ((name, s), (i, t)))
-fun MakeTQuan (q, k, name, t) = TQuan (q, TBindAnno ((name, k), t))
+fun MakeTQuan (q, k, name, i, t) = TQuan (q, i, TBindAnno ((name, k), t))
 fun MakeTForallI (s, name, i, t) = MakeTQuanI (Forall (), s, name, i, t)
-fun MakeTForall (s, name, t) = MakeTQuan (Forall (), s, name, t)
+fun MakeTForall (s, name, i, t) = MakeTQuan (Forall (), s, name, i, t)
 fun EAbsTKind (name, e) = MakeEAbsT (name, KType (), e) 
 fun EAbsTKind_Many (names, e) = foldr EAbsTKind e names
 

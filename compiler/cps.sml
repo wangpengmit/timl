@@ -248,28 +248,25 @@ fun cps_ty_visitor_vtable cast () =
                 in
                   TForallICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], t)
                 end
-              | TQuan (Forall (), bind) =>
+              | TQuan (Forall (), i, bind) =>
                 let
                   val ((name_a, kd_a), t) = unBindAnno2 bind
                   val a = fresh_tvar ()
                   val t = open0_t_t a t
-                  val t = cps_Forall (TN0, t)
+                  val t = cps_Forall (i, t)
                 in
-                  TForall $ close0_t_t_anno ((a, name_a, kd_a), t)
+                  TForall (TN0, close0_t_t_anno ((a, name_a, kd_a), t))
                 end
               | TQuanI (Forall (), bind) =>
                 let
                   val ((name_a, s_a), t) = unBindAnno2 bind
                   val a = fresh_ivar ()
-                  (* val () = println $ "a=" ^ str_int (unFree_i a) *)
-                  (* val () = println $ "before open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
                   val t = open0_i_2it a t
-                  (* val () = println $ "after open0_i_t(): " ^ (ExportPP.pp_t_to_string $ ExportPP.export_t ([], []) t) *)
                   val t = cps_Forall t
                 in
                   TForallI0 $ close0_i_t_anno ((a, name_a, s_a), t)
                 end
-              | TQuan (Exists ex, bind) => 
+              | TQuan (Exists ex, _, bind) => 
                 let
                   val ((name_alpha, kd_alpha), t) = unBindAnno2 bind
                   val alpha = fresh_tvar ()
@@ -277,7 +274,7 @@ fun cps_ty_visitor_vtable cast () =
                   val t = cps_t t
                   val t = close0_t_t_anno ((alpha, name_alpha, kd_alpha), t)
                 in
-                  TQuan (Exists ex, t)
+                  TExists t
                 end
               | TQuanI (Exists ex, bind) => 
                 let
@@ -436,7 +433,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
         val t_e = whnf t_e
-        val (_, (j, _)) = assert_TForallI t_e
+        val (_, _, j, _) = assert_TForallI t_e
         val x = fresh_evar ()
         (* EAppI explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
         val n_fvars = ISet.numItems $ free_evars ISet.empty k
@@ -507,7 +504,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       let
         val ((name_a, kd_a), e) = unBindAnno2 bind
         val t_e = whnf t_e
-        val (_, t_e) = assert_TForall t_e
+        val (_, _, _, t_e) = assert_TForall t_e
         val a = fresh_tvar ()
         val e = open0_t_e a e
         val t_e = open0_t_t a t_e
@@ -520,7 +517,8 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       let
         val ((name_a, s_a), e) = unBindAnno2 bind
         val t_e = whnf t_e
-        val (_, t_e) = assert_TForallI t_e
+        val (_, _, i, t_e) = assert_TForallI t_e
+        val t_e = (i, t_e)
         val a = fresh_ivar ()
         val e = open0_i_e a e
         val t_e = open0_i_2it a t_e
@@ -989,7 +987,7 @@ fun check_CPSed_ty_visitor_vtable cast () =
             TQuanI data
           end
         | _ => #visit_TQuanI vtable this env data (* call super *)
-    fun visit_TQuan this env (data as (q, _)) =
+    fun visit_TQuan this env (data as (q, _, _)) =
       case q of
           Forall () =>
           let

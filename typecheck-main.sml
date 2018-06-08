@@ -111,6 +111,9 @@ open Sortcheck
 fun check_sorts gctx (ctx, is : U.idx list, sorts, r) : idx list =
   (check_length r (is, sorts);
    ListPair.map (fn (i, s) => check_sort gctx (ctx, i, s)) (is, sorts))
+    
+fun check_Time_Nat gctx ctx (i, j) =
+  (check_basic_sort gctx (ctx, i, BSTime), check_basic_sort gctx (ctx, j, BSNat))
 
 fun add_ref a = binop_ref (curry $ swap StMap.insert') a
 val st_types_ref = (ref StMap.empty, ref StMap.empty)
@@ -200,11 +203,10 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
     (* val () = print (sprintf "Kinding $\n" [U.str_mt gctxn ctxn c]) *)
     fun main () =
       case c of
-	  U.TArrow ((st1, c1), (d, j), (st2, c2)) =>
+	  U.TArrow ((st1, c1), i, (st2, c2)) =>
           (check_same_domain st1 st2;
 	   (TArrow ((is_wf_state gctx sctx st1, check_higher_kind_Type (ctx, c1)), 
-	            (check_basic_sort gctx (sctx, d, BSTime),
-                     check_basic_sort gctx (sctx, j, BSNat)),
+	            check_Time_Nat gctx sctx i,
 	            (is_wf_state gctx sctx st2, check_higher_kind_Type (ctx, c2))),
             HType))
         | U.TArray (t, i) =>
@@ -240,13 +242,12 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
 	  (TProd (check_higher_kind_Type (ctx, c1),
 	         check_higher_kind_Type (ctx, c2)),
            HType)
-	| U.TUniI (s, Bind ((name, r), ((i, j), t)), r_all) => 
+	| U.TUniI (s, Bind ((name, r), (i, t)), r_all) => 
           let
             val s = is_wf_sort gctx (sctx, s)
             val t = open_close add_sorting_sk (name, s) ctx
                                (fn ctx as (sctx, _) =>
-                                   ((check_basic_sort gctx (sctx, i, BSTime),
-                                     check_basic_sort gctx (sctx, j, BSNat)),
+                                   (check_Time_Nat gctx sctx i,
                                     check_higher_kind_Type (ctx, t)))
           in
 	    (TUniI (s, Bind ((name, r), t), r_all),
@@ -363,11 +364,11 @@ fun is_wf_type gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.ty) : ty =
     case c of
         U.PTMono t =>
         PTMono (check_kind_Type gctx (ctx, t))
-      | U.PTUni ((i, j), Bind ((name, r), c), r_all) => 
+      | U.PTUni (i, Bind ((name, r), c), r_all) => 
 	PTUni (
-          (check_basic_sort gctx (sctx, i, BSTime),
-           check_basic_sort gctx (sctx, j, BSNat)),
-          Bind ((name, r), is_wf_type gctx (add_kinding_sk (name, Type) ctx, c)), r_all)
+          check_Time_Nat gctx sctx i,
+          Bind ((name, r), is_wf_type gctx (add_kinding_sk (name, Type) ctx, c)),
+          r_all)
   end
 
 infix 6 %%+ 
@@ -1937,22 +1938,31 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
       val check_decls = check_decls gctx
       val get_mtype = get_mtype gctx
       val check_mtype_time = check_mtype_time gctx
-      fun check_tname_times n_fvars i_e r sctxn names = 
+      fun get_tname_times n_fvars i_e len = 
         let
           val extra = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
           val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
-          val len = length names
           (*  cost  ...  cost  i_e
                    extra ... extra              
            *)
-          val gctxn = gctx_names gctx
-          fun unify_2i a = binop_pair (unify_i r gctxn sctxn) a
-          val () = appi (fn (n, (_, i)) => unify_2i (i, (if n = len - 1 then i_e else cost) %%+ extra)) names
+          val times = int_mapi (fn n => if n = len - 1 then i_e else cost) len
+          val times = map (fn i => i %%+ extra) times
           val i_e = if len = 0 then i_e else cost
+        in
+          (times, i_e)
+        end
+      fun check_tname_times r sctxn n_fvars i_e names = 
+        let
+          val extra = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
+          val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+          val (times, i_e) = get_tname_times n_fvars i_e $ length names
+          val gctxn = gctx_names gctx
+          fun unify_2i a = ignore $ binop_pair (unify_i r gctxn sctxn) a
+          val () = app2 unify_2i (map snd names, times)
         in
           i_e
         end
-      fun generalize n_fvars i_e r sctxn t = 
+      fun generalize n_fvars i_e t = 
         let
           fun collect_uvar_t_ctx (_, _, cctx, tctx) =
             (* cctx can't contain uvars *)
@@ -1968,7 +1978,8 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
           val t = shiftx_t_mt 0 (length free_uvars) t
           val t = foldli (fn (v, uvar_ref, t) => SubstUVar.substu_t_mt uvar_ref v t) t free_uvars
           val free_uvar_names = map (attach_snd dummy) $ Range.map generalized_uvar_name (0, (length free_uvars))
-          val i_e = check_tname_times n_fvars i_e r sctxn free_uvar_names
+          val (times, i_e) = get_tname_times n_fvars i_e $ length free_uvar_names
+          val free_uvar_names = zip (free_uvar_names, times)
           val poly_t = PTUni_Many (free_uvar_names, PTMono t, dummy)
         in
           (t, poly_t, free_uvars, free_uvar_names, i_e)
@@ -1989,6 +2000,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               (* val () = println $ "DVal " ^ name *)
               val (tnames, e) = Unbound.unBind bind
               val tnames = map (mapPair' unBinderName unOuter) tnames
+              val tnames = map (mapSnd $ check_Time_Nat gctx sctx) tnames
               val is_value = is_value e
               val (e, t, d, st) = get_mtype (add_kindings_skct (zip (rev $ map (fst o fst) tnames, repeat (length tnames) Type)) ctx, st) e
               fun ty2mtype t = snd $ collect_PTUni t
@@ -1997,11 +2009,11 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                 let
                   val n_fvars = EVarSet.numItems $ FreeEVars.free_evars e
                   val sctxn = sctx_names sctx
-                  val (t, poly_t, free_uvars, free_uvar_names, d) = generalize n_fvars d r sctxn t
+                  val (t, poly_t, free_uvars, free_uvar_names, d) = generalize n_fvars d t
                   val e = UpdateExpr.update_e e
                   val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
                   val e = foldli (fn (v, uvar_ref, e) => SubstUVar.substu_t_e uvar_ref v e) e free_uvars
-                  val d = check_tname_times n_fvars d r sctxn tnames
+                  val d = check_tname_times r sctxn n_fvars d tnames
                   val poly_t = PTUni_Many (tnames, poly_t, r)
                   val tnames = tnames @ free_uvar_names
                 in
@@ -2018,8 +2030,9 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val (name, r1) = unBinderName name
               val ((tnames, Rebind binds), ((pre_st, post_st), (t, d), e)) = Unbound.unBind $ unInner bind
               val tnames = map (mapPair' unBinderName unOuter) tnames
+              val tnames = map (mapSnd $ check_Time_Nat gctx sctx) tnames
               val binds = unTeles binds
-              val ctx as (sctx, kctx, cctx, tctx) = add_kindings_skct (zip ((rev o map fst) tnames, repeat (length tnames) Type)) ctx
+              val ctx as (sctx, kctx, cctx, tctx) = add_kindings_skct (zip (rev $ map (fst o fst) tnames, repeat (length tnames) Type)) ctx
               val e = U.EAscSpace (e, snd d)
               val e = U.EAscTime (e, fst d)
               fun attach_bind_e (bind, e) =
@@ -2067,13 +2080,13 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
 	      val te = check_kind_Type gctx ((sctx, kctx), te)
               (* val () = println $ sprintf "te[post] = $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
 	      val (e, i, st) = check_mtype gctx (add_typing_skct (name, PTMono te) ctx, st) (e, te) 
-              val n_fvars = EVarSet.numItems $ FreeEVars.delete (FreeEVars.free_evars e, inl 0)
+              val n_fvars = EVarSet.numItems $ EVarSet.delete (FreeEVars.free_evars e, inl 0)
               val sctxn = sctx_names sctx
-              val (te, poly_te, free_uvars, free_uvar_names, i) = generalize n_fvars i r sctxn te
+              val (te, poly_te, free_uvars, free_uvar_names, i) = generalize n_fvars i te
               val e = UpdateExpr.update_e e
               val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
               val e = foldli (fn (v, uvar_ref, e) => SubstUVar.substu_t_e uvar_ref v e) e free_uvars
-              val i = check_tname_times n_fvars i r sctxn tnames
+              val i = check_tname_times r sctxn n_fvars i tnames
               val poly_te = PTUni_Many (tnames, poly_te, r)
               val tnames = tnames @ free_uvar_names
               val decl = DRec (Binder $ EName (name, r1), Inner $ Unbound.Bind ((map (mapPair' (Binder o TName) Outer) tnames, Rebind TeleNil), ((StMap.empty, StMap.empty), (te, TN0 r), e)), r)

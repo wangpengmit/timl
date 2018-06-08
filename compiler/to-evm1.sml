@@ -580,7 +580,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
       let
         val (e1, t) = assert_EAscType e1
         val (I_e1, st) = compile (e1, st)
-        val ((_, k), t) = assert_TExists t
+        val (_, k, t) = assert_TExists t
         val t = cg_t t
         val (name_a, bind) = unBindSimpName bind
         val (name_x, e2) = unBindSimpName bind
@@ -593,7 +593,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
       let
         val (e1, t) = assert_EAscType e1
         val (I_e1, st) = compile (e1, st)
-        val ((_, s), t) = assert_TExistsI t
+        val (_, s, t) = assert_TExistsI t
         val t = cg_t t
         val (name_a, bind) = unBindSimpName bind
         val (name_x, e2) = unBindSimpName bind
