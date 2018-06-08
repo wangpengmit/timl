@@ -581,7 +581,7 @@ and on_DRec (name, bind, _) =
       val t = on_mt t
       val e = MakeERec (name, t, e)
       val t = TUniKind_Many (tnames, t)
-      val e = EAbsTKind_Many (tnames, e)
+      val e = EAbsTKind_Many (map fst tnames, e)
     in
       (e, t)
     end

@@ -52,9 +52,9 @@ datatype expr =
          | EGet of string * expr list * region
 
      and decl =
-         DVal of ebinder * (tbinder list, expr) bind outer * region
+         DVal of ebinder * ((tbinder * (idx * idx) outer) list, expr) bind outer * region
          | DValPtrn of ptrn * expr outer * region
-         | DRec of ebinder * (tbinder list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * (idx * idx)) * expr) bind inner * region
+         | DRec of ebinder * ((tbinder * (idx * idx) outer) list * stbind tele rebind, (idx StMap.map * idx StMap.map) * (mtype * (idx * idx)) * expr) bind inner * region
          | DIdxDef of ibinder * sort option outer * idx outer
          | DAbsIdx2 of ibinder * sort outer * idx outer
          | DAbsIdx of (ibinder * sort outer * idx outer) * decl tele rebind * region

@@ -45,9 +45,9 @@ signature EXPR = sig
        (* | EAbsT of (sort, expr) tbind_anno * region *)
 
        and decl =
-           DVal of Binders.ebinder * (Binders.tbinder list, expr) Unbound.bind Unbound.outer * Region.region
+           DVal of Binders.ebinder * ((Binders.tbinder * (idx * idx) Unbound.outer) list, expr) Unbound.bind Unbound.outer * Region.region
            | DValPtrn of ptrn * expr Unbound.outer * Region.region
-           | DRec of Binders.ebinder * (Binders.tbinder list * stbind Unbound.tele Unbound.rebind, (idx StMap.map * idx StMap.map) * (mtype * (idx * idx)) * expr) Unbound.bind Unbound.inner * Region.region
+           | DRec of Binders.ebinder * ((Binders.tbinder * (idx * idx) Unbound.outer) list * stbind Unbound.tele Unbound.rebind, (idx StMap.map * idx StMap.map) * (mtype * (idx * idx)) * expr) Unbound.bind Unbound.inner * Region.region
            | DIdxDef of Binders.ibinder * sort option Unbound.outer * idx Unbound.outer
            | DAbsIdx2 of Binders.ibinder * sort Unbound.outer * idx Unbound.outer
            | DAbsIdx of (Binders.ibinder * sort Unbound.outer * idx Unbound.outer) * decl Unbound.tele Unbound.rebind * Region.region
