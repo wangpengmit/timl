@@ -1,6 +1,7 @@
 structure MicroTiMLTypecheck = struct
 
 open MicroTiMLCosts
+open MicroTiMLFreeEVars
 open MicroTiMLVisitor2
 open EvalConstr
 open UVar
@@ -48,10 +49,9 @@ infix 6 @%++
         
 infix 6 @%!!
 infix 6 @%+
-         
+
 infix 6 @%--
-fun a @%-- b = ISet.difference (a, ISetU.fromList b)
-         
+        
 fun is_wf_basic_sort_BSUVar data = BSUVar data
     
 fun get_basic_sort_IUVar gctx ctx (data as (x, r)) =
@@ -797,103 +797,6 @@ val T : TimeType.time -> idx = ITime
                 
 fun TN n = (to_real n, N0)
 
-fun set_is_rec_expr_visitor_vtable cast () =
-  let
-    val vtable = 
-        default_expr_visitor_vtable
-          cast
-          extend_noop
-          extend_noop
-          extend_noop
-          extend_noop
-          visit_noop
-          visit_noop
-          visit_noop
-          visit_noop
-          visit_noop
-    fun set_flag bind =
-      let
-        val (name1, e) = unBindAnno bind
-        val e = case e of
-                    EAbs (st, bind) =>
-                    let
-                      val (name, body) = unBindAnno bind
-                    in
-                      EAbs (st, BindAnno (name, EAnnoBodyOfRecur body))
-                    end
-                  | EAbsI bind =>
-                    let
-                      val (name, body) = unBindAnno bind
-                    in
-                      EAbsI $ BindAnno (name, EAnnoBodyOfRecur body)
-                    end
-                  | EAbsT bind =>
-                    let
-                      val (name, body) = unBindAnno bind
-                    in
-                      EAbsT $ BindAnno (name, EAnnoBodyOfRecur body)
-                    end
-                  | _ => raise Impossible "set_is_rec: other than EAbs/EAbsI/EAbsT"
-      in
-        BindAnno (name1, e)
-      end
-    fun visit_ERec this env bind =
-      let
-        val bind = set_flag bind
-      in
-        #visit_ERec vtable this env bind (* call super*)
-      end
-  in
-    override_visit_ERec vtable visit_ERec
-  end
-fun new_set_is_rec_expr_visitor params = new_expr_visitor set_is_rec_expr_visitor_vtable params
-fun set_is_rec b =
-  let
-    val visitor as (ExprVisitor vtable) = new_set_is_rec_expr_visitor ()
-  in
-    #visit_expr vtable visitor () b
-  end
-
-fun free_evars_expr_visitor_vtable cast output =
-  let
-    fun extend_e this env name = (env + 1, name)
-    fun visit_var this env data =
-      ((case data of
-            ID (n, _) => if n >= env then output $ n - env
-                         else ()
-          | QID _ => raise Impossible "free_evars/QID"
-       );
-       data)
-  in
-    default_expr_visitor_vtable
-      cast
-      extend_noop
-      extend_noop
-      extend_noop
-      extend_e
-      visit_var
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
-  end
-fun new_free_evars_expr_visitor params = new_expr_visitor free_evars_expr_visitor_vtable params
-fun free_evars b =
-  let
-    val r = ref []
-    fun output n = push_ref r n
-    val visitor as (ExprVisitor vtable) = new_free_evars_expr_visitor output
-    val _ = #visit_expr vtable visitor 0 b
-    val fvars = !r
-  in
-    ISetU.to_set fvars
-  end
-              
-fun is_rec_body e =
-  case e of
-      EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
-    | _ => (false, e)
-             
 val anno_EVar = ref false
 val anno_EProj = ref false
 val anno_EFold = ref false
@@ -1317,36 +1220,16 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EAppI (e, i), subst0_i_t i t, j %%+ mapPair' to_real N cost %%+ subst0_i_2i i j2, st)
         end
-      | EAbsT data =>
-        let
-          val (k, (name, e)) = unEAbsT data
-          val () = assert_b "EAbsT: is_value e" (is_value e)
-          val (e, t, i, _) = tc (add_kinding_full (fst name, k) ctx, IEmptyState) e
-          val (is_rec, e) = is_rec_body e
-          val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
-          val n_fvars = ISet.numItems (free_evars e @%-- excluded)
-          val inner_cost =
-              case !phase of
-                  PhBeforeCodeGen () => TN0
-                | PhBeforeCC () => TN0
-                | PhBeforeCPS () => i %%+ mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
-          val cost =
-              case !phase of
-                  PhBeforeCodeGen () => TN0
-                | PhBeforeCC () => i
-                | PhBeforeCPS () => mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
-        in 
-          (MakeEAbsT (name, k, e), MakeTForall (k, name, inner_cost, t), cost, st)
-        end
       | EAbsI data =>
         let
           val (s, (name, e)) = unEAbsI data
-          val s = is_wf_sort ictx s
           val () = assert_b "EAbsI: is_value e" (is_value e)
+          val (e, n_fvars) =
+              case !phase of
+                  PhBeforeCodeGen () => (e, 0)
+                | _ => assert_EAnnoFreeEVars e
+          val s = is_wf_sort ictx s
           val (e, t, i, _) = open_close add_sorting_full (fst name, s) ctx (fn ctx => tc (ctx, IEmptyState) e)
-          val (is_rec, e) = is_rec_body e
-          val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
-          val n_fvars = ISet.numItems (free_evars e @%-- excluded)
           val inner_cost =
               case !phase of
                   PhBeforeCodeGen () => TN0
@@ -1360,15 +1243,38 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (MakeEAbsI (name, s, e), MakeTForallI (s, name, inner_cost, t), cost, st)
         end
+      | EAbsT data =>
+        let
+          val (k, (name, e)) = unEAbsT data
+          val () = assert_b "EAbsT: is_value e" (is_value e)
+          val (e, n_fvars) =
+              case !phase of
+                  PhBeforeCodeGen () => (e, 0)
+                | _ => assert_EAnnoFreeEVars e
+          val (e, t, i, _) = tc (add_kinding_full (fst name, k) ctx, IEmptyState) e
+          val inner_cost =
+              case !phase of
+                  PhBeforeCodeGen () => TN0
+                | PhBeforeCC () => TN0
+                | PhBeforeCPS () => i %%+ mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
+          val cost =
+              case !phase of
+                  PhBeforeCodeGen () => TN0
+                | PhBeforeCC () => i
+                | PhBeforeCPS () => mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+        in 
+          (MakeEAbsT (name, k, e), MakeTForall (k, name, inner_cost, t), cost, st)
+        end
       | EAbs (pre_st, bind) =>
         let
           val pre_st = sc_against_sort ictx (pre_st, SState)
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind
-          val (is_rec, e) = is_rec_body e
+          val (e, n_fvars) =
+              case !phase of
+                  PhBeforeCodeGen () => (e, 0)
+                | _ => assert_EAnnoFreeEVars e
           val t1 = kc_against_kind itctx (t1, KType ())
           val (e, t2, i, post_st) = tc (add_typing_full (fst name, t1) ctx, pre_st) e
-          val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
-          val n_fvars = ISet.numItems (free_evars e @%-- excluded)
           val extra_inner_cost =
               case !phase of
                   PhBeforeCodeGen () => (C_Abs_Inner_BeforeCodeGen, 0)
@@ -1424,25 +1330,25 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (t, (name, e)) = unBindAnnoName data
           val () = println $ "tc() on: " ^ fst name
-          fun collect_EAbsIT_ignore_BodyOfRecur e =
+          fun collect_EAbsIT_ignore_Anno e =
             case e of
                 EAbsI data =>
                 let
                   val (s, (name, e)) = unEAbsI data
-                  val (binds, e) = collect_EAbsIT_ignore_BodyOfRecur e
+                  val (binds, e) = collect_EAbsIT_ignore_Anno e
                 in
                   (inl (name, s) :: binds, e)
                 end
               | EAbsT data =>
                 let
                   val (k, (name, e)) = unEAbsT data
-                  val (binds, e) = collect_EAbsIT_ignore_BodyOfRecur e
+                  val (binds, e) = collect_EAbsIT_ignore_Anno e
                 in
                   (inr (name, k) :: binds, e)
                 end
-              | EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => collect_EAbsIT_ignore_BodyOfRecur e
+              | EUnOp (EUTiML (EUAnno _), e) => collect_EAbsIT_ignore_Anno e
               | _ => ([], e)
-          val () = case snd $ collect_EAbsIT_ignore_BodyOfRecur e of
+          val () = case snd $ collect_EAbsIT_ignore_Anno e of
                        EAbs _ => ()
                      | _ => raise MTCError "ERec: body should be EAbsITMany (EAbs (...))"
           val t = kc_against_kind itctx (t, KType ())

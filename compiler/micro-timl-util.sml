@@ -220,6 +220,7 @@ fun a |># b = EAscTimeSpace (a, b)
 fun EAnno (e, a) = EUnOp (EUTiML (EUAnno a), e)
 fun EAnnoLiveVars (e, n) = EAnno (e, EALiveVars n)
 fun EAnnoBodyOfRecur e = EAnno (e, EABodyOfRecur ())
+fun EAnnoFreeEVars (e, n) = EAnno (e, EAFreeEVars n)
                                  
 fun EAbsIT (bind, e) =
     case bind of

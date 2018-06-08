@@ -895,7 +895,8 @@ fun test1 dirname =
     val init_st = IState $ StMap.map (fn _ => INat 0) st_name2ty
     val () = println "Started MicroTiML typechecking #1 ..."
     val (e, _) = MicroTiMLLiveVars.live_vars e
-    val e = set_is_rec e
+    val e = set_is_rec false e
+    val e = set_free_evars e
     val () = phase := PhBeforeCPS ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = check_vcs vcs
@@ -938,6 +939,8 @@ fun test1 dirname =
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file (join_dir_file' dirname $ "unit-test-after-cps.tmp", e_str)
     val () = println "Started MicroTiML typechecking #2 ..."
+    val e = set_is_rec true e
+    val e = set_free_evars e
     val () = phase := PhBeforeCC ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs

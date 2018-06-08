@@ -180,6 +180,10 @@ fun assert_EAnnoLiveVars e =
   case e of
       EUnOp (EUTiML (EUAnno (EALiveVars n)), e) => (e, n)
     | _ => raise assert_fail "assert_EAnnoLiveVars"
+fun assert_EAnnoFreeEVars e =
+  case e of
+      EUnOp (EUTiML (EUAnno (EAFreeEVars n)), e) => (e, n)
+    | _ => raise assert_fail "assert_EAnnoFreeEVars"
                  
 infix 6 @++
 fun m @++ m' = StMapU.union m m'
@@ -237,4 +241,9 @@ type mtiml_expr = (Expr.var, idx, sort, basic_sort kind, mtiml_ty) expr
 
 fun subst0_i_2i v b = unop_pair (subst0_i_i v) b
                                 
+fun is_rec_body e =
+  case e of
+      EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
+    | _ => (false, e)
+             
 end

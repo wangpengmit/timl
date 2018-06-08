@@ -86,6 +86,7 @@ fun choose (t1, t2) proj =
 datatype expr_anno =
          EALiveVars of int (* num of live vars afterwards *)
          | EABodyOfRecur of unit (* this is the body of a recursive function *)
+         | EAFreeEVars of int (* num of free expression vars (excluding argument and recursive self-reference) *)
                               
 (* primitive unary term operators *)
 datatype prim_expr_un_op =
@@ -137,6 +138,7 @@ fun str_expr_anno a =
   case a of
       EALiveVars n => "live_vars " ^ str_int n
     | EABodyOfRecur () => "body_of_recur"
+    | EAFreeEVars n => "free_evars " ^ str_int n
                             
 fun str_expr_un_op opr = 
   case opr of
