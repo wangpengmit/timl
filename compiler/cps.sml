@@ -437,13 +437,30 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val x = fresh_evar ()
         (* EAppI explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
         val n_fvars = ISet.numItems $ free_evars ISet.empty k
-        val n_fvars = ISet.numItems $ free_evars ISet.empty k
         val j_k = j_k %%+ mapPair' to_real N (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
         val c = EAppIPair (EAppI (EV x, i), j_k) %$ k
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
         cps (e, t_e) (c, mapPair' to_real N (C_App_BeforeCC + C_Abs_BeforeCC n_live_vars, M_App_BeforeCC + M_Abs_BeforeCC n_live_vars) %%+ subst0_i_2i i j %%+ j_k)
+      end
+    | S.EAppT (e, t) =>
+      (* [[ e[t] ]](k) = [[e]](\x. x[t]{k.j}(k)) *)
+      let
+        val (e, n_live_vars) = assert_EAnnoLiveVars e
+        val (e, st_e) = assert_EAscState e
+        val (e, t_e) = assert_EAscType e
+        val t_e = whnf t_e
+        val (_, _, j, _) = assert_TForall t_e
+        val x = fresh_evar ()
+        (* EAppT explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
+        val n_fvars = ISet.numItems $ free_evars ISet.empty k
+        val j_k = j_k %%+ mapPair' to_real N (C_Abs_Inner_BeforeCC n_fvars, M_Abs_Inner_BeforeCC n_fvars)
+        val c = EAppIPair (EAppT (EV x, cps_t t), j_k) %$ k
+        val t_x = cps_t t_e
+        val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
+      in
+        cps (e, t_e) (c, mapPair' to_real N (C_App_BeforeCC + C_Abs_BeforeCC n_live_vars, M_App_BeforeCC + M_Abs_BeforeCC n_live_vars) %%+ j %%+ j_k)
       end
     | S.ETriOp (ETIte (), e, e1, e2) =>
       (* [[ if e then e1 else e2 ]](k) = [[e]](\y. if y then [[e1]](k) else [[e2]](k)) *)
@@ -504,11 +521,11 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       let
         val ((name_a, kd_a), e) = unBindAnno2 bind
         val t_e = whnf t_e
-        val (_, _, _, t_e) = assert_TForall t_e
+        val (_, _, i, t_e) = assert_TForall t_e
         val a = fresh_tvar ()
         val e = open0_t_e a e
         val t_e = open0_t_t a t_e
-        val e = cps_EAbsIT (e, (TN0, t_e))
+        val e = cps_EAbsIT (e, (i, t_e))
         val e = EAbsT $ close0_t_e_anno ((a, name_a, kd_a), e)
       in
         (k $$ e, j_k)
@@ -526,18 +543,6 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val e = EAbsI $ close0_i_e_anno ((a, name_a, s_a), e)
       in
         (k $$ e, j_k)
-      end
-    | S.EAppT (e, t) =>
-      (* [[ e[t] ]](k) = [[e]](\x. x[t]{k.j}(k)) *)
-      let
-        val (e, st_e) = assert_EAscState e
-        val (e, t_e) = assert_EAscType e
-        val x = fresh_evar ()
-        val c = EAppIPair (EAppT (EV x, cps_t t), j_k) %$ k
-        val t_x = cps_t t_e
-        val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
-      in
-        cps (e, t_e) (c, blowup_time_space_t j_k)
       end
     | S.EPack (t_pack, t, e) =>
       (* [[ pack <t, e> ]](k) = [[e]](\x. k (pack <t, x>)) *)

@@ -2080,7 +2080,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
 	      val te = check_kind_Type gctx ((sctx, kctx), te)
               (* val () = println $ sprintf "te[post] = $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
 	      val (e, i, st) = check_mtype gctx (add_typing_skct (name, PTMono te) ctx, st) (e, te) 
-              val n_fvars = EVarSet.numItems $ EVarSet.delete (FreeEVars.free_evars e, inl 0)
+              val n_fvars = EVarSet.numItems $ EVarSetU.delete (FreeEVars.free_evars e, inl 0)
               val sctxn = sctx_names sctx
               val (te, poly_te, free_uvars, free_uvar_names, i) = generalize n_fvars i te
               val e = UpdateExpr.update_e e

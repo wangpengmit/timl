@@ -1333,7 +1333,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val cost =
               case !phase of
                   PhBeforeCodeGen () => TN0
-                | PhBeforeCC () => forget01_i_2i i
+                | PhBeforeCC () => i
                 | PhBeforeCPS () => mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
         in 
           (MakeEAbsT (name, k, e), MakeTForall (k, name, inner_cost, t), cost, st)
