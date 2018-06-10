@@ -393,7 +393,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
   case e of
       S.EVar x =>
       (* [[ x ]](k) = k x *)
-      (k $$ EVar x, j_k)
+      (k $$ EVar x, TN C_EVar %%+ j_k)
     | S.EAbs (_, bind) =>
       (* [[ \x {pre_st}. (e |> i) {post_st} ]](k) = k (\\j F. \(x, c) {pre_st+F}. [[e]](c) |> blowup_time(i, j))
          where blowup_time(i,j) = b(i+1)+2i+1+j, [b] is blow-up factor *)
@@ -417,7 +417,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val e = EAbsPairClose (pre_st %++ IV F, (x, name_x, t_x), (c, "c", t_c), e)
         val e = EAbsICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], e)
       in
-        (k $$ e, j_k %%+ mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars))
+        (k $$ e, mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars) %%+ j_k)
       end
     | S.EAbsT bind =>
       let
@@ -430,7 +430,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val (e, cost) = cps_EAbsIT (e, (i, t_e))
         val e = EAbsT $ close0_t_e_anno ((a, name_a, kd_a), e)
       in
-        (k $$ e, j_k %%+ cost)
+        (k $$ e, cost %%+ j_k)
       end
     | S.EAbsI bind =>
       let
@@ -444,7 +444,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val (e, cost) = cps_EAbsIT (e, t_e)
         val e = EAbsI $ close0_i_e_anno ((a, name_a, s_a), e)
       in
-        (k $$ e, j_k %%+ cost)
+        (k $$ e, cost %%+ j_k)
       end
     | S.EBinOp (EBApp (), e1, e2) =>
       (* [[ e1 e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. x1 {k.j} (x2, k))) *)
@@ -460,7 +460,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val xk = fresh_evar ()
         (* EApp explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
         val (inner, outer) = get_extra_cost n_live_vars k
-        val j_k = j_k %%+ inner
+        val j_k = inner %%+ j_k
         val e = EAppIPair (EV x1, j_k) %$ EPair (EV x2, EV xk)
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
@@ -482,7 +482,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val x = fresh_evar ()
         (* EAppT explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
         val (inner, outer) = get_extra_cost n_live_vars k
-        val j_k = j_k %%+ inner
+        val j_k = inner %%+ j_k
         val c = EAppIPair (EAppT (EV x, cps_t t), j_k) %$ k
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
@@ -500,7 +500,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val x = fresh_evar ()
         (* EAppI explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
         val (inner, outer) = get_extra_cost n_live_vars k
-        val j_k = j_k %%+ inner
+        val j_k = inner %%+ j_k
         val c = EAppIPair (EAppI (EV x, i), j_k) %$ k
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
@@ -518,7 +518,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val (e2, n_live_vars) = assert_EAnnoLiveVars e2
         (* EIte explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
         val (inner, outer) = get_extra_cost n_live_vars k
-        val j_k = j_k %%+ inner
+        val j_k = inner %%+ j_k
         val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
         val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
         val y = fresh_evar ()
@@ -532,16 +532,16 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       end
     | S.EConst c =>
       (* [[ c ]](k) = k c *)
-      (k $$ EConst c, j_k %%+ TN C_EConst)
+      (k $$ EConst c, TN C_EConst %%+ j_k)
     | S.EState x =>
       (* [[ x ]](k) = k x *)
-      (k $$ EState x, j_k)
+      (k $$ EState x, TN C_EState %%+ j_k)
     | S.ENever t =>
       (* [[ never ]](k) = k(never) *)
-      (k $$ ENever (cps_t t), j_k)
+      (k $$ ENever (cps_t t), TN C_ENever %%+ j_k)
     | S.EBuiltin (name, t) =>
       (* [[ builtin ]](k) = k(builtin) *)
-      (k $$ EBuiltin (name, cps_t t), j_k)
+      (k $$ EBuiltin (name, cps_t t), TN C_EBuiltin %%+ j_k)
     | S.ERec bind =>
       (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
       let
@@ -560,7 +560,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                    | _ => raise Impossible "ERec: body after CPS should be EAbsITMany (EAbs (...))"
         val e = ERec $ close0_e_e_anno ((x, name_x, t_x), e)
       in
-        (k $$ e, i_e %%+ j_k)
+        (k $$ e, j_k %%+ i_e)
       end
     | S.EPack (t_pack, t, e) =>
       (* [[ pack <t, e> ]](k) = [[e]](\x. k (pack <t, x>)) *)
@@ -575,7 +575,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
-        cps (e, t_e) (c, j_k)
+        cps (e, t_e) (c, TN C_EPack %%+ j_k)
       end
     | S.EPackI (t_pack, i, e) =>
       (* [[ packI <i, e> ]](k) = [[e]](\x. k (packI <i, x>)) *)
@@ -589,7 +589,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
-        cps (e, t_e) (c, j_k)
+        cps (e, t_e) (c, TN C_EPack %%+ j_k)
       end
     | S.EUnpack (e1, bind) =>
       (* [[ unpack e1 as <alpha, x> in e2 ]](k) = [[e1]](\x1. unpack x1 as <alpha, x> in [[e2]](k)) *)
@@ -609,7 +609,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_x1 = cps_t t_e1
         val c = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), c))
       in
-        cps (e1, t_e1) (c, i_c)
+        cps (e1, t_e1) (c, TN C_EUnpack %%+ i_c)
       end
     | S.EUnpackI (e1, bind) =>
       (* [[ unpackI e1 as <a, x> in e2 ]](k) = [[e1]](\x1. unpack x1 as <a, x> in [[e2]](k)) *)
@@ -629,7 +629,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_x1 = cps_t t_e1
         val c = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), c))
       in
-        cps (e1, t_e1) (c, i_c)
+        cps (e1, t_e1) (c, TN C_EUnpack %%+ i_c)
       end
     | S.ETuple es =>
       let
@@ -645,8 +645,9 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
             in
               cps (e, t) (ek, i_ek)
             end
+        val len = length es
       in
-        foldr f (ek, j_k) xs_names_es
+        foldr f (ek, (to_real $ C_ETuple len, N len) %%+ j_k) xs_names_es
       end
     | S.EBinOp (opr, e1, e2) =>
       (* [[ e1 o e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. k (x1 o x2))) *)
@@ -689,7 +690,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
               | EBVectorPushBack () => (N C_EVectorPushBack, N 0)
               | EBMapPtr () => (N C_EMapPtr, N 0)
               | EBStorageSet () => (N C_EStorageSet, N 0)
-        val (e, i_e) = cps (e2, t_e2) (e, j_k %%+ mapFst IToReal' cost) 
+        val (e, i_e) = cps (e2, t_e2) (e, mapFst IToReal' cost %%+ j_k) 
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e))
       in
         cps (e1, t_e1) (e, i_e)
@@ -706,8 +707,9 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
           in
             cps (e, t) (ek, i_ek)
           end
+        val len = length es
       in
-        foldr f (ek, j_k) xs_names_es
+        foldr f (ek, (to_real $ C_ENewArrayValues len, N $ len + 1) %%+ j_k) xs_names_es
       end
     | S.EUnOp (opr, e) =>
       (* [[ opr e ]](k) = [[e]](\x. k (opr x)) *)
@@ -720,8 +722,27 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
             val c = k $$ c
             val t_x = cps_t t_e
             val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
+            val cost =
+                case opr of
+                    EUInj _ => C_EInj
+                  | EUFold _ => C_EFold
+                  | EUUnfold _ => C_EUnfold
+                  | EUTiML opr =>
+                    (case opr of
+                         EUProj _ => C_EProj
+                       | EUPrim opr => C_EUPrim opr
+                       | EUArrayLen _ => C_EArrayLen
+                       | EUNat2Int _ => C_ENat2Int
+                       | EUInt2Nat _ => C_EInt2Nat
+                       | EUPrintc _ => C_EPrintc
+                       | EUStorageGet _ => C_EStorageGet
+                       | EUVectorClear _ => C_EVectorClear
+                       | EUVectorLen _ => C_EVectorLen
+                       | EUAnno _ => 0
+                    )
+                  | EUTupleProj _ => C_ETupleProj
           in
-            cps (e, t_e) (c, j_k)
+            cps (e, t_e) (c, TN cost %%+ j_k)
           end
         val (t_e, opr) = 
             case opr of
@@ -864,7 +885,12 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_x3 = cps_t t_e3
         val e = k $$ ETriOp (opr, EV x1, EV x2, EV x3)
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x3, "x3", t_x3), e))
-        val (e, i_e) = cps (e3, t_e3) (e, j_k)
+        val cost =
+            case opr of
+                ETWrite _ => C_EWrite
+              | ETIte _ => raise Impossible "cps()/ETriOp/Ite"
+              | ETVectorSet _ => C_EVectorSet
+        val (e, i_e) = cps (e3, t_e3) (e, TN cost %%+ j_k)
         val e = EAbs (st_e2 %++ F, close0_e_e_anno ((x2, "x2", t_x2), e))
         val (e, i_e) = cps (e2, t_e2) (e, i_e)
         val e = EAbs (st_e3 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e))
@@ -882,7 +908,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
       in
-        cps (e, t_e) (c, TN0)
+        cps (e, t_e) (c, TN C_EHalt)
       end
     (* | S.ELetConstr (e1, bind) => *)
     (*   (* [[ let constr x = e1 in e2 ]](k) = [[e1]](\y. let constr x = y in [[e2]](k)) *) *)

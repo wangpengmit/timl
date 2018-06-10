@@ -941,7 +941,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EProj then e %: t_e else e
           val e = if !anno_EProj_state then e %~ st else e
         in
-          (EUnOp (EUTupleProj n, e), t, i %%+ TN (C_TupleProj + C_Var + C_Let), st)
+          (EUnOp (EUTupleProj n, e), t, i %%+ TN C_ETupleProj, st)
         end
       | EUnOp (EUTiML (EUPrintc ()), e) =>
         let
@@ -1009,7 +1009,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EInj then e %: t else e
           val e = if !anno_EInj_state then e %~ st else e
         in
-          (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i %%+ TN (C_Inj + C_Var + C_Let), st)
+          (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i %%+ TN C_EInj, st)
         end
       | EUnOp (EUFold t', e) =>
         let
@@ -1027,7 +1027,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EFold then e %: t else e
           val e = if !anno_EFold_state then e %~ st else e
         in
-          (EFold (t', e), t', i %%+ TN (C_Fold + C_Var + C_Let), st)
+          (EFold (t', e), t', i %%+ TN C_EFold, st)
         end
       | EUnOp (EUUnfold (), e) =>
         let
@@ -1040,7 +1040,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EUnfold then e %: t_e else e
           val e = if !anno_EUnfold_state then e %~ st else e
         in
-          (EUnfold e, TAppITs (subst0_t_t t t1) args, i %%+ TN (C_Unfold + C_Var + C_Let), st)
+          (EUnfold e, TAppITs (subst0_t_t t t1) args, i %%+ TN C_EUnfold, st)
         end
       | ETriOp (ETIte (), e, e1, e2) =>
         let
@@ -2071,11 +2071,10 @@ datatype tc_flag =
        | Anno_ENewArrayValues_state
        | Anno_EHalt_state
        | Anno_EAbs_state
-| Anno_EVectorLen
-| Anno_EVectorClear
-| Anno_EVectorLen_state
-| Anno_EVectorClear_state
-                              
+       | Anno_EVectorLen
+       | Anno_EVectorClear
+       | Anno_EVectorLen_state
+       | Anno_EVectorClear_state
 
 fun typecheck (flags, st_types) ctx e =
   let

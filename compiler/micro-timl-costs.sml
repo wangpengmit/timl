@@ -136,6 +136,10 @@ val C_EWrite = C_Write + 3 * C_Var + C_Let
 val C_ENever = C_Never + C_Let
 val C_EBuiltin = C_Builtin + C_Let
 fun C_ENewArrayValues len = C_NewArrayValues len + len * C_Var + C_Let
+val C_EInj = C_Inj + C_Var + C_Let
+val C_EFold = C_Fold + C_Var + C_Let
+val C_EUnfold = C_Unfold + C_Var + C_Let
+val C_ETupleProj = C_TupleProj + C_Var + C_Let
 
 open Util
        
