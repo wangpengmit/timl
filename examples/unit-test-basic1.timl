@@ -64,17 +64,24 @@ structure UnitTestBasic1 = struct
                   
 (* val a = if __&false then 1 else 0 *)
 
-(* datatype t = Fst | Snd *)
+datatype t = Fst | Snd
 
 (* val a = case Snd of Fst => 1 | Snd => 2 *)
 
-datatype t = C1 | C2 | C3 | C4
+datatype t2 = C1 | C2 of t --> t2
 
-val a = case C4 of
+val a = case C1 of
             C1 => 1
-          | C2 => 2
-          | C3 => 3
-          | C4 => 4
+          | C2 Fst => 2
+          | C2 Snd => 3
+                          
+(* datatype t = C1 | C2 | C3 | C4 *)
+
+(* val a = case C4 of *)
+(*             C1 => 1 *)
+(*           | C2 => 2 *)
+(*           | C3 => 3 *)
+(*           | C4 => 4 *)
 
 (* datatype list 'a : {Nat} = *)
 (*          Nil of list 'a {0} *)

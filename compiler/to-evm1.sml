@@ -1021,6 +1021,7 @@ fun test1 dirname =
   handle MicroTiMLTypecheck.MTCError msg => (println $ "MTiMLTC.MTCError: " ^ substr 0 1000 msg; fail ())
        | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; fail ())
        | NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; fail ())
+       | Elaborate.Error (_, msg) => (println $ "Elab.Error: " ^ msg; fail ())
     
 val test_suites = [
       test1
