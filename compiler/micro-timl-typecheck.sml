@@ -1074,21 +1074,46 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
           val (e2, i2, st2) = tc_against_ty (add_typing_full (fst name2, t2) ctx, st) (e2, t)
           val () = is_eq_idx (st2, st1)
-          val (cost, e2) =
+          fun is_tail_call e =
+            case e of
+                EBinOp (EBApp (), _, _) => true
+              | EAppT _ => true
+              | EAppI _ => true
+              | ECase _ => true 
+              | ETriOp (ETIte (), _, _, _) => true
+              | EUnOp (EUTiML (EUAnno _), e) => is_tail_call e
+              | EAscTime (e, _) => is_tail_call e
+              | EAscSpace (e, _) => is_tail_call e
+              | EAscType (e, _) => is_tail_call e
+              | EAscState (e, _) => is_tail_call e
+              | ELet (_, bind) => is_tail_call $ snd $ unBindSimp bind
+              | EUnpack (_, bind) => is_tail_call $ snd $ unBindSimp $ snd $ unBindSimp bind
+              | EUnpackI (_, bind) => is_tail_call $ snd $ unBindSimp $ snd $ unBindSimp bind
+              | _ => false
+          val (cost, branch1_extra, branch2_extra, e2) =
               case !phase of
-                  PhBeforeCodeGen () => ((C_Case_BeforeCodeGen, 0), e2)
-                | PhBeforeCC () => ((C_Case_BeforeCodeGen, 0), e2)
+                  PhBeforeCodeGen () => ((C_Case_BeforeCodeGen, 0), (0, 0), (0, 0), e2)
+                | PhBeforeCC () => ((C_Case_BeforeCodeGen, 0), (0, 0), (0, 0), e2)
                 | PhBeforeCPS () =>
                   let
                     val (e2, n_live_vars) = assert_EAnnoLiveVars e2
+                    val cost = (C_Case_BeforeCPS n_live_vars, M_Case_BeforeCPS n_live_vars)
+                    val branch_extra = (C_App_BeforeCC, M_App_BeforeCC)
+                    val branch1_extra = if is_tail_call e1 then (0, 0) else branch_extra
+                    val branch2_extra = if is_tail_call e2 then (0, 0) else branch_extra
                   in
-                    ((C_Case_BeforeCPS n_live_vars, M_Case_BeforeCPS n_live_vars), e2)
+                    (cost, branch1_extra, branch2_extra, e2)
                   end
+          val () = println $ "is_tail_call e1 = " ^ str_bool (is_tail_call e1)
+          val () = println $ "is_tail_call e2 = " ^ str_bool (is_tail_call e2)
+          val () = println $ "branch1_extra = " ^ str_pair (str_int, str_int) branch1_extra
+          val () = println $ "branch2_extra = " ^ str_pair (str_int, str_int) branch2_extra
+          val () = println $ "cost = " ^ str_pair (str_int, str_int) cost
           val e2 = if !anno_ECase_e2_time then e2 |># i2 else e2
           val e = if !anno_ECase then e %: t_e else e
           val e = if !anno_ECase_state then e %~ st else e
         in
-          (MakeECase (e, (name1, e1), (name2, e2)), t, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, TN C_JUMPDEST %%+ i2), st1)
+          (MakeECase (e, (name1, e1), (name2, e2)), t, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1 %%+ mapPair' to_real N branch1_extra, TN C_JUMPDEST %%+ i2 %%+ mapPair' to_real N branch2_extra), st1)
         end
       | EBinOp (EBApp (), e1, e2) =>
         let

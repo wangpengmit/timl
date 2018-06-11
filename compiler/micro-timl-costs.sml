@@ -108,9 +108,9 @@ fun M_AppI_BeforeCPS n_live_vars = M_App_BeforeCC + M_Abs_BeforeCC n_live_vars +
 val C_Ite_BeforeCodeGen = C_Var(*no one else is accounting for this variable read*) + C_ISZERO + C_PUSH + C_JUMPI
 val C_Case_BeforeCodeGen = C_Var + C_PUSH + C_br_sum + C_Case_branch_prelude
 fun C_Ite_BeforeCPS n_live_vars =  C_Ite_BeforeCodeGen +  C_Abs_BeforeCC n_live_vars + C_App_BeforeCC + C_Abs_Inner_BeforeCC n_live_vars
-fun C_Case_BeforeCPS n_live_vars = C_Case_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC + C_Abs_Inner_BeforeCC n_live_vars
 fun M_Ite_BeforeCPS n_live_vars =  M_Abs_BeforeCC n_live_vars + M_App_BeforeCC + M_Abs_Inner_BeforeCC n_live_vars
-fun M_Case_BeforeCPS n_live_vars = M_Abs_BeforeCC n_live_vars + M_App_BeforeCC + M_Abs_Inner_BeforeCC n_live_vars
+fun C_Case_BeforeCPS n_live_vars = C_Case_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars
+fun M_Case_BeforeCPS n_live_vars =                        M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars
 
 val C_EVar = 0 (* each computation is responsible for accounting for reading from variables, so here the cost is zero *)
 val C_EConst = C_Const + C_Let

@@ -70,26 +70,32 @@ structure UnitTestBasic1 = struct
 (* val a = f __&false *)
 
 (* datatype t = Fst | Snd *)
+(* datatype t2 = C1 | C2 | C3 of t --> t2 *)
 
-(* datatype t2 = C1 | C2 of t --> t2 | C3 *)
-
-(* val a = case C1 of *)
+(* val a = case C3 Snd of *)
 (*             C1 => 1 *)
-(*           | C2 Fst => 2 *)
-(*           | C2 Snd => 3 *)
-(*           | C3 => 30 *)
+(*           | C2 => 2 *)
+(*           | C3 Fst => 31 *)
+(*           | C3 Snd => 32 *)
                           
 (* datatype t = Fst | Snd *)
 
 (* val a = case Snd of Fst => 1 | Snd => 2 *)
 
-datatype t = C1 | C2 | C3 | C4
+datatype t = C1 | C2 | C3
 
-val a = case C4 of
+val a = case C3 of
             C1 => 1
           | C2 => 2
           | C3 => 3
-          | C4 => 4
+
+(* datatype t = C1 | C2 | C3 | C4 *)
+
+(* val a = case C4 of *)
+(*             C1 => 1 *)
+(*           | C2 => 2 *)
+(*           | C3 => 3 *)
+(*           | C4 => 4 *)
 
 (* datatype list 'a : {Nat} = *)
 (*          Nil of list 'a {0} *)
