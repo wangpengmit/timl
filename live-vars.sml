@@ -199,6 +199,18 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EBinOp (EBApp (), e1, EAnnoLiveVars (e2, n_lvars, dummy))
       end
+    fun visit_EAppConstr this env data = 
+      let
+        val vtable = cast this
+        val ((var, eia), ts, is, e, ot) = data
+        val ot = Option.map (mapSnd (#visit_mtype vtable this env)) ot
+        val e = #visit_expr vtable this env e
+        val is = map (#visit_idx vtable this env) is
+        val ts = map (#visit_mtype vtable this env) ts
+        val var = #visit_cvar vtable this env var
+      in
+        EAppConstr ((var, eia), ts, is, e, ot)
+      end
     fun visit_EPair this env data =
       let
         val vtable = cast this
@@ -355,18 +367,6 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EAbsI (bind, r)
       end
-    fun visit_EAppConstr this env data = 
-      let
-        val vtable = cast this
-        val ((var, eia), ts, is, e, ot) = data
-        val var = #visit_cvar vtable this env var
-        val ts = map (#visit_mtype vtable this env) ts
-        val is = map (#visit_idx vtable this env) is
-        val e = #visit_expr vtable this env e
-        val ot = Option.map (mapSnd (#visit_mtype vtable this env)) ot
-      in
-        EAppConstr ((var, eia), ts, is, e, ot)
-      end
     fun visit_return this env (t, i, j) =
       let
         val vtable = cast this
@@ -386,7 +386,7 @@ fun live_vars_expr_visitor_vtable cast () =
               let
                 val () = new_lvars := Set.empty
                 (* In the branches, there will be a live continuation variable. *)
-                (* todo: not if num of branches is less than 2 *)
+                (* todo: not if the number of branches is less than 2 *)
                 val bind = visit_bind (#visit_expr vtable this) (new_lvars, true) bind
                 val () = output_set lvars (!new_lvars)
               in
@@ -395,8 +395,9 @@ fun live_vars_expr_visitor_vtable cast () =
             ) binds
         val return = visit_return this env return
         val e = #visit_expr vtable this env e
+        val e = EAnnoLiveVars (e, n_lvars, r)
       in
-        ECase (EAnnoLiveVars (e, n_lvars, r), return, binds, r)
+        ECase (e, return, binds, r)
       end
     fun visit_decls visit_decl ctx decls =
       let

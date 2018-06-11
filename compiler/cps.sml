@@ -526,7 +526,35 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val c = ELetClose ((x_k, "k", k), c)
         val t_y = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
-        val i_c = mapPair' to_real N (C_Ite_BeforeCodeGen + C_App_BeforeCC, M_App_BeforeCC) %%+ outer %%+ IMaxPair (i_e1, i_e2 %%+ TN C_JUMPDEST)
+        val i_c = mapPair' to_real N (C_Ite_BeforeCodeGen + C_App_BeforeCC, M_App_BeforeCC) %%+ outer %%+ IMaxPair (i_e1, TN C_JUMPDEST %%+ i_e2)
+      in
+        cps (e, t_e) (c, i_c)
+      end
+    | S.ECase (e, bind1, bind2) =>
+      (* [[ case e (x.e1) (x.e2) ]](k) = [[e]](\y. case y (x. [[e1]](k)) (x. [[e2]](k))) *)
+      let
+        val (e, st_e) = assert_EAscState e
+        val (name_x_1, e1) = unBindSimp2 bind1
+        val (name_x_2, e2) = unBindSimp2 bind2
+        val (e2, n_live_vars) = assert_EAnnoLiveVars e2
+        val x = fresh_evar ()
+        val e1 = open0_e_e x e1
+        val e2 = open0_e_e x e2
+        val t_res = t_e
+        val (e, t_e) = assert_EAscType e
+        val t_res = cps_t t_res
+        val x_k = fresh_evar ()
+        (* ECase explicitly creates the continuation closure, so it's responsible for adjusting j_k by the closure-unpacking overhead *)
+        val (inner, outer) = get_extra_cost n_live_vars k
+        val j_k = mapPair' to_real N (C_App_BeforeCC, M_App_BeforeCC) %%+ inner %%+ j_k
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
+        val y = fresh_evar ()
+        val c = ECaseClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
+        val c = ELetClose ((x_k, "k", k), c)
+        val t_y = cps_t t_e
+        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
+        val i_c = mapPair' to_real N (C_Case_BeforeCodeGen, 0) %%+ outer %%+ IMaxPair (i_e1, TN C_JUMPDEST %%+ i_e2)
       in
         cps (e, t_e) (c, i_c)
       end
@@ -711,6 +739,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         foldr f (ek, (to_real $ C_ENewArrayValues len, N $ len + 1) %%+ j_k) xs_names_es
       end
+    | S.EUnOp (EUTiML (EUAnno _), e) => cps (e, t_e) (k, j_k)
     | S.EUnOp (opr, e) =>
       (* [[ opr e ]](k) = [[e]](\x. k (opr x)) *)
       let
@@ -724,25 +753,25 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
             val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
             val cost =
                 case opr of
-                    EUInj _ => C_EInj
-                  | EUFold _ => C_EFold
-                  | EUUnfold _ => C_EUnfold
+                    EUInj _ => (C_EInj, 2)
+                  | EUFold _ => (C_EFold, 0)
+                  | EUUnfold _ => (C_EUnfold, 0)
                   | EUTiML opr =>
                     (case opr of
-                         EUProj _ => C_EProj
-                       | EUPrim opr => C_EUPrim opr
-                       | EUArrayLen _ => C_EArrayLen
-                       | EUNat2Int _ => C_ENat2Int
-                       | EUInt2Nat _ => C_EInt2Nat
-                       | EUPrintc _ => C_EPrintc
-                       | EUStorageGet _ => C_EStorageGet
-                       | EUVectorClear _ => C_EVectorClear
-                       | EUVectorLen _ => C_EVectorLen
-                       | EUAnno _ => 0
+                         EUProj _ => (C_EProj, 0)
+                       | EUPrim opr => (C_EUPrim opr, 0)
+                       | EUArrayLen _ => (C_EArrayLen, 0)
+                       | EUNat2Int _ => (C_ENat2Int, 0)
+                       | EUInt2Nat _ => (C_EInt2Nat, 0)
+                       | EUPrintc _ => (C_EPrintc, 0)
+                       | EUStorageGet _ => (C_EStorageGet, 0)
+                       | EUVectorClear _ => (C_EVectorClear, 0)
+                       | EUVectorLen _ => (C_EVectorLen, 0)
+                       | EUAnno _ => raise Impossible "cps()/EUnOp/EUAnno"
                     )
-                  | EUTupleProj _ => C_ETupleProj
+                  | EUTupleProj _ => (C_ETupleProj, 0)
           in
-            cps (e, t_e) (c, TN cost %%+ j_k)
+            cps (e, t_e) (c, mapPair' to_real N cost %%+ j_k)
           end
         val (t_e, opr) = 
             case opr of
@@ -777,30 +806,6 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                 end
       in
         cps_EUnOp t_e (fn x => EUnOp (opr, EV x))
-      end
-    | S.ECase (e, bind1, bind2) =>
-      (* [[ case e (x.e1) (x.e2) ]](k) = [[e]](\y. case y (x. [[e1]](k)) (x. [[e2]](k))) *)
-      let
-        val (e, st_e) = assert_EAscState e
-        val (name_x_1, e1) = unBindSimp2 bind1
-        val (name_x_2, e2) = unBindSimp2 bind2
-        val x = fresh_evar ()
-        val e1 = open0_e_e x e1
-        val e2 = open0_e_e x e2
-        val t_res = t_e
-        val (e, t_e) = assert_EAscType e
-        val t_res = cps_t t_res
-        val x_k = fresh_evar ()
-        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
-        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
-        val y = fresh_evar ()
-        val c = ECaseClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
-        val c = ELetClose ((x_k, "k", k), c)
-        val t_y = cps_t t_e
-        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c))
-        val i_c = IMaxPair (i_e1, i_e2)
-      in
-        cps (e, t_e) (c, i_c)
       end
     | S.EIfi (e, bind1, bind2) =>
       (* [[ ifi e (x.e1) (x.e2) ]](k) = [[e]](\y. ifi y (x. [[e1]](k)) (x. [[e2]](k))) *)

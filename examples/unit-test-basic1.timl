@@ -1,38 +1,38 @@
 structure UnitTestBasic1 = struct
 
-val x = 1
-val f = fn y => 1 + y
-fun f y = 1 + y
-val f = fn y => x + y
-fun f y = x + y
-val a = f 64
-val g = fn y => 1 + y
-val b = f 64
-(* (* val () = __&halt (a + x) *) *)
-val b = a + 2
-val b = (a, 2)
+(* val x = 1 *)
+(* val f = fn y => 1 + y *)
+(* fun f y = 1 + y *)
+(* val f = fn y => x + y *)
+(* fun f y = x + y *)
+(* val a = f 64 *)
+(* val g = fn y => 1 + y *)
+(* val b = f 64 *)
+(* (* (* val () = __&halt (a + x) *) *) *)
+(* val b = a + 2 *)
+(* val b = (a, 2) *)
 
-(* (* val x = 1 *) *)
-val a = if __&false then 1 else 0
-(* (* val () = __&halt (a + x) *) *)
+(* (* (* val x = 1 *) *) *)
+(* val a = if __&false then 1 else 0 *)
+(* (* (* val () = __&halt (a + x) *) *) *)
 
-val x = 1
-val f = fn {n : Nat} y => y + 1
-val f = fn {n : Nat} y => x + y
-fun f {n : Nat} y = y + 1
-fun f {n : Nat} y = x + y
-val a = @f {1}
-val b = a 1
-val a = @f {1} 1
+(* val x = 1 *)
+(* val f = fn {n : Nat} y => y + 1 *)
+(* val f = fn {n : Nat} y => x + y *)
+(* fun f {n : Nat} y = y + 1 *)
+(* fun f {n : Nat} y = x + y *)
+(* val a = @f {1} *)
+(* val b = a 1 *)
+(* val a = @f {1} 1 *)
 
-val x = 1
-val f = fn y => y
-fun f y = y
-val f = fn y => (x, y)
-fun f y = (x, y)
-val a = f 1
-val g = f
-           
+(* val x = 1 *)
+(* val f = fn y => y *)
+(* fun f y = y *)
+(* val f = fn y => (x, y) *)
+(* fun f y = (x, y) *)
+(* val a = f 1 *)
+(* val g = f *)
+
 (* val a = "abc" *)
           
 (* val () = __&printc #"a" *)
@@ -62,10 +62,28 @@ val g = f
 (* fun f x = x + 1 *)
 (* val a = twice f 0xdd *)
                   
+(* val a = if __&false then 1 else 0 *)
+
 (* datatype t = Fst | Snd *)
 
-(* val a = case Fst of Fst => 1 | Snd => 2 *)
+(* val a = case Snd of Fst => 1 | Snd => 2 *)
 
+datatype t = C1 | C2 | C3 | C4
+
+val a = case C4 of
+            C1 => 1
+          | C2 => 2
+          | C3 => 3
+          | C4 => 4
+
+(* datatype list 'a : {Nat} = *)
+(*          Nil of list 'a {0} *)
+(*        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1} *)
+
+(* val a = case Cons (1, Nil) of *)
+(*             Nil => 1 *)
+(*           | Cons _ => 2 *)
+                                  
 (* val a = if 1 > 2 then 1 else 2 *)
 
 (* val a = ifdec #1 #>= #2 then 1 else 2 *)

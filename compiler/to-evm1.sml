@@ -622,31 +622,6 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
       in
         I_e1 @@ I_e2 @@ set_reg ARG_REG @@ JUMP ()
       end
-    | ECase (e, bind1, bind2) =>
-      let
-        val (e, t) = assert_EAscType e
-        val (I_e, st) = compile (e, st)
-        val t = cg_t t
-        val (t1, t2) = assert_TSum t
-        val (name1, e1) = unBindSimpName bind1
-        val (name2, e2) = unBindSimpName bind2
-        val (e2, space_e2) = assert_EAscSpace e2
-        val (e2, i_e2) = assert_EAscTime e2
-        val r = fresh_reg ()
-        val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1), st) e1
-        val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2), st) e2
-        val branch_prelude = [PUSH1nat 32, ADD (), MLOAD ()] @ set_reg r
-        val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((st, rctx, [TProd (TiBoolConst true, t2)](*the stack spec*), (i_e2, space_e2)), branch_prelude @@ I2))
-        val l = fresh_label ()
-        val () = output_heap ((l, "inr_branch"), hval)
-      in
-        I_e @@
-        PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
-        br_sum @@
-        branch_prelude @@
-        I1
-      end
     | EIfi (e, bind1, bind2) =>
       let
         val (e, t) = assert_EAscType e
@@ -684,7 +659,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
         val I1 = cg_e (ectx, itctx, rctx, st) e1
         val I2 = cg_e (ectx, itctx, rctx, st) e2
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((st, rctx, [], (i_e2 %+ to_real C_JUMPDEST, space_e2)), I2))
+        val hval = HCode' (itbinds, ((st, rctx, [], (to_real C_JUMPDEST %+ i_e2, space_e2)), I2))
         val l = fresh_label ()
         val () = output_heap ((l, "else_branch"), hval)
       in
@@ -692,6 +667,31 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
         [ISZERO ()] @@
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
         [JUMPI ()] @@
+        I1
+      end
+    | ECase (e, bind1, bind2) =>
+      let
+        val (e, t) = assert_EAscType e
+        val (I_e, st) = compile (e, st)
+        val t = cg_t t
+        val (t1, t2) = assert_TSum t
+        val (name1, e1) = unBindSimpName bind1
+        val (name2, e2) = unBindSimpName bind2
+        val (e2, space_e2) = assert_EAscSpace e2
+        val (e2, i_e2) = assert_EAscTime e2
+        val r = fresh_reg ()
+        val I1 = cg_e ((name1, inl r) :: ectx, itctx, rctx @+ (r, t1), st) e1
+        val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2), st) e2
+        val branch_prelude = [PUSH1nat 32, ADD (), MLOAD ()] @ set_reg r
+        val itbinds = rev itctx
+        val hval = HCode' (itbinds, ((st, rctx, [TProd (TiBoolConst true, t2)](*the stack spec*), (to_real C_JUMPDEST %+ to_real C_Case_branch_prelude %+ i_e2, space_e2)), branch_prelude @@ I2))
+        val l = fresh_label ()
+        val () = output_heap ((l, "inr_branch"), hval)
+      in
+        I_e @@
+        PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
+        br_sum @@
+        branch_prelude @@
         I1
       end
     | EHalt (e, _) =>

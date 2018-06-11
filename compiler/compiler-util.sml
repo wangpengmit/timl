@@ -25,10 +25,6 @@ fun assert_TProd t =
   case t of
       TBinOp (TBProd (), t1, t2) => (t1, t2)
     | _ => raise assert_fail "assert_TProd"
-fun assert_TSum t =
-  case t of
-      TBinOp (TBSum (), t1, t2) => (t1, t2)
-    | _ => raise assert_fail "assert_TSum"
 fun assert_TAbsT t =
   case t of
       TAbsT bind => unBindAnno bind

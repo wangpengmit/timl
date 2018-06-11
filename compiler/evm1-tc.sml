@@ -611,6 +611,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val b = assert_IBool $ simp_i $ assert_TiBool $ whnf itctx t0
         val inj = if b then InjInr () else InjInl ()
         val ts = choose_pair_inj (t1, t_other) inj
+        val () = add_space $ N 2
       in
         ((itctx, rctx, TSum ts :: sctx, st))
       end

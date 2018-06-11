@@ -171,6 +171,10 @@ fun assert_TExists t =
         (name, k, t)
       end
     | _ => raise assert_fail $ "assert_TExists; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TSum t =
+  case t of
+      TBinOp (TBSum (), t1, t2) => (t1, t2)
+    | _ => raise assert_fail "assert_TSum"
                                                           
 fun assert_EAbs e =
   case e of

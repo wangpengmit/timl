@@ -1719,58 +1719,56 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val () = assert (fn () => isNone ot) "get_mtype()/EAppConstr: isNone ot"
             val tc = fetch_constr_type gctx (cctx, x)
 	    (* delegate to checking [x {is} e] *)
-	    val f = U.EVar ((ID (0, U.get_region_long_id x)), eia)
+            val r = U.get_region_long_id x
+	    val f = U.EAnnoLiveVars (U.EVar ((ID (0, r)), eia), 0, r)
 	    val f = foldl (fn (i, e) => U.EAppI (e, i)) f is
-	    val e = U.EApp (f, UnderscoredExprShift.shift_e_e e)
-            (* val f_name = "__synthesized_constructor" *)
+	    val e = U.EApp (f, UnderscoredExprShift.shift_e_e $ U.EAnnoLiveVars (e, 0, r))
             val f_name = str_var #3 (gctx_names gctx) (names cctx) x
 	    val (e, t, d, st) = get_mtype (add_typing_skct (f_name, tc) ctx, st) e 
-            (* val () = println $ str_i sctxn d *)
             val d = update_2i d
             val d = simp_2i d
-            (* val () = println $ str_i sctxn d *)
-	    (* constructor application doesn't incur count, so we minus one from [d] *)
-            fun minus_one d =
-              let
-                fun wrong_d () = raise Impossible $ "get_mtype (): U.AppConstr: d in wrong form: " ^ str_i gctxn sctxn d
-                fun find_const i =
-                  case i of
-                      IConst (ICTime x, _) => 
-                      let
-                        open TimeType
-                      in
-                        x >= one
-                      end
-                    | _ => false
-                fun const_minus_one i =
-                  case i of
-                      IConst (ICTime x, r) =>
-                      let
-                        open TimeType
-                        val () = if x >= one then () else wrong_d ()
-                      in
-                        ITime (x - one, r)
-                      end
-                    | _ => wrong_d ()
-                val is = collect_IBAdd d
-                val pos = indexOf find_const is !! wrong_d
-                val is = update pos const_minus_one is
-                val d = combine_IBAdd_Time is
-                val d = simp_i d
-                (* val d = *)
-                (*     case d of *)
-                (*         IConst (ICTime _, r) =>  *)
-                (*         if eq_i d (T1 r) then T0 r  *)
-                (*         else wrong_d () *)
-                (*       | (IBinOp (IAdd, d1, d2)) =>  *)
-                (*         if eq_i d1 (T1 dummy) then d2 *)
-                (*         else if eq_i d2 (T1 dummy) then d1 *)
-                (*         else wrong_d () *)
-                (*       | _ => wrong_d () *)
-              in
-                d
-              end
-            val d = mapFst minus_one d
+	    (* (* constructor application doesn't incur count, so we minus one from [d] *) *)
+            (* fun minus_one d = *)
+            (*   let *)
+            (*     fun wrong_d () = raise Impossible $ "get_mtype (): U.AppConstr: d in wrong form: " ^ str_i gctxn sctxn d *)
+            (*     fun find_const i = *)
+            (*       case i of *)
+            (*           IConst (ICTime x, _) =>  *)
+            (*           let *)
+            (*             open TimeType *)
+            (*           in *)
+            (*             x >= one *)
+            (*           end *)
+            (*         | _ => false *)
+            (*     fun const_minus_one i = *)
+            (*       case i of *)
+            (*           IConst (ICTime x, r) => *)
+            (*           let *)
+            (*             open TimeType *)
+            (*             val () = if x >= one then () else wrong_d () *)
+            (*           in *)
+            (*             ITime (x - one, r) *)
+            (*           end *)
+            (*         | _ => wrong_d () *)
+            (*     val is = collect_IBAdd d *)
+            (*     val pos = indexOf find_const is !! wrong_d *)
+            (*     val is = update pos const_minus_one is *)
+            (*     val d = combine_IBAdd_Time is *)
+            (*     val d = simp_i d *)
+            (*     (* val d = *) *)
+            (*     (*     case d of *) *)
+            (*     (*         IConst (ICTime _, r) =>  *) *)
+            (*     (*         if eq_i d (T1 r) then T0 r  *) *)
+            (*     (*         else wrong_d () *) *)
+            (*     (*       | (IBinOp (IAdd, d1, d2)) =>  *) *)
+            (*     (*         if eq_i d1 (T1 dummy) then d2 *) *)
+            (*     (*         else if eq_i d2 (T1 dummy) then d1 *) *)
+            (*     (*         else wrong_d () *) *)
+            (*     (*       | _ => wrong_d () *) *)
+            (*   in *)
+            (*     d *)
+            (*   end *)
+            (* val d = mapFst minus_one d *)
             val (ts, is, e) =
                 case e of
                     EBinOp (EBApp (), f, e) =>
@@ -1798,6 +1796,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val rules = map Unbound.unBind rules
             val return = if !anno_less then (#1 return, NONE, NONE) else return
             val (e, t1, d1, st) = get_mtype (ctx, st) e
+            val (e, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (r, ["Should be EAnnoLiveVars"])) e
             val return = is_wf_return gctx (skctx, return)
             val rules = expand_rules gctx ((sctx, kctx, cctx), rules, t1, r)
             val (rules, t_d_sts) = check_rules (ctx, st) (rules, (t1, return), r)

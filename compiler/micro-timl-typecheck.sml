@@ -1009,7 +1009,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EInj then e %: t else e
           val e = if !anno_EInj_state then e %~ st else e
         in
-          (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i %%+ TN C_EInj, st)
+          (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i %%+ mapPair' to_real N (C_EInj, 2), st)
         end
       | EUnOp (EUFold t', e) =>
         let
@@ -1063,22 +1063,17 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e2 = if !anno_EIte_e2_time then e2 |># i2 else e2
           val e = if !anno_EIte_state then e %~ st else e
         in
-          (ETriOp (ETIte (), e, e1, e2), t, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, i2 %%+ TN C_JUMPDEST), st1)
+          (ETriOp (ETIte (), e, e1, e2), t, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, TN C_JUMPDEST %%+ i2), st1)
         end
       | ECase data =>
         let
           val (e, (name1, e1), (name2, e2)) = unECase data
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
-          val (t1, t2) = case t_e of
-                             TBinOp (TBSum (), t1, t2) => (t1, t2)
-                           | _ => raise MTCError $ "ECase: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (map fst ictx, map fst tctx) t_e)
-          val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
-          val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
-          val () = is_eq_ty itctx (t1, t2)
+          val (t1, t2) = assert_TSum t_e
+          val (e1, t, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
+          val (e2, i2, st2) = tc_against_ty (add_typing_full (fst name2, t2) ctx, st) (e2, t)
           val () = is_eq_idx (st2, st1)
-          val C_Case_branch_prelude = C_PUSH + C_ADD + C_MLOAD + C_set_reg
-          val C_Case_BeforeCodeGen = C_Var + C_PUSH + C_br_sum + C_Case_branch_prelude
           val (cost, e2) =
               case !phase of
                   PhBeforeCodeGen () => ((C_Case_BeforeCodeGen, 0), e2)
@@ -1086,16 +1081,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 | PhBeforeCPS () =>
                   let
                     val (e2, n_live_vars) = assert_EAnnoLiveVars e2
-                    val C_Case_BeforeCPS = C_Case_BeforeCodeGen + C_Abs_BeforeCC n_live_vars + C_App_BeforeCC
-                    val M_Case_BeforeCPS = M_Abs_BeforeCC n_live_vars + M_App_BeforeCC
                   in
-                    ((C_Case_BeforeCPS, M_Case_BeforeCPS), e2)
+                    ((C_Case_BeforeCPS n_live_vars, M_Case_BeforeCPS n_live_vars), e2)
                   end
           val e2 = if !anno_ECase_e2_time then e2 |># i2 else e2
           val e = if !anno_ECase then e %: t_e else e
           val e = if !anno_ECase_state then e %~ st else e
         in
-          (MakeECase (e, (name1, e1), (name2, e2)), t1, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, i2), st1)
+          (MakeECase (e, (name1, e1), (name2, e2)), t, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1, TN C_JUMPDEST %%+ i2), st1)
         end
       | EBinOp (EBApp (), e1, e2) =>
         let
