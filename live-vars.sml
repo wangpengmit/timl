@@ -77,8 +77,8 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         BindSimp (name, EAnnoLiveVars (e, n, r))
       end
-    (* has_k: a continuation variable will also be alive (which is invisible before CPS), so the number of live variables should be added by one *)
-    fun num_lvars (lvars, has_k) = Set.numItems (!lvars) + b2i has_k
+    (* has_cont_var: a continuation variable will also be alive (which is invisible before CPS), so the number of live variables should be added by one *)
+    fun num_lvars (lvars, has_cont_var) = Set.numItems (!lvars) + b2i has_cont_var
                                                                 
     fun visit_expr this env data =
       let

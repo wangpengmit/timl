@@ -1092,23 +1092,27 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
               | _ => false
           val (cost, branch1_extra, branch2_extra, e2) =
               case !phase of
-                  PhBeforeCodeGen () => ((C_Case_BeforeCodeGen, 0), (0, 0), (0, 0), e2)
-                | PhBeforeCC () => ((C_Case_BeforeCodeGen, 0), (0, 0), (0, 0), e2)
+                  PhBeforeCodeGen () => ((0, 0), (0, 0), (0, 0), e2)
+                | PhBeforeCC () => ((0, 0), (0, 0), (0, 0), e2)
                 | PhBeforeCPS () =>
                   let
-                    val (e2, n_live_vars) = assert_EAnnoLiveVars e2
-                    val cost = (C_Case_BeforeCPS n_live_vars, M_Case_BeforeCPS n_live_vars)
+                    val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars e2
+                    val cost = if has_k then
+                                 (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                                  M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                               else (0, 0)
                     val branch_extra = (C_App_BeforeCC, M_App_BeforeCC)
                     val branch1_extra = if is_tail_call e1 then (0, 0) else branch_extra
                     val branch2_extra = if is_tail_call e2 then (0, 0) else branch_extra
                   in
                     (cost, branch1_extra, branch2_extra, e2)
                   end
+          val cost = mapFst (add C_Case_BeforeCodeGen) cost
+          val () = println $ "cost = " ^ str_pair (str_int, str_int) cost
           val () = println $ "is_tail_call e1 = " ^ str_bool (is_tail_call e1)
           val () = println $ "is_tail_call e2 = " ^ str_bool (is_tail_call e2)
           val () = println $ "branch1_extra = " ^ str_pair (str_int, str_int) branch1_extra
           val () = println $ "branch2_extra = " ^ str_pair (str_int, str_int) branch2_extra
-          val () = println $ "cost = " ^ str_pair (str_int, str_int) cost
           val e2 = if !anno_ECase_e2_time then e2 |># i2 else e2
           val e = if !anno_ECase then e %: t_e else e
           val e = if !anno_ECase_state then e %~ st else e
