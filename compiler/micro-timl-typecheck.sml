@@ -1766,7 +1766,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                             EUnpackI data =>
                             let
                               val (e1, (iname, ename, e2)) = unEUnpack data
-                              val e2 = if is_value e1 then EAscTime (e2, shift_i_i i) else e2
+                              val e2 = if is_value e1 then EAscTime (e2, IBinOp (IBMinus (), shift_i_i i, to_real C_EUnpack)) else e2
                             in
                               MakeEUnpackI (e1, iname, ename, e2)
                             end
@@ -1948,7 +1948,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     val () = print $ e_input_str
     val () = println "of type:"
     val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) $ MicroTiMLSimp.simp_t t
-    val () = println "of time:"
+    val () = println "of time:\n"
     val () = println $ (* substr 0 100 $  *)ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i
   in
     (e_output, t, i, st)

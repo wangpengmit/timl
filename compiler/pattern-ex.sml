@@ -689,6 +689,10 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                | _ => raise Impossible $ sprintf "remove_deep_many(): $" [str_ls str_pn pks]
             )
           | matchee :: matchees =>
+            (* todo: handle empty datatypes here *)
+            (* case pks of *)
+            (*     [] => EExfalso (t?, matchee) *)
+            (*   | _ :: _ => *)
             let
               (* val () = app (fn p => println $ str_pn p) pks *)
               val pks = map (remove_top_aliases matchee) pks

@@ -536,126 +536,6 @@ fun is_wf_return gctx (skctx as (sctx, _), (t, d, j)) =
    Option.map (fn d => check_basic_sort gctx (sctx, d, BSTime)) d,
    Option.map (fn j => check_basic_sort gctx (sctx, j, BSNat)) j)
 
-fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext), (* pcovers, *) pn : U.ptrn, t : mtype) : ptrn * cover * context * int =
-  let
-    val match_ptrn = match_ptrn gctx
-    val gctxn = gctx_names gctx
-    val skctxn as (sctxn, kctxn) = (sctx_names sctx, names kctx)
-    (* val () = println $ sprintf "Checking pattern $ for type $" [U.str_pn gctxn (sctxn, kctxn, names cctx) pn, str_mt gctxn (sctxn, kctxn) t] *)
-    (* val () = println $ "sctxn=" ^ (str_ls id sctxn) *)
-  in
-    case pn of
-	U.PnConstr (Outer ((cx, ()), eia), inames, opn, r) =>
- 	let
-          val inames = map binder2str inames
-          val c as (family, tbinds) = snd $ fetch_constr gctx (cctx, cx)
-          val siblings = map fst $ get_family_siblings gctx cctx cx
-          val pos_in_family = indexOf (curry eq_var cx) siblings !! (fn () => raise Impossible "family_pos")
-          val (tname_kinds, ibinds) = unfold_binds tbinds
-          val tnames = map fst tname_kinds
-          val (name_sorts, (t1, is')) = unfold_binds ibinds
-          val () = if eia then () else raise Impossible "eia shouldn't be false"
-          val ts = map (fn _ => fresh_mt gctx (sctx, kctx) r) tnames
-          val is = map (fn _ => fresh_i gctx sctx (fresh_basic_sort ()) r) is'
-          val t_constr = TAppIs (TApps (TVar family) ts) is
-	  val () = unify_mt r gctx (sctx, kctx) (t, t_constr)
-                   handle
-                   Error _ =>
-                   let
-                     val expect = str_mt gctxn skctxn t
-                     val got = str_mt gctxn skctxn t_constr
-                   in
-                     raise Error
-                           (r, sprintf "Type of constructor $ doesn't match datatype " [str_var #3 gctxn (names cctx) cx] ::
-                               indent ["expect: " ^ expect,
-                                       "got: " ^ got])
-                   end
-          val length_name_sorts = length name_sorts
-          val () =
-              if length inames = length_name_sorts then ()
-              else raise Error (r, [sprintf "This constructor requires $ index argument(s), not $" [str_int (length_name_sorts), str_int (length inames)]])
-          val ts = map (normalize_mt true gctx kctx) ts
-          val is = map normalize_i is
-	  val ts = map (shiftx_i_mt 0 (length_name_sorts)) ts
-	  val is = map (shiftx_i_i 0 (length_name_sorts)) is
-	  val t1 = subst_ts_mt ts t1
-	  val ps = ListPair.map (fn (a, b) => PBinPred (BPEq (), a, b)) (is', is)
-          (* val () = println "try piggyback:" *)
-          (* val () = println $ str_ls (fn (name, sort) => sprintf "$: $" [name, sort]) $ str_sctx gctx $ rev name_sorts *)
-          val sorts = rev $ map snd name_sorts
-          val sorts =
-              case (!anno_less, sorts) of
-                  (true, SSubset (bs, Bind (name, p), r) :: sorts') =>
-                  (* piggyback the equalities on a SSubset sort *)
-                  let
-                    (* val () = println "piggyback!" *)
-                  in
-                    SSubset (bs, Bind (name, combine_And ps /\ p), r) :: sorts'
-                  end
-                | _ => sorts
-          val ctxd = ctx_from_full_sortings o ListPair.zip $ (rev inames, sorts)
-          val () = open_ctx ctxd
-          val () = open_premises ps
-          val ctx = add_ctx_skc ctxd ctx
-          val pn1 = opn
-          val (pn1, cover, ctxd', nps) = match_ptrn (ctx, pn1, t1)
-          val ctxd = add_ctx ctxd' ctxd
-          val cover = ConstrC (cx, cover)
-        in
-	  (PnConstr (Outer ((cx, (length siblings, pos_in_family)), eia), map str2ibinder inames, pn1, r), cover, ctxd, length ps + nps)
-	end
-      | U.PnVar ename =>
-        let
-          val name = binder2str ename
-          (* val pcover = combine_covers pcovers *)
-          (* val cover = cover_neg cctx t pcover *)
-          fun is_first_capital s =
-            String.size s >= 1 andalso Char.isUpper (String.sub (s, 0))
-          val () = if is_first_capital name then println $ sprintf "Warning: pattern $ is treated as a wildcard (did you misspell a constructor name?)" [name]
-                   else ()
-        in
-          (PnVar ename, TrueC, ctx_from_typing (name, PTMono t), 0)
-        end
-      | U.PnPair (pn1, pn2) =>
-        let 
-          val r = U.get_region_pn pn
-          val t1 = fresh_mt gctx (sctx, kctx) r
-          val t2 = fresh_mt gctx (sctx, kctx) r
-          (* val () = println $ sprintf "before: $ : $" [U.str_pn (sctxn, kctxn, names cctx) pn, str_mt skctxn t] *)
-          val () = unify_mt r gctx (sctx, kctx) (t, TProd (t1, t2))
-          (* val () = println "after" *)
-          val (pn1, cover1, ctxd, nps1) = match_ptrn (ctx, pn1, t1)
-          val ctx = add_ctx_skc ctxd ctx
-          val (pn2, cover2, ctxd', nps2) = match_ptrn (ctx, pn2, shift_ctx_mt ctxd t2)
-          val ctxd = add_ctx ctxd' ctxd
-        in
-          (PnPair (pn1, pn2), PairC (cover1, cover2), ctxd, nps1 + nps2)
-        end
-      | U.PnTT r =>
-        let
-          val () = unify_mt r gctx (sctx, kctx) (t, TUnit dummy)
-        in
-          (PnTT r, TTC, empty_ctx, 0)
-        end
-      | U.PnAlias (ename, pn, r) =>
-        let
-          val pname = binder2str ename
-          val ctxd = ctx_from_typing (pname, PTMono t)
-          val (pn, cover, ctxd', nps) = match_ptrn (ctx, pn, t)
-          val ctxd = add_ctx ctxd' ctxd
-        in
-          (PnAlias (ename, pn, r), cover, ctxd, nps)
-        end
-      | U.PnAnno (pn1, Outer t') =>
-        let
-          val t' = check_kind_Type gctx ((sctx, kctx), t')
-          val () = unify_mt (U.get_region_pn pn) gctx (sctx, kctx) (t, t')
-          val (pn1, cover, ctxd, nps) = match_ptrn (ctx, pn1, t')
-        in
-          (PnAnno (pn1, Outer t'), cover, ctxd, nps)
-        end
-  end
-
 (* If i1 or i2 is fresh, do unification instead of VC generation. Could be too aggressive. *)
 fun smart_write_le gctx ctx (i1, i2, r) =
   let
@@ -669,118 +549,6 @@ fun smart_write_le gctx ctx (i1, i2, r) =
     if is_fresh_i i1 orelse is_fresh_i i2 then unify_i r gctx ctx (i1, i2)
     else
       write_le (i1, i2, r)
-  end
-
-(* expand wildcard rules to reveal premises *)    
-fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
-  let
-    fun expand_rule (rule as (pn, e), (pcovers, rules)) =
-      let
-	val (pn, cover, ctxd, nps) = match_ptrn gctx (ctx, (* pcovers, *) pn, t)
-        val () = close_n nps
-        val () = close_ctx ctxd
-        (* val cover = ptrn_to_cover pn *)
-        (* val () = println "before check_redundancy()" *)
-        val () = check_redundancy gctx (ctx, t, pcovers, cover, get_region_pn pn)
-        (* val () = println "after check_redundancy()" *)
-        val (pcovers, new_rules) =
-            case (pn, e) of
-                (PnVar _, U.ET (ETNever (), U.TUVar ((), _), _)) =>
-                let
-                  fun hab_to_ptrn cctx (* cutoff *) t hab =
-                    let
-                      (* open UnderscoredExpr *)
-                      (* exception Error of string *)
-                      (* fun runError m () = *)
-                      (*   SOME (m ()) handle Error _ => NONE *)
-                      fun loop (* cutoff *) t hab =
-                        let
-                          (* val t = normalize_mt t *)
-                          val t = whnf_mt true gctx kctx t
-                          fun default () = raise Impossible "hab_to_ptrn"
-                        in
-                          case hab of
-                              ConstrH (x, h') =>
-                              (case is_TAppV t of
-                                   SOME (family, ts, _) =>
-                                   let
-                                     val (_, tbinds) = snd $ fetch_constr gctx (cctx, x)
-                                     val (_, ibinds) = unfold_binds tbinds
-                                     val (name_sorts, (t', _)) = unfold_binds ibinds
-	                             val t' = subst_ts_mt ts t'
-                                     (* cut-off so that [expand_rules] won't try deeper and deeper proposals *) 
-                                     val pn' =
-                                         loop (* (cutoff - 1) *) t' h'
-                                              (* if cutoff > 0 then *)
-                                              (*   loop (cutoff - 1) t' h' *)
-                                              (* else *)
-                                              (*   PnVar ("_", dummy) *)
-                                   in
-                                     PnConstr (Outer ((x, ()), true), repeat (length name_sorts) $ str2ibinder "_", pn', dummy)
-                                   end
-                                 | NONE => default ()
-                              )
-                            | TTH =>
-                              (case t of
-                                   TUnit _ =>
-                                   PnTT dummy
-                                 | _ => default ()
-                              )
-                            | PairH (h1, h2) =>
-                              (case t of
-                                   TProd (t1, t2) =>
-                                   PnPair (loop (* cutoff *) t1 h1, loop (* cutoff *) t2 h2)
-                                 | _ => default ()
-                              )
-                            | TrueH => PnVar $ str2ebinder "_"
-                        end
-                    in
-                      (* runError (fn () => loop t hab) () *)
-                      loop (* cutoff *) t hab
-                    end
-                  fun ptrn_to_cover pn =
-                    let
-                      (* open UnderscoredExpr *)
-                    in
-                      case pn of
-                          PnConstr (Outer ((x, ()), _), _, pn, _) => ConstrC (x, ptrn_to_cover pn)
-                        | PnVar _ => TrueC
-                        | PnPair (pn1, pn2) => PairC (ptrn_to_cover pn1, ptrn_to_cover pn2)
-                        | PnTT _ => TTC
-                        | PnAlias (_, pn, _) => ptrn_to_cover pn
-                        | PnAnno (pn, _) => ptrn_to_cover pn
-                    end
-                  fun convert_pn pn =
-                    case pn of
-                        PnTT a => U.PnTT a
-                      | PnPair (pn1, pn2) => U.PnPair (convert_pn pn1, convert_pn pn2)
-                      | PnConstr (x, inames, opn, r) => U.PnConstr (x, inames, convert_pn opn, r) 
-                      | PnVar a => U.PnVar a
-                      | PnAlias (name, pn, r) => U.PnAlias (name, convert_pn pn, r)
-                      | PnAnno _ => raise Impossible "convert_pn can't convert AnnoP"
-                  fun loop pcovers =
-                    case any_missing false(*treat empty datatype as inhabited, so as to get a shorter proposal*) gctx ctx t $ combine_covers pcovers of
-                        SOME hab =>
-                        let
-                          val pn = hab_to_ptrn cctx (* 10 *) t hab
-                          (* val () = println $ sprintf "New pattern: $" [str_pn (names sctx, names kctx, names cctx) pn] *)
-                          val (pcovers, rules) = loop $ pcovers @ [ptrn_to_cover pn]
-                        in
-                          (pcovers, [(convert_pn pn, e)] @ rules)
-                        end
-                      | NONE => (pcovers, [])
-                  val (pcovers, rules) = loop pcovers
-                in
-                  (pcovers, rules)
-                end
-              | _ => (pcovers @ [cover], [rule])
-      in
-        (pcovers, rules @ new_rules)
-      end
-    val (pcovers, rules) = foldl expand_rule ([], []) $ rules
-    val () = check_exhaustion gctx (ctx, t, pcovers, r);
-  in
-    rules
   end
 
 fun forget_or_check_return r gctx (ctx as (sctx, kctx)) ctxd (t', (d', j')) (t, d, j) =
@@ -1562,8 +1330,16 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e2, d2, st2) = check_mtype (ctx, st) (e2, t)
             val () = unify_state r gctxn sctxn (st2, st1)
             val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e2, ["Should be EAnnoLiveVars"])) e2
+            val cost = if has_k then
+                         (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                          M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                       else (0, 0)
+            val cost = mapFst (add C_Ite_BeforeCodeGen) cost
+            val branch_extra = (C_App_BeforeCC, M_App_BeforeCC)
+            val branch1_extra = if is_tail_call e1 then (0, 0) else branch_extra
+            val branch2_extra = if is_tail_call e2 then (0, 0) else branch_extra
           in
-            (ETriOp (ETIte (), e, e1, e2), t, d %%+ (to_real $ C_Ite_BeforeCPS n_live_vars, N $ M_Ite_BeforeCPS n_live_vars) %%+ smart_max_pair d1 d2, st1)
+            (ETriOp (ETIte (), e, e1, e2), t, d %%+ mapPair' to_real N cost %%+ smart_max_pair (d1 %%+ mapPair' to_real N branch1_extra) (TN C_JUMPDEST %%+ d2 %%+ mapPair' to_real N branch2_extra), st1)
           end
 	| U.EEI (opr, e, i) =>
           (case opr of
@@ -1828,36 +1604,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	  in
 	    (e, t, d, st)
 	  end
-	| U.ECase (e, return, rules, r) => 
-	  let
-            val rules = map Unbound.unBind rules
-            val return = if !anno_less then (#1 return, NONE, NONE) else return
-            val (e, t1, d1, st) = get_mtype (ctx, st) e
-            val (e, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (r, ["Should be EAnnoLiveVars"])) e
-            val return = is_wf_return gctx (skctx, return)
-            val rules = expand_rules gctx ((sctx, kctx, cctx), rules, t1, r)
-            val (rules, t_d_sts) = check_rules (ctx, st) (rules, (t1, return), r)
-            val (ts, ds, sts) = unzip3 t_d_sts
-            fun computed_t () : mtype =
-              case ts of
-                  [] => raise Error (r, ["Empty case-matching must have a return type clause"])
-                | t :: ts => 
-                  (map (fn t' => unify_mt r gctx (sctx, kctx) (t, t')) ts; 
-                   t)
-            val (times, spaces) = unzip ds
-            fun computed_time () =
-              smart_max_list times
-            fun computed_space () =
-              smart_max_list spaces
-            val (t, time, space) = map_triple (lazy_default computed_t, lazy_default computed_time, lazy_default computed_space) return
-            fun unify_states sts =
-              case sts of
-                  [] => NONE
-                | st :: ls => (app (fn st' => unify_state r gctxn sctxn (st', st)) ls; SOME st)
-            val st = default st $ unify_states sts
-          in
-            (ECase (e, return, map Unbound.Bind rules, r), t, d1 %%+ (time, space), st)
-          end
         | U.ECaseSumbool (e, bind1, bind2, r) =>
           let
             val s1 = fresh_sort gctx sctx r
@@ -1903,6 +1649,36 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EIfi (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %%+ smart_max_pair j1 j2, st1)
           end
+	| U.ECase (e, return, rules, r) => 
+	  let
+            val rules = map Unbound.unBind rules
+            val return = if !anno_less then (#1 return, NONE, NONE) else return
+            val (e, t1, d1, st) = get_mtype (ctx, st) e
+            val (e, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (r, ["Should be EAnnoLiveVars"])) e
+            val return = is_wf_return gctx (skctx, return)
+            val rules = expand_rules gctx ((sctx, kctx, cctx), rules, t1, r)
+            val (rules, t_d_sts) = check_rules (ctx, st) (rules, (t1, return), r)
+            val (ts, ds, sts) = unzip3 t_d_sts
+            fun computed_t () : mtype =
+              case ts of
+                  [] => raise Error (r, ["Empty case-matching must have a return type clause"])
+                | t :: ts => 
+                  (map (fn t' => unify_mt r gctx (sctx, kctx) (t, t')) ts; 
+                   t)
+            val (times, spaces) = unzip ds
+            fun computed_time () =
+              smart_max_list times
+            fun computed_space () =
+              smart_max_list spaces
+            val (t, time, space) = map_triple (lazy_default computed_t, lazy_default computed_time, lazy_default computed_space) return
+            fun unify_states sts =
+              case sts of
+                  [] => NONE
+                | st :: ls => (app (fn st' => unify_state r gctxn sctxn (st', st)) ls; SOME st)
+            val st = default st $ unify_states sts
+          in
+            (ECase (e, return, map Unbound.Bind rules, r), t, d1 %%+ (time, space), st)
+          end
     fun extra_msg () = ["when typechecking"] @ indent [US.str_e gctxn ctxn e_all]
     val (e, t, d, st) = main ()
     handle
@@ -1917,6 +1693,280 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     (* val () = print (sprintf "  type: $\n" [str_mt gctxn skctxn t]) *)
   in
     (e, t, d, st)
+  end
+
+and check_rules gctx (ctx as (sctx, kctx, cctx, tctx), st) (rules, t as (t1, return), r) =
+    let 
+      val skcctx = (sctx, kctx, cctx) 
+      fun f (rule, acc) =
+	let
+          (* val previous_covers = map (snd o snd) $ rev acc *)
+          val ans as (rule, (tdst, cover)) = check_rule gctx (ctx, st) ((* previous_covers, *) rule, t)
+          (* val covers = rev $ map (snd o snd) acc *)
+                                               (* val () = println "before check_redundancy()" *)
+	                                       (* val () = check_redundancy (skcctx, t1, covers, cover, get_region_rule rule) *)
+                                               (* val () = println "after check_redundancy()" *)
+	in
+	  ans :: acc
+	end 
+      val (rules, (tdsts, covers)) = (mapSnd unzip o unzip o rev o foldl f []) rules
+	                                                                     (* val () = check_exhaustion (skcctx, t1, covers, r) *)
+    in
+      (rules, tdsts)
+    end
+
+and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e), t as (t1, return)) =
+    let 
+      val skcctx = (sctx, kctx, cctx) 
+      val (pn, cover, ctxd as (sctxd, kctxd, _, _), nps) = match_ptrn gctx (skcctx, (* pcovers, *) pn, t1)
+      val ctx0 = ctx
+      val (ctx, st) = add_ctx_ctxst ctxd (ctx, st)
+      val (e, t, d, st) = get_mtype gctx (ctx, st) e
+      val r = get_region_e e
+      fun get_ptrn_cost (pn, t1) =
+        TN0 dummy
+      val d = get_ptrn_cost (pn, t1) %%+ d
+      val (t, d) = forget_or_check_return r gctx (#1 ctx, #2 ctx) ctxd (t, d) return 
+      val st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) st
+      val () = close_n nps
+      val () = close_ctx ctxd
+      val e = EAsc (e, shift_ctx_mt ctxd t)
+      val e = EAscTime (e, shift_ctx_i ctxd $ fst d)
+      val e = EAscSpace (e, shift_ctx_i ctxd $ snd d)
+    in
+      ((pn, e), ((t, d, st), cover))
+    end
+
+and match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext), (* pcovers, *) pn : U.ptrn, t : mtype) : ptrn * cover * context * int =
+  let
+    val match_ptrn = match_ptrn gctx
+    val gctxn = gctx_names gctx
+    val skctxn as (sctxn, kctxn) = (sctx_names sctx, names kctx)
+    (* val () = println $ sprintf "Checking pattern $ for type $" [U.str_pn gctxn (sctxn, kctxn, names cctx) pn, str_mt gctxn (sctxn, kctxn) t] *)
+    (* val () = println $ "sctxn=" ^ (str_ls id sctxn) *)
+  in
+    case pn of
+	U.PnConstr (Outer ((cx, ()), eia), inames, opn, r) =>
+ 	let
+          val inames = map binder2str inames
+          val c as (family, tbinds) = snd $ fetch_constr gctx (cctx, cx)
+          val siblings = map fst $ get_family_siblings gctx cctx cx
+          val pos_in_family = indexOf (curry eq_var cx) siblings !! (fn () => raise Impossible "family_pos")
+          val (tname_kinds, ibinds) = unfold_binds tbinds
+          val tnames = map fst tname_kinds
+          val (name_sorts, (t1, is')) = unfold_binds ibinds
+          val () = if eia then () else raise Impossible "eia shouldn't be false"
+          val ts = map (fn _ => fresh_mt gctx (sctx, kctx) r) tnames
+          val is = map (fn _ => fresh_i gctx sctx (fresh_basic_sort ()) r) is'
+          val t_constr = TAppIs (TApps (TVar family) ts) is
+	  val () = unify_mt r gctx (sctx, kctx) (t, t_constr)
+                   handle
+                   Error _ =>
+                   let
+                     val expect = str_mt gctxn skctxn t
+                     val got = str_mt gctxn skctxn t_constr
+                   in
+                     raise Error
+                           (r, sprintf "Type of constructor $ doesn't match datatype " [str_var #3 gctxn (names cctx) cx] ::
+                               indent ["expect: " ^ expect,
+                                       "got: " ^ got])
+                   end
+          val length_name_sorts = length name_sorts
+          val () =
+              if length inames = length_name_sorts then ()
+              else raise Error (r, [sprintf "This constructor requires $ index argument(s), not $" [str_int (length_name_sorts), str_int (length inames)]])
+          val ts = map (normalize_mt true gctx kctx) ts
+          val is = map normalize_i is
+	  val ts = map (shiftx_i_mt 0 (length_name_sorts)) ts
+	  val is = map (shiftx_i_i 0 (length_name_sorts)) is
+	  val t1 = subst_ts_mt ts t1
+	  val ps = ListPair.map (fn (a, b) => PBinPred (BPEq (), a, b)) (is', is)
+          (* val () = println "try piggyback:" *)
+          (* val () = println $ str_ls (fn (name, sort) => sprintf "$: $" [name, sort]) $ str_sctx gctx $ rev name_sorts *)
+          val sorts = rev $ map snd name_sorts
+          val sorts =
+              case (!anno_less, sorts) of
+                  (true, SSubset (bs, Bind (name, p), r) :: sorts') =>
+                  (* piggyback the equalities on a SSubset sort *)
+                  let
+                    (* val () = println "piggyback!" *)
+                  in
+                    SSubset (bs, Bind (name, combine_And ps /\ p), r) :: sorts'
+                  end
+                | _ => sorts
+          val ctxd = ctx_from_full_sortings o ListPair.zip $ (rev inames, sorts)
+          val () = open_ctx ctxd
+          val () = open_premises ps
+          val ctx = add_ctx_skc ctxd ctx
+          val pn1 = opn
+          val (pn1, cover, ctxd', nps) = match_ptrn (ctx, pn1, t1)
+          val ctxd = add_ctx ctxd' ctxd
+          val cover = ConstrC (cx, cover)
+        in
+	  (PnConstr (Outer ((cx, (length siblings, pos_in_family)), true), map str2ibinder inames, pn1, r), cover, ctxd, length ps + nps)
+	end
+      | U.PnVar ename =>
+        let
+          val name = binder2str ename
+          (* val pcover = combine_covers pcovers *)
+          (* val cover = cover_neg cctx t pcover *)
+          fun is_first_capital s =
+            String.size s >= 1 andalso Char.isUpper (String.sub (s, 0))
+          val () = if is_first_capital name then println $ sprintf "Warning: pattern $ is treated as a wildcard (did you misspell a constructor name?)" [name]
+                   else ()
+        in
+          (PnVar ename, TrueC, ctx_from_typing (name, PTMono t), 0)
+        end
+      | U.PnPair (pn1, pn2) =>
+        let 
+          val r = U.get_region_pn pn
+          val t1 = fresh_mt gctx (sctx, kctx) r
+          val t2 = fresh_mt gctx (sctx, kctx) r
+          (* val () = println $ sprintf "before: $ : $" [U.str_pn (sctxn, kctxn, names cctx) pn, str_mt skctxn t] *)
+          val () = unify_mt r gctx (sctx, kctx) (t, TProd (t1, t2))
+          (* val () = println "after" *)
+          val (pn1, cover1, ctxd, nps1) = match_ptrn (ctx, pn1, t1)
+          val ctx = add_ctx_skc ctxd ctx
+          val (pn2, cover2, ctxd', nps2) = match_ptrn (ctx, pn2, shift_ctx_mt ctxd t2)
+          val ctxd = add_ctx ctxd' ctxd
+        in
+          (PnPair (pn1, pn2), PairC (cover1, cover2), ctxd, nps1 + nps2)
+        end
+      | U.PnTT r =>
+        let
+          val () = unify_mt r gctx (sctx, kctx) (t, TUnit dummy)
+        in
+          (PnTT r, TTC, empty_ctx, 0)
+        end
+      | U.PnAlias (ename, pn, r) =>
+        let
+          val pname = binder2str ename
+          val ctxd = ctx_from_typing (pname, PTMono t)
+          val (pn, cover, ctxd', nps) = match_ptrn (ctx, pn, t)
+          val ctxd = add_ctx ctxd' ctxd
+        in
+          (PnAlias (ename, pn, r), cover, ctxd, nps)
+        end
+      | U.PnAnno (pn1, Outer t') =>
+        let
+          val t' = check_kind_Type gctx ((sctx, kctx), t')
+          val () = unify_mt (U.get_region_pn pn) gctx (sctx, kctx) (t, t')
+          val (pn1, cover, ctxd, nps) = match_ptrn (ctx, pn1, t')
+        in
+          (PnAnno (pn1, Outer t'), cover, ctxd, nps)
+        end
+  end
+
+(* expand wildcard rules to reveal premises *)    
+and expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
+  let
+    fun expand_rule (rule as (pn, e), (pcovers, rules)) =
+      let
+	val (pn, cover, ctxd, nps) = match_ptrn gctx (ctx, (* pcovers, *) pn, t)
+        val () = close_n nps
+        val () = close_ctx ctxd
+        (* val cover = ptrn_to_cover pn *)
+        (* val () = println "before check_redundancy()" *)
+        val () = check_redundancy gctx (ctx, t, pcovers, cover, get_region_pn pn)
+        (* val () = println "after check_redundancy()" *)
+        val (pcovers, new_rules) =
+            case (pn, e) of
+                (PnVar _, U.ET (ETNever (), U.TUVar ((), _), _)) =>
+                let
+                  fun hab_to_ptrn cctx (* cutoff *) t hab =
+                    let
+                      (* open UnderscoredExpr *)
+                      (* exception Error of string *)
+                      (* fun runError m () = *)
+                      (*   SOME (m ()) handle Error _ => NONE *)
+                      fun loop (* cutoff *) t hab =
+                        let
+                          (* val t = normalize_mt t *)
+                          val t = whnf_mt true gctx kctx t
+                          fun default () = raise Impossible "hab_to_ptrn"
+                        in
+                          case hab of
+                              ConstrH (x, h') =>
+                              (case is_TAppV t of
+                                   SOME (family, ts, _) =>
+                                   let
+                                     val (_, tbinds) = snd $ fetch_constr gctx (cctx, x)
+                                     val (_, ibinds) = unfold_binds tbinds
+                                     val (name_sorts, (t', _)) = unfold_binds ibinds
+	                             val t' = subst_ts_mt ts t'
+                                     (* cut-off so that [expand_rules] won't try deeper and deeper proposals *) 
+                                     val pn' =
+                                         loop (* (cutoff - 1) *) t' h'
+                                              (* if cutoff > 0 then *)
+                                              (*   loop (cutoff - 1) t' h' *)
+                                              (* else *)
+                                              (*   PnVar ("_", dummy) *)
+                                   in
+                                     PnConstr (Outer ((x, ()), true), repeat (length name_sorts) $ str2ibinder "_", pn', dummy)
+                                   end
+                                 | NONE => default ()
+                              )
+                            | TTH =>
+                              (case t of
+                                   TUnit _ =>
+                                   PnTT dummy
+                                 | _ => default ()
+                              )
+                            | PairH (h1, h2) =>
+                              (case t of
+                                   TProd (t1, t2) =>
+                                   PnPair (loop (* cutoff *) t1 h1, loop (* cutoff *) t2 h2)
+                                 | _ => default ()
+                              )
+                            | TrueH => PnVar $ str2ebinder "_"
+                        end
+                    in
+                      (* runError (fn () => loop t hab) () *)
+                      loop (* cutoff *) t hab
+                    end
+                  fun ptrn_to_cover pn =
+                    let
+                      (* open UnderscoredExpr *)
+                    in
+                      case pn of
+                          PnConstr (Outer ((x, ()), _), _, pn, _) => ConstrC (x, ptrn_to_cover pn)
+                        | PnVar _ => TrueC
+                        | PnPair (pn1, pn2) => PairC (ptrn_to_cover pn1, ptrn_to_cover pn2)
+                        | PnTT _ => TTC
+                        | PnAlias (_, pn, _) => ptrn_to_cover pn
+                        | PnAnno (pn, _) => ptrn_to_cover pn
+                    end
+                  fun convert_pn pn =
+                    case pn of
+                        PnTT a => U.PnTT a
+                      | PnPair (pn1, pn2) => U.PnPair (convert_pn pn1, convert_pn pn2)
+                      | PnConstr (x, inames, opn, r) => U.PnConstr (x, inames, convert_pn opn, r) 
+                      | PnVar a => U.PnVar a
+                      | PnAlias (name, pn, r) => U.PnAlias (name, convert_pn pn, r)
+                      | PnAnno _ => raise Impossible "convert_pn can't convert AnnoP"
+                  fun loop pcovers =
+                    case any_missing false(*treat empty datatype as inhabited, so as to get a shorter proposal*) gctx ctx t $ combine_covers pcovers of
+                        SOME hab =>
+                        let
+                          val pn = hab_to_ptrn cctx (* 10 *) t hab
+                          (* val () = println $ sprintf "New pattern: $" [str_pn (names sctx, names kctx, names cctx) pn] *)
+                          val (pcovers, rules) = loop $ pcovers @ [ptrn_to_cover pn]
+                        in
+                          (pcovers, [(convert_pn pn, e)] @ rules)
+                        end
+                      | NONE => (pcovers, [])
+                  val (pcovers, rules) = loop pcovers
+                in
+                  (pcovers, rules)
+                end
+              | _ => (pcovers @ [cover], [rule])
+      in
+        (pcovers, rules @ new_rules)
+      end
+    val (pcovers, rules) = foldl expand_rule ([], []) $ rules
+    val () = check_exhaustion gctx (ctx, t, pcovers, r);
+  in
+    rules
   end
 
 and check_mtype gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, t) =
@@ -2330,79 +2380,6 @@ and is_wf_datatype gctx ctx (Bind (name, tbinds) : U.mtype U.datatype_def, r) : 
       (dt, ([], add_kindingext nk [], rev constrs, []))
     end
       
-and check_rules gctx (ctx as (sctx, kctx, cctx, tctx), st) (rules, t as (t1, return), r) =
-    let 
-      val skcctx = (sctx, kctx, cctx) 
-      fun f (rule, acc) =
-	let
-          (* val previous_covers = map (snd o snd) $ rev acc *)
-          val ans as (rule, (tdst, cover)) = check_rule gctx (ctx, st) ((* previous_covers, *) rule, t)
-          (* val covers = rev $ map (snd o snd) acc *)
-                                               (* val () = println "before check_redundancy()" *)
-	                                       (* val () = check_redundancy (skcctx, t1, covers, cover, get_region_rule rule) *)
-                                               (* val () = println "after check_redundancy()" *)
-	in
-	  ans :: acc
-	end 
-      val (rules, (tdsts, covers)) = (mapSnd unzip o unzip o rev o foldl f []) rules
-	                                                                     (* val () = check_exhaustion (skcctx, t1, covers, r) *)
-    in
-      (rules, tdsts)
-    end
-
-and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e), t as (t1, return)) =
-    let 
-      val skcctx = (sctx, kctx, cctx) 
-      val (pn, cover, ctxd as (sctxd, kctxd, _, _), nps) = match_ptrn gctx (skcctx, (* pcovers, *) pn, t1)
-      val ctx0 = ctx
-      val (ctx, st) = add_ctx_ctxst ctxd (ctx, st)
-      val (e, t, d, st) = get_mtype gctx (ctx, st) e
-      val r = get_region_e e
-      val (t, d) = forget_or_check_return r gctx (#1 ctx, #2 ctx) ctxd (t, d) return 
-      val st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) st
-      (*
-        val (e, t, d) = 
-            case return of
-                (SOME t, SOME d) =>
-                let
-	          val e = check_mtype_time (ctx, e, shift_ctx_mt ctxd t, shift_ctx_i ctxd d)
-                in
-                  (e, t, d)
-                end
-              | (SOME t, NONE) =>
-                let 
-                  val (e, d) = check_mtype (ctx, e, shift_ctx_mt ctxd t)
-                  (* val () = println $ str_i (names (#1 ctx)) d *)
-		  val d = forget_ctx_d (get_region_e e) ctx ctxd d
-                                       (* val () = println $ str_i (names (#1 ctx0)) d *)
-                in
-                  (e, t, d)
-                end
-              | (NONE, SOME d) =>
-                let 
-                  val (e, t) = check_time (ctx, e, shift_ctx_i ctxd d)
-		  val t = forget_ctx_mt (get_region_e e) ctx ctxd t 
-                in
-                  (e, t, d)
-                end
-              | (NONE, NONE) =>
-                let 
-                  val (e, t, d) = get_mtype (ctx, e)
-		  val t = forget_ctx_mt (get_region_e e) ctx ctxd t 
-		  val d = forget_ctx_d (get_region_e e) ctx ctxd d
-                in
-                  (e, t, d)
-                end
-      *)
-      val () = close_n nps
-      val () = close_ctx ctxd
-      val e = EAsc (e, shift_ctx_mt ctxd t)
-      val e = EAscTime (e, shift_ctx_i ctxd $ fst d)
-      val e = EAscSpace (e, shift_ctx_i ctxd $ snd d)
-    in
-      ((pn, e), ((t, d, st), cover))
-    end
-
 fun link_sig r gctx m (ctx' as (sctx', kctx', cctx', tctx') : context) =
   let
     val gctxn = gctx_names gctx

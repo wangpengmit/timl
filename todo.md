@@ -136,6 +136,7 @@
 - [ ] Rename "micro-timl/" to "compiler/".
 - [ ] Add "let nat {i} = x in ..." to name the index of nat.
 - [ ] Add register-file polymorphism so that EVM snippets for new_array and string_concat can be shared instead of inlined.
+- [ ] pattern-ex.sml/remove_deep_many() should handle empty datatypes.
 
 # To-do for Examples:
 
