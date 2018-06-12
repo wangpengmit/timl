@@ -230,5 +230,22 @@ fun EAbsITs (binds, e) = foldr EAbsIT e binds
 
 fun ETupleProj (e, n) = EUnOp (EUTupleProj n, e)
   
+fun is_tail_call e =
+  case e of
+      EBinOp (EBApp (), _, _) => true
+    | EAppT _ => true
+    | EAppI _ => true
+    | ECase _ => true 
+    | ETriOp (ETIte (), _, _, _) => true
+    | EUnOp (EUTiML (EUAnno _), e) => is_tail_call e
+    | EAscTime (e, _) => is_tail_call e
+    | EAscSpace (e, _) => is_tail_call e
+    | EAscType (e, _) => is_tail_call e
+    | EAscState (e, _) => is_tail_call e
+    | ELet (_, bind) => is_tail_call $ snd $ unBindSimp bind
+    | EUnpack (_, bind) => is_tail_call $ snd $ unBindSimp $ snd $ unBindSimp bind
+    | EUnpackI (_, bind) => is_tail_call $ snd $ unBindSimp $ snd $ unBindSimp bind
+    | _ => false
+                       
 end
                                  

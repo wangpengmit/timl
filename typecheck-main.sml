@@ -895,7 +895,7 @@ fun str_gctx old_gctxn gctx =
                 ([sprintf "functor $ (structure $ : " [name, arg_name] ] @
                  indent (str_sig gctxn arg) @
                  [") : "] @
-                 indent (str_sig (add (arg_name, ctx_names arg) gctxn) body),
+                 indent (str_sig (Gctx.add (arg_name, ctx_names arg) gctxn) body),
                  [])
       in
         (ls :: acc, addList (gctxn, gctxnd))
@@ -1339,8 +1339,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val () = check_submap pre_st st
                  val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
                  val st = st @++ post_st
-                 val (e2, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (r2, ["Should be EAnnoLiveVars"])) e2
-                 val cost = mapPair' to_real N (C_App_BeforeCPS n_live_vars, M_App_BeforeCPS n_live_vars)
+                 val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (r2, ["Should be EAnnoLiveVars"])) e2
+                 val cost = mapPair' to_real N (C_App_BeforeCPS, M_App_BeforeCPS)
                in
                  (EApp (e1, e2), t, d1 %%+ d2 %%+ cost %%+ d, st) 
 	       end
@@ -1533,7 +1533,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e1, t, d1, st1) = get_mtype (ctx, st) e1
             val (e2, d2, st2) = check_mtype (ctx, st) (e2, t)
             val () = unify_state r gctxn sctxn (st2, st1)
-            val (e2, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e2, ["Should be EAnnoLiveVars"])) e2
+            val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e2, ["Should be EAnnoLiveVars"])) e2
           in
             (ETriOp (ETIte (), e, e1, e2), t, d %%+ (to_real $ C_Ite_BeforeCPS n_live_vars, N $ M_Ite_BeforeCPS n_live_vars) %%+ smart_max_pair d1 d2, st1)
           end
@@ -1548,7 +1548,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                    in
                      snd $ U.assert_EAnnoLiveVars (fn () => raise Error (U.get_region_e e, ["Should be EAnnoLiveVars"])) e
                    end
-                 val n_live_vars = get_n_live_vars e
+                 val (n_live_vars, has_k) = get_n_live_vars e
                  val (e, t, d, st) = get_mtype (ctx, st) e
                  val cost = mapPair' to_real N (C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars)
                  fun subst_i_2i v b = unop_pair (subst_i_i v) b
@@ -1720,9 +1720,9 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val tc = fetch_constr_type gctx (cctx, x)
 	    (* delegate to checking [x {is} e] *)
             val r = U.get_region_long_id x
-	    val f = U.EAnnoLiveVars (U.EVar ((ID (0, r)), eia), 0, r)
+	    val f = U.EAnnoLiveVars (U.EVar ((ID (0, r)), eia), (0, true), r)
 	    val f = foldl (fn (i, e) => U.EAppI (e, i)) f is
-	    val e = U.EApp (f, UnderscoredExprShift.shift_e_e $ U.EAnnoLiveVars (e, 0, r))
+	    val e = U.EApp (f, UnderscoredExprShift.shift_e_e $ U.EAnnoLiveVars (e, (0, true), r))
             val f_name = str_var #3 (gctx_names gctx) (names cctx) x
 	    val (e, t, d, st) = get_mtype (add_typing_skct (f_name, tc) ctx, st) e 
             val d = update_2i d
@@ -1796,7 +1796,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val rules = map Unbound.unBind rules
             val return = if !anno_less then (#1 return, NONE, NONE) else return
             val (e, t1, d1, st) = get_mtype (ctx, st) e
-            val (e, n_live_vars) = assert_EAnnoLiveVars (fn () => raise Error (r, ["Should be EAnnoLiveVars"])) e
+            val (e, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (r, ["Should be EAnnoLiveVars"])) e
             val return = is_wf_return gctx (skctx, return)
             val rules = expand_rules gctx ((sctx, kctx, cctx), rules, t1, r)
             val (rules, t_d_sts) = check_rules (ctx, st) (rules, (t1, return), r)

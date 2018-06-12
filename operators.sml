@@ -84,7 +84,7 @@ fun choose (t1, t2) proj =
     | ProjSnd () => t2
                                  
 datatype expr_anno =
-         EALiveVars of int (* num of live vars afterwards *)
+         EALiveVars of int(* num of live vars afterwards *) * bool(*does it have continuation?*)
          | EABodyOfRecur of unit (* this is the body of a recursive function *)
          | EAFreeEVars of int (* num of free expression vars (excluding argument and recursive self-reference) *)
                               
@@ -136,7 +136,7 @@ fun str_prim_expr_un_op opr =
                    
 fun str_expr_anno a =
   case a of
-      EALiveVars n => "live_vars " ^ str_int n
+      EALiveVars (n, b) => sprintf "live_vars ($, $)" [str_int n, str_bool b]
     | EABodyOfRecur () => "body_of_recur"
     | EAFreeEVars n => "free_evars " ^ str_int n
                             

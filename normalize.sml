@@ -680,7 +680,7 @@ fun normalize_sgntr ignore_dt gctx sg =
       end
 
 fun normalize_sgntr_list ignore_dt gctx0 gctx =
-  fst $ foldr (fn ((name, sg), (acc, gctx)) => let val p = (name, normalize_sgntr ignore_dt gctx sg) in (p :: acc, add p gctx) end) ([], gctx0) gctx
+  fst $ foldr (fn ((name, sg), (acc, gctx)) => let val p = (name, normalize_sgntr ignore_dt gctx sg) in (p :: acc, Gctx.add p gctx) end) ([], gctx0) gctx
 
 fun normalize_gctx ignore_dt gctx0 gctx =
   let

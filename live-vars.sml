@@ -78,7 +78,7 @@ fun live_vars_expr_visitor_vtable cast () =
         BindSimp (name, EAnnoLiveVars (e, n, r))
       end
     (* has_cont_var: a continuation variable will also be alive (which is invisible before CPS), so the number of live variables should be added by one *)
-    fun num_lvars (lvars, has_cont_var) = Set.numItems (!lvars) + b2i has_cont_var
+    fun num_lvars (lvars, has_k, has_cont_var) = (Set.numItems (!lvars) + b2i has_cont_var, !has_k)
                                                                 
     fun visit_expr this env data =
       let
@@ -103,14 +103,14 @@ fun live_vars_expr_visitor_vtable cast () =
 	  | ECaseSumbool data => #visit_ECaseSumbool vtable this env data
 	  | EIfi (e, bind1, bind2, r) =>
             let
-              val lvars = fst env
+              val lvars = #1 env
               val n_lvars = num_lvars env
               val new_lvars = ref Set.empty
               (* In the branches, there will be a live continuation variable. *)
-              val bind2 = visit_ibind this (#visit_expr vtable this) env bind2
+              val bind2 = visit_ibind this (#visit_expr vtable this) (new_lvars, ref false, true) bind2
               val () = output_set lvars (!new_lvars)
               val () = new_lvars := Set.empty
-              val bind1 = visit_ibind this (#visit_expr vtable this) env bind1
+              val bind1 = visit_ibind this (#visit_expr vtable this) (new_lvars, ref false, true) bind1
               val () = output_set lvars (!new_lvars)
               val e = #visit_expr vtable this env e
             in
@@ -125,7 +125,7 @@ fun live_vars_expr_visitor_vtable cast () =
             end
           | EGet (x, es, r) => EGet (x, mapr (#visit_expr vtable this env) es, r)
       end
-    fun visit_var this (lvars, _) data =
+    fun visit_var this (lvars, _, _) data =
       ((case data of
             ID (n, _) => output lvars $ inl n
           | QID ((m, _), (n, _)) => output lvars $ inr (m, n)
@@ -260,15 +260,15 @@ fun live_vars_expr_visitor_vtable cast () =
       case opr of
           ETIte _ =>
           let
-            val lvars = fst env
+            val lvars = #1 env
             val n_lvars = num_lvars env
             val vtable = cast this
             val new_lvars = ref Set.empty
             (* In the branches, there will be a live continuation variable. *)
-            val e2 = #visit_expr vtable this (new_lvars, true) e2
+            val e2 = #visit_expr vtable this (new_lvars, ref false, true) e2
             val () = output_set lvars (!new_lvars)
             val () = new_lvars := Set.empty
-            val e3 = #visit_expr vtable this (new_lvars, true) e3
+            val e3 = #visit_expr vtable this (new_lvars, ref false, true) e3
             val () = output_set lvars (!new_lvars)
             val e1 = #visit_expr vtable this env e1
           in
@@ -340,7 +340,7 @@ fun live_vars_expr_visitor_vtable cast () =
     fun forget n s = Set.map (fn x => case x of inl x => inl $ x - n | inr _ => x) $ Set.filter (fn inl x => x >= n | inr _ => true) s
     fun visit_bind visit_body env bind =
       let
-        val lvars = fst env
+        val lvars = #1 env
         val (pn, e) = unBind bind
         val n = get_num_ebind_pn pn
         val () = unop_ref (Set.map (shift n)) lvars
@@ -357,12 +357,12 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EAbs (st, bind)
       end
-    fun visit_EAbsI this (lvars, _) (bind, r) =
+    fun visit_EAbsI this (lvars, _, _) (bind, r) =
       let
         val vtable = cast this
         val new_lvars = ref Set.empty
         (* now there will be a live continuation variable *)
-        val bind = visit_ibind_anno this (#visit_sort vtable this) (#visit_expr vtable this) (new_lvars, true) bind
+        val bind = visit_ibind_anno this (#visit_sort vtable this) (#visit_expr vtable this) (new_lvars, ref false, true) bind
         val () = output_set lvars (!new_lvars)
       in
         EAbsI (bind, r)
@@ -378,7 +378,7 @@ fun live_vars_expr_visitor_vtable cast () =
       end
     fun visit_ECase this env (e, return, binds, r) =
       let
-        val lvars = fst env
+        val lvars = #1 env
         val n_lvars = num_lvars env
         val vtable = cast this
         val new_lvars = ref Set.empty
@@ -387,7 +387,7 @@ fun live_vars_expr_visitor_vtable cast () =
                 val () = new_lvars := Set.empty
                 (* In the branches, there will be a live continuation variable. *)
                 (* todo: not if the number of branches is less than 2 *)
-                val bind = visit_bind (#visit_expr vtable this) (new_lvars, true) bind
+                val bind = visit_bind (#visit_expr vtable this) (new_lvars, ref false, true) bind
                 val () = output_set lvars (!new_lvars)
               in
                 bind
@@ -407,7 +407,7 @@ fun live_vars_expr_visitor_vtable cast () =
         Teles decls
       end
     fun get_num_ebind_decls a = #4 $ count_binder_decls a
-    fun visit_ELet this (env as (lvars, _)) (return, bind, r) =
+    fun visit_ELet this (env as (lvars, _, _)) (return, bind, r) =
       let
         val vtable = cast this
         val (decls, e) = unBind bind
@@ -465,9 +465,9 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         name
       end
-    fun visit_ebinder this ctx name =
+    fun visit_ebinder this (ctx : (Set.set ref * bool ref * bool) ctx) name =
       let
-        val lvars = fst $ !(#current ctx)
+        val lvars = #1 $ !(#current ctx)
         val () = unop_ref (forget 1) lvars
       in
         name
@@ -475,7 +475,6 @@ fun live_vars_expr_visitor_vtable cast () =
     fun visit_DVal this ctx (name, bind, r) =
       let
         val vtable = cast this
-        val _ : bool = snd $ !(#current ctx)
         val (tbinders, e) = unBind $ unOuter bind
         val e = #visit_expr vtable this (#outer ctx) e
         val bind = Outer $ Bind (tbinders, e)
@@ -485,7 +484,7 @@ fun live_vars_expr_visitor_vtable cast () =
       end
     fun visit_DValPtrn this ctx (pn, e, r) =
       let
-        val lvars = fst $ !(#current ctx)
+        val lvars = #1 $ !(#current ctx)
         val vtable = cast this
         val e = visit_outer (#visit_expr vtable this) ctx e
         val n = get_num_ebind_pn pn
@@ -499,7 +498,7 @@ fun live_vars_expr_visitor_vtable cast () =
                 | TypingST pn => get_num_ebind_pn pn) $ unTeles $ unRebind stbinds
     fun visit_DRec this ctx (name, bind, r) =
       let
-        val env as (lvars, _ : bool) = !(#current ctx)
+        val env as (lvars, _, _ : bool) = !(#current ctx)
         val vtable = cast this
         val new_lvars = ref Set.empty
         val (p, body) = unBind $ unInner bind
@@ -509,7 +508,7 @@ fun live_vars_expr_visitor_vtable cast () =
                          (visit_pair (#visit_mtype vtable this)
                                      (visit_pair (#visit_idx vtable this)
                                                  (#visit_idx vtable this)))
-                         (#visit_expr vtable this) (new_lvars, true) body
+                         (#visit_expr vtable this) (new_lvars, ref false, true) body
         val n = get_num_ebind_rec_binds p
         val () = unop_ref (forget n) new_lvars
         val () = output_set lvars (!new_lvars)
@@ -577,7 +576,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val _ = visit_list (visit_cbinder this) ctx $ rev cctx
         val _ = visit_list (visit_ebinder this) ctx $ rev tctx
         val (m, _) = unInner m
-        val lvars = fst $ !(#current ctx)
+        val lvars = #1 $ !(#current ctx)
         (* 'open' touches all evars in the module, so all of them should be counted as live evars *)
         val () = appi (fn (i, _) => output lvars $ inr (m, i)) tctx
       in
@@ -794,7 +793,7 @@ fun live_vars_e b =
   let
     val lvars = ref Set.empty
     val visitor as (ExprVisitor vtable) = new_live_vars_expr_visitor ()
-    val b = #visit_expr vtable visitor (lvars, false) b
+    val b = #visit_expr vtable visitor (lvars, ref true, false) b
   in
     (b, !lvars)
   end
@@ -803,7 +802,7 @@ fun live_vars_decls b =
   let
     val lvars = ref Set.empty
     val visitor as (ExprVisitor vtable) = new_live_vars_expr_visitor ()
-    val b = visit_decls (#visit_decl vtable visitor) (env2ctx (lvars, false)) b
+    val b = visit_decls (#visit_decl vtable visitor) (env2ctx (lvars, ref true, false)) b
   in
     (b, !lvars)
   end

@@ -1171,7 +1171,7 @@ fun on_top_bind gctx (name, bind) =
       | S.TBFunctor (((arg_name, r2), arg), m) =>
         let
           val (arg, arg_ctx) = on_sig gctx arg
-          val gctx = add (arg_name, Sig arg_ctx) gctx
+          val gctx = Gctx.add (arg_name, Sig arg_ctx) gctx
           val (m, body_ctx) = on_module gctx m
         in
           (TBFunctor (((arg_name, r2), arg), m), [(name, FunctorBind ((arg_name, arg_ctx), body_ctx))])

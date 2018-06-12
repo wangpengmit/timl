@@ -192,9 +192,10 @@ fun assert_and_reduce_letxx e =
 val whnf = fn t => whnf ([], []) t
                        
 infix 6 %%+
-infix 6 %%-
-fun IMinus (a, b) = IBinOp (IBMinus (), a, b)
-fun a %%- b = binop_pair IMinus (a, b)
+        
+(* infix 6 %%- *)
+(* fun IMinus (a, b) = IBinOp (IBMinus (), a, b) *)
+(* fun a %%- b = binop_pair IMinus (a, b) *)
 
 fun blowup_time (i, j) = i %+ j
 fun blowup_space (i, j) = i %+ j
@@ -362,16 +363,15 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
     val cps_with_frame = cps
     fun cps (e, t_e) (k, j_k) = cps_with_frame (e, t_e, F) (k, j_k)
     fun err () = raise Impossible $ "unknown case of cps() on: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
-    (* EApp/EAppI/EAppT/EIte/ECase explicitly creates the continuation closure, so they are responsible for adjusting j_k by the closure-unpacking overhead. Also, if k = EVar, we can be sure that the surrounding EAbs or ECase/Ite over-added C_App_BeforeCC to j_k, so we need to subtract it. *)
+    (* EApp/EAppI/EAppT/EIte/ECase explicitly creates the continuation closure, so they are responsible for adjusting j_k by the closure-unpacking overhead. *)
     fun get_cost_adjustments n_live_vars k =
       let
-        val inner_plus = (C_Abs_Inner_BeforeCC n_live_vars, M_Abs_Inner_BeforeCC n_live_vars)
+        val inner = (C_Abs_Inner_BeforeCC n_live_vars, M_Abs_Inner_BeforeCC n_live_vars)
         val outer = (C_Abs_BeforeCC n_live_vars, M_Abs_BeforeCC n_live_vars)
-        val inner_minus = (C_App_BeforeCC, M_App_BeforeCC)
       in
         case k of
-            EAbs _ => (mapPair' to_real N inner_plus, TN0, mapPair' to_real N outer)
-          | EVar _ => (TN0, mapPair' to_real N inner_minus, TN0)
+            EAbs _ => (mapPair' to_real N inner, mapPair' to_real N outer)
+          | EVar _ => (TN0, TN0)
           | _ => raise Impossible "get_cost_adjustments(): neither EAbs nor EVar"
       end
     (* [[ \\a. e |> i ]](k) = k (\\a. \\j F. \c {F}. [[e]](c)) *)
@@ -384,7 +384,9 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val () = assert_b_m (fn () => "is_value() on " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)) $ is_value e
         val (e, n_fvars) = assert_EAnnoFreeEVars e
         val j = (IV j1, IV j2)
-        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, mapPair' to_real N (C_App_BeforeCC, M_App_BeforeCC) %%+ j)
+        val tail_app_cost = if is_tail_call e then (0, 0)
+                            else (C_App_BeforeCC, M_App_BeforeCC)
+        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, mapPair' to_real N tail_app_cost %%+ j)
         (* val e = EAscTimeSpace (e, blowup_time_space_t j) *)
         val t_e = cps_t t_e
         val t_c = cont_type ((IV F, t_e), j)
@@ -415,7 +417,9 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val j2 = fresh_ivar ()
         val F = fresh_ivar ()
         val j = (IV j1, IV j2)
-        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, mapPair' to_real N (C_App_BeforeCC, M_App_BeforeCC) %%+ j)
+        val tail_app_cost = if is_tail_call e then (0, 0)
+                            else (C_App_BeforeCC, M_App_BeforeCC)
+        val (e, _) = cps_with_frame (e, t_e, IV F) (EV c, mapPair' to_real N tail_app_cost %%+ j)
         (* val e = EAscTimeSpace (e, blowup_time_space (i, j)) *)
         val t_e = cps_t t_e
         val t_c = cont_type ((post_st %++ IV F, t_e), j)
@@ -464,8 +468,8 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val x1 = fresh_evar ()
         val x2 = fresh_evar ()
         val xk = fresh_evar ()
-        val (inner_plus, inner_minus, outer) = get_cost_adjustments n_live_vars k
-        val j_k = inner_plus %%+ j_k %%- inner_minus
+        val (inner, outer) = get_cost_adjustments n_live_vars k
+        val j_k = inner %%+ j_k
         val e = EAppIPair (EV x1, j_k) %$ EPair (EV x2, EV xk)
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
@@ -485,8 +489,8 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_e = whnf t_e
         val (_, _, j, _) = assert_TForall t_e
         val x = fresh_evar ()
-        val (inner_plus, inner_minus, outer) = get_cost_adjustments n_live_vars k
-        val j_k = inner_plus %%+ j_k %%- inner_minus
+        val (inner, outer) = get_cost_adjustments n_live_vars k
+        val j_k = inner %%+ j_k
         val c = EAppIPair (EAppT (EV x, cps_t t), j_k) %$ k
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
@@ -502,8 +506,8 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_e = whnf t_e
         val (_, _, j, _) = assert_TForallI t_e
         val x = fresh_evar ()
-        val (inner_plus, inner_minus, outer) = get_cost_adjustments n_live_vars k
-        val j_k = inner_plus %%+ j_k %%- inner_minus
+        val (inner, outer) = get_cost_adjustments n_live_vars k
+        val j_k = inner %%+ j_k
         val c = EAppIPair (EAppI (EV x, i), j_k) %$ k
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c))
@@ -519,10 +523,14 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_res = cps_t t_res
         val x_k = fresh_evar ()
         val (e2, n_live_vars) = assert_EAnnoLiveVars e2
-        val (inner_plus, inner_minus, outer) = get_cost_adjustments n_live_vars k
-        val j_k = mapPair' to_real N (C_App_BeforeCC, M_App_BeforeCC) %%+ inner_plus %%+ j_k %%- inner_minus
-        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
-        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
+        val (inner, outer) = get_cost_adjustments n_live_vars k
+        val j_k = inner %%+ j_k
+        val tail_app_cost1 = if is_tail_call e1 then (0, 0)
+                            else (C_App_BeforeCC, M_App_BeforeCC)
+        val tail_app_cost2 = if is_tail_call e2 then (0, 0)
+                            else (C_App_BeforeCC, M_App_BeforeCC)
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, mapPair' to_real N tail_app_cost1 %%+ j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, mapPair' to_real N tail_app_cost2 %%+ j_k)
         val y = fresh_evar ()
         val c = ETriOp (ETIte (), EV y, e1, e2)
         val c = ELetClose ((x_k, "k", k), c)
@@ -546,10 +554,14 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val (e, t_e) = assert_EAscType e
         val t_res = cps_t t_res
         val x_k = fresh_evar ()
-        val (inner_plus, inner_minus, outer) = get_cost_adjustments n_live_vars k
-        val j_k = mapPair' to_real N (C_App_BeforeCC, M_App_BeforeCC) %%+ inner_plus %%+ j_k %%- inner_minus
-        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
-        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
+        val (inner, outer) = get_cost_adjustments n_live_vars k
+        val j_k = inner %%+ j_k
+        val tail_app_cost1 = if is_tail_call e1 then (0, 0)
+                            else (C_App_BeforeCC, M_App_BeforeCC)
+        val tail_app_cost2 = if is_tail_call e2 then (0, 0)
+                            else (C_App_BeforeCC, M_App_BeforeCC)
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, mapPair' to_real N tail_app_cost1 %%+ j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, mapPair' to_real N tail_app_cost2 %%+ j_k)
         val y = fresh_evar ()
         val c = ECaseClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
         val c = ELetClose ((x_k, "k", k), c)
