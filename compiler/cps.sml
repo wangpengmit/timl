@@ -364,7 +364,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
     fun cps (e, t_e) (k, j_k) = cps_with_frame (e, t_e, F) (k, j_k)
     fun err () = raise Impossible $ "unknown case of cps() on: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
     (* EApp/EAppI/EAppT/EIte/ECase explicitly creates the continuation closure, so they are responsible for adjusting j_k by the closure-unpacking overhead. *)
-    fun get_cost_adjustments n_live_vars k =
+    fun get_cost_adjustments (n_live_vars, _) k =
       let
         val inner = (C_Abs_Inner_BeforeCC n_live_vars, M_Abs_Inner_BeforeCC n_live_vars)
         val outer = (C_Abs_BeforeCC n_live_vars, M_Abs_BeforeCC n_live_vars)

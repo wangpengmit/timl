@@ -78,7 +78,7 @@ fun process_prog show_result filename gctx prog =
                       let
                         val outs = default empty $ Gctx.find (graph, node)
                         val working = union (working, outs)
-                        val done = add (done, node)
+                        val done = SU.Set.add (done, node)
                       in
                         loop (working, done)
                       end

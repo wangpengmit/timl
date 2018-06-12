@@ -791,7 +791,9 @@ fun assert_TCell t =
   end
 
 infix 6 %%+
-
+infix 6 ++
+fun a ++ b = binop_pair op+ (a, b)
+        
 val N : nat -> idx = INat
 val T : TimeType.time -> idx = ITime
                 

@@ -373,6 +373,9 @@ fun is_wf_type gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.ty) : ty =
 
 infix 6 %%+ 
 
+infix 6 ++
+fun a ++ b = binop_pair op+ (a, b)
+                   
 fun smart_max a b =
   if eq_i a (T0 dummy) then
     b
