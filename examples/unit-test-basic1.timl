@@ -2,9 +2,9 @@ structure UnitTestBasic1 = struct
 
 (* val x = 1 *)
 (* val f = fn y => 1 + y *)
-fun f y = 1 + y
+(* fun f y = 1 + y *)
 (* val f = fn y => x + y *)
-(* (* fun f y = x + y *) *)
+(* fun f y = x + y *)
 (* val a = f 64 *)
 (* val g = fn y => 1 + y *)
 (* val b = f 64 *)
@@ -17,17 +17,17 @@ fun f y = 1 + y
 (* val f = fn {n : Nat} y => y + 1 *)
 (* val f = fn {n : Nat} => (fn y => y + 1) using _ *)
 (* val f = fn {n : Nat} y => x + y *)
-(* (* fun f {n : Nat} y = y + 1 *) *)
-(* (* fun f {n : Nat} y = x + y *) *)
+(* fun f {n : Nat} y = y + 1 *)
+(* fun f {n : Nat} y = x + y *)
 (* val a = @f {1} *)
 (* val b = a 1 *)
 (* val a = @f {1} 1 *)
 
 (* val x = 1 *)
 (* val f = fn y => y *)
-(* (* fun f y = y *) *)
+(* fun f y = y *)
 (* val f = fn y => (x, y) *)
-(* (* fun f y = (x, y) *) *)
+(* fun f y = (x, y) *)
 (* val a = f 1 *)
 (* val g = f *)
 
@@ -66,17 +66,17 @@ fun f y = 1 + y
                   
 (* val a = if __&false then 1 else 0 *)
 
-(* val f = fn x => if x then 1 else 0 *)
-(* val a = f __&false *)
+val f = fn x => if x then 1 else 0
+val a = f __&false
 
-(* datatype t = Fst | Snd *)
-(* datatype t2 = C1 | C2 | C3 of t --> t2 *)
+datatype t = Fst | Snd
+datatype t2 = C1 | C2 | C3 of t --> t2
 
-(* val a = case C3 Snd of *)
-(*             C1 => 1 *)
-(*           | C2 => 2 *)
-(*           | C3 Fst => 31 *)
-(*           | C3 Snd => 32 *)
+val a = case C3 Snd of
+            C1 => 1
+          | C2 => 2
+          | C3 Fst => 31
+          | C3 Snd => 32
                           
 (* datatype t = Fst | Snd *)
 

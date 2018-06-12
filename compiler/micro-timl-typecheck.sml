@@ -1270,7 +1270,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                     val tail_app_cost = if is_tail_call e then (0, 0)
                                         else (C_App_BeforeCC, M_App_BeforeCC)
                   in
-                    i %%+ mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) %%+ mapPair' to_real N tail_app_cost
+                    i %%+ mapPair' to_real N ((C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost)
                   end
           val cost =
               case !phase of
@@ -1298,7 +1298,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                     val tail_app_cost = if is_tail_call e then (0, 0)
                                         else (C_App_BeforeCC, M_App_BeforeCC)
                   in
-                    i %%+ mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) %%+ mapPair' to_real N tail_app_cost
+                    i %%+ mapPair' to_real N ((C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost)
                   end
           val cost =
               case !phase of

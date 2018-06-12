@@ -1120,6 +1120,22 @@ fun is_rec_body e =
                
 fun N n = INat (n, dummy)
 fun TN n = (to_real n, N 0)
+
+fun is_tail_call e =
+  case e of
+      EBinOp (EBApp (), _, _) => true
+    | EET (EETAppT (), _, _) => true
+    | EEI (EEIAppI (), _, _) => true
+    | ECase _ => true (* todo: not if the number of branches is less than 2 *)
+    | ECaseSumbool _ => true
+    | EIfi _ => true
+    | ETriOp (ETIte (), _, _, _) => true
+    | EUnOp (EUAnno _, e, _) => is_tail_call e
+    | EEI (EEIAscTime (), e, _) => is_tail_call e
+    | EEI (EEIAscSpace (), e, _) => is_tail_call e
+    | EET (EETAsc (), e, _) => is_tail_call e
+    | ELet (_, bind, _) => is_tail_call $ snd $ Unbound.unBind bind
+    | _ => false
              
 fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (idx * idx) * idx StMap.map =
   let
@@ -1250,7 +1266,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                end
              | EUAnno anno =>
                case (anno, e) of
-	           (EALiveVars n_live_vars, U.EVar (x, eia)) =>
+	           (EALiveVars (n_live_vars, has_k), U.EVar (x, eia)) =>
                    let
                      val r = U.get_region_long_id x
                      val t = fetch_type gctx (tctx, x)
@@ -1267,7 +1283,12 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                                    val t_arg = check_kind_Type gctx (skctx, t_arg)
                                    val t = subst_t_t t_arg t
                                    val (t, cost, t_args) = insert_type_args t
-                                   val cost = cost %%+ mapPair' to_real N (C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars) %%+ d2
+                                   val closure_cost =
+                                       if has_k then
+                                         (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                                          M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                                       else (0, 0)
+                                   val cost = cost %%+ mapPair' to_real N (closure_cost ++ (C_App_BeforeCC, M_App_BeforeCC)) %%+ d2
                                  in
                                    (t, cost, t_arg :: t_args)
                                  end
@@ -1281,7 +1302,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                        let
                          val (_, t) = collect_PTUni t
                          val (ibinds, _) = collect_TUniI t
-                         val e = U.EAnnoLiveVars (U.EVar (x, true), n_live_vars, r)
+                         val e = U.EAnnoLiveVars (U.EVar (x, true), (n_live_vars, has_k), r)
                          val e = U.EAppIs (e, repeat (length ibinds) (U.IUVar ((), r)))
                        in
                          get_mtype (ctx, st) e
@@ -1343,9 +1364,13 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
                  val st = st @++ post_st
                  val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (r2, ["Should be EAnnoLiveVars"])) e2
-                 val cost = mapPair' to_real N (C_App_BeforeCPS, M_App_BeforeCPS)
+                 val cost = if has_k then
+                              (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                               M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                            else (0, 0)
+                 val cost = cost ++ (C_App_BeforeCPS, M_App_BeforeCPS)
                in
-                 (EApp (e1, e2), t, d1 %%+ d2 %%+ cost %%+ d, st) 
+                 (EApp (e1, e2), t, d1 %%+ d2 %%+ mapPair' to_real N cost %%+ d, st) 
 	       end
 	     | EBNew () =>
                let
@@ -1553,7 +1578,12 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                    end
                  val (n_live_vars, has_k) = get_n_live_vars e
                  val (e, t, d, st) = get_mtype (ctx, st) e
-                 val cost = mapPair' to_real N (C_AppI_BeforeCPS n_live_vars, M_AppI_BeforeCPS n_live_vars)
+                 val cost = if has_k then
+                              (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                               M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                            else (0, 0)
+                 val cost = cost ++ (C_App_BeforeCC, M_App_BeforeCC)
+                 val cost = mapPair' to_real N cost
                  fun subst_i_2i v b = unop_pair (subst_i_i v) b
                in
                  case t of
@@ -1669,8 +1699,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
             (* todo: pattern-matching also takes time *)
-            val extra_inner_cost = mapPair' to_real N (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars)
-            val d = d %%+ extra_inner_cost
+            val tail_app_cost = if is_tail_call e then (0, 0)
+                                else (C_App_BeforeCC, M_App_BeforeCC)
+            val extra_inner_cost = (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars) ++ tail_app_cost
+            val d = d %%+ mapPair' to_real N extra_inner_cost
             val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           in
 	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e)), TArrow ((pre_st, t), d, (post_st, t1)), cost, st)
@@ -1690,8 +1722,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (is_rec, e) = is_rec_body e
             val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
-            val extra_inner_cost = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
-            val d = d %%+ extra_inner_cost
+            val tail_app_cost = if is_tail_call e then (0, 0)
+                                else (C_App_BeforeCC, M_App_BeforeCC)
+            val extra_inner_cost = (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost
+            val d = d %%+ mapPair' to_real N extra_inner_cost
             val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           in
 	    (EAbsI (BindAnno ((iname, s), e), r_all), TUniI (s, Bind ((name, r), (d, t)), r_all), cost, st)
@@ -1940,31 +1974,32 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
       val check_decls = check_decls gctx
       val get_mtype = get_mtype gctx
       val check_mtype_time = check_mtype_time gctx
-      fun get_tname_times n_fvars i_e len = 
+      val tail_app_cost = (C_App_BeforeCC, M_App_BeforeCC)
+      fun get_tname_times n_fvars is_tail_call i_e len = 
         let
-          val extra = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
+          val extra = mapPair' to_real N ((C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost)
           val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           (*  cost  ...  cost  i_e
                    extra ... extra              
            *)
           val times = int_mapi (fn n => if n = len - 1 then i_e else cost) len
-          val times = map (fn i => i %%+ extra) times
+          val times = mapi (fn (n, i) => i %%+ extra %%+ mapPair' to_real N (if n = len - 1 andalso is_tail_call then (0, 0) else tail_app_cost)) times
           val i_e = if len = 0 then i_e else cost
         in
           (times, i_e)
         end
-      fun check_tname_times r sctxn n_fvars i_e names = 
+      fun check_tname_times r sctxn n_fvars is_tail_call i_e names = 
         let
           val extra = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
           val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
-          val (times, i_e) = get_tname_times n_fvars i_e $ length names
+          val (times, i_e) = get_tname_times n_fvars is_tail_call i_e $ length names
           val gctxn = gctx_names gctx
           fun unify_2i a = ignore $ binop_pair (unify_i r gctxn sctxn) a
           val () = app2 unify_2i (map snd names, times)
         in
           i_e
         end
-      fun generalize n_fvars i_e t = 
+      fun generalize n_fvars is_tail_call i_e t = 
         let
           fun collect_uvar_t_ctx (_, _, cctx, tctx) =
             (* cctx can't contain uvars *)
@@ -1980,7 +2015,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
           val t = shiftx_t_mt 0 (length free_uvars) t
           val t = foldli (fn (v, uvar_ref, t) => SubstUVar.substu_t_mt uvar_ref v t) t free_uvars
           val free_uvar_names = map (attach_snd dummy) $ Range.map generalized_uvar_name (0, (length free_uvars))
-          val (times, i_e) = get_tname_times n_fvars i_e $ length free_uvar_names
+          val (times, i_e) = get_tname_times n_fvars is_tail_call i_e $ length free_uvar_names
           val free_uvar_names = zip (free_uvar_names, times)
           val poly_t = PTUni_Many (free_uvar_names, PTMono t, dummy)
         in
@@ -2005,17 +2040,18 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val tnames = map (mapSnd $ check_Time_Nat gctx sctx) tnames
               val is_value = is_value e
               val (e, t, d, st) = get_mtype (add_kindings_skct (zip (rev $ map (fst o fst) tnames, repeat (length tnames) Type)) ctx, st) e
+              val is_tail_call = is_tail_call e
               fun ty2mtype t = snd $ collect_PTUni t
             in
               if is_value then 
                 let
                   val n_fvars = EVarSet.numItems $ FreeEVars.free_evars e
                   val sctxn = sctx_names sctx
-                  val (t, poly_t, free_uvars, free_uvar_names, d) = generalize n_fvars d t
+                  val (t, poly_t, free_uvars, free_uvar_names, d) = generalize n_fvars is_tail_call d t
                   val e = UpdateExpr.update_e e
                   val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
                   val e = foldli (fn (v, uvar_ref, e) => SubstUVar.substu_t_e uvar_ref v e) e free_uvars
-                  val d = check_tname_times r sctxn n_fvars d tnames
+                  val d = check_tname_times r sctxn n_fvars is_tail_call d tnames
                   val poly_t = PTUni_Many (tnames, poly_t, r)
                   val tnames = tnames @ free_uvar_names
                 in
@@ -2084,11 +2120,12 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
 	      val (e, i, st) = check_mtype gctx (add_typing_skct (name, PTMono te) ctx, st) (e, te) 
               val n_fvars = EVarSet.numItems $ EVarSetU.delete (FreeEVars.free_evars e, inl 0)
               val sctxn = sctx_names sctx
-              val (te, poly_te, free_uvars, free_uvar_names, i) = generalize n_fvars i te
+              val is_tail_call = is_tail_call e
+              val (te, poly_te, free_uvars, free_uvar_names, i) = generalize n_fvars is_tail_call i te
               val e = UpdateExpr.update_e e
               val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
               val e = foldli (fn (v, uvar_ref, e) => SubstUVar.substu_t_e uvar_ref v e) e free_uvars
-              val i = check_tname_times r sctxn n_fvars i tnames
+              val i = check_tname_times r sctxn n_fvars is_tail_call i tnames
               val poly_te = PTUni_Many (tnames, poly_te, r)
               val tnames = tnames @ free_uvar_names
               val decl = DRec (Binder $ EName (name, r1), Inner $ Unbound.Bind ((map (mapPair' (Binder o TName) Outer) tnames, Rebind TeleNil), ((StMap.empty, StMap.empty), (te, TN0 r), e)), r)
