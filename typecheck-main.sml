@@ -905,13 +905,6 @@ fun is_tail_call e =
     | ELet (_, bind, _) => is_tail_call $ snd $ Unbound.unBind bind
     | _ => false
 
-datatype fake_expr =
-         FEConst of int
-         | FEUnPair of fake_expr
-         | FEUnSum of fake_expr list
-         | FEUnfold of fake_expr
-         | FEUnpackI of fake_expr
-             
 fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (idx * idx) * idx StMap.map =
   let
     val (ctx, st) = ctx_st
@@ -1677,7 +1670,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
               smart_max_list times
             fun computed_space () =
               smart_max_list spaces
-            val (t, time, space) = map_triple (lazy_default computed_t, lazy_default computed_time, lazy_default computed_space) return
+            val (t, time, space) = (lazy_default computed_t $ #1 return, computed_time (), computed_space ())
+            (* val (t, time, space) = map_triple (lazy_default computed_t, lazy_default computed_time, lazy_default computed_space) return *)
             fun unify_states sts =
               case sts of
                   [] => NONE
@@ -1687,8 +1681,12 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                          (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
                           M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
                        else (0, 0)
+            val d = d1 %%+ mapPair' to_real N cost %%+ (time, space)
+            val () = println $ "ECase: d1 = " ^ str_i gctxn sctxn (fst d1)
+            val () = println $ "ECase: cost = " ^ str_int (fst cost)
+            val () = println $ "ECase: d = " ^ str_i gctxn sctxn (fst d)
           in
-            (ECase (e, return, map Unbound.Bind rules, r), t, d1 %%+ mapPair' to_real N cost %%+ (time, space), st)
+            (ECase (e, return, map Unbound.Bind rules, r), t, d, st)
           end
     fun extra_msg () = ["when typechecking"] @ indent [US.str_e gctxn ctxn e_all]
     val (e, t, d, st) = main ()
@@ -1710,6 +1708,12 @@ and adjust_rules_costs rules_tdsts =
     let
       open PatternEx
       val pns = map (fst o fst) rules_tdsts
+      datatype fake_expr =
+               FEConst of int
+               | FEUnPair of fake_expr
+               | FEUnSum of fake_expr list
+               | FEUnfold of fake_expr
+               | FEUnpackI of fake_expr
       val pns = map from_TiML_ptrn pns
       val pns = mapi (fn (n, pn) => PnBind (pn, FEConst n)) pns
       val shift_i_e = return3
@@ -1756,14 +1760,33 @@ and adjust_rules_costs rules_tdsts =
           | CUnfold => C_EUnfold
           | CUnpackI => C_EUnpack
           | CUnSum (len, i) => C_ECaseMany (len, i)
+      val () = println $ "C_EProj = " ^ str_int C_EProj
+      val () = println $ "C_EUnfold = " ^ str_int C_EUnfold
+      val () = println $ "C_EUnpack = " ^ str_int C_EUnpack
+      val () = println $ "C_Case_BeforeCodeGen = " ^ str_int C_Case_BeforeCodeGen
+      val () = println $ "C_ECaseMany (2, 0) = " ^ str_int (C_ECaseMany (2, 0))
+      val () = println $ "C_ECaseMany (2, 1) = " ^ str_int (C_ECaseMany (2, 1))
+      val () = println $ "C_App_BeforeCC = " ^ str_int C_App_BeforeCC
       val costs = collect_cost [] e
+      fun str_cost c =
+        case c of
+            CUnPair => "CUnPair"
+          | CUnfold => "CUnfold"
+          | CUnpackI => "CUnpackI"
+          | CUnSum (len, i) => sprintf "CUnSum ($, $)" [str_int len, str_int i]
+      val () = println "costs:"
+      val () = app println $ map (str_pair (str_int, str_ls str_cost)) costs
       val costs = IMapU.fromList_multi costs
       val costs = IMap.map (max_from_0 o map (sum o map eval_cost)) costs
+      val () = println $ IMapU.str_map (str_int, str_int) costs
       fun m @! k = IMap.find (m, k)
       fun get_cost n = default 0 $ costs @! n
       val tail_app_cost = (C_App_BeforeCC, M_App_BeforeCC)
       fun get_tail_app_cost e = mapPair' to_real N (if is_tail_call e then (0, 0) else tail_app_cost)
+      val () = app println $ map (str_i Gctx.empty []) $ map (fst o #2 o snd) rules_tdsts
       val rules_tdsts = mapi (fn (n, (rl, (t, d, st))) => (rl, (t, TN (get_cost n) %%+ d %%+ get_tail_app_cost (snd rl), st))) rules_tdsts
+      val () = println "after adjust:"
+      val () = app println $ map (str_i Gctx.empty []) $ map (fst o #2 o snd) rules_tdsts
     in
       rules_tdsts
     end

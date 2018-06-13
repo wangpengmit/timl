@@ -70,8 +70,19 @@ structure UnitTestBasic1 = struct
 (* fun f x = if x then 1 else 0 *)
 (* val a = f __&false *)
 
-(* datatype t = Fst | Snd *)
-(* datatype t2 = C1 | C2 | C3 of t --> t2 *)
+datatype t = Fst | Snd
+datatype t2 = C1 | C2 | C3 of t --> t2
+
+val a =
+    let
+      val x = C3 Snd
+    in
+      (case x of
+           C1 => 1
+         | C2 => 2
+         | C3 Fst => 31
+         | C3 Snd => 32) using _
+    end
 
 (* val a = case C3 Snd of *)
 (*             C1 => 1 *)
@@ -96,11 +107,30 @@ structure UnitTestBasic1 = struct
 (* val a = case C1 of *)
 (*             C1 => 1 *)
 
-datatype t = C1 | C2
+(* datatype t = C1 | C2 *)
 
-val a = (case C2 of
-            C1 => 1
-          | C2 => 2) using _
+(* val a = *)
+(*     let *)
+(*       val x = C2 *)
+(*     in *)
+(*       (case x of *)
+(*            C1 => 1 *)
+(*          | C2 => 2) using _ *)
+(*     end *)
+
+(* val a = (case C2 of *)
+(*             C1 => 1 *)
+(*           | C2 => 2) using _ *)
+
+(* val a = *)
+(*     let *)
+(*       val x = (C2, C2) *)
+(*     in *)
+(*       (case x of *)
+(*            (_, C1) => 1 *)
+(*          | (C1, C2) => 12 *)
+(*          | (C2, C2) => 22) using _ *)
+(*     end *)
 
 (* val a = (case (C2, C2) of *)
 (*             (_, C1) => 1 *)
