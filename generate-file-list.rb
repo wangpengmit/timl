@@ -169,6 +169,7 @@ compiler/evm-costs.sml
 compiler/micro-timl-costs.sml
 free-evars.sml
 live-vars.sml
+compiler/pattern-ex.sml
 typecheck-main.sml
 trivial-solver.sml
 derived-trans.sml
@@ -193,7 +194,6 @@ compiler/micro-timl-long-id.sml
 compiler/micro-timl-visitor2.sml
 compiler/micro-timl-util.sml
 compiler/micro-timl-pp.sml
-compiler/pattern-ex.sml
 compiler/post-process.sml
 compiler/export-pp.sml
 compiler/micro-timl-util-timl.sml

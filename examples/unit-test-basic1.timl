@@ -96,18 +96,16 @@ structure UnitTestBasic1 = struct
 (* val a = case C1 of *)
 (*             C1 => 1 *)
 
-(* datatype t = C1 | C2 *)
-
-(* val a = case C2 of *)
-(*             C1 => 1 *)
-(*           | C2 => 2 *)
-
 datatype t = C1 | C2
 
-val a = case (C2, C2) of
-            (_, C1) => 1
-          | (C1, C2) => 12
-          | (C2, C2) => 22
+val a = (case C2 of
+            C1 => 1
+          | C2 => 2) using _
+
+(* val a = (case (C2, C2) of *)
+(*             (_, C1) => 1 *)
+(*           | (C1, C2) => 12 *)
+(*           | (C2, C2) => 22) using _ *)
 
 (* datatype t = C1 | C2 | C3 *)
 

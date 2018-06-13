@@ -275,6 +275,7 @@ fun foldlM_Error f = foldlM (error_bind, error_return) f
 fun max a b = if a < b then b else a
 fun max_ls init ls = foldl (uncurry max) init ls
 fun sum ls = foldl op+ 0 ls
+fun max_from_0 ls = max_ls 0 ls
 
 fun write_file (filename, s) =
     let

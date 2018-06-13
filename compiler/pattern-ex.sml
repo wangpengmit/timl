@@ -605,9 +605,7 @@ fun get_pn_alias p =
     | PnAnno (p, _) => get_pn_alias p
     | _ => NONE
              
-open MicroTiML
-       
-fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e)) matchees pks =
+fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e, (EMatchPair, EMatchSum, EMatchUnfold, EUnpackI))) matchees pks =
   let
     fun shift_e_pn a = shift_e_pn_fn shift_e_e a
     fun subst0_e_pn a = subst0_e_pn_fn subst_e_e a
@@ -721,7 +719,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                         val ename1 = lazy_default fresh_name $ get_alias pns1
                         val ename2 = lazy_default fresh_name $ get_alias pns2
                       in
-                        EMatchPair (matchee, BindSimp (ename1, BindSimp (ename2, remove_deep_many (EV 1 :: EV 0 :: matchees) (add_column pns1 $ add_column pns2 pks))))
+                        EMatchPair (matchee, ename1, ename2, remove_deep_many (EV 1 :: EV 0 :: matchees) (add_column pns1 $ add_column pns2 pks))
                       end
                     | ShInj n =>
                       let
@@ -731,7 +729,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                         val cases = map (remove_deep_many (EV 0 :: matchees)) $ pn_groups
                         val enames = map (lazy_default fresh_name o get_alias) pn_groups
                       in
-                        EMatchSum (matchee, map BindSimp $ zip (enames, cases))
+                        EMatchSum (matchee, zip (enames, cases))
                       end
                     | ShUnfold =>
                       let
@@ -741,7 +739,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                         val pns = is_all_Unfold pns
                         val ename = lazy_default fresh_name $ get_alias pns
                       in
-                        EMatchUnfold (matchee, BindSimp (ename, remove_deep_many (EV 0 :: matchees) (add_column pns pks)))
+                        EMatchUnfold (matchee, ename, remove_deep_many (EV 0 :: matchees) (add_column pns pks))
                       end
                     | ShUnpackI iname =>
                       let
@@ -765,7 +763,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                         val (pns, pks) = is_all_UnpackI pks
                         val ename = lazy_default fresh_name $ get_alias pns
                       in
-                        EUnpackI (matchee, BindSimp (iname, BindSimp (ename, remove_deep_many (EV 0 :: matchees) (add_column pns pks))))
+                        EUnpackI (matchee, iname, ename, remove_deep_many (EV 0 :: matchees) (add_column pns pks))
                       end
             end
     (* val () = println $ "after " ^ str_int (length matchees) *)
@@ -792,7 +790,7 @@ fun remove_deep params matchee =
     remove_deep_many fresh_name params [matchee]
   end
   
-fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e)) matchee branches : ('var, 'idx, 'sort, 'kind, 'ty) expr =
+fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e, _)) matchee branches =
   let
     (* val str_pn = str_pn str_e *)
     (* val () = println $ "before to_expr: " ^ str_ls str_pn branches *)
