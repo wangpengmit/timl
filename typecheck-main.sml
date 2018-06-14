@@ -1468,36 +1468,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (ENewArrayValues (t, es, r), TArray (t, INat (length es, r)), d %%+ (to_real $ C_ENewArrayValues len, N $ len + 1), st)
           end
-	| U.EAbs (pre_st, bind) => 
-	  let
-            val pre_st = is_wf_state gctx sctx pre_st
-            val (pn, e) = Unbound.unBind bind
-            val r = U.get_region_pn pn
-            val t = fresh_mt gctx (sctx, kctx) r
-            val skcctx = (sctx, kctx, cctx) 
-            val (pn, cover, ctxd, nps (* number of premises *)) = match_ptrn gctx (skcctx, pn, t)
-	    val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
-            val (ctx, pre_st) = add_ctx_ctxst ctxd (ctx, pre_st)
-	    val (e, t1, d, post_st) = get_mtype (ctx, pre_st) e
-            val r = get_region_e e
-	    val t1 = forget_ctx_mt r gctx (#1 ctx, #2 ctx) ctxd t1 
-            val d = forget_ctx_2i r gctx (#1 ctx) (#1 ctxd) d
-            val post_st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) post_st
-            val () = close_n nps
-            val () = close_ctx ctxd
-            val (is_rec, e) = is_rec_body e
-            (* calculation of 'excluded' is more complicated because of patterns *)
-            val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
-            val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
-            (* todo: pattern-matching also takes time *)
-            val tail_app_cost = if is_tail_call e then (0, 0)
-                                else (C_App_BeforeCC, M_App_BeforeCC)
-            val extra_inner_cost = (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars) ++ tail_app_cost
-            val d = d %%+ mapPair' to_real N extra_inner_cost
-            val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
-          in
-	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e)), TArrow ((pre_st, t), d, (post_st, t1)), cost, st)
-	  end
 	| U.EAbsI (bind, r_all) => 
 	  let 
             val ((iname, s), e) = unBindAnno bind
@@ -1671,6 +1641,36 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (ECase (e, return, map Unbound.Bind rules, r), t, d, st)
           end
+	| U.EAbs (pre_st, bind) => 
+	  let
+            val pre_st = is_wf_state gctx sctx pre_st
+            val (pn, e) = Unbound.unBind bind
+            val r = U.get_region_pn pn
+            val t = fresh_mt gctx (sctx, kctx) r
+            val skcctx = (sctx, kctx, cctx) 
+            val (pn, cover, ctxd, nps (* number of premises *)) = match_ptrn gctx (skcctx, pn, t)
+	    val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
+            val (ctx, pre_st) = add_ctx_ctxst ctxd (ctx, pre_st)
+	    val (e, t1, d, post_st) = get_mtype (ctx, pre_st) e
+            val r = get_region_e e
+	    val t1 = forget_ctx_mt r gctx (#1 ctx, #2 ctx) ctxd t1 
+            val d = forget_ctx_2i r gctx (#1 ctx) (#1 ctxd) d
+            val post_st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) post_st
+            val () = close_n nps
+            val () = close_ctx ctxd
+            val (is_rec, e) = is_rec_body e
+            (* calculation of 'excluded' is more complicated because of patterns *)
+            val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
+            val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
+            val d = hd $ adjust_rules_costs [((pn, e), d)]
+            val tail_app_cost = if is_tail_call e then (0, 0)
+                                else (C_App_BeforeCC, M_App_BeforeCC)
+            val extra_inner_cost = (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars) ++ tail_app_cost
+            val d = d %%+ mapPair' to_real N extra_inner_cost
+            val outer_cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+          in
+	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e)), TArrow ((pre_st, t), d, (post_st, t1)), outer_cost, st)
+	  end
     fun extra_msg () = ["when typechecking"] @ indent [US.str_e gctxn ctxn e_all]
     val (e, t, d, st) = main ()
     handle
@@ -1687,10 +1687,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     (e, t, d, st)
   end
 
-and adjust_rules_costs rules_tdsts =
+and adjust_rules_costs rules_ds =
     let
       open PatternEx
-      val pns = map (fst o fst) rules_tdsts
+      val pns = map (fst o fst) rules_ds
       datatype fake_expr =
                FEConst of int
                | FEUnPair of fake_expr
@@ -1765,15 +1765,15 @@ and adjust_rules_costs rules_tdsts =
       fun m @! k = IMap.find (m, k)
       fun get_cost n = default 0 $ costs @! n
       val tail_app_cost = (C_App_BeforeCC, M_App_BeforeCC)
-      val len = length rules_tdsts
+      val len = length rules_ds
       fun get_tail_app_cost e =
         mapPair' to_real N (if len <= 1 orelse is_tail_call e then (0, 0) else tail_app_cost)
-      val () = app println $ map (str_i Gctx.empty []) $ map (fst o #2 o snd) rules_tdsts
-      val rules_tdsts = mapi (fn (n, (rl, (t, d, st))) => (rl, (t, TN (get_cost n) %%+ d %%+ get_tail_app_cost (snd rl), st))) rules_tdsts
+      val () = app println $ map (str_i Gctx.empty []) $ map (fst o snd) rules_ds
+      val ds = mapi (fn (n, (rl, d)) => TN (get_cost n) %%+ d %%+ get_tail_app_cost (snd rl)) rules_ds
       val () = println "after adjust:"
-      val () = app println $ map (str_i Gctx.empty []) $ map (fst o #2 o snd) rules_tdsts
+      val () = app println $ map (str_i Gctx.empty []) $ map fst ds
     in
-      rules_tdsts
+      ds
     end
       
 and check_rules gctx (ctx as (sctx, kctx, cctx, tctx), st) (rules, t as (t1, return), r) =
@@ -1790,8 +1790,10 @@ and check_rules gctx (ctx as (sctx, kctx, cctx, tctx), st) (rules, t as (t1, ret
 	end 
       val (rules_tdsts, covers) = unzip $ map (fn (a, b, c) => ((a, b), c)) $ rev $ foldl f [] rules
       (* val () = check_exhaustion (skcctx, t1, covers, r) *)
+      val ds = adjust_rules_costs $ map (fn (rule, tr) => (rule, #2 tr)) rules_tdsts
+      val ret = ListPair.map (fn (((pn, e), (t, _, st)), d) => ((pn, e), (t, d, st))) (rules_tdsts, ds)
     in
-      adjust_rules_costs rules_tdsts
+      ret
     end
 
 and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e), t as (t1, return)) =

@@ -10,8 +10,10 @@ type time = real
 val zero = fromInt 0
 val one = fromInt 1
 
-fun str_time x = toString x
-                   
+fun str_time x = fmt (StringCvt.FIX NONE) x
+                   (* toString x *)
+val toString = str_time
+                 
 val time_eq = op==
 val add = op+
 val minus = op-
