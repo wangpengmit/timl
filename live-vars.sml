@@ -382,17 +382,20 @@ fun live_vars_expr_visitor_vtable cast () =
         val n_lvars = num_lvars env
         val vtable = cast this
         val new_lvars = ref Set.empty
-        val binds = map (fn bind =>
-              let
-                val () = new_lvars := Set.empty
-                (* In the branches, there will be a live continuation variable. *)
-                (* todo: not if the number of branches is less than 2 *)
-                val bind = visit_bind (#visit_expr vtable this) (new_lvars, ref false, true) bind
-                val () = output_set lvars (!new_lvars)
-              in
-                bind
-              end
-            ) binds
+        val binds =
+            if length binds >= 2 then
+              map (fn bind =>
+                      let
+                        val () = new_lvars := Set.empty
+                        (* In the branches, there will be a live continuation variable. *)
+                        val bind = visit_bind (#visit_expr vtable this) (new_lvars, ref false, true) bind
+                        val () = output_set lvars (!new_lvars)
+                      in
+                        bind
+                      end
+                  ) binds
+            else
+              map (visit_bind (#visit_expr vtable this) env) binds
         val return = visit_return this env return
         val e = #visit_expr vtable this env e
         val e = EAnnoLiveVars (e, n_lvars, r)

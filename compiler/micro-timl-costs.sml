@@ -37,6 +37,7 @@ val C_Int2Nat = 0
 val C_StorageGet = C_SLOAD
 val C_tuple_malloc = C_PUSH + C_MLOAD + C_DUP + C_PUSH + C_ADD + C_PUSH + C_MSTORE
 val C_Inj = 2 * C_PUSH + C_tuple_malloc + 2 * C_SWAP + 2 * C_DUP + 2 * C_MSTORE + C_ADD
+val M_Inj = 2
 val C_Fold = 0
 val C_Unfold = 0
 val C_Unpack = C_set_reg

@@ -87,7 +87,8 @@ datatype expr_anno =
          EALiveVars of int(* num of live vars afterwards *) * bool(*does it have continuation?*)
          | EABodyOfRecur of unit (* this is the body of a recursive function *)
          | EAFreeEVars of int (* num of free expression vars (excluding argument and recursive self-reference) *)
-                              
+         | EAConstr of unit
+                         
 (* primitive unary term operators *)
 datatype prim_expr_un_op =
          EUPIntNeg of unit
@@ -139,6 +140,7 @@ fun str_expr_anno a =
       EALiveVars (n, b) => sprintf "live_vars ($, $)" [str_int n, str_bool b]
     | EABodyOfRecur () => "body_of_recur"
     | EAFreeEVars n => "free_evars " ^ str_int n
+    | EAConstr () => "constr"
                             
 fun str_expr_un_op opr = 
   case opr of

@@ -1011,7 +1011,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EInj then e %: t else e
           val e = if !anno_EInj_state then e %~ st else e
         in
-          (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i %%+ mapPair' to_real N (C_EInj, 2), st)
+          (EInj (inj, t', e), TSum $ choose_pair_inj (t, t') inj, i %%+ mapPair' to_real N (C_EInj, M_Inj), st)
         end
       | EUnOp (EUFold t', e) =>
         let

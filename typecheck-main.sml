@@ -886,6 +886,10 @@ fun is_rec_body e =
   case e of
       EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
     | _ => (false, e)
+fun is_constr e =
+  case e of
+      EUnOp (EUAnno (EAConstr ()), e, _) => (true, e)
+    | _ => (false, e)
                
 fun N n = INat (n, dummy)
 fun TN n = (to_real n, N 0)
@@ -895,7 +899,16 @@ fun is_tail_call e =
       EBinOp (EBApp (), _, _) => true
     | EET (EETAppT (), _, _) => true
     | EEI (EEIAppI (), _, _) => true
-    | ECase _ => true (* todo: not if the number of branches is less than 2 *)
+    | ECase (_, _, binds, _) =>
+      let
+        val len = length binds
+      in
+        if len >= 2 then
+          true 
+        else if len = 1 then
+          is_tail_call $ snd $ Unbound.unBind $ hd binds
+        else true
+      end        
     | ECaseSumbool _ => true
     | EIfi _ => true
     | ETriOp (ETIte (), _, _, _) => true
@@ -1097,6 +1110,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	       let
                  val r1 = U.get_region_e e1
                  val (e1, t1, d1, st) = get_mtype (ctx, st) e1
+                 val (is_constr, e1) = is_constr e1
                  val t1 = whnf_mt true gctx kctx t1
                  val ((pre_st, t2), d, (post_st, t)) =
                      case t1 of
@@ -1139,7 +1153,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                             else (0, 0)
                  val cost = cost ++ (C_App_BeforeCPS, M_App_BeforeCPS)
                in
-                 (EApp (e1, e2), t, d1 %%+ d2 %%+ mapPair' to_real N cost %%+ d, st) 
+                 (EApp (e1, e2), t, if is_constr then d2 else d1 %%+ d2 %%+ mapPair' to_real N cost %%+ d, st) 
 	       end
 	     | EBNew () =>
                let
@@ -1581,7 +1595,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val r = U.get_region_long_id x
 	    val f = U.EAnnoLiveVars (U.EVar ((ID (0, r)), eia), (0, true), r)
 	    val f = foldl (fn (i, e) => U.EAppI (e, i)) f is
-	    val e = U.EApp (f, UShift.shift_e_e $ U.EAnnoLiveVars (e, (0, true), r))
+	    val e = U.EApp (U.EAnnoConstr (f, r), UShift.shift_e_e $ U.EAnnoLiveVars (e, (0, true), r))
             val f_name = str_var #3 (gctx_names gctx) (names cctx) x
 	    val (e, t, d, st) = get_mtype (add_typing_skct (f_name, tc) ctx, st) e 
             val d = update_2i d
@@ -1599,14 +1613,23 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                       (ts, is, e)
                     end
                   | _ => raise Impossible "get_mtype (): U.EAppConstr: e in wrong form"
-            (* now [length is] is the number of [packI]'s *)
             val e = ExprShift.forget_e_e 0 1 e
             val siblings = get_family_siblings gctx cctx x
             val pos_in_family = indexOf (curry eq_var x) (map fst siblings) !! (fn () => raise Impossible "get_mtype(): family_pos")
             val family = get_family $ snd $ hd siblings
             val family_type = TVar family
+            (* now [length is] is the number of [packI]'s *)
+            val len_is = length is
+            fun get_num_inj (len, n) = 
+              if len <= 0 then raise Impossible "get_num_inj(): len=0"
+              else if len = 1 then (assert (fn () => n = 0) "get_num_inj(): n = 0"; 0)
+              else
+                if n <= 0 then 1
+                else 1 + get_num_inj (len-1, n-1)
+            val num_inj = get_num_inj (length siblings, pos_in_family)
+            val cost = d %%+ mapPair' to_real N ((len_is + 1) * C_EPack + num_inj * C_EInj + C_EFold, num_inj * M_Inj)
 	  in
-	    (EAppConstr ((x, true), ts, is, e, SOME (pos_in_family, family_type)), t, d, st)
+	    (EAppConstr ((x, true), ts, is, e, SOME (pos_in_family, family_type)), t, cost, st)
 	  end
 	| U.ECase (e, return, rules, r) => 
 	  let
@@ -1636,14 +1659,15 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                   [] => NONE
                 | st :: ls => (app (fn st' => unify_state r gctxn sctxn (st', st)) ls; SOME st)
             val st = default st $ unify_states sts
-            val cost = if has_k then
+            val len = length rules
+            val cost = if len >= 2 andalso has_k then
                          (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
                           M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
                        else (0, 0)
             val d = d1 %%+ mapPair' to_real N cost %%+ (time, space)
-            val () = println $ "ECase: d1 = " ^ str_i gctxn sctxn (fst d1)
-            val () = println $ "ECase: cost = " ^ str_int (fst cost)
-            val () = println $ "ECase: d = " ^ str_i gctxn sctxn (fst d)
+            (* val () = println $ "ECase: d1 = " ^ str_i gctxn sctxn (fst d1) *)
+            (* val () = println $ "ECase: cost = " ^ str_int (fst cost) *)
+            (* val () = println $ "ECase: d = " ^ str_i gctxn sctxn (fst d) *)
           in
             (ECase (e, return, map Unbound.Bind rules, r), t, d, st)
           end
@@ -1741,7 +1765,9 @@ and adjust_rules_costs rules_tdsts =
       fun m @! k = IMap.find (m, k)
       fun get_cost n = default 0 $ costs @! n
       val tail_app_cost = (C_App_BeforeCC, M_App_BeforeCC)
-      fun get_tail_app_cost e = mapPair' to_real N (if is_tail_call e then (0, 0) else tail_app_cost)
+      val len = length rules_tdsts
+      fun get_tail_app_cost e =
+        mapPair' to_real N (if len <= 1 orelse is_tail_call e then (0, 0) else tail_app_cost)
       val () = app println $ map (str_i Gctx.empty []) $ map (fst o #2 o snd) rules_tdsts
       val rules_tdsts = mapi (fn (n, (rl, (t, d, st))) => (rl, (t, TN (get_cost n) %%+ d %%+ get_tail_app_cost (snd rl), st))) rules_tdsts
       val () = println "after adjust:"

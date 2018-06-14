@@ -1,39 +1,39 @@
 structure UnitTestBasic1 = struct
 
-(* val x = 1 *)
-(* val f = fn y => 1 + y *)
-(* fun f y = 1 + y *)
-(* val f = fn y => x + y *)
-(* fun f y = x + y *)
-(* val a = f 64 *)
-(* val g = fn y => 1 + y *)
-(* val b = f 64 *)
-(* val b = a + 2 *)
-(* val b = (a, 2) *)
+val x = 1
+val f = fn y => 1 + y
+fun f y = 1 + y
+val f = fn y => x + y
+fun f y = x + y
+val a = f 64
+val g = fn y => 1 + y
+val b = f 64
+val b = a + 2
+val b = (a, 2)
 
-(* val a = if __&false then 1 else 0 *)
+val a = if __&false then 1 else 0
 
-(* val x = 1 *)
-(* val f = fn {n : Nat} y => y + 1 *)
-(* val f = fn {n : Nat} => (fn y => y + 1) using _ *)
-(* val f = fn {n : Nat} y => x + y *)
-(* fun f {n : Nat} y = y + 1 *)
-(* fun f {n : Nat} y = x + y *)
-(* val a = @f {1} *)
-(* val b = a 1 *)
-(* val a = @f {1} 1 *)
+val x = 1
+val f = fn {n : Nat} y => y + 1
+val f = fn {n : Nat} => (fn y => y + 1) using _
+val f = fn {n : Nat} y => x + y
+fun f {n : Nat} y = y + 1
+fun f {n : Nat} y = x + y
+val a = @f {1}
+val b = a 1
+val a = @f {1} 1
 
-(* val x = 1 *)
-(* val f = fn y => y *)
-(* fun f y = y *)
-(* val f = fn y => (x, y) *)
-(* fun f y = (x, y) *)
-(* val a = f 1 *)
-(* val g = f *)
+val x = 1
+val f = fn y => y
+fun f y = y
+val f = fn y => (x, y)
+fun f y = (x, y)
+val a = f 1
+val g = f
 
-(* val f = fn y => 1 + y *)
-(* val g = fn y => f y *)
-(* val a = g 64 *)
+val f = fn y => 1 + y
+val g = fn y => f y
+val a = g 64
           
 (* val a = "abc" *)
           
@@ -64,17 +64,15 @@ structure UnitTestBasic1 = struct
 (* fun f x = x + 1 *)
 (* val a = twice f 0xdd *)
                   
-(* val a = (if __&false then 1 else 0) using _ *)
-
-(* val f = fn x => if x then 1 else 0 *)
-(* fun f x = if x then 1 else 0 *)
-(* val a = f __&false *)
+val f = fn x => if x then 1 else 0
+fun f x = if x then 1 else 0
+val a = f __&false
 
 datatype t = Fst | Snd
 datatype t2 = C1 | C2 | C3 {n : Nat} {n = 0} of t --> t2
 
 val a =
-    let
+    (let
       val x = @C3 {0} {_} Snd
     in
       (case x of
@@ -82,13 +80,13 @@ val a =
          | C2 => 2
          | C3 Fst => 31
          | C3 Snd => 32) using _
-    end
+    end) using _
 
-(* val a = case C3 Snd of *)
-(*             C1 => 1 *)
-(*           | C2 => 2 *)
-(*           | C3 Fst => 31 *)
-(*           | C3 Snd => 32 *)
+val a = (case @C3 {0} {} Snd of
+            C1 => 1
+          | C2 => 2
+          | C3 Fst => 31
+          | C3 Snd => 32) using _
 
 (* datatype sum 'a 'b = *)
 (*          inl of 'a --> sum 'a 'b *)
@@ -102,65 +100,73 @@ val a =
 (*            case a of *)
 (*                inl () => () *)
 
-(* datatype t = C1 *)
+datatype t = C1
 
-(* val a = case C1 of *)
-(*             C1 => 1 *)
+val a = (case C1 of
+            C1 => 1) using _
 
-(* datatype t = C1 | C2 *)
+val a =
+    let
+      val x = C1 using _
+    in
+    (case x of
+         C1 => 1) using _
+    end
+                    
+datatype t = C1 | C2
 
-(* val a = *)
-(*     let *)
-(*       val x = C2 *)
-(*     in *)
-(*       (case x of *)
-(*            C1 => 1 *)
-(*          | C2 => 2) using _ *)
-(*     end *)
+val a =
+    let
+      val x = C2 using _
+    in
+      (case x of
+           C1 => 1
+         | C2 => 2) using _
+    end
 
-(* val a = (case C2 of *)
-(*             C1 => 1 *)
-(*           | C2 => 2) using _ *)
+val a = (case C2 of
+            C1 => 1
+          | C2 => 2) using _
 
-(* val a = *)
-(*     let *)
-(*       val x = (C2, C2) *)
-(*     in *)
-(*       (case x of *)
-(*            (_, C1) => 1 *)
-(*          | (C1, C2) => 12 *)
-(*          | (C2, C2) => 22) using _ *)
-(*     end *)
+val a =
+    let
+      val x = (C2, C2)
+    in
+      (case x of
+           (_, C1) => 1
+         | (C1, C2) => 12
+         | (C2, C2) => 22) using _
+    end
 
-(* val a = (case (C2, C2) of *)
-(*             (_, C1) => 1 *)
-(*           | (C1, C2) => 12 *)
-(*           | (C2, C2) => 22) using _ *)
+val a = (case (C2, C2) of
+            (_, C1) => 1
+          | (C1, C2) => 12
+          | (C2, C2) => 22) using _
 
-(* datatype t = C1 | C2 | C3 *)
+datatype t = C1 | C2 | C3
 
-(* val a = (case C3 of *)
-(*             C1 => 1 *)
-(*           | C2 => 2 *)
-(*           | C3 => 3) (* using _ *) *)
+val a = (case C3 of
+            C1 => 1
+          | C2 => 2
+          | C3 => 3) using _
 
-(* datatype t = C1 | C2 | C3 | C4 *)
+datatype t = C1 | C2 | C3 | C4
 
-(* val a = case C4 of *)
-(*             C1 => 1 *)
-(*           | C2 => 2 *)
-(*           | C3 => 3 *)
-(*           | C4 => 4 *)
+val a = (case C4 of
+            C1 => 1
+          | C2 => 2
+          | C3 => 3
+          | C4 => 4) using _
 
-(* datatype list 'a : {Nat} = *)
-(*          Nil of list 'a {0} *)
-(*        | Nil2 of list 'a {0} *)
-(*        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1} *)
+datatype list 'a : {Nat} =
+         Nil of list 'a {0}
+       | Nil2 of list 'a {0}
+       | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1}
 
-(* val a = case Cons (1, Nil) of *)
-(*             Nil => 1 *)
-(*           | Nil2 => 12 *)
-(*           | Cons _ => 2 *)
+val a = (case Cons (1, Nil) of
+            Nil => 1
+          | Nil2 => 12
+          | Cons _ => 2) using _
                                   
 (* val a = if 1 > 2 then 1 else 2 *)
 
