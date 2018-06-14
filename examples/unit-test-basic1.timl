@@ -71,11 +71,11 @@ structure UnitTestBasic1 = struct
 (* val a = f __&false *)
 
 datatype t = Fst | Snd
-datatype t2 = C1 | C2 | C3 of t --> t2
+datatype t2 = C1 | C2 | C3 {n : Nat} {n = 0} of t --> t2
 
 val a =
     let
-      val x = C3 Snd
+      val x = @C3 {0} {_} Snd
     in
       (case x of
            C1 => 1

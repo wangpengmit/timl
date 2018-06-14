@@ -20,7 +20,8 @@ open FreshUVar
 open UVarForget
 open Util
 structure US = UnderscoredToString
-
+structure UShift = UnderscoredExprShift
+                 
 infixr 0 $
 infix 0 !!
 
@@ -1526,84 +1527,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
 	    (ELet ((SOME t, SOME $ fst d, SOME $ snd d), Unbound.Bind (Teles decls, e), r), t, d, st)
 	  end
-	| U.EAppConstr ((x, eia), ts, is, e, ot) => 
-	  let
-            val () = assert (fn () => null ts) "get_mtype()/EAppConstr: null ts"
-            val () = assert (fn () => isNone ot) "get_mtype()/EAppConstr: isNone ot"
-            val tc = fetch_constr_type gctx (cctx, x)
-	    (* delegate to checking [x {is} e] *)
-            val r = U.get_region_long_id x
-	    val f = U.EAnnoLiveVars (U.EVar ((ID (0, r)), eia), (0, true), r)
-	    val f = foldl (fn (i, e) => U.EAppI (e, i)) f is
-	    val e = U.EApp (f, UnderscoredExprShift.shift_e_e $ U.EAnnoLiveVars (e, (0, true), r))
-            val f_name = str_var #3 (gctx_names gctx) (names cctx) x
-	    val (e, t, d, st) = get_mtype (add_typing_skct (f_name, tc) ctx, st) e 
-            val d = update_2i d
-            val d = simp_2i d
-	    (* (* constructor application doesn't incur count, so we minus one from [d] *) *)
-            (* fun minus_one d = *)
-            (*   let *)
-            (*     fun wrong_d () = raise Impossible $ "get_mtype (): U.AppConstr: d in wrong form: " ^ str_i gctxn sctxn d *)
-            (*     fun find_const i = *)
-            (*       case i of *)
-            (*           IConst (ICTime x, _) =>  *)
-            (*           let *)
-            (*             open TimeType *)
-            (*           in *)
-            (*             x >= one *)
-            (*           end *)
-            (*         | _ => false *)
-            (*     fun const_minus_one i = *)
-            (*       case i of *)
-            (*           IConst (ICTime x, r) => *)
-            (*           let *)
-            (*             open TimeType *)
-            (*             val () = if x >= one then () else wrong_d () *)
-            (*           in *)
-            (*             ITime (x - one, r) *)
-            (*           end *)
-            (*         | _ => wrong_d () *)
-            (*     val is = collect_IBAdd d *)
-            (*     val pos = indexOf find_const is !! wrong_d *)
-            (*     val is = update pos const_minus_one is *)
-            (*     val d = combine_IBAdd_Time is *)
-            (*     val d = simp_i d *)
-            (*     (* val d = *) *)
-            (*     (*     case d of *) *)
-            (*     (*         IConst (ICTime _, r) =>  *) *)
-            (*     (*         if eq_i d (T1 r) then T0 r  *) *)
-            (*     (*         else wrong_d () *) *)
-            (*     (*       | (IBinOp (IAdd, d1, d2)) =>  *) *)
-            (*     (*         if eq_i d1 (T1 dummy) then d2 *) *)
-            (*     (*         else if eq_i d2 (T1 dummy) then d1 *) *)
-            (*     (*         else wrong_d () *) *)
-            (*     (*       | _ => wrong_d () *) *)
-            (*   in *)
-            (*     d *)
-            (*   end *)
-            (* val d = mapFst minus_one d *)
-            val (ts, is, e) =
-                case e of
-                    EBinOp (EBApp (), f, e) =>
-                    let
-                      val (f, is) = collect_EAppI f
-                      val (f, ts) = collect_EAppT f
-                      val () = case f of
-                                   EVar (_, true) => ()
-                                 | _ => raise Impossible "get_mtype()/EAppConstr: EVar (_, true)"
-                    in
-                      (ts, is, e)
-                    end
-                  | _ => raise Impossible "get_mtype (): U.EAppConstr: e in wrong form"
-            val e = ExprShift.forget_e_e 0 1 e
-            val siblings = get_family_siblings gctx cctx x
-            val pos_in_family = indexOf (curry eq_var x) (map fst siblings) !! (fn () => raise Impossible "get_mtype(): family_pos")
-            val family = get_family $ snd $ hd siblings
-            val family_type = TVar family
-            val e = EAppConstr ((x, true), ts, is, e, SOME (pos_in_family, family_type))
-	  in
-	    (e, t, d, st)
-	  end
         | U.ECaseSumbool (e, bind1, bind2, r) =>
           let
             val s1 = fresh_sort gctx sctx r
@@ -1649,6 +1572,42 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EIfi (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %%+ smart_max_pair j1 j2, st1)
           end
+	| U.EAppConstr ((x, eia), ts, is, e, ot) => 
+	  let
+            val () = assert (fn () => null ts) "get_mtype()/EAppConstr: null ts"
+            val () = assert (fn () => isNone ot) "get_mtype()/EAppConstr: isNone ot"
+            val tc = fetch_constr_type gctx (cctx, x)
+	    (* delegate to checking [x {is} e] *)
+            val r = U.get_region_long_id x
+	    val f = U.EAnnoLiveVars (U.EVar ((ID (0, r)), eia), (0, true), r)
+	    val f = foldl (fn (i, e) => U.EAppI (e, i)) f is
+	    val e = U.EApp (f, UShift.shift_e_e $ U.EAnnoLiveVars (e, (0, true), r))
+            val f_name = str_var #3 (gctx_names gctx) (names cctx) x
+	    val (e, t, d, st) = get_mtype (add_typing_skct (f_name, tc) ctx, st) e 
+            val d = update_2i d
+            val d = simp_2i d
+            val (ts, is, e) =
+                case e of
+                    EBinOp (EBApp (), f, e) =>
+                    let
+                      val (f, is) = collect_EAppI f
+                      val (f, ts) = collect_EAppT f
+                      val () = case f of
+                                   EVar (_, true) => ()
+                                 | _ => raise Impossible "get_mtype()/EAppConstr: EVar (_, true)"
+                    in
+                      (ts, is, e)
+                    end
+                  | _ => raise Impossible "get_mtype (): U.EAppConstr: e in wrong form"
+            (* now [length is] is the number of [packI]'s *)
+            val e = ExprShift.forget_e_e 0 1 e
+            val siblings = get_family_siblings gctx cctx x
+            val pos_in_family = indexOf (curry eq_var x) (map fst siblings) !! (fn () => raise Impossible "get_mtype(): family_pos")
+            val family = get_family $ snd $ hd siblings
+            val family_type = TVar family
+	  in
+	    (EAppConstr ((x, true), ts, is, e, SOME (pos_in_family, family_type)), t, d, st)
+	  end
 	| U.ECase (e, return, rules, r) => 
 	  let
             val rules = map Unbound.unBind rules
@@ -1956,6 +1915,7 @@ and expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
   let
     fun expand_rule (rule as (pn, e), (pcovers, rules)) =
       let
+        (* todo: run match_ptrn only to get [cover]? If so, that functionality should be carved out. *)
 	val (pn, cover, ctxd, nps) = match_ptrn gctx (ctx, (* pcovers, *) pn, t)
         val () = close_n nps
         val () = close_ctx ctxd
