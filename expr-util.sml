@@ -17,6 +17,7 @@ val EBNatAdd = EBNat (EBNAdd ())
 fun ETT r = EConst (ECTT (), r)
 fun EConstInt (n, r) = EConst (ECInt n, r)
 fun EConstNat (n, r) = EConst (ECNat n, r)
+val ENat = EConstNat
 (* fun EConstString (n, r) = EConst (ECString n, r) *)
 fun EByte (c, r) = EConst (ECByte c, r)
 val EChar = EByte

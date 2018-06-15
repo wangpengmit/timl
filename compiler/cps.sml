@@ -358,6 +358,8 @@ fun TN n = (to_real n, N0)
 fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
   let
     val () = println $ "CPS on\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) ([], [], [], []) e)
+    fun simp_2i a = unop_pair Simp.simp_i a
+    val j_k = simp_2i j_k
     (* val () = println $ "k: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) ([], [], [], []) k) *)
     val () = println $ sprintf "j_k: $, $\n" [ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst j_k, ToString.str_i Gctx.empty [] $ Simp.simp_i $ snd j_k]
     val cps_with_frame = cps
