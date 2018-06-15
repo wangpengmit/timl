@@ -51,6 +51,14 @@ fun count_binder_decls b =
   end
 
 (***************** the "live_vars" visitor  **********************)    
+
+fun visit_decls visit_decl ctx decls =
+  let
+    val decls = unTeles decls
+    val decls = List.concat $ mapr (visit_decl ctx) decls
+  in
+    Teles decls
+  end
     
 fun live_vars_expr_visitor_vtable cast () =
   let
@@ -69,7 +77,7 @@ fun live_vars_expr_visitor_vtable cast () =
     fun visit_ibind this = visit_bind_simp (#extend_i (cast this) this)
     fun visit_ibind_anno this = visit_bind_anno (#extend_i (cast this) this)
                                                 
-    fun output lvars n = binop_ref (curry Set.add) lvars n
+    fun output lvars n = (println "output"; binop_ref (curry Set.add) lvars n)
     fun output_set lvars s = Set.app (output lvars) s
     fun add_AnnoLiveVars (bind, n, r) =
       let
@@ -192,7 +200,10 @@ fun live_vars_expr_visitor_vtable cast () =
       end
     fun visit_EApp this env (e1, e2) =
       let
+        val () = println $ "lvars = " ^ (SetU.str_set (str_sum str_int (str_pair (id, str_int))) (!(#1 env)))
+        val () = println $ "has_cont_var = " ^ (str_bool (#3 env))
         val n_lvars = num_lvars env
+        val () = println $ "n_lvars = " ^ (str_int $ fst n_lvars)
         val vtable = cast this
         val e2 = #visit_expr vtable this env e2
         val e1 = #visit_expr vtable this env e1
@@ -402,13 +413,6 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         ECase (e, return, binds, r)
       end
-    fun visit_decls visit_decl ctx decls =
-      let
-        val decls = unTeles decls
-        val decls = List.concat $ mapr (visit_decl ctx) decls
-      in
-        Teles decls
-      end
     fun get_num_ebind_decls a = #4 $ count_binder_decls a
     fun visit_ELet this (env as (lvars, _, _)) (return, bind, r) =
       let
@@ -477,11 +481,12 @@ fun live_vars_expr_visitor_vtable cast () =
       end
     fun visit_DVal this ctx (name, bind, r) =
       let
+        val () = println "visit_DVal"
         val vtable = cast this
+        val name = visit_ebinder this ctx name
         val (tbinders, e) = unBind $ unOuter bind
         val e = #visit_expr vtable this (#outer ctx) e
         val bind = Outer $ Bind (tbinders, e)
-        val name = visit_ebinder this ctx name
       in
         [DVal (name, bind, r)]
       end
@@ -489,9 +494,9 @@ fun live_vars_expr_visitor_vtable cast () =
       let
         val lvars = #1 $ !(#current ctx)
         val vtable = cast this
-        val e = visit_outer (#visit_expr vtable this) ctx e
         val n = get_num_ebind_pn pn
         val () = unop_ref (forget n) lvars
+        val e = visit_outer (#visit_expr vtable this) ctx e
       in
         [DValPtrn (pn, e, r)]
       end
@@ -501,7 +506,9 @@ fun live_vars_expr_visitor_vtable cast () =
                 | TypingST pn => get_num_ebind_pn pn) $ unTeles $ unRebind stbinds
     fun visit_DRec this ctx (name, bind, r) =
       let
-        val env as (lvars, _, _ : bool) = !(#current ctx)
+        val () = println "visit_DRec"
+        val env = !(#current ctx)
+        val lvars = #1 env
         val vtable = cast this
         val new_lvars = ref Set.empty
         val (p, body) = unBind $ unInner bind

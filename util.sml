@@ -436,6 +436,11 @@ fun app_inl_inr f1 f2 s =
     case s of
         inl e => f1 e
       | inr e => f2 e
+                    
+fun str_sum f1 f2 s =
+  case s of
+      inl e => f1 e
+    | inr e => f2 e
 
 fun find_by_snd p ls =
     Option.map fst (List.find (fn (_, y) => p y) ls)

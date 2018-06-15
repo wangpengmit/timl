@@ -899,6 +899,7 @@ fun test1 dirname =
     val e = set_free_evars e
     val () = phase := PhBeforeCPS ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
+    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
     val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #1"
     open ExportPP

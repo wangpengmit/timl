@@ -1052,6 +1052,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                    let
                      val r = U.get_region_long_id x
                      val t = fetch_type gctx (tctx, x)
+                     val () = println $ "has_k = " ^ str_bool has_k
+                     val () = println $ "n_live_vars = " ^ str_int n_live_vars
                    in
                      if eia then
                        let
@@ -1070,6 +1072,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                                          (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
                                           M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
                                        else (0, 0)
+                                   val () = println $ "d2 = " ^ (str_i gctxn sctxn $ simp_i $ fst d2)
+                                   val () = println $ "closure_cost = " ^ str_int (fst closure_cost)
                                    val cost = cost %%+ mapPair' to_real N (closure_cost ++ (C_App_BeforeCC, M_App_BeforeCC)) %%+ d2
                                  in
                                    (t, cost, t_arg :: t_args)
@@ -1077,6 +1081,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                          val (t, cost, t_args) = insert_type_args t
                          val e = EVar (x, true)
                          val e = EAppTs (e, t_args)
+                         val () = println $ "cost = " ^ (str_i gctxn sctxn $ simp_i $ fst cost)
                        in
                          (e, t, TN C_EVar %%+ cost, st)
                        end
@@ -1679,10 +1684,11 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     val t = SimpType.simp_mt $ normalize_mt true gctx kctx t
     val d = simp_2i $ unop_pair normalize_i d
     (* val () = println $ str_ls id $ #4 ctxn *)
+    (* val () = println $ " Typed: " ^ str_e gctxn ctxn e *)
+    (* val () = println $ "  Time: " ^ str_i gctxn sctxn (fst d) *)
+    (* val () = println $ "  Type: " ^ str_mt gctxn skctxn t *)
     (* val () = print (sprintf " Typed $: \n        $\n" [str_e gctxn ctxn e, str_mt gctxn skctxn t]) *)
-    (* val () = print (sprintf "   Time : $: \n" [str_i sctxn d]) *)
     (* val () = print (sprintf "  type: $ [for $]\n  time: $\n" [str_mt gctxn skctxn t, str_e gctxn ctxn e, str_i gctxn sctxn d]) *)
-    (* val () = print (sprintf "  type: $\n" [str_mt gctxn skctxn t]) *)
   in
     (e, t, d, st)
   end
@@ -2109,7 +2115,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
       val tail_app_cost = (C_App_BeforeCC, M_App_BeforeCC)
       fun get_tname_times n_fvars is_tail_call i_e len = 
         let
-          val extra = mapPair' to_real N ((C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost)
+          val extra = mapPair' to_real N (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars)
           val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           (*  cost  ...  cost  i_e
                    extra ... extra              

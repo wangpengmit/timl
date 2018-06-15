@@ -76,22 +76,22 @@ structure UnitTestBasic1 = struct
 (*            case a of *)
 (*                inl () => () *)
 
-(* val f = fn x => if x then 1 else 0 *)
-(* fun f x = if x then 1 else 0 *)
-(* val a = f __&false *)
+(* val f = (fn (_, ()) => ()) using _ *)
+(* fun f (_, ()) = () *)
+(* val a = (f ((), ())) using _ *)
 
-(* val f = (fn (_, ()) => ()) (* using _ *) *)
-fun f (_, ()) = ()
-val a = (f ((), ())) using _
-
-(* datatype t2 'a = C {0 = 0} {1 = 1} of 'a --> t2 'a *)
+datatype t2 'a = C {0 = 0} {1 = 1} of 'a --> t2 'a
 
 (* val f = fn ((), C ((), x)) => x : int *)
 (* val a = (f ((), C ((), 2))) using _ *)
                             
-(* val f = fn (_, C (_, x)) => x *)
-(* val a = (f ((), C ((), 2))) using _ *)
+val f = fn (_, C (_, x)) => x
+val a = (f ((), C ((), 2))) using _
                                                 
+(* val f = fn x => if x then 1 else 0 *)
+(* fun f x = if x then 1 else 0 *)
+(* val a = f __&false *)
+
 (* datatype t = Fst | Snd *)
 (* datatype t2 = C1 | C2 | C3 {n : Nat} {n = 0} of t --> t2 *)
 

@@ -894,9 +894,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     val tc_against_time = tc_against_time st_types
     val tc_against_time_space = tc_against_time_space st_types
     val tc_against_ty_time_space = tc_against_ty_time_space st_types
-    val () = println "tc() start: "
+    (* val () = println "tc() start: " *)
     val e_input_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input
-    val () = print $ e_input_str
+    (* val () = print $ e_input_str *)
     fun err () = raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
     val itctx = (ictx, tctx)
     fun get_vector t1 =
@@ -1238,16 +1238,21 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 | PhBeforeCPS () =>
                   let
                     val (e, (n_live_vars, has_k)) = assert_EAnnoLiveVars e
+                    val () = println $ "has_k = " ^ str_bool has_k
+                    val () = println $ "n_live_vars = " ^ str_int n_live_vars
                     val cost = if has_k then
                                  (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
                                   M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
                                else (0, 0)
+                    val () = println $ "cost = " ^ str_int (fst cost)
                     val cost = cost ++ (C_App_BeforeCC, M_App_BeforeCC)
                   in
                     (cost, e)
                   end
           val e = if !anno_EAppT then e %: t_e else e
           val e = if !anno_EAppT_state then e %~ st else e
+          val () = println $ "j = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst j)
+          val () = println $ "j2 = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst j2)
         in
           (EAppT (e, t1), subst0_t_t t1 t, j %%+ mapPair' to_real N cost %%+ j2, st)
         end
@@ -1329,7 +1334,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                   in
                     (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars) ++ tail_app_cost
                   end
-          val () = println $ "i = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ fst i)
+          val () = println $ "i = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i)
           val () = println $ "extra = " ^ str_int (fst extra_inner_cost)
           val () = println $ "n_fvars = " ^ str_int n_fvars
           val () = println $ "C_Abs_Inner_BeforeCC n_fvars = " ^ str_int (C_Abs_Inner_BeforeCC n_fvars)
@@ -1946,10 +1951,11 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                       | Impossible m => raise Impossible (m ^ extra_msg ())
     val () = println "tc() finished:"
     val () = print $ e_input_str
-    val () = println "of type:"
-    val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) $ MicroTiMLSimp.simp_t t
-    val () = println "of time:\n"
-    val () = println $ (* substr 0 100 $  *)ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i
+    val () = println "of time:"
+    val () = println $ ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i
+    (* val () = println "of type:" *)
+    (* val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) $ MicroTiMLSimp.simp_t t *)
+    val () = println ""
   in
     (e_output, t, i, st)
   end
