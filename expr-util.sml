@@ -50,7 +50,20 @@ fun EAnno (e, a, r) = EUnOp (EUAnno a, e, r)
 fun EAnnoLiveVars (e, n, r) = EAnno (e, EALiveVars n, r)
 fun EAnnoBodyOfRecur (e, r) = EAnno (e, EABodyOfRecur (), r)
 fun EAnnoConstr (e, r) = EAnno (e, EAConstr (), r)
-  
+
+infix 0 %:
+infix 0 |>
+infix 0 |#
+infix 0 %~
+infix 0 |>#
+        
+fun a %: b = EAsc (a, b)
+fun a |> b = EAscTime (a, b)
+fun a |# b = EAscSpace (a, b)
+fun a %~ b = EAscState (a, b)
+fun EAscTimeSpace (e, (i, j)) = e |> i |# j
+fun a |># b = EAscTimeSpace (a, b)
+                               
 fun collect_Pair e =
   case e of
       EBinOp (EBPair (), e1, e2) =>

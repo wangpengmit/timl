@@ -458,6 +458,7 @@ sort_bind : sorting (sorting)
 return : RETURN ty RTRI idx ((SOME ty, SOME idx, NONE))
        | RETURN ty ((SOME ty, NONE, NONE))
        | RETURN RTRI idx ((NONE, SOME idx, NONE))
+       | RETURN RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2))
        | ((NONE, NONE, NONE))
 
 (* rec_return : COLON ty RTRI idx ((SOME ty, SOME idx)) *)

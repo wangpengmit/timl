@@ -88,6 +88,7 @@ datatype expr_anno =
          | EABodyOfRecur of unit (* this is the body of a recursive function *)
          | EAFreeEVars of int (* num of free expression vars (excluding argument and recursive self-reference) *)
          | EAConstr of unit
+         | EABodyRec of unit
                          
 (* primitive unary term operators *)
 datatype prim_expr_un_op =
@@ -141,6 +142,7 @@ fun str_expr_anno a =
     | EABodyOfRecur () => "body_of_recur"
     | EAFreeEVars n => "free_evars " ^ str_int n
     | EAConstr () => "constr"
+    | EABodyAsc () => "body_asc"
                             
 fun str_expr_un_op opr = 
   case opr of
