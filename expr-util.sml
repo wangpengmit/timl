@@ -60,7 +60,6 @@ infix 0 |>#
 fun a %: b = EAsc (a, b)
 fun a |> b = EAscTime (a, b)
 fun a |# b = EAscSpace (a, b)
-fun a %~ b = EAscState (a, b)
 fun EAscTimeSpace (e, (i, j)) = e |> i |# j
 fun a |># b = EAscTimeSpace (a, b)
                                
@@ -109,5 +108,13 @@ fun assert_EAnnoLiveVars err e =
   case e of
       EUnOp (EUAnno (EALiveVars n), e, _) => (e, n)
     | _ => err ()
+fun is_rec_body e =
+  case e of
+      EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
+    | _ => (false, e)
+fun has_body_asc e =
+  case e of
+      EUnOp (EUAnno (EABodyAsc ()), EEI (EEIAscSpace (), EEI (EEIAscTime (), e, i), j), _) => (e, SOME (i, j))
+    | _ => (e, NONE)
                
 end

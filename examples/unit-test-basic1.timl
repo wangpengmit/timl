@@ -155,7 +155,8 @@ structure UnitTestBasic1 = struct
 (*           | Nil2 => 12 *)
 (*           | Cons _ => 2) using _ *)
 
-fun f y return using $369 = 1 + y
+fun f y return using $370 = 1 + y
+val a = f 1
 
 (* datatype list 'a : {Nat} = *)
 (*          Nil of list 'a {0} *)

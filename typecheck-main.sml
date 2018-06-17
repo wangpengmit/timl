@@ -884,10 +884,6 @@ fun assert_TMap err t =
   case t of
       TMap a => a
     | _ => err ()
-fun is_rec_body e =
-  case e of
-      EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
-    | _ => (false, e)
 fun is_constr e =
   case e of
       EUnOp (EUAnno (EAConstr ()), e, _) => (true, e)
@@ -1891,7 +1887,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (pn, cover, ctxd, nps (* number of premises *)) = match_ptrn gctx (skcctx, pn, t)
 	    val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
             val (ctx, pre_st) = add_ctx_ctxst ctxd (ctx, pre_st)
-            val (e, d_spec) = has_body_asc e
+            val (is_rec, e) = U.is_rec_body e
+            val (e, d_spec) = U.has_body_asc e
 	    val (e, t1, d, post_st) = get_mtype (ctx, pre_st) e
             val d_spec = Option.map (check_Time_Nat gctx (#1 ctx)) d_spec
             val r = get_region_e e
@@ -1900,7 +1897,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val post_st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) post_st
             val () = close_n nps
             val () = close_ctx ctxd
-            val (is_rec, e) = is_rec_body e
             (* calculation of 'excluded' is more complicated because of patterns *)
             val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
@@ -1911,7 +1907,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                                 else (C_App_BeforeCC, M_App_BeforeCC)
             val d = d %%+ mapPair' to_real N tail_app_cost
             val d = case d_spec of
-                        SOME d_spec => (smart_le (d, d_spec); d_spec)
+                        SOME d_spec => (smart_write_le_2i gctx (#1 ctx) r (d, d_spec); d_spec)
                       | NONE => d
             val outer_cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           in

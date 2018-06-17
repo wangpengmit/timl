@@ -88,7 +88,7 @@ datatype expr_anno =
          | EABodyOfRecur of unit (* this is the body of a recursive function *)
          | EAFreeEVars of int (* num of free expression vars (excluding argument and recursive self-reference) *)
          | EAConstr of unit
-         | EABodyRec of unit
+         | EABodyAsc of unit
                          
 (* primitive unary term operators *)
 datatype prim_expr_un_op =
