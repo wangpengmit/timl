@@ -161,6 +161,11 @@ local
                     | _ => def ()
                   )
               (* | IBMinus () => raise Impossible "simp_p()/MinusI" *)
+              | IBMod () =>
+                (case (i1, i2) of
+                     (IConst (ICNat c1, r), IConst (ICNat c2, _)) => mark $ INat (c1 mod c2, r)
+                   | _ => def ()
+                )
 	      | IBMult () => 
 	        if eq_i i1 (T0 dummy) then
                   mark $ T0 $ r ()
@@ -245,7 +250,6 @@ local
                           | NONE => def ()
                       end
                 end
-              | IBMod () => def ()
               | IBLt () => def ()
               | IBGt () => def ()
               | IBLe () => def ()
@@ -272,7 +276,11 @@ local
             fun default () = IUnOp (opr, passi i, r)
           in
             case opr of
-                IUDiv n => IDiv (passi i, (n, r))
+                IUDiv n =>
+                (case i of
+                     IConst (ICNat c, r) => mark $ IConst (ICNat $ c div n, r)
+                   | _ => default ()
+                )
               (* | IUExp s => ExpI (passi i, (s, r)) *)
               | IUToReal () =>
                 (case i of

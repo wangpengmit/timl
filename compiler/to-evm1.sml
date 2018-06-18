@@ -893,7 +893,7 @@ fun test1 dirname =
     open MicroTiMLTypecheck
     open TestUtil
     val init_st = IState $ StMap.map (fn _ => INat 0) st_name2ty
-    val () = println "Started MicroTiML typechecking #1 ..."
+    val () = println "Started MicroTiML typechecking #_1 ..."
     val (e, _) = MicroTiMLLiveVars.live_vars e
     val e = set_is_rec false e
     val e = set_free_evars e
@@ -901,7 +901,7 @@ fun test1 dirname =
     val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
     val () = check_vcs vcs
-    val () = println "Finished MicroTiML typechecking #1"
+    val () = println "Finished MicroTiML typechecking #_1"
     open ExportPP
     val () = println "Type:"
     val () = pp_t NONE $ export_t (SOME 1) ([], []) t
@@ -939,14 +939,14 @@ fun test1 dirname =
     val e = simp_e e
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file (join_dir_file' dirname $ "unit-test-after-cps.tmp", e_str)
-    val () = println "Started MicroTiML typechecking #2 ..."
+    val () = println "Started MicroTiML typechecking #_2 ..."
     val e = set_is_rec true e
     val e = set_free_evars e
     val () = phase := PhBeforeCC ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
     val () = check_vcs vcs
-    val () = println "Finished MicroTiML typechecking #2"
+    val () = println "Finished MicroTiML typechecking #_2"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
     val _ = print_time_space i
@@ -963,12 +963,12 @@ fun test1 dirname =
     val () = write_file (join_dir_file' dirname $ "unit-test-after-cc.tmp", e_str)
     (* val () = println e_str *)
     (* val () = println "" *)
-    val () = println "Started MicroTiML typechecking #3 ..."
+    val () = println "Started MicroTiML typechecking #_3 ..."
     val () = phase := PhBeforeCodeGen ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
     val () = check_vcs vcs
-    val () = println "Finished MicroTiML typechecking #3"
+    val () = println "Finished MicroTiML typechecking #_3"
     (* val () = println "Type:" *)
     (* val () = pp_t NONE $ export_t (SOME 1) ([], []) t *)
     val _ = print_time_space i

@@ -1427,14 +1427,15 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | ETuple es =>
         let
-          val (ls, st) = foldl (fn (e, (acc, st)) =>
+          val (ls, st) = mapFst rev $ foldl (fn (e, (acc, st)) =>
                                            let val res as (e, t, i, st) = tc (ctx, st) e
                                            in (res :: acc, st) end) ([], st) es
           fun get_e (e, t, i, st) =
             let
               val e = if !anno_EPair then e %: t else e
+              val e = if !anno_EPair_state then e %~ st else e
             in
-              if !anno_EPair_state then e %~ st else e
+              e
             end
           val len = length es
           val i = combine_IBAdd_Time_Nat $ map #3 ls

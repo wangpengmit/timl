@@ -167,11 +167,13 @@ datatype list 'a : {Nat} =
        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1}
 
 fun length_int [a] {n : Nat} (l : list a {n}) (* return using $(1172*n + 292), 13*n+2 *) =
-    case l return using $(1714*n + 9), 23*n of
+    case l return using $(2111*n + 9), 30*n of
         [] => 0
       | _ :: xs => 1 + length_int xs
 
-(* val a = length_int [1, 2, 3] *)
+(* val ls = [] : list int {_} *)
+val ls = [1, 2, 3]
+val a = length_int ls
                                  
 (* val a = "abc" *)
           

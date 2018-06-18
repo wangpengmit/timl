@@ -956,7 +956,6 @@ val cc_tc_flags =
 (* fun forget_t_t a = shift_t_t_fn forget_var a *)
 (* fun forget_i_e a = shift_i_e_fn (forget_i_i, forget_i_s, forget_i_t) a *)
 (* fun forget_t_e a = shift_t_e_fn (forget_t_t) a *)
-(* fun forget_e_e a = shift_e_e_fn forget_var a *)
                                
 (* fun check_ERec_closed_expr_visitor_vtable cast output = *)
 (*   let *)

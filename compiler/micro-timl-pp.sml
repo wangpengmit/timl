@@ -979,11 +979,11 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str "EPack";
           space ();
           str "(";
-          (* pp_t t; *)
-          comma ();
           pp_e e;
           comma ();
-          (* pp_t t_all; *)
+          pp_t t;
+          comma ();
+          pp_t t_all;
           str ")";
           close_box ()
         )

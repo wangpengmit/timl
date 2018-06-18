@@ -57,7 +57,11 @@ fun live_vars_expr_visitor_vtable cast () =
             let
               val () = unop_ref (ISet.map inc) lvars
               val () = unop_ref (fn s => s @%+ 0) lvars
+              val e2 = shift01_e_e e2
               val e2 = #visit_expr vtable this env e2
+              fun forget_e_e a = shift_e_e_fn forget_var a
+              fun forget01_e_e a = forget_e_e 0 1 a
+              val e2 = forget01_e_e e2
               val () = unop_ref (fn s => ISet.map dec (s @%- 0)) lvars
               val e1 = #visit_expr vtable this env e1
             in
