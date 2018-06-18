@@ -41,10 +41,10 @@ datatype ('mtype, 'expr) ptrn =
          | PnExpr of 'expr inner
          | PnWildcard
 
-fun from_TiML_ptrn p =
+fun from_TiML_ptrn (get_inj : 'cvar -> inj) (p : ('cvar, 'mtype) S.ptrn) =
   let
     (* open Pattern *)
-    val f = from_TiML_ptrn
+    val f = from_TiML_ptrn get_inj
   in
     case p of
         S.PnVar name => PnVar name
@@ -52,7 +52,7 @@ fun from_TiML_ptrn p =
       | S.PnPair (p1, p2) => PnPair (f p1, f p2)
       | S.PnAnno (p, t) => PnAnno (f p, t)
       | S.PnAlias (name, p, r) => PnAlias (name, f p, r)
-      | S.PnConstr (Outer ((_, inj), _), inames, p, r) => PnConstr (Outer inj, inames, f p, r)
+      | S.PnConstr (Outer ((* (_, inj) *)inj, _), inames, p, r) => PnConstr (Outer $ get_inj inj, inames, f p, r)
   end
 
 local
@@ -790,7 +790,7 @@ fun remove_deep params matchee =
     remove_deep_many fresh_name params [matchee]
   end
   
-fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e, _)) matchee branches =
+fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e, _)) matchee (branches : ('mtype, 'expr) ptrn list) =
   let
     (* val str_pn = str_pn str_e *)
     (* val () = println $ "before to_expr: " ^ str_ls str_pn branches *)

@@ -114,6 +114,7 @@ datatype exp =
          | ECase of exp * return * (ptrn * exp) list * region
          | EAsc of exp * ty * region
          | EAscTime of exp * idx * region
+         | EAscSpace of exp * idx * region
          | ELet of return * decl list * exp * region
          | EConst of exp_const * region
          | EUnOp of expr_un_op * exp * region
@@ -151,6 +152,7 @@ fun PnList (pns, r) = foldr (fn (pn, acc) => PnCons (pn, acc, r)) (PnNil r) pns
 fun ESemiColon (e1, e2, r) = ELet ((NONE, NONE, NONE), [DVal ([], PnShortVar ("_", r), e1, r)], e2, r)
 fun EInc r =EShortVar ("inc", r)
 fun EAdd r =EShortVar ("add", r)
+fun EAscTimeSpace (e, (i, j), r) = EAscSpace (EAscTime (e, i, r), j, r)
                                
 type name = id
               

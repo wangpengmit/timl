@@ -361,6 +361,8 @@ local
 	  EAsc (elab e, elab_mt t)
 	| S.EAscTime (e, i, _) =>
 	  EAscTime (elab e, elab_i i)
+	| S.EAscSpace (e, i, _) =>
+	  EAscSpace (elab e, elab_i i)
 	| S.ELet (return, decs, e, r) =>
           ELet (elab_return return, Unbound.Bind (Teles $ map elab_decl decs, elab e), r)
 	| S.EConst (c, r) =>

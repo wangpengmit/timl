@@ -1150,6 +1150,94 @@ fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
     rules
   end
 
+fun get_rules_cost_adjustments (get_inj : 'cvar -> int * int) (rules : (('cvar, 'mtype) Pattern.ptrn * bool) list) =
+    let
+      open PatternEx
+      val pns = map fst rules
+      datatype fake_expr =
+               FEConst of int
+               | FEUnPair of fake_expr
+               | FEUnSum of fake_expr list
+               | FEUnfold of fake_expr
+               | FEUnpackI of fake_expr
+      val pns = map (from_TiML_ptrn get_inj) pns
+      val pns = mapi (fn (n, pn) => PnBind (pn, FEConst n)) pns
+      val shift_i_e = return3
+      val shift_e_e = return3
+      val subst_e_e = return4 
+      val EV = FEConst
+      fun str_e e = "[expr]"
+      fun EMatchPair (matchee, ename1, ename2, e) =
+        FEUnPair e
+      fun EMatchSum (matchee, cases) =
+        FEUnSum $ map snd cases
+      fun EMatchUnfold (matchee, ename, e) =
+        FEUnfold e
+      fun EUnpackI (matchee, iname, ename, e) =
+        FEUnpackI e
+      val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, str_e, (EMatchPair, EMatchSum, EMatchUnfold, EUnpackI)) (EV 0) pns
+      datatype cost =
+               CUnPair
+               | CUnSum of int * int
+               | CUnfold
+               | CUnpackI
+      fun collect_cost acc e =
+        let
+          val f = collect_cost
+        in
+          case e of
+              FEConst n => [(n, acc)]
+            | FEUnPair e => f (CUnPair :: acc) e
+            | FEUnSum es =>
+              let
+                val len = length es
+              in
+                concatMapi (fn (i, e) => f (CUnSum (len, i) :: acc) e) es
+              end
+            | FEUnfold e => f (CUnfold :: acc) e
+            | FEUnpackI e => f (CUnpackI :: acc) e
+        end
+      fun C_ECaseMany (len, i) =
+        (assert_b "C_ECaseMany: len = 2" (len = 2);
+         C_Case_BeforeCodeGen + i * C_JUMPDEST)
+      fun eval_cost c =
+        case c of
+            CUnPair => 2 * C_EProj
+          | CUnfold => C_EUnfold
+          | CUnpackI => C_EUnpack
+          | CUnSum (len, i) => C_ECaseMany (len, i)
+      val () = println $ "C_EProj = " ^ str_int C_EProj
+      val () = println $ "C_EUnfold = " ^ str_int C_EUnfold
+      val () = println $ "C_EUnpack = " ^ str_int C_EUnpack
+      val () = println $ "C_Case_BeforeCodeGen = " ^ str_int C_Case_BeforeCodeGen
+      val () = println $ "C_ECaseMany (2, 0) = " ^ str_int (C_ECaseMany (2, 0))
+      val () = println $ "C_ECaseMany (2, 1) = " ^ str_int (C_ECaseMany (2, 1))
+      val () = println $ "C_App_BeforeCC = " ^ str_int C_App_BeforeCC
+      val costs = collect_cost [] e
+      fun str_cost c =
+        case c of
+            CUnPair => "CUnPair"
+          | CUnfold => "CUnfold"
+          | CUnpackI => "CUnpackI"
+          | CUnSum (len, i) => sprintf "CUnSum ($, $)" [str_int len, str_int i]
+      val () = println "costs:"
+      val () = app println $ map (str_pair (str_int, str_ls str_cost)) costs
+      val costs = IMapU.fromList_multi costs
+      val costs = IMap.map (max_from_0 o map (sum o map eval_cost)) costs
+      val () = println $ IMapU.str_map (str_int, str_int) costs
+      fun m @! k = IMap.find (m, k)
+      fun get_cost n = default 0 $ costs @! n
+      val tail_app_cost = (C_App_BeforeCC, M_App_BeforeCC)
+      val len = length rules
+      fun get_tail_app_cost e =
+        if len <= 1 orelse e then (0, 0) else tail_app_cost
+      val ds = mapi (fn (n, rl) => (get_cost n, 0) ++ get_tail_app_cost (snd rl)) rules
+      (* val () = println "after adjust:" *)
+      (* val () = app println $ map (str_i Gctx.empty []) $ map fst ds *)
+    in
+      ds
+    end
+      
 fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (idx * idx) * idx StMap.map =
   let
     val (ctx, st) = ctx_st
@@ -1899,7 +1987,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             (* calculation of 'excluded' is more complicated because of patterns *)
             val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
-            val d = hd (get_rules_cost_adjustments [(pn, e)]) %%+ d
+            val d = mapPair' to_real N (hd $ get_rules_cost_adjustments snd [(pn, is_tail_call e)]) %%+ d
             val extra_inner_cost = (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars)
             val d = mapPair' to_real N extra_inner_cost %%+ d
             val tail_app_cost = if is_tail_call e then (0, 0)
@@ -1928,6 +2016,48 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
   in
     (e, t, d, st)
   end
+
+and check_rules gctx (ctx as (sctx, kctx, cctx, tctx), st) (rules, t as (t1, return), r) =
+    let 
+      val skcctx = (sctx, kctx, cctx) 
+      fun f (rule, acc) =
+	let
+          (* val previous_covers = map (snd o snd) $ rev acc *)
+          val ans as (rule, tdst, cover) = check_rule gctx (ctx, st) ((* previous_covers, *) rule, t)
+          (* val covers = rev $ map (snd o snd) acc *)
+	  (* val () = check_redundancy (skcctx, t1, covers, cover, get_region_rule rule) *)
+	in
+	  ans :: acc
+	end 
+      val (rules_tdsts, covers) = unzip $ map (fn (a, b, c) => ((a, b), c)) $ rev $ foldl f [] rules
+      (* val () = check_exhaustion (skcctx, t1, covers, r) *)
+      val ds = get_rules_cost_adjustments snd $ map (mapSnd is_tail_call) $ map fst rules_tdsts
+      val ret = ListPair.map (fn (((pn, e), (t, d, st)), d') => ((pn, e), (t, mapPair' to_real N d' %%+ d, st))) (rules_tdsts, ds)
+    in
+      ret
+    end
+
+and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e), t as (t1, return)) =
+    let 
+      val skcctx = (sctx, kctx, cctx) 
+      val (pn, cover, ctxd as (sctxd, kctxd, _, _), nps) = match_ptrn gctx (skcctx, (* pcovers, *) pn, t1)
+      val ctx0 = ctx
+      val (ctx, st) = add_ctx_ctxst ctxd (ctx, st)
+      val (e, t, d, st) = get_mtype gctx (ctx, st) e
+      val r = get_region_e e
+      fun get_ptrn_cost (pn, t1) =
+        TN0 dummy
+      val d = get_ptrn_cost (pn, t1) %%+ d
+      val (t, d) = forget_or_check_return r gctx (#1 ctx, #2 ctx) ctxd (t, d) return 
+      val st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) st
+      val () = close_n nps
+      val () = close_ctx ctxd
+      val e = EAsc (e, shift_ctx_mt ctxd t)
+      val e = EAscTime (e, shift_ctx_i ctxd $ fst d)
+      val e = EAscSpace (e, shift_ctx_i ctxd $ snd d)
+    in
+      ((pn, e), (t, d, st), cover)
+    end
 
 and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
     let
@@ -2028,7 +2158,8 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val skcctx = (sctx, kctx, cctx) 
               val (e, t, d, st) = get_mtype (ctx, st) e
               val (pn, cover, ctxd, nps) = match_ptrn gctx (skcctx, pn, t)
-              val d = d %%+ hd (get_rules_cost_adjustments [(pn, ENat (0, dummy))])
+              val extra = hd $ get_rules_cost_adjustments snd [(pn, false)]
+              val d = d %%+ mapPair' to_real N extra
               val d = shift_ctx_2i ctxd d
               val st = StMap.map (shift_ctx_i ctxd) st
 	      val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
@@ -2218,136 +2349,6 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
 	       (* val () = print $ sprintf "   Time : $: \n" [str_i sctxn d] *)
     in
       ret
-    end
-
-and get_rules_cost_adjustments rules =
-    let
-      open PatternEx
-      val pns = map fst rules
-      datatype fake_expr =
-               FEConst of int
-               | FEUnPair of fake_expr
-               | FEUnSum of fake_expr list
-               | FEUnfold of fake_expr
-               | FEUnpackI of fake_expr
-      val pns = map from_TiML_ptrn pns
-      val pns = mapi (fn (n, pn) => PnBind (pn, FEConst n)) pns
-      val shift_i_e = return3
-      val shift_e_e = return3
-      val subst_e_e = return4 
-      val EV = FEConst
-      fun str_e e = "[expr]"
-      fun EMatchPair (matchee, ename1, ename2, e) =
-        FEUnPair e
-      fun EMatchSum (matchee, cases) =
-        FEUnSum $ map snd cases
-      fun EMatchUnfold (matchee, ename, e) =
-        FEUnfold e
-      fun EUnpackI (matchee, iname, ename, e) =
-        FEUnpackI e
-      val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, str_e, (EMatchPair, EMatchSum, EMatchUnfold, EUnpackI)) (EV 0) pns
-      datatype cost =
-               CUnPair
-               | CUnSum of int * int
-               | CUnfold
-               | CUnpackI
-      fun collect_cost acc e =
-        let
-          val f = collect_cost
-        in
-          case e of
-              FEConst n => [(n, acc)]
-            | FEUnPair e => f (CUnPair :: acc) e
-            | FEUnSum es =>
-              let
-                val len = length es
-              in
-                concatMapi (fn (i, e) => f (CUnSum (len, i) :: acc) e) es
-              end
-            | FEUnfold e => f (CUnfold :: acc) e
-            | FEUnpackI e => f (CUnpackI :: acc) e
-        end
-      fun C_ECaseMany (len, i) =
-        (assert_b "C_ECaseMany: len = 2" (len = 2);
-         C_Case_BeforeCodeGen + i * C_JUMPDEST)
-      fun eval_cost c =
-        case c of
-            CUnPair => 2 * C_EProj
-          | CUnfold => C_EUnfold
-          | CUnpackI => C_EUnpack
-          | CUnSum (len, i) => C_ECaseMany (len, i)
-      val () = println $ "C_EProj = " ^ str_int C_EProj
-      val () = println $ "C_EUnfold = " ^ str_int C_EUnfold
-      val () = println $ "C_EUnpack = " ^ str_int C_EUnpack
-      val () = println $ "C_Case_BeforeCodeGen = " ^ str_int C_Case_BeforeCodeGen
-      val () = println $ "C_ECaseMany (2, 0) = " ^ str_int (C_ECaseMany (2, 0))
-      val () = println $ "C_ECaseMany (2, 1) = " ^ str_int (C_ECaseMany (2, 1))
-      val () = println $ "C_App_BeforeCC = " ^ str_int C_App_BeforeCC
-      val costs = collect_cost [] e
-      fun str_cost c =
-        case c of
-            CUnPair => "CUnPair"
-          | CUnfold => "CUnfold"
-          | CUnpackI => "CUnpackI"
-          | CUnSum (len, i) => sprintf "CUnSum ($, $)" [str_int len, str_int i]
-      val () = println "costs:"
-      val () = app println $ map (str_pair (str_int, str_ls str_cost)) costs
-      val costs = IMapU.fromList_multi costs
-      val costs = IMap.map (max_from_0 o map (sum o map eval_cost)) costs
-      val () = println $ IMapU.str_map (str_int, str_int) costs
-      fun m @! k = IMap.find (m, k)
-      fun get_cost n = default 0 $ costs @! n
-      val tail_app_cost = (C_App_BeforeCC, M_App_BeforeCC)
-      val len = length rules
-      fun get_tail_app_cost e =
-        mapPair' to_real N (if len <= 1 orelse is_tail_call e then (0, 0) else tail_app_cost)
-      val ds = mapi (fn (n, rl) => TN (get_cost n) %%+ get_tail_app_cost (snd rl)) rules
-      val () = println "after adjust:"
-      val () = app println $ map (str_i Gctx.empty []) $ map fst ds
-    in
-      ds
-    end
-      
-and check_rules gctx (ctx as (sctx, kctx, cctx, tctx), st) (rules, t as (t1, return), r) =
-    let 
-      val skcctx = (sctx, kctx, cctx) 
-      fun f (rule, acc) =
-	let
-          (* val previous_covers = map (snd o snd) $ rev acc *)
-          val ans as (rule, tdst, cover) = check_rule gctx (ctx, st) ((* previous_covers, *) rule, t)
-          (* val covers = rev $ map (snd o snd) acc *)
-	  (* val () = check_redundancy (skcctx, t1, covers, cover, get_region_rule rule) *)
-	in
-	  ans :: acc
-	end 
-      val (rules_tdsts, covers) = unzip $ map (fn (a, b, c) => ((a, b), c)) $ rev $ foldl f [] rules
-      (* val () = check_exhaustion (skcctx, t1, covers, r) *)
-      val ds = get_rules_cost_adjustments $ map fst rules_tdsts
-      val ret = ListPair.map (fn (((pn, e), (t, d, st)), d') => ((pn, e), (t, d' %%+ d, st))) (rules_tdsts, ds)
-    in
-      ret
-    end
-
-and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e), t as (t1, return)) =
-    let 
-      val skcctx = (sctx, kctx, cctx) 
-      val (pn, cover, ctxd as (sctxd, kctxd, _, _), nps) = match_ptrn gctx (skcctx, (* pcovers, *) pn, t1)
-      val ctx0 = ctx
-      val (ctx, st) = add_ctx_ctxst ctxd (ctx, st)
-      val (e, t, d, st) = get_mtype gctx (ctx, st) e
-      val r = get_region_e e
-      fun get_ptrn_cost (pn, t1) =
-        TN0 dummy
-      val d = get_ptrn_cost (pn, t1) %%+ d
-      val (t, d) = forget_or_check_return r gctx (#1 ctx, #2 ctx) ctxd (t, d) return 
-      val st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) st
-      val () = close_n nps
-      val () = close_ctx ctxd
-      val e = EAsc (e, shift_ctx_mt ctxd t)
-      val e = EAscTime (e, shift_ctx_i ctxd $ fst d)
-      val e = EAscSpace (e, shift_ctx_i ctxd $ snd d)
-    in
-      ((pn, e), (t, d, st), cover)
     end
 
 and check_mtype gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, t) =

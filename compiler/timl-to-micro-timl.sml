@@ -185,7 +185,7 @@ fun on_e (e : S.expr) : mtiml_expr =
       let
         (* todo: use information in [return] *)
         val e = on_e e
-        val rules = map (mapPair (from_TiML_ptrn, on_e) o unBind) rules
+        val rules = map (mapPair (from_TiML_ptrn snd, on_e) o unBind) rules
         val name = default (EName ("__x", dummy)) $ firstSuccess get_pn_alias $ map fst rules
         val pns = map PnBind rules
         val pns = map (shift_e_pn 0 1) pns
@@ -244,7 +244,7 @@ fun on_e (e : S.expr) : mtiml_expr =
       let
         val (pn, e) = unBind bind
         val (pn, Outer t) = case pn of S.PnAnno a => a | _ => raise Impossible "to-micro-timl/EAbs: must be AnnoP"
-        val name = default (EName ("__x", dummy)) $ get_pn_alias $ from_TiML_ptrn pn
+        val name = default (EName ("__x", dummy)) $ get_pn_alias $ from_TiML_ptrn snd pn
         val t = on_mt t
         fun shift_e_rule a = DerivedTrans.for_rule SS.shift_e_e a
         val e = SMakeECase (SEV 0, [shift_e_rule (pn, e)])
