@@ -340,7 +340,7 @@ local
 	  let 
             fun f (b, e) =
 		case b of
-		    BindTyping pn => EAbs (StMap.empty, Unbound.Bind (elab_pn pn, e))
+		    BindTyping pn => EAbs (StMap.empty, Unbound.Bind (elab_pn pn, e), NONE)
 		  | BindSorting (name, s, _) => EAbsI (BindAnno ((IName name, elab_s s), e), r)
             val e = elab e
             val e = case d of SOME d => EAscTime (e, elab_i d) | _ => e

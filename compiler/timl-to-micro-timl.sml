@@ -239,7 +239,7 @@ fun on_e (e : S.expr) : mtiml_expr =
     (*   in *)
     (*     EAbs $ BindAnno ((name, t), e) *)
     (*   end *)
-    | S.EAbs (st, bind) =>
+    | S.EAbs (st, bind, d) =>
       (* delegate to ECase *)
       let
         val (pn, e) = unBind bind
@@ -250,7 +250,7 @@ fun on_e (e : S.expr) : mtiml_expr =
         val e = SMakeECase (SEV 0, [shift_e_rule (pn, e)])
         val e = on_e e
       in
-        EAbs (IState st, BindAnno ((name, t), e))
+        EAbs (IState st, BindAnno ((name, t), e), d)
       end
     | S.EAbsI (bind, _) =>
       let

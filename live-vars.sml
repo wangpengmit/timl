@@ -360,13 +360,14 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         Bind (pn, e)
       end
-    fun visit_EAbs this env (st, bind) =
+    fun visit_EAbs this env (st, bind, spec) =
       let
         val vtable = cast this
-        val st = StMap.map (#visit_idx vtable this env) st
+        val spec = visit_option (visit_pair (#visit_idx vtable this) (#visit_idx vtable this)) env spec
         val bind = visit_bind (#visit_expr vtable this) env bind
+        val st = StMap.map (#visit_idx vtable this env) st
       in
-        EAbs (st, bind)
+        EAbs (st, bind, spec)
       end
     fun visit_EAbsI this (lvars, _, _) (bind, r) =
       let

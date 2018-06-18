@@ -127,14 +127,16 @@ fun EV x = EVar $ make_Free_e x
 fun ELetClose ((x, name, e1), e2) = MakeELet (e1, (name, dummy), close0_e_e x e2)
 fun ELetManyClose (ds, e) = foldr ELetClose e ds
 
-fun EAbsPairClose (st, (x1, name1, t1), (x2, name2, t2), e) =
+fun EAbsPairCloseWithAnno (st, (x1, name1, t1), (x2, name2, t2), e, spec) =
   let
     val x = fresh_evar ()
     val e = ELetClose ((x2, name2, ESnd (EV x)), e)
     val e = ELetClose ((x1, name1, EFst (EV x)), e)
   in
-    EAbs (st, close0_e_e_anno ((x, "x", TProd (t1, t2)), e))
+    EAbs (st, close0_e_e_anno ((x, "x", TProd (t1, t2)), e), spec)
   end
+    
+fun EAbsPairClose (st, x1, x2, e) = EAbsPairCloseWithAnno (st, x1, x2, e, NONE)
     
 fun EUnpackClose (e1, (a, name_a), (x, name_x), e2) =
   EUnpack (e1, curry TBind (name_a, dummy) $ curry EBind (name_x, dummy) $ close0_t_e a $ close0_e_e x e2)

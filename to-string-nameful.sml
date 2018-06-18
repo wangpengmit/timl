@@ -363,14 +363,14 @@ fun strn_e e =
            ETNever () => sprintf "(never [$])" [strn_mt t]
          | ETBuiltin name => sprintf "(builtin $ [$])" [name, strn_mt t]
       )
-    | EAbs (st, bind) => 
+    | EAbs (st, bind, spec) => 
       let
         val (pn, e) = Unbound.unBind bind
         val st = strn_state st
         val pn = strn_pn pn
 	val e = strn_e e
       in
-        sprintf "(fn $$ => $)" [st, pn, e]
+        sprintf "(fn $$$ => $)" [st, pn, default "" $ Option.map (fn (i, j) => sprintf " return $, $" [strn_i i, strn_i j]) spec, e]
       end
     | EAbsI (bind, _) =>
       let

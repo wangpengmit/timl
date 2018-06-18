@@ -32,7 +32,7 @@ signature EXPR = sig
            | EET of Operators.expr_ET * expr * mtype
            | ET of Operators.expr_T * mtype * Region.region
            | ENewArrayValues of mtype * expr list * Region.region
-	   | EAbs of idx StMap.map * (ptrn, expr) Unbound.bind
+	   | EAbs of idx StMap.map * (ptrn, expr) Unbound.bind * (idx * idx) option
 	   | EAbsI of (sort, expr) Binders.ibind_anno * Region.region
 	   | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option
 	   | ECase of expr * return * (ptrn, expr) Unbound.bind list * Region.region

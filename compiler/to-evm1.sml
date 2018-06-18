@@ -762,7 +762,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
 fun cg_hval (st_name2int, ectx) (e, t_all) =
   let
     val (itbinds, e) = collect_EAbsIT e
-    val (st, (t, (name, e))) = assert_EAbs e
+    val (st, (t, (name, e)), i_spec) = assert_EAbs e
     val t = cg_t t
     (* input argument is always stored in ARG_REG *)
     val ectx = (name, inl ARG_REG) :: ectx

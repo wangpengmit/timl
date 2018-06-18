@@ -592,7 +592,7 @@ and cc_ERec e_all outer_binds bind =
       val () = println $ "cc(): before open_collect_EAbsIT()"
       val (inner_binds, e) = open_collect_EAbsIT e (* todo: this could be slow, should be combined *)
       val () = println $ "cc(): after open_collect_EAbsIT()"
-      val (st, (t_z, (name_z, e))) = assert_EAbs e
+      val (st, (t_z, (name_z, e)), i_spec) = assert_EAbs e
       val z = fresh_evar ()
       val e = open0_e_e z e
       val e = cc e
@@ -641,7 +641,7 @@ and cc_ERec e_all outer_binds bind =
       val () = println $ "cc(): before ELetManyClose()"
       val e = ELetManyClose ((p, "p", p_def) :: (x, fst name_x, def_x) :: ys_defs, e)
       val () = println $ "cc(): after ELetManyClose()"
-      val e = EAbsPairClose (st, (z_env, "z_env", t_env), (z, fst name_z, t_z), e)
+      val e = EAbsPairCloseWithAnno (st, (z_env, "z_env", t_env), (z, fst name_z, t_z), e, i_spec)
       val betas_outer_inner_binds = betas @ outer_inner_binds
       val () = println $ "cc(): before close_EAbsITs()"
       val e = close_EAbsITs (betas_outer_inner_binds, e)
@@ -696,12 +696,12 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
         let
           val (t_x, (name_x, e)) = unBindAnnoName bind
           val (binds, e) = collect_EAbsIT e
-          val (st, (t_y, (name_y, e))) = assert_EAbs e
+          val (st, (t_y, (name_y, e)), i_spec) = assert_EAbs e
           val (e, _) = assert_EAscState e
           val (e, _) = assert_EAscTimeSpace e
           val (e, _) = assert_EAscType e
           val e = #visit_expr (cast this) this env e
-          val e = EAbs (st, EBindAnno ((name_y, t_y), e))
+          val e = EAbs (st, EBindAnno ((name_y, t_y), e), i_spec)
         in
           ERec $ EBindAnno ((name_x, t_x), EAbsITs (binds, e))
         end
@@ -709,7 +709,7 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
     val len_mark_begin = String.size mark_begin
     val mark_end = #"$"
     val default_fun_name = "__f"
-    fun visit_EAbs this env (pre, bind) =
+    fun visit_EAbs this env (pre, bind, i_spec) =
       let
         val (t_y, ((name_y, r), e)) = unBindAnnoName bind
         (* val () = println $ "visit_EAbs()/name_y: " ^ name_y *)
@@ -724,7 +724,7 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
         val (e, i) = assert_EAscTimeSpace e
         val (_, t_e) = assert_EAscType e
         val e = #visit_expr (cast this) this env e
-        val e = EAbs (pre, EBindAnno (((name_y, r), t_y), e))
+        val e = EAbs (pre, EBindAnno (((name_y, r), t_y), e), i_spec)
       in
         ERec $ EBindAnno (((fun_name, dummy), TArrow ((pre, t_y), i, (post, t_e))), shift01_e_e e)
       end
@@ -735,11 +735,11 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
           val (binds, e1) = collect_EAbsIT e1
           val e1 = 
               case e1 of
-                  EAbs (st, bind1) =>
+                  EAbs (st, bind1, i_spec) =>
                   let
                     val (t_y, ((name_y, r), e1)) = unBindAnnoName bind1
                   in
-                    EAbs (st, EBindAnno (((mark_begin ^ name_x ^ String.str mark_end ^ name_y, r), t_y), e1))
+                    EAbs (st, EBindAnno (((mark_begin ^ name_x ^ String.str mark_end ^ name_y, r), t_y), e1), i_spec)
                   end
                 | _ => e1
           val e1 = EAbsITs (binds, e1)

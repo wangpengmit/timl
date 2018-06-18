@@ -98,7 +98,8 @@ fun collect_EAppT e =
     | _ => (e, [])
 
 fun MakePnAnno (pn, t) = PnAnno (pn, Outer t)
-fun MakeEAbs (st, pn, e) = EAbs (st, Binders.Bind (pn, e))
+fun MakeEAbs (st, pn, e) = EAbs (st, Binders.Bind (pn, e), NONE)
+fun MakeEAbsWithAnno (st, pn, e, i) = EAbs (st, Binders.Bind (pn, e), i)
 fun MakeEAbsI (name, s, e, r) = EAbsI (IBindAnno ((name, s), e), r)
 fun MakeDIdxDef (name, s, i) = DIdxDef (IBinder name, Outer s, Outer i)
 fun MakeDVal (ename, tnames, e, r) = DVal (EBinder ename, Outer $ Unbound.Bind (map (mapPair' TBinder Outer) tnames, e), r)
@@ -112,9 +113,5 @@ fun is_rec_body e =
   case e of
       EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
     | _ => (false, e)
-fun has_body_asc e =
-  case e of
-      EUnOp (EUAnno (EABodyAsc ()), EEI (EEIAscSpace (), EEI (EEIAscTime (), e, i), j), _) => (e, SOME (i, j))
-    | _ => (e, NONE)
                
 end

@@ -29,7 +29,7 @@ type ('this, 'env) expr_visitor_vtable =
        visit_EEI : 'this -> 'env -> expr_EI * expr * idx -> T.expr,
        visit_EET : 'this -> 'env -> expr_ET * expr * mtype -> T.expr,
        visit_ET : 'this -> 'env -> expr_T * mtype * region -> T.expr,
-       visit_EAbs : 'this -> 'env -> idx StMap.map * (ptrn, expr) bind -> T.expr,
+       visit_EAbs : 'this -> 'env -> idx StMap.map * (ptrn, expr) bind * (idx * idx) option -> T.expr,
        visit_EAbsI : 'this -> 'env -> (sort, expr) ibind_anno * region -> T.expr,
        visit_EAppConstr : 'this -> 'env -> (cvar * bool) * mtype list * idx list * expr * (int * mtype) option -> T.expr,
        visit_ECase : 'this -> 'env -> expr * return * (ptrn, expr) bind list * region -> T.expr,
@@ -334,13 +334,14 @@ fun default_expr_visitor_vtable
       in
         T.ET (opr, t, r)
       end
-    fun visit_EAbs this env (st, bind) =
+    fun visit_EAbs this env (st, bind, spec) =
       let
         val vtable = cast this
         val st = StMap.map (#visit_idx vtable this env) st
         val bind = visit_bind (#visit_ptrn vtable this) (#visit_expr vtable this) env bind
+        val spec = visit_option (visit_pair (#visit_idx vtable this) (#visit_idx vtable this)) env spec
       in
-        T.EAbs (st, bind)
+        T.EAbs (st, bind, spec)
       end
     fun visit_EAbsI this env data =
       let

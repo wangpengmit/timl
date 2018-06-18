@@ -11,6 +11,8 @@ open MicroTiML
        
 infixr 0 $
 
+infix 6 @%+
+val op@%+ = ISet.add
 infix 6 @%-
 val op@%- = ISetU.delete
          
@@ -33,7 +35,42 @@ fun live_vars_expr_visitor_vtable cast () =
     fun visit_ibind_anno this = visit_bind_anno (#extend_i (cast this) this)
     fun visit_tbind_anno this = visit_bind_anno (#extend_t (cast this) this)
     fun visit_cbind_anno this = visit_bind_anno (#extend_c (cast this) this)
-                                                
+
+    fun need_intro_new_var e =
+        let
+          val f = need_intro_new_var
+        in
+          case e of
+              EVar _ => false
+            | EAscTime (e, _) => f e
+            | EAscSpace (e, _) => f e
+            | EAscState (e, _) => f e
+            | EAscType (e, _) => f e
+            | _ => true
+        end
+    fun visit_e2 this env (e1, e2) =
+        let
+          val vtable = cast this
+          val lvars = #1 env
+        in
+          if need_intro_new_var e1 then
+            let
+              val () = unop_ref (ISet.map inc) lvars
+              val () = unop_ref (fn s => s @%+ 0) lvars
+              val e2 = #visit_expr vtable this env e2
+              val () = unop_ref (fn s => ISet.map dec (s @%- 0)) lvars
+              val e1 = #visit_expr vtable this env e1
+            in
+              (e1, e2)
+            end
+          else
+            let
+              val e2 = #visit_expr vtable this env e2
+              val e1 = #visit_expr vtable this env e1
+            in
+              (e1, e2)
+            end
+        end
     fun visit_ebind this f (env as (lvars, _, _)) bind =
       let
         val (name, b) = unBindSimp bind
@@ -214,29 +251,28 @@ fun live_vars_expr_visitor_vtable cast () =
           let
             val n_lvars = num_lvars env
             val vtable = cast this
-            val e2 = #visit_expr vtable this env e2
-            val e1 = #visit_expr vtable this env e1
+            val (e1, e2) = visit_e2 this env (e1, e2)
           in
             EBinOp (EBApp (), e1, EAnnoLiveVars (e2, n_lvars))
           end
         | _ =>
           let
             val vtable = cast this
-            val e2 = #visit_expr vtable this env e2
-            val e1 = #visit_expr vtable this env e1
+            val (e1, e2) = visit_e2 this env (e1, e2)
           in
             EBinOp (opr, e1, e2)
           end
-    fun visit_EAbs this (env as (lvars, _, _)) (i, bind) =
+    fun visit_EAbs this (env as (lvars, _, _)) (i, bind, spec) =
       let
         val vtable = cast this
-        val i = #visit_idx vtable this env i
+        val spec = visit_option (visit_pair (#visit_idx vtable this) (#visit_idx vtable this)) env spec
         val new_lvars = ref ISet.empty
         (* now there will be a live continuation variable *)
         val bind = visit_ebind_anno this (#visit_ty vtable this) (#visit_expr vtable this) (new_lvars, ref false, true) bind
         val () = output_set lvars (!new_lvars)
+        val i = #visit_idx vtable this env i
       in
-        EAbs (i, bind)
+        EAbs (i, bind, spec)
       end
     fun visit_ERec this env data =
       let

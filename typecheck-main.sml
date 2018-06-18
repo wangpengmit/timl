@@ -1877,9 +1877,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (ECase (e, return, map Unbound.Bind rules, r), t, d, st)
           end
-	| U.EAbs (pre_st, bind) => 
+	| U.EAbs (pre_st, bind, d_spec) => 
 	  let
             val pre_st = is_wf_state gctx sctx pre_st
+            val d_spec = Option.map (check_Time_Nat gctx (#1 ctx)) d_spec
             val (pn, e) = Unbound.unBind bind
             val r = U.get_region_pn pn
             val t = fresh_mt gctx (sctx, kctx) r
@@ -1888,9 +1889,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	    val () = check_exhaustion gctx (skcctx, t, [cover], get_region_pn pn)
             val (ctx, pre_st) = add_ctx_ctxst ctxd (ctx, pre_st)
             val (is_rec, e) = U.is_rec_body e
-            val (e, d_spec) = U.has_body_asc e
 	    val (e, t1, d, post_st) = get_mtype (ctx, pre_st) e
-            val d_spec = Option.map (check_Time_Nat gctx (#1 ctx)) d_spec
             val r = get_region_e e
 	    val t1 = forget_ctx_mt r gctx (#1 ctx, #2 ctx) ctxd t1 
             val d = forget_ctx_2i r gctx (#1 ctx) (#1 ctxd) d
@@ -1911,7 +1910,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                       | NONE => d
             val outer_cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           in
-	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e)), TArrow ((pre_st, t), d, (post_st, t1)), outer_cost, st)
+	    (EAbs (pre_st, Unbound.Bind (PnAnno (pn, Outer t), e), d_spec), TArrow ((pre_st, t), d, (post_st, t1)), outer_cost, st)
 	  end
     fun extra_msg () = ["when typechecking"] @ indent [US.str_e gctxn ctxn e_all]
     val (e, t, d, st) = main ()
@@ -2050,8 +2049,6 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                     U.SortingST (name, Outer s) => U.MakeEAbsI (unBinderName name, s, e, r)
                   | U.TypingST pn => U.MakeEAbs (StMap.empty, pn, e)
               val len_binds = length binds
-              val e = U.EAscTimeSpace (e, d)
-              val e = U.EAnno (e, EABodyAsc (), r)
               val e = foldri (fn (n, bind, e) =>
                                  let
                                    val e = if n = len_binds - 1 then
@@ -2064,7 +2061,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                                  in
                                    if n = 0 then
                                      (case bind of
-                                          U.TypingST pn => U.MakeEAbs (pre_st, pn, e)
+                                          U.TypingST pn => U.MakeEAbsWithAnno (pre_st, pn, e, SOME d)
                                         | _ => raise Error (r, ["Recursion must have a typing bind as the last bind"]))
                                    else attach_bind_e (bind, e)
                                  end

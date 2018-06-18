@@ -149,11 +149,11 @@ fun anf_decls_expr_visitor_vtable cast output =
         val x = fresh_evar ()
         val e = open0_e_e x e
         val (binds, e) = open_collect_EAbsIT e
-        val (st, (t_y, (name_y, e))) = assert_EAbs e
+        val (st, (t_y, (name_y, e)), i_spec) = assert_EAbs e
         val y = fresh_evar ()
         val e = open0_e_e y e
         val e = anf e
-        val e = EAbs (st, close0_e_e_anno ((y, fst name_y, t_y), e))
+        val e = EAbs (st, close0_e_e_anno ((y, fst name_y, t_y), e), i_spec)
         val e = close_EAbsITs (binds, e)
         val e = ERec $ close0_e_e_anno ((x, fst name_x, t_x), e)
       in

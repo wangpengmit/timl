@@ -1313,9 +1313,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in 
           (MakeEAbsT (name, k, e), MakeTForall (k, name, inner_cost, t), cost, st)
         end
-      | EAbs (pre_st, bind) =>
+      | EAbs (pre_st, bind, i_spec) =>
         let
           val pre_st = sc_against_sort ictx (pre_st, SState)
+          val i_spec = Option.map (sc_against_Time_Nat ictx) i_spec
           val (t1 : mtiml_ty, (name, e)) = unEAbs bind
           val (e, n_fvars) =
               case !phase of
@@ -1346,8 +1347,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                   PhBeforeCodeGen () => (0, 0)
                 | PhBeforeCC () => (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
                 | PhBeforeCPS () => (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
+          fun check_le_2i (i, j) (i', j') = (check_prop (i %<= i'); check_prop (j %<= j'))
+          val i = case i_spec of
+                      SOME i_spec => (check_le_2i i i_spec; i_spec)
+                    | NONE => i
         in
-          (MakeEAbs (pre_st, name, t1, e), TArrow ((pre_st, t1), i, (post_st, t2)), mapPair' to_real N cost, st)
+          (MakeEAbsWithAnno (pre_st, name, t1, e, i_spec), TArrow ((pre_st, t1), i, (post_st, t2)), mapPair' to_real N cost, st)
         end
       (* | EAbsI _ => *)
       (*   let *)
@@ -1953,8 +1958,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     val () = print $ e_input_str
     val () = println "of time:"
     val () = println $ ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i
-    (* val () = println "of type:" *)
-    (* val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) $ MicroTiMLSimp.simp_t t *)
+    val () = println "of type:"
+    val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) $ MicroTiMLSimp.simp_t t
     val () = println ""
   in
     (e_output, t, i, st)

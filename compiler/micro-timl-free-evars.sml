@@ -28,8 +28,8 @@ fun set_is_rec_expr_visitor_vtable cast pass_through_EAbsIT =
         let
           val (name_anno, e) = unBindAnno bind
           val (binds, e) = collect_EAbsIT e
-          val (st, (anno, (name, body))) = assert_EAbs e
-          val e = EAbs (st, EBindAnno ((name, anno), EAnnoBodyOfRecur body))
+          val (st, (anno, (name, body)), i_spec) = assert_EAbs e
+          val e = EAbs (st, EBindAnno ((name, anno), EAnnoBodyOfRecur body), i_spec)
         in
           BindAnno (name_anno, EAbsITs (binds, e))
         end
@@ -37,11 +37,11 @@ fun set_is_rec_expr_visitor_vtable cast pass_through_EAbsIT =
         let
           val (name1, e) = unBindAnno bind
           val e = case e of
-                      EAbs (st, bind) =>
+                      EAbs (st, bind, spec) =>
                       let
                         val (name, body) = unBindAnno bind
                       in
-                        EAbs (st, BindAnno (name, EAnnoBodyOfRecur body))
+                        EAbs (st, BindAnno (name, EAnnoBodyOfRecur body), spec)
                       end
                     | EAbsI bind =>
                       let
@@ -127,7 +127,7 @@ fun set_free_evars_expr_visitor_vtable cast () =
           visit_noop
     fun visit_expr this env e =
       case e of
-          EAbs (pre_st, bind) =>
+          EAbs (pre_st, bind, spec) =>
           let
             val (name, e) = unBindAnno bind
             val (is_rec, e) = is_rec_body e
@@ -136,7 +136,7 @@ fun set_free_evars_expr_visitor_vtable cast () =
             val e = #visit_expr (cast this) this env e
             val e = EAnnoFreeEVars (e, n_fvars)
           in
-            EAbs (pre_st, BindAnno (name, e))
+            EAbs (pre_st, BindAnno (name, e), spec)
           end
         | EAbsT data =>
           let

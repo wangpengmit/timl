@@ -178,7 +178,7 @@ fun assert_TSum t =
                                                           
 fun assert_EAbs e =
   case e of
-      EAbs (st, bind) => (st, unBindAnnoName bind)
+      EAbs (st, bind, spec) => (st, unBindAnnoName bind, spec)
     | _ => raise assert_fail "assert_EAbs"
 fun assert_EAnnoLiveVars e =
   case e of
