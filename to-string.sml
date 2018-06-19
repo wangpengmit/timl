@@ -175,7 +175,7 @@ structure ExportExpr = ExportExprFn (structure Params = struct
                                      open CanToString
                                      open ExportIdx
                                      open ExportType
-                                  )
+                                    )
 open ExportExpr
 
 fun str_e gctx ctx b =

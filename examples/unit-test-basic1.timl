@@ -171,13 +171,14 @@ datatype list 'a : {Nat} =
 (*         [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
 (*       | _ :: xs => 1 + length_int xs *)
 
-fun length_int [a] {n : Nat} (l : list a {n}) (* return using $(1172*n + 292), 13*n+2 *) =
+fun length_int [a] {n : Nat} (l : list a {n}) return using $(2111*n + 976), 30*n+4 =
     case l of
         [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
-      | _ :: xs => (1 + length_int xs) using $(2111*n + 1), 30*n 
+      | _ :: xs => (1 + length_int xs) using $(2111*n+494), 30*n 
 
 (* val ls = [] : list int {_} *)
-val ls = [1, 2, 3]
+(* val ls = [1, 2, 3] *)
+val ls = [1, 2, 3, 4, 5]
 val a = length_int ls
                                  
 (* val a = "abc" *)
