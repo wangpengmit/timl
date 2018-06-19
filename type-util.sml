@@ -45,6 +45,11 @@ fun collect_TApp t =
       end
     | _ => (t, [])
              
+fun collect_TProd_left t =
+    case t of
+        TProd (t1, t2) => collect_TProd_left t1 @ [t2]
+      | _ => [t]
+             
 fun is_TApp_TUVar t =
   let
     val (t, t_args) = collect_TApp t

@@ -142,6 +142,8 @@ export.sml
 to-string-raw.sml
 to-string-nameful.sml
 to-string.sml
+pp-util.sml
+expr-pp.sml
 uvar.sml
 uniquefy.sml
 expr.sml
@@ -181,7 +183,6 @@ smt-solver.sml
 long-id-map.sml
 bigO-solver.sml
 simp-ctx.sml
-pp-util.sml
 nouvar-expr.sml
 visitor.sml                                 
 parse-filename.sml
