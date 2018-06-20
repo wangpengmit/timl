@@ -114,4 +114,15 @@ fun is_rec_body e =
       EUnOp (EUAnno (EABodyOfRecur ()), e, _) => (true, e)
     | _ => (false, e)
                
+fun collect_EAbsI e =
+  case e of
+      EAbsI (data, _) =>
+      let
+        val (s, (name, e)) = unBindAnnoName data
+        val (binds, e) = collect_EAbsI e
+      in
+        ((name, s) :: binds, e)
+      end
+    | _ => ([], e)
+             
 end

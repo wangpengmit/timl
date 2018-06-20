@@ -98,7 +98,7 @@ fun str_uvar_mt (str_s, str_k, str_mt) (u : ('sort, 'kind, 'mtype) uvar_mt) =
                             
 fun pp_uvar_mt (str_s, str_k, pp_t, str) (u : ('sort, 'kind, 'mtype) uvar_mt) =
   case !u of
-      Refined t => str_pt t
+      Refined t => pp_t t
     | Fresh info => str $ str_uinfo_mt (str_s, str_k) info
                             
 val eq_uvar_bs = op=
