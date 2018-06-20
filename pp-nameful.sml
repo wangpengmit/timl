@@ -1,6 +1,6 @@
 (***************** pretty printers  **********************)    
 
-functor PrettyPrinterFn (structure Expr : IDX_TYPE_EXPR
+functor PrettyPrintFn (structure Expr : IDX_TYPE_EXPR
                                             where type Idx.base_sort = BaseSorts.base_sort
                                               and type Type.base_type = BaseTypes.base_type
                                               and type Idx.region = Region.region
