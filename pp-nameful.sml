@@ -1,6 +1,6 @@
 (***************** pretty printers  **********************)    
 
-functor PrettyPrintFn (structure Expr : IDX_TYPE_EXPR
+functor PPNamefulFn (structure Expr : IDX_TYPE_EXPR
                                             where type Idx.base_sort = BaseSorts.base_sort
                                               and type Type.base_type = BaseTypes.base_type
                                               and type Idx.region = Region.region
@@ -13,7 +13,7 @@ functor PrettyPrintFn (structure Expr : IDX_TYPE_EXPR
                          val str_uvar_bs : ('a -> string) -> 'a Expr.Idx.uvar_bs -> string
                          val str_uvar_i : ('basic_sort -> string) * ('idx -> string) -> ('basic_sort, 'idx) Expr.Idx.uvar_i -> string
                          val str_uvar_s : ('sort -> string) -> ('basic_sort, 'sort) Expr.Idx.uvar_s -> string
-                         val pp_uvar_mt : ('sort -> string) * ('kind -> string) * ('mtype -> unit) * (string -> unit) -> ('sort, 'kind, 'mtype) Expr.Type.uvar_mt -> string
+                         val pp_uvar_mt : ('sort -> string) * ('kind -> string) * ('mtype -> unit) * (string -> unit) -> ('sort, 'kind, 'mtype) Expr.Type.uvar_mt -> unit
                          val str_ptrn_constr_tag : Expr.ptrn_constr_tag -> string
                         ) = struct
 
@@ -248,12 +248,13 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
                   (
                     str "[";
                     str $ fst name;
-                    comma ();
+                    colon ();
                     app (fn (name, s) => (str $ fst name; colon (); str $ str_s s; comma ())) iname_sorts;
                     pp_t t;
                     comma ();
                     app (fn i => (str $ str_i i; comma ())) is;
-                    str "]"
+                    str "]";
+                    comma ()
                   )
                 end
           in
@@ -843,29 +844,22 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
           in
             (
               open_hbox ();
-              str "DVal";
-              space ();
-              str "(";
-              str $ binder2str name;
-              space ();
+              strs "DVal";
+              strs $ binder2str name;
               app (fn (name, (i, j)) => (str "["; str name; colon (); str $ str_i i; comma (); str $ str_i j; str "]"; space ())) tnames;
               equal ();
               pp_e e;
-              str ")";
               close_box ()
             )
           end
         | DValPtrn (pn, Outer e, _) =>
           (
             open_hbox ();
-            str "DValPtrn";
-            space ();
-            str "(";
+            strs "DValPtrn";
             pp_pn pn;
             space ();
             equal ();
             pp_e e;
-            str ")";
             close_box ()
           )
         | DRec (name, bind, _) =>
@@ -898,11 +892,8 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
             (
               open_vbox ();
               open_hbox ();
-              str "DRec";
-              space ();
-              str "(";
-              str name;
-              space ();
+              strs "DRec";
+              strs name;
               app (fn (name, (i, j)) => (str "["; str name; colon (); str $ str_i i; comma (); str $ str_i j; str "]"; space ())) tnames;
               app (fn bind => (pp_bind bind; space ())) binds;
               comma ();
@@ -914,12 +905,11 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
               comma ();
               str $ str_i i;
               comma ();
-              str $ str_i j;
+              strs $ str_i j;
               equal ();
               close_box ();
               space ();
               pp_e e;
-              str ")";
               close_box ()
             )
           end
@@ -1010,5 +1000,10 @@ fun pp_e_to_fn params s e = withPP ("", 80, s) (fn s => pp_e params s e)
 fun pp_e_fn params = pp_e_to_fn params TextIO.stdOut
 fun pp_e_to_string_fn params e =
     pp_to_string "pp_e_to_string.tmp" (fn os => pp_e_to_fn params os e)
+                 
+fun pp_d_to_fn params s e = withPP ("", 80, s) (fn s => pp_d params s e)
+fun pp_d_fn params = pp_d_to_fn params TextIO.stdOut
+fun pp_d_to_string_fn params e =
+    pp_to_string "pp_d_to_string.tmp" (fn os => pp_d_to_fn params os e)
                  
 end

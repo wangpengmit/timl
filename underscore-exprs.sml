@@ -16,6 +16,7 @@ fun str_uvar_bs _ _ = "_"
 fun str_uvar_i _ _ = "_"
 fun str_uvar_s _ _ = "_"
 fun str_uvar_mt _ _ = "_"
+fun pp_uvar_mt (str_s, str_k, pp_t, str) _ = str "_"
 end
 
 structure NamefulExpr = IdxTypeExprFn (type v = string
@@ -52,6 +53,12 @@ end
 structure NamefulToString = ToStringFn (structure Expr = NamefulExpr
                                         structure CanToString = NamefulCanToString
                                 )
+                                
+structure NamefulPrettyPrint = PrettyPrintFn
+                                 (structure Expr = NamefulExpr
+                                  structure CanToString = NamefulCanToString
+                                  val str_ptrn_constr_tag = fn () => ""
+                                 )
                                 
 structure NamefulToStringRaw = ToStringRawFn (structure Expr = NamefulExpr
                                               open NamefulCanToString

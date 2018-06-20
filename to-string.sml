@@ -13,6 +13,7 @@ signature CAN_TO_STRING = sig
   val str_uvar_i : ('basic_sort -> string) * ('idx -> string) -> ('basic_sort, 'idx) uvar_i -> string
   val str_uvar_s : ('sort -> string) -> ('basic_sort, 'sort) uvar_s -> string
   val str_uvar_mt : ('sort -> string) * ('kind -> string) * ('mtype -> string) -> ('sort, 'kind, 'mtype) uvar_mt -> string
+  val pp_uvar_mt : ('sort -> string) * ('kind -> string) * ('mtype -> unit) * (string -> unit) -> ('sort, 'kind, 'mtype) uvar_mt -> unit
 end
 
 functor ToStringFn (structure Expr : IDX_TYPE_EXPR where type Idx.base_sort = BaseSorts.base_sort

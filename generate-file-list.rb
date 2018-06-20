@@ -143,7 +143,8 @@ to-string-raw.sml
 to-string-nameful.sml
 to-string.sml
 pp-util.sml
-expr-pp.sml
+pp-nameful.sml
+pretty-print.sml
 uvar.sml
 uniquefy.sml
 expr.sml

@@ -48,9 +48,10 @@ structure ToString = ToStringFn (structure Expr = Expr
                                  structure CanToString = CanToString
                                 )
                                 
-structure ToString = ToStringFn (structure Expr = Expr
-                                 structure CanToString = CanToString
-                                )
+structure PrettyPrint = PrettyPrintFn (structure Expr = Expr
+                                       structure CanToString = CanToString
+                                       val str_ptrn_constr_tag = fn inj => Util.str_pair (Util.str_int, Util.str_int) inj
+                                      )
                                 
 structure ToStringRaw = ToStringRawFn (structure Expr = Expr
                                     open CanToString

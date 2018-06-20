@@ -852,6 +852,8 @@ fun test1 dirname =
     open NameResolve
     val (prog, _, _) = resolve_prog empty prog
                                     
+    (* val e_str = PrettyPrint.pp_e_to_string Gctx.empty ToStringUtil.empty_ctx e *)
+    (* val () = write_file (join_dir_file' dirname $ "unit-test-before-TiML-tc.tmp", e_str) *)
     open TypeCheck
     val () = println "Started TiML typechecking ..."
     val () = TypeCheck.turn_on_builtin ()
@@ -877,9 +879,8 @@ fun test1 dirname =
     val e = SimpExpr.simp_e [] e
     (* val () = println "Finished simplifying" *)
                      
-    (* val e = simp_e e *)
-    (* val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e *)
-    (* val () = write_file (join_dir_file' dirname $ "unit-test-before-translation.tmp", e_str) *)
+    val e_str = PrettyPrint.pp_e_to_string Gctx.empty ToStringUtil.empty_ctx e
+    val () = write_file (join_dir_file' dirname $ "unit-test-before-translation.tmp", e_str)
     val () = println "Started translating ..."
     val e = trans_e e
     val st_name2ty = StMap.map (mapSnd trans_mt) st_name2ty
