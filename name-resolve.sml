@@ -249,15 +249,15 @@ fun copy_anno gctx (anno as (t, d, j)) e =
           ECase (e, (t', d', j'), es, r) =>
           let
             fun is_tuple_value e =
-                false
                 (* case e of *)
                 (*     EVar _ => true *)
-                (*   | EBinOp (EBPair (), e1, e2) => is_tuple_value e1 andalso is_tuple_value e2 *)
+                (*   (* | EBinOp (EBPair (), e1, e2) => is_tuple_value e1 andalso is_tuple_value e2 *) *)
                 (*   | _ => false *)
+                false
             (* if e is tuple value, we are sure it doesn't cost time, so we can copy time annotation *)
             val (d, j) = if is_tuple_value e then (d, j) else (NONE, NONE)
             val (t, d, j) = (copy t' t, copy d' d, copy j' j)
-            val es = map (copy_anno_rule (t, d, j)) es
+            (* val es = map (copy_anno_rule (t, d, j)) es *)
           in
             ECase (e, (t, d, j), es, r)
           end

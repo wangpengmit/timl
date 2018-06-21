@@ -180,9 +180,9 @@ fun pp_e_to_string gctx ctx b =
 
 fun pp_d_to_string gctx ctx b =
   let
-    val (b, _) = export_decl gctx ctx b
+    val (b, ctx) = export_decl gctx ctx b
   in
-    PPN.pp_d_to_string_fn pp_e_params b
+    (PPN.pp_d_to_string_fn pp_e_params b, ctx)
   end
 
 end

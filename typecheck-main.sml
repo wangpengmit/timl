@@ -38,6 +38,8 @@ infixr 2 \/
 infixr 1 -->
 infix 1 <->
 
+infix 0 |>#
+        
 infix  9 @!
 fun m @! k = StMap.find (m, k)
 infix  6 @+
@@ -376,7 +378,10 @@ infix 6 %%+
 
 infix 6 ++
 fun a ++ b = binop_pair op+ (a, b)
-                   
+
+infix 6 %%-
+fun a %%- b = binop_pair (fn (a, b) => IBinOp (IBMinus (), a, b)) (a, b)
+                        
 fun smart_max a b =
   if eq_i a (T0 dummy) then
     b
@@ -891,31 +896,6 @@ fun is_constr e =
                
 fun N n = INat (n, dummy)
 fun TN n = (to_real n, N 0)
-
-fun is_tail_call e =
-  case e of
-      EBinOp (EBApp (), _, _) => true
-    | EET (EETAppT (), _, _) => true
-    | EEI (EEIAppI (), _, _) => true
-    | ECase (_, _, binds, _) =>
-      let
-        val len = length binds
-      in
-        if len >= 2 then
-          true 
-        else if len = 1 then
-          is_tail_call $ snd $ Unbound.unBind $ hd binds
-        else true
-      end        
-    | ECaseSumbool _ => true
-    | EIfi _ => true
-    | ETriOp (ETIte (), _, _, _) => true
-    | EUnOp (EUAnno _, e, _) => is_tail_call e
-    | EEI (EEIAscTime (), e, _) => is_tail_call e
-    | EEI (EEIAscSpace (), e, _) => is_tail_call e
-    | EET (EETAsc (), e, _) => is_tail_call e
-    | ELet (_, bind, _) => is_tail_call $ snd $ Unbound.unBind bind
-    | _ => false
 
 fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext), (* pcovers, *) pn : U.ptrn, t : mtype) : ptrn * cover * context * int =
   let
@@ -1946,8 +1926,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
               smart_max_list times
             fun computed_space () =
               smart_max_list spaces
-            val (t, time, space) = (lazy_default computed_t $ #1 return, computed_time (), computed_space ())
-            (* val (t, time, space) = map_triple (lazy_default computed_t, lazy_default computed_time, lazy_default computed_space) return *)
+            (* val (t, time, space) = (lazy_default computed_t $ #1 return, computed_time (), computed_space ()) *)
+            val (t, time, space) = map_triple (lazy_default computed_t, lazy_default computed_time, lazy_default computed_space) return
             fun unify_states sts =
               case sts of
                   [] => NONE
@@ -2019,25 +1999,32 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 
 and check_rules gctx (ctx as (sctx, kctx, cctx, tctx), st) (rules, t as (t1, return), r) =
     let 
-      val skcctx = (sctx, kctx, cctx) 
-      fun f (rule, acc) =
+      fun get_inj (cx, _) =
+        let
+          val c as (family, tbinds) = snd $ fetch_constr gctx (cctx, cx)
+          val siblings = map fst $ get_family_siblings gctx cctx cx
+          val pos_in_family = indexOf (curry eq_var cx) siblings !! (fn () => raise Impossible "get_inj()/family_pos")
+        in
+          (length siblings, pos_in_family)
+        end
+      val ds = get_rules_cost_adjustments get_inj $ map (mapSnd U.is_tail_call) rules
+      val skcctx = (sctx, kctx, cctx)
+      fun f ((rule, adjust), acc) =
 	let
           (* val previous_covers = map (snd o snd) $ rev acc *)
-          val ans as (rule, tdst, cover) = check_rule gctx (ctx, st) ((* previous_covers, *) rule, t)
+          val ans as (rule, tdst, cover) = check_rule gctx (ctx, st) ((* previous_covers, *) rule, t, adjust)
           (* val covers = rev $ map (snd o snd) acc *)
 	  (* val () = check_redundancy (skcctx, t1, covers, cover, get_region_rule rule) *)
 	in
 	  ans :: acc
 	end 
-      val (rules_tdsts, covers) = unzip $ map (fn (a, b, c) => ((a, b), c)) $ rev $ foldl f [] rules
+      val (rules_tdsts, covers) = unzip $ map (fn (a, b, c) => ((a, b), c)) $ rev $ foldl f [] $ zip (rules, ds)
       (* val () = check_exhaustion (skcctx, t1, covers, r) *)
-      val ds = get_rules_cost_adjustments snd $ map (mapSnd is_tail_call) $ map fst rules_tdsts
-      val ret = ListPair.map (fn (((pn, e), (t, d, st)), d') => ((pn, e), (t, mapPair' to_real N d' %%+ d, st))) (rules_tdsts, ds)
     in
-      ret
+      rules_tdsts
     end
 
-and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e), t as (t1, return)) =
+and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e), t as (t1, return), adjust) =
     let 
       val skcctx = (sctx, kctx, cctx) 
       val (pn, cover, ctxd as (sctxd, kctxd, _, _), nps) = match_ptrn gctx (skcctx, (* pcovers, *) pn, t1)
@@ -2045,16 +2032,13 @@ and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e
       val (ctx, st) = add_ctx_ctxst ctxd (ctx, st)
       val (e, t, d, st) = get_mtype gctx (ctx, st) e
       val r = get_region_e e
-      fun get_ptrn_cost (pn, t1) =
-        TN0 dummy
-      val d = get_ptrn_cost (pn, t1) %%+ d
+      val e = EAsc (e, shift_ctx_mt ctxd t)
+      val d = mapPair' to_real N adjust %%+ d
       val (t, d) = forget_or_check_return r gctx (#1 ctx, #2 ctx) ctxd (t, d) return 
       val st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) st
       val () = close_n nps
       val () = close_ctx ctxd
-      val e = EAsc (e, shift_ctx_mt ctxd t)
-      val e = EAscTime (e, shift_ctx_i ctxd $ fst d)
-      val e = EAscSpace (e, shift_ctx_i ctxd $ snd d)
+      val e = e |># (shift_ctx_2i ctxd d %%- mapPair' to_real N adjust)
     in
       ((pn, e), (t, d, st), cover)
     end

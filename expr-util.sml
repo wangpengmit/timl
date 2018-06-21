@@ -125,4 +125,29 @@ fun collect_EAbsI e =
       end
     | _ => ([], e)
              
+fun is_tail_call e =
+  case e of
+      EBinOp (EBApp (), _, _) => true
+    | EET (EETAppT (), _, _) => true
+    | EEI (EEIAppI (), _, _) => true
+    | ECase (_, _, binds, _) =>
+      let
+        val len = length binds
+      in
+        if len >= 2 then
+          true 
+        else if len = 1 then
+          is_tail_call $ snd $ Unbound.unBind $ hd binds
+        else true
+      end        
+    | ECaseSumbool _ => true
+    | EIfi _ => true
+    | ETriOp (ETIte (), _, _, _) => true
+    | EUnOp (EUAnno _, e, _) => is_tail_call e
+    | EEI (EEIAscTime (), e, _) => is_tail_call e
+    | EEI (EEIAscSpace (), e, _) => is_tail_call e
+    | EET (EETAsc (), e, _) => is_tail_call e
+    | ELet (_, bind, _) => is_tail_call $ snd $ Unbound.unBind bind
+    | _ => false
+
 end
