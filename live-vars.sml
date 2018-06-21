@@ -2,6 +2,8 @@ structure LiveVars = struct
 
 structure Visitor = ExprVisitorFn (structure S = UnderscoredExpr
                                    structure T = UnderscoredExpr)
+
+open UnderscoredExprShift
 open Visitor
 open VisitorUtil
 open Util
@@ -88,10 +90,10 @@ fun live_vars_expr_visitor_vtable cast () =
     (* has_cont_var: a continuation variable will also be alive (which is invisible before CPS), so the number of live variables should be added by one *)
     fun num_lvars (lvars, has_k, has_cont_var) = (Set.numItems (!lvars) + b2i has_cont_var, !has_k)
                                                                 
-    fun visit_expr this env data =
+    fun visit_expr this (env as (_, has_k, _)) data =
       let
         val vtable = cast this
-      in
+        val ret = 
         case data of
 	    EVar data => #visit_EVar vtable this env data
           | EConst data => #visit_EConst vtable this env data
@@ -132,6 +134,9 @@ fun live_vars_expr_visitor_vtable cast () =
               ESetModify (b, x, es, e, r)
             end
           | EGet (x, es, r) => EGet (x, mapr (#visit_expr vtable this env) es, r)
+        val () = has_k := true
+      in
+        ret
       end
     fun visit_var this (lvars, _, _) data =
       ((case data of
@@ -178,6 +183,62 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EUnOp (opr, e, r)
       end
+    fun shift n x =
+      case x of
+          inl x => inl $ x + n
+        | inr _ => x
+    fun forget n s = Set.map (fn x => case x of inl x => inl $ x - n | inr _ => x) $ Set.filter (fn inl x => x >= n | inr _ => true) s
+    fun get_num_ebind_pn pn = snd $ PV.count_binder_pn pn
+    fun visit_bind visit_body env bind =
+      let
+        val lvars = #1 env
+        val (pn, e) = unBind bind
+        val n = get_num_ebind_pn pn
+        val () = unop_ref (Set.map (shift n)) lvars
+        val e = visit_body env e
+        val () = unop_ref (forget n) lvars
+      in
+        Bind (pn, e)
+      end
+    fun need_intro_new_var e =
+        let
+          val f = need_intro_new_var
+        in
+          case e of
+              EVar _ => false
+            | EEI (EEIAscTime (), e, _) => f e
+            | EEI (EEIAscSpace (), e, _) => f e
+            | EET (EETAsc (), e, _) => f e
+            | _ => true
+        end
+    fun visit_e2 this env (e1, e2) =
+        let
+          val vtable = cast this
+          val lvars = #1 env
+          val has_k = #2 env
+          val () = has_k := true
+        in
+          if need_intro_new_var e1 then
+            let
+              val () = unop_ref (Set.map (shift 1)) lvars
+              val () = unop_ref (curry Set.add' $ inl 0) lvars
+              val e2 = shift_e_e e2
+              val e2 = #visit_expr vtable this env e2
+              fun forget01_e_e a = forget_e_e 0 1 a
+              val e2 = forget01_e_e e2
+              val () = unop_ref (forget 1) lvars
+              val e1 = #visit_expr vtable this env e1
+            in
+              (e1, e2)
+            end
+          else
+            let
+              val e2 = #visit_expr vtable this env e2
+              val e1 = #visit_expr vtable this env e1
+            in
+              (e1, e2)
+            end
+        end
     fun visit_EBinOp this env (opr, e1, e2) =
       let
         val vtable = cast this
@@ -192,21 +253,19 @@ fun live_vars_expr_visitor_vtable cast () =
           | EBNat (EBNAdd ()) => #visit_ENatAdd vtable this env data
           | _ =>
             let
-              val e2 = #visit_expr vtable this env e2
-              val e1 = #visit_expr vtable this env e1
+              val (e1, e2) = visit_e2 this env (e1, e2)
             in
               EBinOp (opr, e1, e2)
             end
       end
     fun visit_EApp this env (e1, e2) =
       let
-        val () = println $ "lvars = " ^ (SetU.str_set (str_sum str_int (str_pair (id, str_int))) (!(#1 env)))
-        val () = println $ "has_cont_var = " ^ (str_bool (#3 env))
+        (* val () = println $ "lvars = " ^ (SetU.str_set (str_sum str_int (str_pair (id, str_int))) (!(#1 env))) *)
+        (* val () = println $ "has_cont_var = " ^ (str_bool (#3 env)) *)
         val n_lvars = num_lvars env
-        val () = println $ "n_lvars = " ^ (str_int $ fst n_lvars)
+        (* val () = println $ "n_lvars = " ^ (str_int $ fst n_lvars) *)
         val vtable = cast this
-        val e2 = #visit_expr vtable this env e2
-        val e1 = #visit_expr vtable this env e1
+        val (e1, e2) = visit_e2 this env (e1, e2)
       in
         EBinOp (EBApp (), e1, EAnnoLiveVars (e2, n_lvars, dummy))
       end
@@ -226,8 +285,7 @@ fun live_vars_expr_visitor_vtable cast () =
       let
         val vtable = cast this
         val (e1, e2) = data
-        val e2 = #visit_expr vtable this env e2
-        val e1 = #visit_expr vtable this env e1
+        val (e1, e2) = visit_e2 this env (e1, e2)
       in
         EBinOp (EBPair (), e1, e2)
       end
@@ -235,8 +293,7 @@ fun live_vars_expr_visitor_vtable cast () =
       let
         val vtable = cast this
         val (e1, e2) = data
-        val e2 = #visit_expr vtable this env e2
-        val e1 = #visit_expr vtable this env e1
+        val (e1, e2) = visit_e2 this env (e1, e2)
       in
         EBinOp (EBAdd, e1, e2)
       end
@@ -244,8 +301,7 @@ fun live_vars_expr_visitor_vtable cast () =
       let
         val vtable = cast this
         val (e1, e2) = data
-        val e2 = #visit_expr vtable this env e2
-        val e1 = #visit_expr vtable this env e1
+        val (e1, e2) = visit_e2 this env (e1, e2)
       in
         EBinOp (EBNatAdd, e1, e2)
       end
@@ -253,8 +309,7 @@ fun live_vars_expr_visitor_vtable cast () =
       let
         val vtable = cast this
         val (e1, e2) = data
-        val e2 = #visit_expr vtable this env e2
-        val e1 = #visit_expr vtable this env e1
+        val (e1, e2) = visit_e2 this env (e1, e2)
       in
         EBinOp (EBNew (), e1, e2)
       end
@@ -262,8 +317,7 @@ fun live_vars_expr_visitor_vtable cast () =
       let
         val vtable = cast this
         val (e1, e2) = data
-        val e2 = #visit_expr vtable this env e2
-        val e1 = #visit_expr vtable this env e1
+        val (e1, e2) = visit_e2 this env (e1, e2)
       in
         EBinOp (EBRead (), e1, e2)
       end
@@ -342,23 +396,6 @@ fun live_vars_expr_visitor_vtable cast () =
         val t = #visit_mtype vtable this env t
       in
         ET (opr, t, r)
-      end
-    fun get_num_ebind_pn pn = snd $ PV.count_binder_pn pn
-    fun shift n x =
-      case x of
-          inl x => inl $ x + n
-        | inr _ => x
-    fun forget n s = Set.map (fn x => case x of inl x => inl $ x - n | inr _ => x) $ Set.filter (fn inl x => x >= n | inr _ => true) s
-    fun visit_bind visit_body env bind =
-      let
-        val lvars = #1 env
-        val (pn, e) = unBind bind
-        val n = get_num_ebind_pn pn
-        val () = unop_ref (Set.map (shift n)) lvars
-        val e = visit_body env e
-        val () = unop_ref (forget n) lvars
-      in
-        Bind (pn, e)
       end
     fun visit_EAbs this env (st, bind, spec) =
       let

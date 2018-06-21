@@ -170,40 +170,40 @@ datatype list 'a : {Nat} =
 (* val ls = [1, 2, 3] *)
 val ls = [1, 2, 3, 4, 5]
 
-(* fun length_int [a] {n : Nat} (l : list a {n}) return using $(2111*n + 976), 30*n+4 = *)
-(*     case l return using $(2111*n + 777), 30*n+2 of *)
-(*         [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
-(*       | _ :: xs => 1 + length_int xs *)
+(* (* fun length_int [a] {n : Nat} (l : list a {n}) return using $(2111*n + 976), 30*n+4 = *) *)
+(* (*     case l return using $(2111*n + 777), 30*n+2 of *) *)
+(* (*         [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *) *)
+(* (*       | _ :: xs => 1 + length_int xs *) *)
 
-(* fun length_int [a] {n : Nat} (l : list a {n}) return using $(2111*n + 976), 30*n+4 = *)
-(*     case l of *)
-(*         [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
-(*       | _ :: xs => (1 + length_int xs) using $(2111*n+494), 30*n *)
+(* (* fun length_int [a] {n : Nat} (l : list a {n}) return using $(2111*n + 976), 30*n+4 = *) *)
+(* (*     case l of *) *)
+(* (*         [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *) *)
+(* (*       | _ :: xs => (1 + length_int xs) using $(2111*n+494), 30*n *) *)
 
-fun length_int [a] {n : Nat} (l : list a {n}) =
-    case l return using $(1362*n+777), 17*n+2 of
-        [] => (0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0) using _
-      | _ :: xs => (1 + length_int xs) using _
+(* fun length_int [a] {n : Nat} (l : list a {n}) = *)
+(*     case l return using $(2111*n+777), 30*n+2 of *)
+(*         [] => (0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0) using _ *)
+(*       | _ :: xs => (1 + (length_int xs using _, _)) using _ *)
 
-val a = length_int ls
+(* val a = length_int ls *)
            
-(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
-(* (* fun waste_time a = *) *)
-(* (*   let *) *)
-(* (*     val _ = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *) *)
-(* (*   in *) *)
-(* (*     a *) *)
-(* (*   end *) *)
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+(* fun waste_time a = *)
+(*   let *)
+(*     val _ = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
+(*   in *)
+(*     a *)
+(*   end *)
                                                                                               
-(* fun map ['a 'b] {m1 : Time} {m2 n : Nat} (f : 'a -- m1, m2 --> 'b) (ls : list (* 'a *)_ {n}) = *)
-(*   case ls return list (* 'b *)_ {n} using (4007.0+m1)*$n+1460.0, (59+m2)*n+12 of *)
-(*   (* case ls return using (4007.0+m1)*$n+1874.0, (59+m2)*n+18 of *) *)
-(*       Nil => (let val _ = waste_time () in Nil end) (* using $1232, 10 *) *)
-(*       (* Nil => waste_time Nil (* using $1232, 10 *) *) *)
-(*     | Cons (x, xs) => Cons (f x, map f xs) *)
+fun map ['a 'b] {m1 : Time} {m2 n : Nat} (f : 'a -- m1, m2 --> 'b) (ls : list (* 'a *)_ {n}) =
+  case ls return list (* 'b *)_ {n} using (6524.0+m1)*$n+1767.0, (104+m2)*n+17 of
+  (* case ls return using (4007.0+m1)*$n+1874.0, (59+m2)*n+18 of *)
+      Nil => (let val _ = waste_time () in Nil end) : list _ {n} using _, _
+      (* Nil => waste_time Nil (* using $1232, 10 *) *)
+    | Cons (x, xs) => Cons (f x, map f xs) : list _ {n}
                                   
-(* fun inc x = x + 1 *)
-(* val a = map inc ls *)
+fun inc x = x + 1
+val a = map inc ls
                                  
 (* val a = "abc" *)
           

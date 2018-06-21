@@ -38,6 +38,7 @@ infixr 2 \/
 infixr 1 -->
 infix 1 <->
 
+infix 0 %:
 infix 0 |>#
         
 infix  9 @!
@@ -2032,13 +2033,12 @@ and check_rule gctx (ctx as (sctx, kctx, cctx, tctx), st) ((* pcovers, *) (pn, e
       val (ctx, st) = add_ctx_ctxst ctxd (ctx, st)
       val (e, t, d, st) = get_mtype gctx (ctx, st) e
       val r = get_region_e e
-      val e = EAsc (e, shift_ctx_mt ctxd t)
       val d = mapPair' to_real N adjust %%+ d
       val (t, d) = forget_or_check_return r gctx (#1 ctx, #2 ctx) ctxd (t, d) return 
       val st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) st
       val () = close_n nps
       val () = close_ctx ctxd
-      val e = e |># (shift_ctx_2i ctxd d %%- mapPair' to_real N adjust)
+      val e = e %: shift_ctx_mt ctxd t |># (shift_ctx_2i ctxd d %%- mapPair' to_real N adjust)
     in
       ((pn, e), (t, d, st), cover)
     end
