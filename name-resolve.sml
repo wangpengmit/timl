@@ -237,91 +237,91 @@ fun shift_return (sctxn, kctxn) (t, d, j) =
        Option.map (fn d => shiftx_i_i 0 sctxn d) j)
     end
       
-fun copy_anno gctx (anno as (t, d, j)) e =
-    let
-      val copy_anno = copy_anno gctx
-      val copy_anno_rule = copy_anno_rule gctx
-      fun copy a b = case a of
-                         NONE => b
-                       | SOME _ => a
-    in
-      case e of
-          ECase (e, (t', d', j'), es, r) =>
-          let
-            fun is_tuple_value e =
-                (* case e of *)
-                (*     EVar _ => true *)
-                (*   (* | EBinOp (EBPair (), e1, e2) => is_tuple_value e1 andalso is_tuple_value e2 *) *)
-                (*   | _ => false *)
-                false
-            (* if e is tuple value, we are sure it doesn't cost time, so we can copy time annotation *)
-            val (d, j) = if is_tuple_value e then (d, j) else (NONE, NONE)
-            val (t, d, j) = (copy t' t, copy d' d, copy j' j)
-            (* val es = map (copy_anno_rule (t, d, j)) es *)
-          in
-            ECase (e, (t, d, j), es, r)
-          end
-        | ELet ((t', d', j'), bind, r) =>
-          let
-            val (decls, e) = Unbound.unBind bind
-            val decls = unTeles decls
-            val (t, d, j) = (copy t' t, copy d' d, copy j' j)
-            open UnderscoredToString
-            val (_, (sctx, kctx, _, _)) = str_decls gctx ([], [], [], []) decls
-            val (sctxn, kctxn) = (length sctx, length kctx)
-            fun is_match_var decl =
-                case decl of
-                    DValPtrn (_, Outer (EVar _), _) => true
-                  | DVal (_, Outer bind, _) =>
-                    let
-                      val (_, e) = Unbound.unBind bind
-                    in
-                      case e of
-                          EVar _ => true
-                        | _ => false
-                    end
-                  | _ => false
-            val (d', j') = if List.all is_match_var decls then (d, j) else (NONE, NONE)
-          in
-            ELet ((t, d, j), Unbound.Bind (Teles decls, copy_anno (shift_return (sctxn, kctxn) (t, d', j')) e), r)
-          end
-        | EEI (EEIAscTime (), e, d') =>
-          let
-            val d = SOME d'
-            val e = copy_anno (t, d, j) e
-          in
-            EAscTime (e, d')
-          end
-        | EEI (EEIAscSpace (), e, j') =>
-          let
-            val j = SOME j'
-            val e = copy_anno (t, d, j) e
-          in
-            EAscSpace (e, j')
-          end
-        | EET (EETAsc (), e, t') =>
-          let
-            val t = SOME t'
-            val e = copy_anno (t, d, j) e
-          in
-            EAsc (e, t')
-          end
-        | ET (ETNever (), _, _) => e
-        | _ =>
-          case t of
-              SOME t => EAsc (e, t)
-            | NONE => e
-    end
+(* fun copy_anno gctx (anno as (t, d, j)) e = *)
+(*     let *)
+(*       val copy_anno = copy_anno gctx *)
+(*       val copy_anno_rule = copy_anno_rule gctx *)
+(*       fun copy a b = case a of *)
+(*                          NONE => b *)
+(*                        | SOME _ => a *)
+(*     in *)
+(*       case e of *)
+(*           ECase (e, (t', d', j'), es, r) => *)
+(*           let *)
+(*             fun is_tuple_value e = *)
+(*                 (* case e of *) *)
+(*                 (*     EVar _ => true *) *)
+(*                 (*   (* | EBinOp (EBPair (), e1, e2) => is_tuple_value e1 andalso is_tuple_value e2 *) *) *)
+(*                 (*   | _ => false *) *)
+(*                 false *)
+(*             (* if e is tuple value, we are sure it doesn't cost time, so we can copy time annotation *) *)
+(*             val (d, j) = if is_tuple_value e then (d, j) else (NONE, NONE) *)
+(*             val (t, d, j) = (copy t' t, copy d' d, copy j' j) *)
+(*             (* val es = map (copy_anno_rule (t, d, j)) es *) *)
+(*           in *)
+(*             ECase (e, (t, d, j), es, r) *)
+(*           end *)
+(*         | ELet ((t', d', j'), bind, r) => *)
+(*           let *)
+(*             val (decls, e) = Unbound.unBind bind *)
+(*             val decls = unTeles decls *)
+(*             val (t, d, j) = (copy t' t, copy d' d, copy j' j) *)
+(*             open UnderscoredToString *)
+(*             val (_, (sctx, kctx, _, _)) = str_decls gctx ([], [], [], []) decls *)
+(*             val (sctxn, kctxn) = (length sctx, length kctx) *)
+(*             fun is_match_var decl = *)
+(*                 case decl of *)
+(*                     DValPtrn (_, Outer (EVar _), _) => true *)
+(*                   | DVal (_, Outer bind, _) => *)
+(*                     let *)
+(*                       val (_, e) = Unbound.unBind bind *)
+(*                     in *)
+(*                       case e of *)
+(*                           EVar _ => true *)
+(*                         | _ => false *)
+(*                     end *)
+(*                   | _ => false *)
+(*             val (d', j') = if List.all is_match_var decls then (d, j) else (NONE, NONE) *)
+(*           in *)
+(*             ELet ((t, d, j), Unbound.Bind (Teles decls, copy_anno (shift_return (sctxn, kctxn) (t, d', j')) e), r) *)
+(*           end *)
+(*         | EEI (EEIAscTime (), e, d') => *)
+(*           let *)
+(*             val d = SOME d' *)
+(*             val e = copy_anno (t, d, j) e *)
+(*           in *)
+(*             EAscTime (e, d') *)
+(*           end *)
+(*         | EEI (EEIAscSpace (), e, j') => *)
+(*           let *)
+(*             val j = SOME j' *)
+(*             val e = copy_anno (t, d, j) e *)
+(*           in *)
+(*             EAscSpace (e, j') *)
+(*           end *)
+(*         | EET (EETAsc (), e, t') => *)
+(*           let *)
+(*             val t = SOME t' *)
+(*             val e = copy_anno (t, d, j) e *)
+(*           in *)
+(*             EAsc (e, t') *)
+(*           end *)
+(*         | ET (ETNever (), _, _) => e *)
+(*         | _ => *)
+(*           case t of *)
+(*               SOME t => EAsc (e, t) *)
+(*             | NONE => e *)
+(*     end *)
       
-and copy_anno_rule gctx return bind =
-    let
-      val (pn, e) = Unbound.unBind bind
-      fun ptrn_names pn : string list * string list = PatternVisitor.collect_binder_pn pn
-      val (sctx, _) = ptrn_names pn
-      val offset = (length sctx, 0)
-    in
-      Unbound.Bind (pn, copy_anno gctx (shift_return offset return) e)
-    end
+(* and copy_anno_rule gctx return bind = *)
+(*     let *)
+(*       val (pn, e) = Unbound.unBind bind *)
+(*       fun ptrn_names pn : string list * string list = PatternVisitor.collect_binder_pn pn *)
+(*       val (sctx, _) = ptrn_names pn *)
+(*       val offset = (length sctx, 0) *)
+(*     in *)
+(*       Unbound.Bind (pn, copy_anno gctx (shift_return offset return) e) *)
+(*     end *)
       
 fun get_datatype_names (Bind (name, tbinds)) =
     let
@@ -491,7 +491,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
             case e of
                 EEI (EEIAscTime (), e, i) => (e, i)
               | _ => raise Impossible "import_e/visit_EAscTime"
-        val e = copy_anno (gctx_names gctx) (NONE, SOME i, NONE) e
+        (* val e = copy_anno (gctx_names gctx) (NONE, SOME i, NONE) e *)
       in
         EAscTime (e, i)
       end
@@ -504,7 +504,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
             case e of
                 EET (EETAsc (), e, t) => (e, t)
               | _ => raise Impossible "import_e/visit_EAsc"
-        val e = copy_anno (gctx_names gctx) (SOME t, NONE, NONE) e
+        (* val e = copy_anno (gctx_names gctx) (SOME t, NONE, NONE) e *)
       in
         EAsc (e, t)
       end
@@ -517,7 +517,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
             case e of
                 ECase data => data
               | _ => raise Impossible "import_e/visit_ECase"
-        val rules = map (copy_anno_rule (gctx_names gctx) return) rules
+        (* val rules = map (copy_anno_rule (gctx_names gctx) return) rules *)
       in
         ECase (e, return, rules, r)
       end
@@ -531,7 +531,7 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
                 [DRec data] => data
               | _ => raise Impossible "import_e/visit_DRec"
         val (names, (sts, (t, (d, j)), e)) = Unbound.unBind $ unInner bind
-        val e = copy_anno (gctx_names gctx) (SOME t, SOME d, SOME j) e
+        (* val e = copy_anno (gctx_names gctx) (SOME t, SOME d, SOME j) e *)
       in
         [DRec (name, Inner $ Unbound.Bind (names, (sts, (t, (d, j)), e)), r)]
       end

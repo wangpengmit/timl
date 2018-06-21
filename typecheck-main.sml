@@ -1988,9 +1988,9 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     val t = SimpType.simp_mt $ normalize_mt true gctx kctx t
     val d = simp_2i $ unop_pair normalize_i d
     (* val () = println $ str_ls id $ #4 ctxn *)
-    val () = println $ " Typed: " ^ str_e gctxn ctxn e
-    val () = println $ "  Time: " ^ str_i gctxn sctxn (fst d)
-    val () = println $ "  Type: " ^ str_mt gctxn skctxn t
+    (* val () = println $ " Typed: " ^ str_e gctxn ctxn e *)
+    (* val () = println $ "  Time: " ^ str_i gctxn sctxn (fst d) *)
+    (* val () = println $ "  Type: " ^ str_mt gctxn skctxn t *)
     (* val () = print (sprintf " Typed $: \n        $\n" [str_e gctxn ctxn e, str_mt gctxn skctxn t]) *)
     (* val () = print (sprintf "  type: $ [for $]\n  time: $\n" [str_mt gctxn skctxn t, str_e gctxn ctxn e, str_i gctxn sctxn d]) *)
   in
