@@ -211,6 +211,7 @@ fun live_vars_expr_visitor_vtable cast () =
             | EET (EETAsc (), e, _) => f e
             | _ => true
         end
+    fun forget01_e_e a = forget_e_e 0 1 a
     fun visit_e2 this env (e1, e2) =
         let
           val vtable = cast this
@@ -224,7 +225,6 @@ fun live_vars_expr_visitor_vtable cast () =
               val () = unop_ref (curry Set.add' $ inl 0) lvars
               val e2 = shift_e_e e2
               val e2 = #visit_expr vtable this env e2
-              fun forget01_e_e a = forget_e_e 0 1 a
               val e2 = forget01_e_e e2
               val () = unop_ref (forget 1) lvars
               val e1 = #visit_expr vtable this env e1
@@ -238,6 +238,17 @@ fun live_vars_expr_visitor_vtable cast () =
             in
               (e1, e2)
             end
+        end
+    fun visit_e3 this env (e1, e2, e3) =
+        let
+          val vtable = cast this
+          (* delegate to visit_e2 *)
+          val e = #visit_expr vtable this env (EIntAdd (e1, EIntAdd (e2, e3)))
+        in
+          case e of
+              EBinOp (EBPrim (EBPIntAdd ()), e1, (EBinOp (EBPrim (EBPIntAdd ()), e2, e3))) =>
+              (e1, e2, e3)
+            | _ => raise Impossible "live-vars/visit_e3()"
         end
     fun visit_EBinOp this env (opr, e1, e2) =
       let
@@ -342,9 +353,7 @@ fun live_vars_expr_visitor_vtable cast () =
         | _ =>
           let
             val vtable = cast this
-            val e3 = #visit_expr vtable this env e3
-            val e2 = #visit_expr vtable this env e2
-            val e1 = #visit_expr vtable this env e1
+            val (e1, e2, e3) = visit_e3 this env (e1, e2, e3)
           in
             ETriOp (opr, e1, e2, e3)
           end

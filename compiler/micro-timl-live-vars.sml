@@ -48,6 +48,8 @@ fun live_vars_expr_visitor_vtable cast () =
             | EAscType (e, _) => f e
             | _ => true
         end
+    fun forget_e_e a = shift_e_e_fn forget_var a
+    fun forget01_e_e a = forget_e_e 0 1 a
     fun visit_e2 this env (e1, e2) =
         let
           val vtable = cast this
@@ -61,8 +63,6 @@ fun live_vars_expr_visitor_vtable cast () =
               val () = unop_ref (fn s => s @%+ 0) lvars
               val e2 = shift01_e_e e2
               val e2 = #visit_expr vtable this env e2
-              fun forget_e_e a = shift_e_e_fn forget_var a
-              fun forget01_e_e a = forget_e_e 0 1 a
               val e2 = forget01_e_e e2
               val () = unop_ref (fn s => ISet.map dec (s @%- 0)) lvars
               val e1 = #visit_expr vtable this env e1
@@ -76,6 +76,17 @@ fun live_vars_expr_visitor_vtable cast () =
             in
               (e1, e2)
             end
+        end
+    fun visit_e3 this env (e1, e2, e3) =
+        let
+          val vtable = cast this
+          (* delegate to visit_e2 *)
+          val e = #visit_expr vtable this env (EIntAdd (e1, EIntAdd (e2, e3)))
+        in
+          case e of
+              EBinOp (EBPrim (EBPIntAdd ()), e1, (EBinOp (EBPrim (EBPIntAdd ()), e2, e3))) =>
+              (e1, e2, e3)
+            | _ => raise Impossible "micro-timl-live-vars/visit_e3()"
         end
     fun visit_ebind this f (env as (lvars, _, _)) bind =
       let
@@ -174,49 +185,6 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         ret
       end
-    fun visit_ETriOp this env (opr, e1, e2, e3) =
-      case opr of
-          ETIte _ =>
-          let
-            val lvars = #1 env
-            val n_lvars = num_lvars env
-            val vtable = cast this
-            val new_lvars = ref ISet.empty
-            (* In the branches, there will be a live continuation variable. *)
-            val e2 = #visit_expr vtable this (new_lvars, ref false, true) e2
-            val () = output_set lvars (!new_lvars)
-            val () = new_lvars := ISet.empty
-            val e3 = #visit_expr vtable this (new_lvars, ref false, true) e3
-            val () = output_set lvars (!new_lvars)
-            val e1 = #visit_expr vtable this env e1
-          in
-            ETriOp (opr, e1, e2, EAnnoLiveVars (e3, n_lvars))
-          end
-        | _ =>
-          let
-            val vtable = cast this
-            val e3 = #visit_expr vtable this env e3
-            val e2 = #visit_expr vtable this env e2
-            val e1 = #visit_expr vtable this env e1
-          in
-            ETriOp (opr, e1, e2, e3)
-          end
-    fun visit_ECase this env (e, e1, e2) =
-      let
-        val lvars = #1 env
-        val n_lvars = num_lvars env
-        val vtable = cast this
-        val new_lvars = ref ISet.empty
-        (* In the branches, there will be a live continuation variable. *)
-        val e1 = visit_ebind this (#visit_expr vtable this) (new_lvars, ref false, true) e1
-        val () = output_set lvars (!new_lvars)
-        val () = new_lvars := ISet.empty
-        val e2 = visit_ebind this (#visit_expr vtable this) (new_lvars, ref false, true) e2
-        val () = output_set lvars (!new_lvars)
-        val e = #visit_expr vtable this env e
-      in
-        ECase (e, e1, add_AnnoLiveVars (e2, n_lvars))
-      end
     fun visit_var this (lvars, _, _) data =
       ((case data of
             ID (n, _) => output lvars n
@@ -268,6 +236,47 @@ fun live_vars_expr_visitor_vtable cast () =
           in
             EBinOp (opr, e1, e2)
           end
+    fun visit_ETriOp this env (opr, e1, e2, e3) =
+      case opr of
+          ETIte _ =>
+          let
+            val lvars = #1 env
+            val n_lvars = num_lvars env
+            val vtable = cast this
+            val new_lvars = ref ISet.empty
+            (* In the branches, there will be a live continuation variable. *)
+            val e2 = #visit_expr vtable this (new_lvars, ref false, true) e2
+            val () = output_set lvars (!new_lvars)
+            val () = new_lvars := ISet.empty
+            val e3 = #visit_expr vtable this (new_lvars, ref false, true) e3
+            val () = output_set lvars (!new_lvars)
+            val e1 = #visit_expr vtable this env e1
+          in
+            ETriOp (opr, e1, e2, EAnnoLiveVars (e3, n_lvars))
+          end
+        | _ =>
+          let
+            val vtable = cast this
+            val (e1, e2, e3) = visit_e3 this env (e1, e2, e3)
+          in
+            ETriOp (opr, e1, e2, e3)
+          end
+    fun visit_ECase this env (e, e1, e2) =
+      let
+        val lvars = #1 env
+        val n_lvars = num_lvars env
+        val vtable = cast this
+        val new_lvars = ref ISet.empty
+        (* In the branches, there will be a live continuation variable. *)
+        val e1 = visit_ebind this (#visit_expr vtable this) (new_lvars, ref false, true) e1
+        val () = output_set lvars (!new_lvars)
+        val () = new_lvars := ISet.empty
+        val e2 = visit_ebind this (#visit_expr vtable this) (new_lvars, ref false, true) e2
+        val () = output_set lvars (!new_lvars)
+        val e = #visit_expr vtable this env e
+      in
+        ECase (e, e1, add_AnnoLiveVars (e2, n_lvars))
+      end
     fun visit_EAbs this (env as (lvars, _, _)) (i, bind, spec) =
       let
         val vtable = cast this
@@ -442,19 +451,17 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EHalt (e, t)
       end
-    fun visit_EMallocPair this env (a, b) =
+    fun visit_EMallocPair this env (e1, e2) =
       let
         val vtable = cast this
-        val b = #visit_expr vtable this env b
-        val a = #visit_expr vtable this env a
+        val (e1, e2) = visit_e2 this env (e1, e2)
       in
-        EMallocPair (a, b)
+        EMallocPair (e1, e2)
       end
     fun visit_EPairAssign this env (e1, proj, e2) =
       let
         val vtable = cast this
-        val e2 = #visit_expr vtable this env e2
-        val e1 = #visit_expr vtable this env e1
+        val (e1, e2) = visit_e2 this env (e1, e2)
       in
         EPairAssign (e1, proj, e2)
       end

@@ -47,6 +47,7 @@ fun EUnfold e = EUnOp (EUUnfold (), e)
 fun EApp (e1, e2) = EBinOp (EBApp (), e1, e2)
 
 fun EBinOpPrim (opr, e1, e2) = EBinOp (EBPrim opr, e1, e2)
+fun EIntAdd (e1, e2) = EBinOpPrim (EBPIntAdd (), e1, e2)
 val EBNatAdd = EBNat (EBNAdd ())
 fun ENatAdd (e1, e2) = EBinOp (EBNatAdd, e1, e2)
 fun ENew (e1, e2) = EBinOp (EBNew (), e1, e2)

@@ -26,6 +26,7 @@ val EConstChar = EByte
 fun EFst (e, r) = EUnOp (EUFst, e, r)
 fun ESnd (e, r) = EUnOp (EUSnd, e, r)
 fun EApp (e1, e2) = EBinOp (EBApp (), e1, e2)
+fun EIntAdd (e1, e2) = EBinOp (EBAdd, e1, e2)
 fun EPair (e1, e2) = EBinOp (EBPair (), e1, e2)
 fun EAppI (e, i) = EEI (EEIAppI (), e, i)
 fun EAppIs (f, args) = foldl (swap EAppI) f args

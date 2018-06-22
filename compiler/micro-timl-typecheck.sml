@@ -80,8 +80,10 @@ fun check_prop p =
   in
     if eq_p p (PTrue dummy) then ()
     else
-      (println $ "write_prop: " ^ (ToString.str_p Gctx.empty [] p);
-       write_prop (p, get_region_p p))
+      (
+        (* println $ "write_prop: " ^ (ToString.str_p Gctx.empty [] p); *)
+        write_prop (p, get_region_p p)
+      )
   end
 fun add_admit p = write_admit (p, get_region_p p)
                          
