@@ -77,17 +77,37 @@ fun live_vars_expr_visitor_vtable cast () =
               (e1, e2)
             end
         end
-    fun visit_e3 this env (e1, e2, e3) =
+    fun visit_es this env es =
         let
           val vtable = cast this
           (* delegate to visit_e2 *)
-          val e = #visit_expr vtable this env (EIntAdd (e1, EIntAdd (e2, e3)))
+          val len = length es
+          fun to_adds es = foldl_nonempty (fn (e, acc) => EIntAdd (e, acc)) $ rev es
+          fun from_adds n e =
+            if n <= 1 then [e]
+            else
+              case e of
+                  EBinOp (EBPrim (EBPIntAdd ()), e1, e2) => e1 :: from_adds (n-1) e2
+                | _ => raise Impossible "micro-timl-live-vars/visit_es()"
+          val e = #visit_expr vtable this env $ to_adds es
         in
-          case e of
-              EBinOp (EBPrim (EBPIntAdd ()), e1, (EBinOp (EBPrim (EBPIntAdd ()), e2, e3))) =>
-              (e1, e2, e3)
-            | _ => raise Impossible "micro-timl-live-vars/visit_e3()"
+          from_adds len e
         end
+    fun visit_e3 this env (e1, e2, e3) =
+      case visit_es this env [e1, e2, e3] of
+          [e1, e2, e3] => (e1, e2, e3)
+        | _ => raise Impossible "micro-timl-live-vars/visit_e3()"
+    (* fun visit_e3 this env (e1, e2, e3) = *)
+    (*     let *)
+    (*       val vtable = cast this *)
+    (*       (* delegate to visit_e2 *) *)
+    (*       val e = #visit_expr vtable this env (EIntAdd (e1, EIntAdd (e2, e3))) *)
+    (*     in *)
+    (*       case e of *)
+    (*           EBinOp (EBPrim (EBPIntAdd ()), e1, (EBinOp (EBPrim (EBPIntAdd ()), e2, e3))) => *)
+    (*           (e1, e2, e3) *)
+    (*         | _ => raise Impossible "micro-timl-live-vars/visit_e3()" *)
+    (*     end *)
     fun visit_ebind this f (env as (lvars, _, _)) bind =
       let
         val (name, b) = unBindSimp bind
@@ -163,8 +183,8 @@ fun live_vars_expr_visitor_vtable cast () =
           | EPairAssign data => #visit_EPairAssign vtable this env data
           | EProjProtected data => #visit_EProjProtected vtable this env data
           | EHalt data => #visit_EHalt vtable this env data
-          | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, mapr (#visit_expr vtable this env) es)
-          | ETuple es => ETuple (mapr (#visit_expr vtable this env) es)
+          | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_es this env es)
+          | ETuple es => ETuple (visit_es this env es)
           | EIfi (e, bind1, bind2) =>
             let
               val lvars = #1 env
