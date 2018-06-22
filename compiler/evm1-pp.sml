@@ -338,10 +338,11 @@ fun pp_insts (params as (pp_t, pp_inst)) s insts =
         )
   end
 
-fun pp_hval (params as (str_i, str_s, str_k, pp_t, pp_insts)) s bind =
+fun pp_hval (params as (str_i, str_s, str_b, pp_t, pp_insts)) s bind =
   let
     val pp_t = pp_t s
     val pp_insts = pp_insts s
+    val str_k = str_k str_b
     fun space () = PP.space s 1
     fun str v = PP.string s v
     fun comma () = (str ","; space ())
@@ -451,12 +452,12 @@ fun pp_insts_fn params = pp_insts_to_fn params TextIO.stdOut
 fun pp_insts_to_string_fn params b =
   pp_to_string "pp_insts_to_string.tmp" (fn os => pp_insts_to_fn params os b)
     
-fun pp_prog_to_fn (str_i, str_s, str_k, pp_t) s b =
+fun pp_prog_to_fn (str_i, str_s, str_bs, pp_t) s b =
   let
     val pp_w = pp_w pp_t
     val pp_insts = pp_insts (pp_t, pp_inst (str_i, pp_t, pp_w))
   in
-    withPP ("", 80, s) (fn s => pp_prog (pp_hval (str_i, str_s, str_k, pp_t, pp_insts), pp_insts) s b)
+    withPP ("", 80, s) (fn s => pp_prog (pp_hval (str_i, str_s, str_bs, pp_t, pp_insts), pp_insts) s b)
   end
 fun pp_prog_fn params = pp_prog_to_fn params TextIO.stdOut
 fun pp_prog_to_string_fn params b =

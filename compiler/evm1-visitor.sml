@@ -41,40 +41,6 @@ fun new_evm1_visitor vtable params =
     EVM1Visitor vtable
   end
 
-(***************** overrides  **********************)    
-
-fun override_visit_insts (record : ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable) new =
-  {
-    visit_word = #visit_word record,
-    visit_inst = #visit_inst record,
-    visit_insts = new,
-    visit_idx = #visit_idx record,
-    visit_sort = #visit_sort record,
-    visit_kind = #visit_kind record,
-    visit_ty = #visit_ty record,
-    visit_label = #visit_label record,
-    visit_hval = #visit_hval record,
-    visit_prog = #visit_prog record,
-    extend_i = #extend_i record,
-    extend_t = #extend_t record
-  }
-    
-fun override_visit_label (record : ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable) new =
-  {
-    visit_word = #visit_word record,
-    visit_inst = #visit_inst record,
-    visit_insts = #visit_insts record,
-    visit_idx = #visit_idx record,
-    visit_sort = #visit_sort record,
-    visit_kind = #visit_kind record,
-    visit_ty = #visit_ty record,
-    visit_label = new,
-    visit_hval = #visit_hval record,
-    visit_prog = #visit_prog record,
-    extend_i = #extend_i record,
-    extend_t = #extend_t record
-  }
-    
 (***************** the default visitor  **********************)    
 
 open VisitorUtil
@@ -257,9 +223,43 @@ fun default_evm1_visitor_vtable
 (* fun visit_prog (visit_label, visit_hval, visit_insts) env (H, I) = *)
 (*   (visit_list (visit_pair (visit_pair visit_label return2) visit_hval) env H, visit_insts env I) *)
 
+(***************** overrides  **********************)    
+
+fun override_visit_insts (record : ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable) new =
+  {
+    visit_word = #visit_word record,
+    visit_inst = #visit_inst record,
+    visit_insts = new,
+    visit_idx = #visit_idx record,
+    visit_sort = #visit_sort record,
+    visit_kind = #visit_kind record,
+    visit_ty = #visit_ty record,
+    visit_label = #visit_label record,
+    visit_hval = #visit_hval record,
+    visit_prog = #visit_prog record,
+    extend_i = #extend_i record,
+    extend_t = #extend_t record
+  }
+    
+fun override_visit_label (record : ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable) new =
+  {
+    visit_word = #visit_word record,
+    visit_inst = #visit_inst record,
+    visit_insts = #visit_insts record,
+    visit_idx = #visit_idx record,
+    visit_sort = #visit_sort record,
+    visit_kind = #visit_kind record,
+    visit_ty = #visit_ty record,
+    visit_label = new,
+    visit_hval = #visit_hval record,
+    visit_prog = #visit_prog record,
+    extend_i = #extend_i record,
+    extend_t = #extend_t record
+  }
+    
 (*********** the "export" visitor: convertnig de Bruijn indices to nameful terms ***************)    
 
-fun export_evm1_visitor_vtable cast (omitted, visit_idx, visit_sort, visit_ty) =
+fun export_evm1_visitor_vtable cast (omitted, visit_kind, visit_idx, visit_sort, visit_ty) =
   let
     fun extend_i this (depth, (sctx, kctx)) name = ((depth, (Name2str name :: sctx, kctx)), name)
     fun extend_t this (depth, (sctx, kctx)) name = ((depth, (sctx, Name2str name :: kctx)), name)
@@ -274,7 +274,7 @@ fun export_evm1_visitor_vtable cast (omitted, visit_idx, visit_sort, visit_ty) =
           (only_s visit_idx)
           (only_s visit_sort)
           (only_sk visit_ty)
-          visit_noop
+          (ignore_this_env visit_kind)
     fun visit_insts this (depth, ctx) t = 
       let
         val (reached_depth_limit, depth) =

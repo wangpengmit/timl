@@ -929,7 +929,7 @@ fun normalize_t_fn params t =
   end
     
 (********* the "export" visitor: convertnig de Bruijn indices to nameful terms *************)
-fun export_ty_visitor_vtable cast (omitted, visit_var, visit_idx, visit_sort) =
+fun export_ty_visitor_vtable cast (omitted, visit_var, visit_bs, visit_idx, visit_sort) =
   let
     fun extend_i this (depth, (sctx, kctx)) name = ((depth, (Name2str name :: sctx, kctx)), name)
     fun extend_t this (depth, (sctx, kctx)) name = ((depth, (sctx, Name2str name :: kctx)), name)
@@ -941,7 +941,7 @@ fun export_ty_visitor_vtable cast (omitted, visit_var, visit_idx, visit_sort) =
           extend_i
           extend_t
           (ignore_this_depth visit_var)
-          visit_noop
+          (ignore_this_env visit_bs)
           (only_s visit_idx)
           (only_s visit_sort)
     fun visit_ty this (depth, ctx) t = 
@@ -1073,17 +1073,18 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
 (***************** the default visitor  **********************)    
 
 fun default_expr_visitor_vtable
-      (cast : 'this -> ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind, 'ty2) expr_visitor_interface)
+      (cast : 'this -> ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 'ty2) expr_visitor_interface)
       extend_i
       extend_t
       extend_c
       extend_e
       visit_var
       visit_cvar
+      visit_kind
       visit_idx
       visit_sort
       visit_ty
-    : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind, 'ty2) expr_visitor_vtable =
+    : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 'ty2) expr_visitor_vtable =
   let
     fun visit_ibinder this = visit_binder (#extend_i (cast this) this)
     fun visit_tbinder this = visit_binder (#extend_t (cast this) this)
@@ -1495,7 +1496,7 @@ fun default_expr_visitor_vtable
       visit_cvar = visit_cvar,
       visit_idx = visit_idx,
       visit_sort = visit_sort,
-      visit_kind = visit_noop,
+      visit_kind = visit_kind,
       visit_ty = visit_ty,
       extend_i = extend_i,
       extend_t = extend_t,

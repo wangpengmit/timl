@@ -35,6 +35,7 @@ fun anf_decls_expr_visitor_vtable cast output =
           visit_noop
           visit_noop
           visit_noop
+          visit_noop
     fun visit_expr this env e =
       case e of
           EAscSpace (e, i) => EAscSpace (anf e, i)

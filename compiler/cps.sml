@@ -1102,6 +1102,7 @@ fun check_CPSed_type_expr_visitor_vtable cast () =
     visit_noop
     visit_noop
     visit_noop
+    visit_noop
     (ignore_this_env check_CPSed_type)
 
 fun new_check_CPSed_type_expr_visitor params = new_expr_visitor check_CPSed_type_expr_visitor_vtable params

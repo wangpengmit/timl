@@ -19,6 +19,7 @@ fun eval_constr_expr_visitor_vtable cast () =
           visit_noop
           visit_noop
           visit_noop
+          visit_noop
     fun visit_EAppConstr this env (e1, ts, is, e2) =
       let
         val vtable = cast this

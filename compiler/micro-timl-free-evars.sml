@@ -23,6 +23,7 @@ fun set_is_rec_expr_visitor_vtable cast pass_through_EAbsIT =
           visit_noop
           visit_noop
           visit_noop
+          visit_noop
     fun set_flag bind =
       if pass_through_EAbsIT then
         let
@@ -98,6 +99,7 @@ fun free_evars_expr_visitor_vtable cast output =
       visit_noop
       visit_noop
       visit_noop
+      visit_noop
   end
 fun new_free_evars_expr_visitor params = new_expr_visitor free_evars_expr_visitor_vtable params
 fun free_evars b =
@@ -120,6 +122,7 @@ fun set_free_evars_expr_visitor_vtable cast () =
           extend_noop
           extend_noop
           extend_noop
+          visit_noop
           visit_noop
           visit_noop
           visit_noop

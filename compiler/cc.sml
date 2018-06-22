@@ -99,6 +99,7 @@ fun free_ivars_with_anno_expr_visitor_vtable cast (output, visit_i, visit_s, vis
       extend_noop
       visit_noop
       visit_noop
+      visit_noop
       (ignore_this_env $ visit_i output)
       (ignore_this_env $ visit_s output)
       (ignore_this_env $ visit_t output)
@@ -231,6 +232,7 @@ fun free_tvars_with_anno_expr_visitor_vtable cast (output, visit_t) (* : ('this,
       visit_noop
       visit_noop
       visit_noop
+      visit_noop
       (ignore_this_env $ visit_t output)
 
 fun new_free_tvars_with_anno_expr_visitor params = new_expr_visitor free_tvars_with_anno_expr_visitor_vtable params
@@ -283,6 +285,7 @@ fun free_evars_with_anno_expr_visitor_vtable cast (excluded, output) (* : ('this
           extend_noop
           extend_noop
           visit_var
+          visit_noop
           visit_noop
           visit_noop
           visit_noop
@@ -452,6 +455,7 @@ fun cc_expr_visitor_vtable cast () =
           extend_noop
           extend_noop
           extend_noop
+          visit_noop
           visit_noop
           visit_noop
           visit_noop
@@ -692,6 +696,7 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
           visit_noop
           visit_noop
           visit_noop
+          visit_noop
     fun visit_ERec this env bind =
         let
           val (t_x, (name_x, e)) = unBindAnnoName bind
@@ -848,6 +853,7 @@ fun remove_var_anno_expr_visitor_vtable cast () =
           extend_noop
           visit_noop
           visit_noop
+          visit_noop
           (ignore_this_env remove_var_anno_i)
           (ignore_this_env remove_var_anno_s)
           (ignore_this_env remove_var_anno_t)
@@ -874,6 +880,7 @@ fun combine_non_compute_expr_visitor_vtable cast () =
           extend_noop
           extend_noop
           extend_noop
+          visit_noop
           visit_noop
           visit_noop
           visit_noop

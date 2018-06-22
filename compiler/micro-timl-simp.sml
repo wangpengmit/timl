@@ -31,6 +31,7 @@ fun simp_expr_visitor_vtable cast () =
       extend_noop
       visit_noop
       visit_noop
+      visit_noop
       (ignore_this_env simp_i)
       (ignore_this_env simp_s)
       (ignore_this_env simp_t)

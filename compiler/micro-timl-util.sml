@@ -248,5 +248,11 @@ fun is_tail_call e =
     | EUnpackI (_, bind) => is_tail_call $ snd $ unBindSimp $ snd $ unBindSimp bind
     | _ => false
                        
+fun map_kind f k =
+    case k of
+        KType () => KType ()
+      | KArrow (b, k) => KArrow (f b, map_kind f k)
+      | KArrowT (k1, k2) => KArrowT (map_kind f k1, map_kind f k2)
+
 end
                                  

@@ -25,8 +25,19 @@ fun str_ty_bin_op opr =
       TBProd () => "prod"
     | TBSum () => "sum"
 
+fun str_k str_b k =
+    let
+      val str_k = str_k str_b
+    in
+    case k of
+        KType () => "KType"
+      | KArrow (b, k) => sprintf "($) => $" [str_b b, str_k k]
+      | KArrowT (k1, k2) => sprintf "($) => $" [str_k k1, str_k k2]
+    (* "<kind>" *)
+    end
+                    
 (* depth=NONE means no depth limit *)
-fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s depth (t : ('var, 'bsort, 'idx, 'sort) ty) =
+fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t : ('var, 'bsort, 'idx, 'sort) ty) =
   let
     val (reached_depth_limit, depth) =
         case depth of
@@ -36,10 +47,12 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
                       else
                         (false, SOME (n-1))
     val pp_t = pp_t params s depth
+    val str_k = str_k str_b
     fun space () = PP.space s 1
     fun add_space a = (space (); a)
     fun str v = PP.string s v
     fun comma () = (str ","; space ())
+    fun colon () = (str ":"; space ())
     fun open_hbox () = PP.openHBox s
     (* fun open_vbox () = PP.openVBox s (PP.Abs 2) *)
     fun open_vbox () = PP.openVBox s (PP.Rel 2)
@@ -140,7 +153,7 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           space ();
           str "(";
           str name;
-          comma ();
+          colon ();
           str $ str_b b;
           comma ();
           pp_t t;
@@ -159,18 +172,32 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           str ")";
           close_box ()
         )
-      | TQuan (q, (i, j), bind) =>
+      | TQuan (Exists _, _, bind) =>
         let
           val (name, k, t) = get_bind_anno bind
         in
           open_hbox ();
-          str "TQuan";
+          str "TExists";
           space ();
           str "(";
-          str $ str_quan q;
-          comma ();
           str name;
+          colon ();
+          str $ str_k k;
           comma ();
+          pp_t t;
+          str ")";
+          close_box ()
+        end
+      | TQuan (Forall (), (i, j), bind) =>
+        let
+          val (name, k, t) = get_bind_anno bind
+        in
+          open_hbox ();
+          str "TForall";
+          space ();
+          str "(";
+          str name;
+          colon ();
           str $ str_k k;
           comma ();
           str $ str_i i;
@@ -181,18 +208,32 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           str ")";
           close_box ()
         end
-      | TQuanI (q, bind) =>
+      | TQuanI (Exists _, bind) =>
+        let
+          val (name, s, (_, t)) = get_bind_anno bind
+        in
+          open_hbox ();
+          str "TExistsI";
+          space ();
+          str "(";
+          str name;
+          colon ();
+          str $ str_s s;
+          comma ();
+          pp_t t;
+          str ")";
+          close_box ()
+        end
+      | TQuanI (Forall (), bind) =>
         let
           val (name, s, ((i, j), t)) = get_bind_anno bind
         in
           open_hbox ();
-          str "TQuanI";
+          str "TForallI";
           space ();
           str "(";
-          str $ str_quan q;
-          comma ();
           str name;
-          comma ();
+          colon ();
           str $ str_s s;
           comma ();
           str $ str_i i;
@@ -212,7 +253,7 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           space ();
           str "(";
           str name;
-          comma ();
+          colon ();
           str $ str_k k;
           comma ();
           pp_t t;
@@ -328,7 +369,7 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s, str_k)) s de
           space ();
           str "(";
           str name;
-          comma ();
+          colon ();
           str $ str_k k;
           comma ();
           pp_t t;
@@ -444,14 +485,6 @@ fun str_inj opr =
       InjInl () => "inl"
     | InjInr () => "inr"
 
-fun str_expr_un_op str_t opr =
-  case opr of
-     EUInj (opr, t) => sprintf "inj ($, $)" [str_inj opr, str_t t]
-    | EUFold t => sprintf "fold $" [str_t t]
-    | EUUnfold () => "unfold"
-    | EUTiML opr => Operators.str_expr_un_op opr
-    | EUTupleProj n => "proj " ^ str_int n
-
 fun str_expr_tri_op opr =
   case opr of
       ETWrite () => "EWrite"
@@ -485,7 +518,7 @@ fun str_e str_var str_i e =
   end
     
 (* depth=NONE means no depth limit *)
-fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
+fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
   let
     val (reached_depth_limit, depth) =
         case depth of
@@ -496,6 +529,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
                         (false, SOME (n-1))
     val pp_e = pp_e params s (depth_t, depth)
     val pp_t = pp_t s depth_t
+    val str_k = str_k str_b
     fun space () = PP.space s 1
     fun add_space a = (space (); a)
     fun str v = PP.string s v
@@ -652,7 +686,42 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
+      | EUnOp (EUFold t, e) =>
+        (
+          open_hbox ();
+          str "EFold";
+          space ();
+          str "(";
+          pp_e e;
+          comma ();
+          pp_t t;
+          str ")";
+          close_box ()
+        )
+      | EUnOp (EUInj (opr, t), e) =>
+        (
+          open_hbox ();
+          str "EInj";
+          space ();
+          str "(";
+          str $ str_inj opr;
+          comma ();
+          pp_e e;
+          comma ();
+          pp_t t;
+          str ")";
+          close_box ()
+        )
       | EUnOp (opr, e) =>
+        let
+          fun str_expr_un_op str_t opr =
+              case opr of
+                  EUInj (opr, t) => sprintf "inj ($, $)" [str_inj opr, str_t t]
+                | EUFold t => sprintf "fold $" [str_t t]
+                | EUUnfold () => "unfold"
+                | EUTiML opr => Operators.str_expr_un_op opr
+                | EUTupleProj n => "proj " ^ str_int n
+        in
         (
           open_hbox ();
           str "EUnOp";
@@ -664,6 +733,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_k, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
+        end
       | EBinOp (EBApp (), e1, e2) =>
         (
           open_hbox ();
