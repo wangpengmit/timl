@@ -436,6 +436,9 @@ fun app_inl_inr f1 f2 s =
     case s of
         inl e => f1 e
       | inr e => f2 e
+
+fun filter_inl ls = List.mapPartial is_inl ls
+fun filter_inr ls = List.mapPartial is_inr ls
                     
 fun str_sum f1 f2 s =
   case s of

@@ -468,7 +468,7 @@ fun cc_expr_visitor_vtable cast () =
         (* val () = println $ e_str *)
         (* fun err () = raise Impossible $ "unknown case of cc() on: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e) *)
         fun cc_t t = #visit_ty (cast this) this env t
-        fun cc_e e = #visit_expr (cast this) this env e
+        fun cc_e a = #visit_expr (cast this) this a
         val e =
             case e of
                 EBinOp (EBApp (), e1, e2) =>
@@ -483,7 +483,7 @@ fun cc_expr_visitor_vtable cast () =
                   val z = fresh_evar ()
                   val z_code = fresh_evar ()
                   val z_env = fresh_evar ()
-                  val e = EAppITs (EV z_code, map (map_inr cc_t) itargs) %$ EPair (EV z_env, cc e2)
+                  val e = EAppITs (EV z_code, map (map_inr cc_t) itargs) %$ EPair (EV z_env, cc env e2)
                                   
                   (* val p = fresh_evar () *)
                   (* val p_def = EPair (EV z_env, cc e2) *)
@@ -495,60 +495,63 @@ fun cc_expr_visitor_vtable cast () =
                   (* val e = ELetManyClose ([(z_code, "z_code", EFst $ EV z), (z_env, "z_env", ESnd $ EV z), (p, "p", p_def)], e) *)
                                         
                   (* val () = println $ "cc()/EApp: after ELetManyClose()" *)
-                  val e = EUnpackClose (cc e1, (gamma, "'c"), (z, "z"), e)
+                  val e = EUnpackClose (cc env e1, (gamma, "'c"), (z, "z"), e)
                                        (* val () = println "cc() done on EApp" *)
                 in
                   e
                 end
-              | EAbsT _ => cc_abs e
-              | EAbsI _ => cc_abs e
-              | EAbs _ => cc_abs e
-              | ERec _ => cc_abs e
+              | EAbsT _ => cc_abs env e
+              | EAbsI _ => cc_abs env e
+              | EAbs _ => cc_abs env e
+              | ERec _ => cc_abs env e
               | ELet (e1, bind) =>
                 let
-                  val e1 = cc e1
+                  val e1 = cc env e1
                   val (x, name, e2) = unBindSimpOpen_e bind
-                  val e2 = cc e2
+                  val e2 = cc env e2
                 in
                   ELetClose ((x, fst name, e1), e2)
                 end
               | ECase (e, bind1, bind2) =>
                 let
-                  val e = cc e
+                  val e = cc env e
                   val (x1, name1, e1) = unBindSimpOpen_e bind1
                   val (x2, name2, e2) = unBindSimpOpen_e bind2
                 in
-                  ECaseClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
+                  ECaseClose (e, ((x1, fst name1), cc env e1), ((x2, fst name2), cc env e2))
                 end
               | EIfi (e, bind1, bind2) =>
                 let
-                  val e = cc e
+                  val e = cc env e
                   val (x1, name1, e1) = unBindSimpOpen_e bind1
                   val (x2, name2, e2) = unBindSimpOpen_e bind2
                 in
-                  EIfiClose (e, ((x1, fst name1), cc e1), ((x2, fst name2), cc e2))
+                  EIfiClose (e, ((x1, fst name1), cc env e1), ((x2, fst name2), cc env e2))
                 end
               | EUnpack (e1, bind) =>
                 let
-                  val e1 = cc e1
+                  val e1 = cc env e1
                   val (name_a, bind) = unBindSimpName bind
                   val (name_x, e2) = unBindSimpName bind
                   val a = fresh_tvar ()
                   val x = fresh_evar ()
                   val e2 = open0_t_e a e2
                   val e2 = open0_e_e x e2
-                  val e2 = cc e2
+                  val e2 = cc env e2
                 in
                   EUnpackClose (e1, (a, fst name_a), (x, fst name_x), e2)
                 end
               | EUnpackI (e1, bind) =>
                 let
+                  val (e1, t_e1) = assert_EAscType e1
+                  val (_, s, _) = assert_TExistsI t_e1
                   (* val () = println "before cc()/EUnpackI/cc#1" *)
-                  val e1 = cc e1
+                  val e1 = cc env e1
                   (* val () = println "after cc()/EUnpackI/cc#1" *)
                   val (name_a, bind) = unBindSimpName bind
                   val (name_x, e2) = unBindSimpName bind
                   val a = fresh_ivar ()
+                  val env = (a, fst name_a, s) :: env
                   val x = fresh_evar ()
                   (* val () = println "before cc()/EUnpackI/open0_i_e()" *)
                   (* this could be slow *)
@@ -556,7 +559,7 @@ fun cc_expr_visitor_vtable cast () =
                   (* val () = println "after cc()/EUnpackI/open0_i_e()" *)
                   val e2 = open0_e_e x e2
                   (* val () = println "before cc()/EUnpackI/cc#2" *)
-                  val e2 = cc e2
+                  val e2 = cc env e2
                   (* val () = println "after cc()/EUnpackI/cc#2" *)
                   val e = EUnpackIClose (e1, (a, fst name_a), (x, fst name_x), e2)
                                         (* val () = println "done cc()/EUnpackI" *)
@@ -575,25 +578,25 @@ fun cc_expr_visitor_vtable cast () =
 
 and new_cc_expr_visitor params = new_expr_visitor cc_expr_visitor_vtable params
 
-and cc b =
+and cc env b =
   let
     val visitor as (ExprVisitor vtable) = new_cc_expr_visitor ()
   in
-    #visit_expr vtable visitor () b
+    #visit_expr vtable visitor env b
   end
 
-and cc_abs e_all =
+and cc_abs env e_all =
     let
       val () = println $ "cc_abs(): before open_collect_EAbsIT()"
       val (binds, e) = open_collect_EAbsIT e_all (* todo: this could be slow, should be combined *)
       val () = println $ "cc_abs(): after open_collect_EAbsIT()"
     in
       case e of
-          ERec bind => cc_ERec e_all binds bind
+          ERec bind => cc_ERec env e_all binds bind
         | _ => raise Impossible "cc_abs"
     end
 
-and cc_ERec e_all outer_binds bind =
+and cc_ERec env e_all outer_binds bind =
     let
       val (t_x, (name_x, e)) = unBindAnnoName bind
       val () = println $ "cc() on: " ^ fst name_x
@@ -605,7 +608,8 @@ and cc_ERec e_all outer_binds bind =
       val (st, (t_z, (name_z, e)), i_spec) = assert_EAbs e
       val z = fresh_evar ()
       val e = open0_e_e z e
-      val e = cc e
+      val outer_inner_binds = outer_binds @ inner_binds
+      val e = cc ((rev $ filter_inl outer_inner_binds) @ env) e
       val () = println $ "cc() really on: " ^ fst name_x
       val () = println $ "cc(): before collect_TForallIT_open_with()"
       val (_, t_arrow) = collect_TForallIT_open_with inner_binds t_x
@@ -621,11 +625,13 @@ and cc_ERec e_all outer_binds bind =
               (inl (x, _, _), inl (x', _, _)) => x = x'
             | (inr (x, _, _), inr (x', _, _)) => x = x'
             | _ => false
-      val outer_inner_binds = outer_binds @ inner_binds
-      val () = println "before free_ivars"
-      (* val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e *)
-      val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *) (* todo: e can be much smaller than e_all because e is after CC, so collecting free vars on e_all could be slow *)
-      val () = println "after free_ivars"
+
+      val free_ivars = rev env
+      (* val () = println "before free_ivars" *)
+      (* (* val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e *) *)
+      (* val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *) (* todo: e can be much smaller than e_all because e is after CC, so collecting free vars on e_all could be slow *) *)
+      (* val () = println "after free_ivars" *)
+                       
       (* val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e *)
       val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *)
       val betas = map inl free_ivars @ map inr free_tvars
@@ -944,12 +950,12 @@ fun combine_non_compute b =
   end
     
 val cc =
- fn e =>
+ fn env => fn e =>
     let
       val e = convert_EAbs_to_ERec e
       val () = code_blocks := []
       val () = code_labels := IntBinarySet.empty
-      val e = cc e
+      val e = cc env e
       val decls = rev $ !code_blocks
       val e = ELetManyClose (decls, e)
       val e = remove_var_anno_e e
@@ -965,7 +971,7 @@ val cc_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_EAbs, Anno_EVar, Anno_EAbs_state]
+      [Anno_EAbs, Anno_EVar, Anno_EAbs_state, Anno_EUnpackI]
     end
                      
 (* val forget_var = Subst.forget_var *)
@@ -1139,7 +1145,7 @@ fun test1 dirname =
     (* val () = println "" *)
                      
     val () = println "Started CC ..."
-    val e = cc e
+    val e = cc [] e
     val () = println "Finished CC"
     (* val () = pp_e $ export empty_ctx e *)
     (* val () = println "" *)

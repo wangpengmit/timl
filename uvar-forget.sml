@@ -41,12 +41,12 @@ fun forget_i_i x n b =
         val bsort = update_bs bsort
         (* val () = println $ sprintf "  for uvar ?$" [str_int name] *)
         val results = mapi (try_forget forget) args
-        val args = List.mapPartial is_inl results
+        val args = filter_inl results
         val () =
             if length args = length results then
               raise AppUVarSucceeded $ IApps (IUVar (uvar, r)) args
             else ()
-        val locs = List.mapPartial is_inr results
+        val locs = filter_inr results
         val () = assert (fn () => not (null locs)) "not (null locs)"
         val max_loc = max_ls 0 locs
         fun extend_ctx n (ctx, bsort) =
@@ -152,14 +152,14 @@ fun forget_i_mt x n b =
         (* val () = println $ sprintf "  for uvar ?$" [str_int uvar_name] *)
         val i_results = mapi (try_forget (forget_i_i x n)) i_args
         val t_results = mapi (try_forget forget) t_args
-        val i_args = List.mapPartial is_inl i_results
-        val t_args = List.mapPartial is_inl t_results
+        val i_args = filter_inl i_results
+        val t_args = filter_inl t_results
         val () =
             if length i_args = length i_results andalso length t_args = length t_results then
               raise AppUVarSucceeded $ TApps (TAppIs (TUVar (uvar, r)) i_args) t_args
             else ()
-        val i_locs = List.mapPartial is_inr i_results
-        val t_locs = List.mapPartial is_inr t_results
+        val i_locs = filter_inr i_results
+        val t_locs = filter_inr t_results
         val length_sctx = length sctx
         val length_kctx = length kctx
         val i_locs = map (fn n => length_sctx - 1 - n) i_locs
