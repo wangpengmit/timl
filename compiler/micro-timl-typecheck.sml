@@ -75,8 +75,14 @@ fun get_sort_type_SUVar gctx ctx data = SUVar data
 (* fun check_prop ctx p = push_ref vcs (ctx, p) *)
 (* fun add_admit p = push_ref admits (ctx, p)                *)
 fun check_prop p =
-  (println $ "write_prop: " ^ (ToString.str_p Gctx.empty [] $ Simp.simp_p p);
-  write_prop (p, get_region_p p))
+  let
+    val p = Simp.simp_p p
+  in
+    if eq_p p (PTrue dummy) then ()
+    else
+      (println $ "write_prop: " ^ (ToString.str_p Gctx.empty [] p);
+       write_prop (p, get_region_p p))
+  end
 fun add_admit p = write_admit (p, get_region_p p)
                          
 structure Sortcheck = SortcheckFn (structure U = Expr

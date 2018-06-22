@@ -958,6 +958,14 @@ fun new_expr_visitor vtable params =
     ExprVisitor vtable
   end
     
+fun visit_decls' visitor ctx decls =
+  let
+    val ExprVisitor vtable = visitor
+    val decls = visit_decls (#visit_decl vtable visitor) ctx decls
+  in
+    decls
+  end
+    
 fun visit_decls_list visitor ctx decls =
   let
     val ExprVisitor vtable = visitor
@@ -983,7 +991,8 @@ fun visit_decl_acc visitor (b, env) =
     (hd b, env)
   end
 
-fun visit_decls_acc a = visit_with_acc visit_decls_list a
+fun visit_decls_acc a = visit_with_acc visit_decls' a
+fun visit_decls_list_acc a = visit_with_acc visit_decls_list a
 
 fun unExprVisitor (ExprVisitor vtable) = vtable
 val get_vtable = unExprVisitor

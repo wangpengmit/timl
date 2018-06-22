@@ -554,6 +554,7 @@ fun split_dir_file filename =
   end
 
 fun join_dir_file (dir, file) = OS.Path.joinDirFile {dir = dir, file = file}
+val join_dir_file' = curry join_dir_file
 
 fun split_base_ext file =
   let

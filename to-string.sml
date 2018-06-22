@@ -197,7 +197,7 @@ fun str_decls gctx ctx b =
   let
     val (b, ctx) = export_decls gctx ctx b
   in
-    (map SN.strn_decl b, ctx)
+    (map SN.strn_decl $ unTeles b, ctx)
   end
 
 end

@@ -965,9 +965,18 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
     ret
   end
 
+val debug_dir_name = ref (NONE : string option)
+fun debug_write_file filename s =
+  case !debug_dir_name of
+      SOME dirname => write_file (join_dir_file' dirname filename, s)
+    | NONE => ()
+  
 val cps = fn (e, t_e, F) => fn (k, j_k) =>
              let
                val (e, _) = MicroTiMLLiveVars.live_vars e
+               val () = debug_write_file
+                          "debug-before-cps-after-live-vars.tmp" $
+                          ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ToStringUtil.empty_ctx e
                val e = set_is_rec false e
                val e = set_free_evars e
                val (e, i) = cps (e, t_e, F) (k, j_k)

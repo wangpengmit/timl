@@ -95,6 +95,12 @@ structure UnderscoredToString = ToStringFn (structure Expr = UnderscoredExpr
                                             structure CanToString = UnderscoredCanToString
                                 )
                                 
+structure UnderscoredPrettyPrint = PrettyPrintFn
+                                 (structure Expr = UnderscoredExpr
+                                  structure CanToString = UnderscoredCanToString
+                                  val str_ptrn_constr_tag = fn () => ""
+                                 )
+                                
 structure UnderscoredToStringRaw = ToStringRawFn (structure Expr = UnderscoredExpr
                                                   open UnderscoredCanToString
                                    )

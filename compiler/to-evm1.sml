@@ -842,7 +842,6 @@ open TestUtil
 fun test1 dirname =
   let
     val () = println "ToEVM1.UnitTest started"
-    val join_dir_file' = curry join_dir_file
     val filename = join_dir_file' dirname "to-evm1-test.pkg"
     val filenames = map snd $ ParseFilename.expand_pkg (fn msg => raise Impossible msg) (true, filename)
     open Parser
@@ -852,12 +851,11 @@ fun test1 dirname =
     open NameResolve
     val (prog, _, _) = resolve_prog empty prog
                                     
-    (* val e_str = PrettyPrint.pp_e_to_string Gctx.empty ToStringUtil.empty_ctx e *)
-    (* val () = write_file (join_dir_file' dirname $ "unit-test-before-TiML-tc.tmp", e_str) *)
     open TypeCheck
     val () = println "Started TiML typechecking ..."
     val () = TypeCheck.turn_on_builtin ()
     val () = TypeCheck.clear_st_types ()
+    val () = TypeCheck.debug_dir_name := SOME dirname
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
     val (st_name2ty, st_name2int) = TypeCheck.get_st_types ()
     fun check_vcs vcs = 
@@ -928,6 +926,7 @@ fun test1 dirname =
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file (join_dir_file' dirname $ "unit-test-before-cps.tmp", e_str)
     val () = println "Started CPS conversion ..."
+    val () = CPS.debug_dir_name := SOME dirname
     open MicroTiMLUtil
     val k = EHaltFun TUnit TUnit
     (* val () = phase := PhBeforeCC () *)

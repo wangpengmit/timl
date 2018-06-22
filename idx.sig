@@ -16,7 +16,7 @@ signature IDX = sig
            | BSUVar of basic_sort uvar_bs
                              
   datatype idx =
-	   IVar of var * sort list(*annotation*)
+	   IVar of var * sort list(*annotation*)(*todo: no longer needed by CC*)
            | IConst of Operators.idx_const * region
            | IUnOp of Operators.idx_un_op * idx * region
            | IBinOp of Operators.idx_bin_op * idx * idx

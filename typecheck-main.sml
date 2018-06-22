@@ -2590,11 +2590,26 @@ fun is_wf_sig gctx (specs, r) =
 (*   in *)
 (*   end *)
 
+val debug_dir_name = ref (NONE : string option)
+fun debug_write_file filename s =
+  case !debug_dir_name of
+      SOME dirname => write_file (join_dir_file' dirname filename, s)
+    | NONE => ()
+
+structure UPP = UnderscoredPrettyPrint
+                  
 fun get_sig gctx m =
   case m of
       U.ModComponents (decls, r) =>
       let
-        val (decls, _) = LiveVars.live_vars_decls $ Teles decls (* todo: live-evar analysis does not cross module boundaries, so there will be under-estimation if there are top-level function applications *)
+        val decls = Teles decls
+        val () = debug_write_file
+                   "debug-before-TiML-tc.tmp" $
+                   fst $ UPP.pp_decls_to_string Gctx.empty ToStringUtil.empty_ctx decls
+        val (decls, _) = LiveVars.live_vars_decls decls (* todo: live-evar analysis does not cross module boundaries, so there will be under-estimation if there are top-level function applications *)
+        val () = debug_write_file
+                   "debug-before-TiML-tc-after-live-vars.tmp" $
+                   fst $ UPP.pp_decls_to_string Gctx.empty ToStringUtil.empty_ctx decls
         val decls = unTeles decls
         val (decls, ctxd, nps, ds, _, st) = check_decls gctx (empty_ctx, !st_ref) decls
         val () = StMap.app (fn i => ignore $ forget_above_i_i 0 i handle _ => raise Error (r, ["state can't mention index variables"])) st

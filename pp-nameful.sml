@@ -393,7 +393,7 @@ fun pp_pn (params as pp_t) s pn =
 fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
     let
       val pp_e = pp_e params s
-      val pp_d = pp_d params s
+      val pp_decls = pp_decls params s
       val pp_t = pp_t s
       val pp_pn = pp_pn s
       val pp_st = pp_st str_i s
@@ -711,11 +711,10 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
         | ELet (return, bind, _) => 
           let
             val (decls, e) = Unbound.unBind bind
-            val decls = unTeles decls
           in
 	    open_vbox_noindent ();
             open_hbox (); str "ELet"; space (); pp_return return; close_box (); space ();
-            app (fn d => (pp_d d; space ())) decls;
+            pp_decls decls;
             str "In"; space ();
             pp_e e; space ();
             str "End";
@@ -988,6 +987,19 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
           )
     end
       
+and pp_decls params s decls =
+  let
+    val decls = unTeles decls
+    val pp_d = pp_d params s
+    fun space () = PP.space s 1
+    fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+    fun close_box () = PP.closeBox s
+  in
+    open_vbox_noindent ();
+    app (fn d => (pp_d d; space ())) decls;
+    close_box ()
+  end
+    
 open WithPP
        
 fun pp_t_fn params t = withPP ("", 80, TextIO.stdOut) (fn s => pp_t params s t)
@@ -1005,5 +1017,10 @@ fun pp_d_to_fn params s e = withPP ("", 80, s) (fn s => pp_d params s e)
 fun pp_d_fn params = pp_d_to_fn params TextIO.stdOut
 fun pp_d_to_string_fn params e =
     pp_to_string "pp_d_to_string.tmp" (fn os => pp_d_to_fn params os e)
+                 
+fun pp_decls_to_fn params s e = withPP ("", 80, s) (fn s => pp_decls params s e)
+fun pp_decls_fn params = pp_decls_to_fn params TextIO.stdOut
+fun pp_decls_to_string_fn params e =
+    pp_to_string "pp_decls_to_string.tmp" (fn os => pp_decls_to_fn params os e)
                  
 end
