@@ -13,7 +13,7 @@ main: main.mlb $(FILES)
 	mllex parser/timl.lex
 	mlyacc sexp/sexp.grm
 	mllex sexp/sexp.lex
-	mlton $(MLTON_FLAGS) -default-ann 'nonexhaustiveMatch error' -default-ann 'redundantMatch error' main.mlb
+	./format-mlton.rb mlton $(MLTON_FLAGS) -default-ann "'nonexhaustiveMatch error'" -default-ann "'redundantMatch error'" main.mlb
 
 main.mlb: generate-file-list.rb
 	ruby generate-file-list.rb mlton > main.mlb
@@ -25,7 +25,7 @@ smlnj: main.cm $(FILES)
 	./format.rb ml-build -Ccontrol.poly-eq-warn=false -Ccompiler-mc.error-non-exhaustive-match=true -Ccompiler-mc.error-non-exhaustive-bind=true main.cm Main.main main-image
 
 main.cm: generate-file-list.rb
-	ruby generate-file-list.rb smlnj > main.cm
+	./generate-file-list.rb smlnj > main.cm
 
 %.t.sml: %.sml
 	cp $< $@

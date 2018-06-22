@@ -2518,6 +2518,7 @@ fun shift_i_expr_visitor_vtable cast ((shift_i, shift_s, shift_t), n) : ('this, 
       extend_noop
       visit_noop
       visit_noop
+      visit_noop
       (do_shift shift_i)
       (do_shift shift_s)
       (do_shift shift_t)
@@ -2545,6 +2546,7 @@ fun shift_t_expr_visitor_vtable cast (shift_t, n) : ('this, int, 'var, 'idx, 'so
       extend_t
       extend_noop
       extend_noop
+      visit_noop
       visit_noop
       visit_noop
       visit_noop
@@ -2579,6 +2581,7 @@ fun shift_c_expr_visitor_vtable cast (shift_var, n) : ('this, int, 'var, 'idx, '
       visit_noop
       visit_noop
       visit_noop
+      visit_noop
   end
 
 fun new_shift_c_expr_visitor params = new_expr_visitor shift_c_expr_visitor_vtable params
@@ -2604,6 +2607,7 @@ fun shift_e_expr_visitor_vtable cast (shift_var, n) : ('this, int, 'var, 'idx, '
       extend_noop
       extend_e
       visit_var
+      visit_noop
       visit_noop
       visit_noop
       visit_noop
@@ -2634,6 +2638,7 @@ fun subst_i_expr_visitor_vtable cast (visit_idx, visit_sort, visit_ty) =
       extend_noop
       visit_noop
       visit_noop
+      visit_noop
       (ignore_this visit_idx)
       (ignore_this visit_sort)
       (ignore_this visit_ty)
@@ -2661,6 +2666,7 @@ fun subst_t_expr_visitor_vtable cast visit_ty =
       extend_t
       extend_noop
       extend_noop
+      visit_noop
       visit_noop
       visit_noop
       visit_noop
@@ -2719,6 +2725,7 @@ fun subst_c_expr_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_
           extend_e
           visit_noop
           (visit_imposs "subst_c_e/visit_cvar")
+          visit_noop
           visit_noop
           visit_noop
           visit_noop
@@ -2781,6 +2788,7 @@ fun subst_e_expr_visitor_vtable cast ((compare_var, shift_var, shift_i_i, shift_
           visit_noop
           visit_noop
           visit_noop
+          visit_noop
     val vtable = override_visit_EVar vtable visit_EVar
   in
     vtable
@@ -2796,7 +2804,7 @@ fun subst_e_e_fn params d x v b =
   end
 
 (*********** the "export" visitor: converting de Bruijn indices to nameful terms ***************)
-fun export_expr_visitor_vtable cast (omitted, visit_var, visit_cvar, visit_idx, visit_sort, visit_ty) =
+fun export_expr_visitor_vtable cast (omitted, visit_var, visit_cvar, visit_kind, visit_idx, visit_sort, visit_ty) =
   let
     fun extend_i this (depth, (sctx, kctx, cctx, tctx)) name = ((depth, (Name2str name :: sctx, kctx, cctx, tctx)), name)
     fun extend_t this (depth, (sctx, kctx, cctx, tctx)) name = ((depth, (sctx, Name2str name :: kctx, cctx, tctx)), name)
@@ -2814,6 +2822,7 @@ fun export_expr_visitor_vtable cast (omitted, visit_var, visit_cvar, visit_idx, 
           extend_e
           (ignore_this_depth visit_var)
           (ignore_this_depth visit_cvar)
+          (ignore_this_env visit_kind)
           (only_s visit_idx)
           (only_s visit_sort)
           (only_sk visit_ty)
@@ -2875,6 +2884,7 @@ fun uniquefy_expr_visitor_vtable cast (visit_idx, visit_sort, visit_ty) =
           extend_t
           extend_c
           extend_e
+          visit_noop
           visit_noop
           visit_noop
           (only_s visit_idx)
