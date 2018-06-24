@@ -57,7 +57,6 @@ fun live_vars_expr_visitor_vtable cast () =
         let
           val vtable = cast this
           val lvars = #1 env
-          val has_k = #2 env
           val env = set_has_k env
         in
           if need_intro_new_var e1 then
