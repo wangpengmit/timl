@@ -204,11 +204,12 @@ fun live_vars_expr_visitor_vtable cast () =
             end
           | ESetModify (b, x, es, e, r) =>
             let
+              val n_lvars = num_lvars env
               val es = visit_es this env $ es @ [e]
               val (e, es) = assert_cons $ rev es
               val es = rev es
             in
-              ESetModify (b, x, es, e, r)
+              ESetModify (b, x, es, EAnnoLiveVars (e, n_lvars, dummy), r)
             end
           | EGet (x, es, r) => EGet (x, visit_es this env es, r)
       in

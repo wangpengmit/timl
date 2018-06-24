@@ -914,7 +914,7 @@ fun combine_non_compute_expr_visitor_vtable cast () =
           in
             case e of
                 EVar _ => true
-              | EState _ => true (* todo: why? *)
+              | EState _ => true
               | EAppI (e, _) => f e
               | EAppT (e, _) => f e
               (* | EPackI (_, _, e) => f e *)

@@ -1591,7 +1591,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                 if is_value e then ()
                 else raise Error (r, ["must be value"])
               val () = app check_value es
-              val e = U.ESetModify (false, x, es, (U.EApp (e, U.EGet (x, es, r))), r)
+              val (e, n_live_vars) = U.assert_EAnnoLiveVars (fn () => raise Error (r, ["Should be EAnnoLiveVars"])) e
+              val e = U.ESetModify (false, x, es, (U.EApp (e, U.EAnnoLiveVars (U.EGet (x, es, r), n_live_vars, r))), r)
             in
               get_mtype ctx_st e
             end

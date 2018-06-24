@@ -310,10 +310,11 @@ fun compile st_name2int ectx e =
            SOME (name, v) =>
            (case v of
                 inl r => get_reg r
-              | inr l => PUSH_value (VLabel l) @ repeat C_MLOAD (JUMPDEST ())(*to make gas cost the same as get_reg, for debugging purpose*))
+              | inr l => PUSH_value (VLabel l) @ repeat C_MLOAD (JUMPDEST ())(*to make gas cost the same as get_reg, for debugging purpose*)
+           )
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
     | EConst c => PUSH_value $ VConst $ cg_c c
-    | EState x => PUSH_value $ VState $ st_name2int @!! x
+    | EState x => (PUSH_value $ VState $ st_name2int @!! x) @ repeat C_MLOAD (JUMPDEST ())(*to make gas cost the same as get_reg, for debugging purpose*)
     | EAppT (e, t) => compile e @ [VALUE_AppT $ Inner $ cg_t t]
     | EAppI (e, i) => compile e @ [VALUE_AppI $ Inner i]
     | EPack (t_pack, t, e) => compile e @ [VALUE_Pack (Inner $ cg_t t_pack, Inner $ cg_t t)]

@@ -248,7 +248,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     val time_ref = ref $ to_real $ C_inst inst
     val space_ref = ref N0
     val ishift_ref = ref 0
-    fun add_time n = unop_ref (fn i => i %+ to_real n) time_ref
+    (* val () = println $ "before time_ref = " ^ (ExportPP.str_i $ ExportPP.export_i [] $ !time_ref) *)
+    fun add_time n = unop_ref (fn i => ((* println $ "add_time: " ^ str_int n;  *)i %+ to_real n)) time_ref
     fun add_space j = unop_ref (fn i => i %+ j) space_ref
     fun add_ishift n = unop_ref (fn m => m + n) ishift_ref
     fun open_with pair = (add_ishift 1; open_sorting pair)
@@ -520,7 +521,6 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, sctx) = assert_cons sctx
         val _ = assert_TByte $ whnf itctx t0
-        val () = add_time C_logdata
       in
         ((itctx, rctx, TUnit :: sctx, st))
       end
@@ -623,7 +623,6 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                     TState x => assert_fst_true $ st_name2ty @!! x
                   | _ => assert_TMap $ assert_TCell t1
         val () = assert_TInt t0
-        val () = add_time $ 2 * C_sha3word
       in
         ((itctx, rctx, t :: sctx, st))
       end
@@ -632,7 +631,6 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, t1, sctx) = assert_cons2 sctx
         val vec = assert_TState t0
         val offset = assert_TNat t1
-        val () = add_time C_sha3word
       in
         ((itctx, rctx, TVectorPtr (vec, offset) :: sctx, st))
       end
@@ -721,6 +719,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | ASCTIME _ => err ()
     | ASCSPACE _ => err ()
     | MACRO_br_sum () => err ()
+    (* val () = println $ "before time_ref = " ^ (ExportPP.str_i $ ExportPP.export_i [] $ !time_ref) *)
   in
     (ctx, (!time_ref, !space_ref), !ishift_ref)
   end
@@ -854,7 +853,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val i = shiftn_i_i ni i
               val () = check_prop (i' %<= i)
             in
-              (TN (C_inst inst) %%+ (i, j), ni)
+              ((i, j), ni)
             end
           | ASCSPACE i =>
             let
@@ -863,7 +862,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               val i = shiftn_i_i ni i
               val () = check_prop (i' %<= i)
             in
-              (TN (C_inst inst) %%+ (j, i), ni)
+              ((j, i), ni)
             end
           | _ =>
             let
