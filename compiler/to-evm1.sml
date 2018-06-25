@@ -623,6 +623,24 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
       in
         I_e1 @@ I_e2 @@ set_reg ARG_REG @@ JUMP ()
       end
+    | ETriOp (ETIte (), e, e1, e2) =>
+      let
+        val (I_e, st) = compile (e, st)
+        val (e2, space_e2) = assert_EAscSpace e2
+        val (e2, i_e2) = assert_EAscTime e2
+        val I1 = cg_e (ectx, itctx, rctx, st) e1
+        val I2 = cg_e (ectx, itctx, rctx, st) e2
+        val itbinds = rev itctx
+        val hval = HCode' (itbinds, ((st, rctx, [], (to_real C_JUMPDEST %+ i_e2, space_e2)), I2))
+        val l = fresh_label ()
+        val () = output_heap ((l, "else_branch"), hval)
+      in
+        I_e @@
+        [ISZERO ()] @@
+        PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
+        [JUMPI ()] @@
+        I1
+      end
     | EIfi (e, bind1, bind2) =>
       let
         val (e, t) = assert_EAscType e
@@ -641,7 +659,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
         val I2 = cg_e ((name2, inl r) :: ectx, itctx, rctx @+ (r, t2), st) e2
         val branch_prelude = set_reg r
         val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((st, rctx, [t2], (i_e2, space_e2)), branch_prelude @@ I2))
+        val hval = HCode' (itbinds, ((st, rctx, [t2], (to_real C_JUMPDEST %+ to_real C_Ifi_branch_prelude %+ i_e2, space_e2)), branch_prelude @@ I2))
         val l = fresh_label ()
         val () = output_heap ((l, "ifi_else_branch"), hval)
       in
@@ -650,24 +668,6 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
         PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
         [JUMPI ()] @@
         branch_prelude @@
-        I1
-      end
-    | ETriOp (ETIte (), e, e1, e2) =>
-      let
-        val (I_e, st) = compile (e, st)
-        val (e2, space_e2) = assert_EAscSpace e2
-        val (e2, i_e2) = assert_EAscTime e2
-        val I1 = cg_e (ectx, itctx, rctx, st) e1
-        val I2 = cg_e (ectx, itctx, rctx, st) e2
-        val itbinds = rev itctx
-        val hval = HCode' (itbinds, ((st, rctx, [], (to_real C_JUMPDEST %+ i_e2, space_e2)), I2))
-        val l = fresh_label ()
-        val () = output_heap ((l, "else_branch"), hval)
-      in
-        I_e @@
-        [ISZERO ()] @@
-        PUSH_value (VAppITs_ctx (VLabel l, itctx)) @@
-        [JUMPI ()] @@
         I1
       end
     | ECase (e, bind1, bind2) =>

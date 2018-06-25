@@ -1083,6 +1083,41 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (ETriOp (ETIte (), e, e1, e2), t, i %%+ mapPair' to_real N cost %%+ IMaxPair (i1 %%+ mapPair' to_real N branch1_extra, TN C_JUMPDEST %%+ i2 %%+ mapPair' to_real N branch2_extra), st1)
         end
+      | EIfi data =>
+        let
+          val (e, (name1, e1), (name2, e2)) = unECase data
+          val (e, t_e, j, st) = tc (ctx, st) e
+          val i = assert_TiBool $ whnf itctx t_e
+          val make_exists = make_exists "__p"
+          val t1 = make_exists (SSubset_from_prop dummy $ i %= Itrue)
+          val t2 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
+          val (e1, t, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
+          val (e2, i2, st2) = tc_against_ty (add_typing_full (fst name2, t2) ctx, st) (e2, t)
+          val () = is_eq_idx (st2, st1)
+          val (cost, branch1_extra, branch2_extra, e2) =
+              case !phase of
+                  PhBeforeCodeGen () => ((0, 0), (0, 0), (0, 0), e2)
+                | PhBeforeCC () => ((0, 0), (0, 0), (0, 0), e2)
+                | PhBeforeCPS () =>
+                  let
+                    val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars e2
+                    val cost = if has_k then
+                                 (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                                  M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                               else (0, 0)
+                    val branch_extra = (C_App_BeforeCC, M_App_BeforeCC)
+                    val branch1_extra = if is_tail_call e1 then (0, 0) else branch_extra
+                    val branch2_extra = if is_tail_call e2 then (0, 0) else branch_extra
+                  in
+                    (cost, branch1_extra, branch2_extra, e2)
+                  end
+          val cost = mapFst (add C_Ifi_BeforeCodeGen) cost
+          val e2 = if !anno_EIfi_e2_time then e2 |># i2 else e2
+          val e = if !anno_EIfi then e %: t_e else e
+          val e = if !anno_EIfi_state then e %~ st else e
+        in
+          (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t, j %%+ mapPair' to_real N cost %%+ IMaxPair (i1 %%+ mapPair' to_real N branch1_extra, TN C_JUMPDEST %%+ i2 %%+ mapPair' to_real N branch2_extra), st1)
+        end
       | ECase data =>
         let
           val (e, (name1, e1), (name2, e2)) = unECase data
@@ -1110,11 +1145,11 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                     (cost, branch1_extra, branch2_extra, e2)
                   end
           val cost = mapFst (add C_Case_BeforeCodeGen) cost
-          val () = println $ "cost = " ^ str_pair (str_int, str_int) cost
-          val () = println $ "is_tail_call e1 = " ^ str_bool (is_tail_call e1)
-          val () = println $ "is_tail_call e2 = " ^ str_bool (is_tail_call e2)
-          val () = println $ "branch1_extra = " ^ str_pair (str_int, str_int) branch1_extra
-          val () = println $ "branch2_extra = " ^ str_pair (str_int, str_int) branch2_extra
+          (* val () = println $ "cost = " ^ str_pair (str_int, str_int) cost *)
+          (* val () = println $ "is_tail_call e1 = " ^ str_bool (is_tail_call e1) *)
+          (* val () = println $ "is_tail_call e2 = " ^ str_bool (is_tail_call e2) *)
+          (* val () = println $ "branch1_extra = " ^ str_pair (str_int, str_int) branch1_extra *)
+          (* val () = println $ "branch2_extra = " ^ str_pair (str_int, str_int) branch2_extra *)
           val e2 = if !anno_ECase_e2_time then e2 |># i2 else e2
           val e = if !anno_ECase then e %: t_e else e
           val e = if !anno_ECase_state then e %~ st else e
@@ -1659,24 +1694,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2, e3) = if !anno_EWrite_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
           (EWrite (e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN C_EWrite, st)
-        end
-      | EIfi data =>
-        let
-          val (e, (name1, e1), (name2, e2)) = unECase data
-          val (e, t_e, j, st) = tc (ctx, st) e
-          val i = assert_TiBool $ whnf itctx t_e
-          val make_exists = make_exists "__p"
-          val t1 = make_exists (SSubset_from_prop dummy $ i %= Itrue)
-          val t2 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
-          val (e1, t1, i1, st1) = tc (add_typing_full (fst name1, t1) ctx, st) e1
-          val (e2, t2, i2, st2) = tc (add_typing_full (fst name2, t2) ctx, st) e2
-          val e2 = if !anno_EIfi_e2_time then e2 |># i2 else e2
-          val () = is_eq_ty itctx (t1, t2)
-          val () = is_eq_idx (st2, st1)
-          val e = if !anno_EIfi then e %: t_e else e
-          val e = if !anno_EIfi_state then e %~ st else e
-        in
-          (EIfi (e, EBind (name1, e1), EBind (name2, e2)), t1, j %%+ TN C_Ifi %%+ IMaxPair (i1, i2), st1)
         end
       | EPack (t', t1, e) =>
         let

@@ -1643,25 +1643,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (ETriOp (ETWrite (), e1, e2, e3), TUnit r, d1 %%+ d2 %%+ d3 %%+ TN C_EWrite, st)
           end
-	| U.ETriOp (ETIte (), e, e1, e2) =>
-          let
-            val r = U.get_region_e e_all
-            val (e, d, st) = check_mtype (ctx, st) (e, TBool r)
-            val (e1, t, d1, st1) = get_mtype (ctx, st) e1
-            val (e2, d2, st2) = check_mtype (ctx, st) (e2, t)
-            val () = unify_state r gctxn sctxn (st2, st1)
-            val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e2, ["Should be EAnnoLiveVars"])) e2
-            val cost = if has_k then
-                         (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
-                          M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
-                       else (0, 0)
-            val cost = mapFst (add C_Ite_BeforeCodeGen) cost
-            val branch_extra = (C_App_BeforeCC, M_App_BeforeCC)
-            val branch1_extra = if is_tail_call e1 then (0, 0) else branch_extra
-            val branch2_extra = if is_tail_call e2 then (0, 0) else branch_extra
-          in
-            (ETriOp (ETIte (), e, e1, e2), t, d %%+ mapPair' to_real N cost %%+ smart_max_pair (d1 %%+ mapPair' to_real N branch1_extra) (TN C_JUMPDEST %%+ d2 %%+ mapPair' to_real N branch2_extra), st1)
-          end
 	| U.EEI (opr, e, i) =>
           (case opr of
 	       EEIAppI () =>
@@ -1839,29 +1820,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (ECaseSumbool (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %%+ smart_max_pair j1 j2, st1)
           end
-        | U.EIfi (e, bind1, bind2, r) =>
-          let
-            val i = fresh_i gctx sctx BSBool r
-            val (e, j_e, st) = check_mtype (ctx, st) (e, TiBool (i, r))
-            val (iname1, e1) = unBindSimpName bind1
-            val (iname2, e2) = unBindSimpName bind2
-            val s1 = SSubset_from_prop r $ i %= ITrue r
-            val s2 = SSubset_from_prop r $ i %= IFalse r
-            val (e1, t1, j1, st1) = open_close add_sorting_skcts (fst iname1, s1) (ctx, st) (fn ctx_st => get_mtype ctx_st e1)
-            val ctxd = ctx_from_sorting (fst iname1, s1)
-            val skctx' = add_sorting_sk (fst iname1, s1) (#1 ctx, #2 ctx)
-            val (t1, j1) = forget_or_check_return r gctx skctx' ctxd (t1, j1) (NONE, NONE, NONE)
-            val st1 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st1
-            val (e2, t2, j2, st2) = open_close add_sorting_skcts (fst iname2, s2) (ctx, st) (fn ctx_st => get_mtype ctx_st e2)
-            val ctxd = ctx_from_sorting (fst iname2, s2)
-            val skctx' = add_sorting_sk (fst iname2, s2) (#1 ctx, #2 ctx)
-            val (t2, j2) = forget_or_check_return r gctx skctx' ctxd (t2, j2) (NONE, NONE, NONE)
-            val st2 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st2
-            val () = unify_mt r gctx (sctx, kctx) (t2, t1)
-            val () = unify_state r gctxn sctxn (st2, st1)
-          in
-            (EIfi (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %%+ smart_max_pair j1 j2, st1)
-          end
 	| U.EAppConstr ((x, (eia, _)), ts, is, e, ot) => 
 	  let
             val () = assert (fn () => null ts) "get_mtype()/EAppConstr: null ts"
@@ -1946,6 +1904,57 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             (* val () = println $ "ECase: d = " ^ str_i gctxn sctxn (fst d) *)
           in
             (ECase (e, return, map Unbound.Bind rules, r), t, d, st)
+          end
+        | U.EIfi (e, bind1, bind2, r) =>
+          let
+            val i = fresh_i gctx sctx BSBool r
+            val (e, j_e, st) = check_mtype (ctx, st) (e, TiBool (i, r))
+            val (iname1, e1) = unBindSimpName bind1
+            val (iname2, e2) = unBindSimpName bind2
+            val s1 = SSubset_from_prop r $ i %= ITrue r
+            val s2 = SSubset_from_prop r $ i %= IFalse r
+            val (e1, t1, j1, st1) = open_close add_sorting_skcts (fst iname1, s1) (ctx, st) (fn ctx_st => get_mtype ctx_st e1)
+            val ctxd = ctx_from_sorting (fst iname1, s1)
+            val skctx' = add_sorting_sk (fst iname1, s1) (#1 ctx, #2 ctx)
+            val (t1, j1) = forget_or_check_return r gctx skctx' ctxd (t1, j1) (NONE, NONE, NONE)
+            val st1 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st1
+            val (e2, t2, j2, st2) = open_close add_sorting_skcts (fst iname2, s2) (ctx, st) (fn ctx_st => get_mtype ctx_st e2)
+            val ctxd = ctx_from_sorting (fst iname2, s2)
+            val skctx' = add_sorting_sk (fst iname2, s2) (#1 ctx, #2 ctx)
+            val (t2, j2) = forget_or_check_return r gctx skctx' ctxd (t2, j2) (NONE, NONE, NONE)
+            val st2 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st2
+            val () = unify_mt r gctx (sctx, kctx) (t2, t1)
+            val () = unify_state r gctxn sctxn (st2, st1)
+            val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e2, ["Should be EAnnoLiveVars"])) e2
+            val cost = if has_k then
+                         (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                          M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                       else (0, 0)
+            val cost = mapFst (add C_Ifi_BeforeCodeGen) cost
+            val branch_extra = (C_App_BeforeCC, M_App_BeforeCC)
+            val branch1_extra = if is_tail_call e1 then (0, 0) else branch_extra
+            val branch2_extra = if is_tail_call e2 then (0, 0) else branch_extra
+          in
+            (EIfi (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %%+ mapPair' to_real N cost %%+ smart_max_pair (j1 %%+ mapPair' to_real N branch1_extra) (TN C_JUMPDEST %%+ j2 %%+ mapPair' to_real N branch2_extra), st1)
+          end
+	| U.ETriOp (ETIte (), e, e1, e2) =>
+          let
+            val r = U.get_region_e e_all
+            val (e, d, st) = check_mtype (ctx, st) (e, TBool r)
+            val (e1, t, d1, st1) = get_mtype (ctx, st) e1
+            val (e2, d2, st2) = check_mtype (ctx, st) (e2, t)
+            val () = unify_state r gctxn sctxn (st2, st1)
+            val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (get_region_e e2, ["Should be EAnnoLiveVars"])) e2
+            val cost = if has_k then
+                         (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                          M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                       else (0, 0)
+            val cost = mapFst (add C_Ite_BeforeCodeGen) cost
+            val branch_extra = (C_App_BeforeCC, M_App_BeforeCC)
+            val branch1_extra = if is_tail_call e1 then (0, 0) else branch_extra
+            val branch2_extra = if is_tail_call e2 then (0, 0) else branch_extra
+          in
+            (ETriOp (ETIte (), e, e1, e2), t, d %%+ mapPair' to_real N cost %%+ smart_max_pair (d1 %%+ mapPair' to_real N branch1_extra) (TN C_JUMPDEST %%+ d2 %%+ mapPair' to_real N branch2_extra), st1)
           end
 	| U.EAbs (pre_st, bind, d_spec) => 
 	  let
