@@ -1319,8 +1319,11 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                   let
                     val tail_app_cost = if is_tail_call e then (0, 0)
                                         else (C_App_BeforeCC, M_App_BeforeCC)
+                    val extra_inner_cost = (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost
+                    val () = println $ "EAbsI/i = " ^ (ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst i)
+                    val () = println $ "EAbsI/extra_inner_cost = " ^ str_int (fst extra_inner_cost)
                   in
-                    i %%+ mapPair' to_real N ((C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost)
+                    i %%+ mapPair' to_real N extra_inner_cost
                   end
           val cost =
               case !phase of
@@ -1380,10 +1383,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                   in
                     (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars) ++ tail_app_cost
                   end
-          val () = println $ "i = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i)
-          val () = println $ "extra = " ^ str_int (fst extra_inner_cost)
-          val () = println $ "n_fvars = " ^ str_int n_fvars
-          val () = println $ "C_Abs_Inner_BeforeCC n_fvars = " ^ str_int (C_Abs_Inner_BeforeCC n_fvars)
+          val () = println $ "EAbs/i = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i)
+          val () = println $ "EAbs/extra = " ^ str_int (fst extra_inner_cost)
+          val () = println $ "EAbs/n_fvars = " ^ str_int n_fvars
+          val () = println $ "EAbs/C_Abs_Inner_BeforeCC n_fvars = " ^ str_int (C_Abs_Inner_BeforeCC n_fvars)
           val i = i %%+ mapPair' to_real N extra_inner_cost              
           val e = if !anno_EAbs then e %: t2 (* |># i *) else e
           val e = if !anno_EAbs_state then e %~ post_st else e

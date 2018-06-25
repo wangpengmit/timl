@@ -245,20 +245,33 @@ structure UnitTestBasic1 = struct
 (*            case a of *)
 (*                inl () => () *)
 
-(* val a = if 1 > 2 then 1 else 2 *)
-
-val a = ifdec #1 #>= #2 then 1 else 2
+(* val a = (if 1 > 2 then 1 else 2) using _, _ *)
+(* val a = (ifdec #1 #>= #2 then 1 else 2) using _, _ *)
+                                     
+(* fun f b = ifdec b then 1 else 2 *)
+(* val a = f (#1 #>= #2) *)
 
 (* val a = #3 #+ #1 *)
 (* val a = #3 #- #1 *)
 (* val a = #3 #* #2 *)
 (* val a = #5 #/ #2 *)
                                
-(* fun fact_tail {n : Nat} (n : nat {n}, acc) = *)
-(*   ifdec n #< #1 then acc *)
-(*   else fact_tail (n #- #1, __&nat2int n *acc) using 4.0 * $n *)
+(* datatype list 'a : {Nat} = *)
+(*          Nil of list 'a {0} *)
+(*        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1} *)
+
+(* fun length_int [a] {n : Nat} (l : list a {n}) = *)
+(*     case l return using $(2111*n+777), 30*n+2 of *)
+(*         [] => (0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0) using _ *)
+(*       | _ :: xs => (1 + (%length_int xs using _, _)) using _ *)
+
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+
+fun fact_tail {n : Nat} (n : nat {n}, acc) =
+  ifdec n #< #1 then waste_time (); acc
+  else %fact_tail (n #- #1, __&nat2int n *acc) using $(1825*n+1651), 26*n+16
                  
-(* val a = fact_tail (#4, 1) *)
+val a = (%fact_tail (#4, 1)) using _, _
                   
 (* fun fact {n : Nat} (n : nat {n}) = *)
 (*   ifdec n #< #1 then 1 *)

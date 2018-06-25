@@ -1770,9 +1770,12 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (is_rec, e) = is_rec_body e
             val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
+            val () = println $ "EAbsI/n_fvars = " ^ str_int n_fvars
             val tail_app_cost = if is_tail_call e then (0, 0)
                                 else (C_App_BeforeCC, M_App_BeforeCC)
             val extra_inner_cost = (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost
+            val () = println $ "EAbsI/d = " ^ (ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst d)
+            val () = println $ "EAbsI/extra_inner_cost = " ^ str_int (fst extra_inner_cost)
             val d = d %%+ mapPair' to_real N extra_inner_cost
             val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           in
@@ -1931,6 +1934,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                           M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
                        else (0, 0)
             val cost = mapFst (add C_Ifi_BeforeCodeGen) cost
+            val cost = mapFst (add C_EUnpack) cost
             val branch_extra = (C_App_BeforeCC, M_App_BeforeCC)
             val branch1_extra = if is_tail_call e1 then (0, 0) else branch_extra
             val branch2_extra = if is_tail_call e2 then (0, 0) else branch_extra
@@ -1975,9 +1979,11 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val post_st = StMap.map (forget_ctx_d r gctx (#1 ctx) (#1 ctxd)) post_st
             val () = close_n nps
             val () = close_ctx ctxd
-            (* calculation of 'excluded' is more complicated because of patterns *)
-            val excluded = [0] @ (if is_rec then [1] else []) (* argument and (optionally) self-reference are not free evars *)
+            val len_pn_ebinds = length $ snd $ PatternVisitor.collect_binder_pn pn
+            val excluded = (if is_rec then [len_pn_ebinds] else []) @ list_of_range (0, len_pn_ebinds) (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
+            val () = println $ "EAbs/is_rec = " ^ str_bool is_rec
+            val () = println $ "EAbs/n_fvars = " ^ str_int n_fvars
             val d = mapPair' to_real N (hd $ get_rules_cost_adjustments snd [(pn, is_tail_call e)]) %%+ d
             val extra_inner_cost = (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars)
             val d = mapPair' to_real N extra_inner_cost %%+ d

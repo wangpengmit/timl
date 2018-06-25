@@ -541,6 +541,37 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         cps (e, t_e) (c, i_c)
       end
+    | S.EIfi (e, bind1, bind2) =>
+      (* [[ ifi e (x.e1) (x.e2) ]](k) = [[e]](\y. ifi y (x. [[e1]](k)) (x. [[e2]](k))) *)
+      let
+        val (e, st_e) = assert_EAscState e
+        val (name_x_1, e1) = unBindSimp2 bind1
+        val (name_x_2, e2) = unBindSimp2 bind2
+        val (e2, n_live_vars) = assert_EAnnoLiveVars e2
+        val x = fresh_evar ()
+        val e1 = open0_e_e x e1
+        val e2 = open0_e_e x e2
+        val t_res = t_e
+        val (e, t_e) = assert_EAscType e
+        val t_res = cps_t t_res
+        val x_k = fresh_evar ()
+        val (inner, outer) = get_cost_adjustments n_live_vars k
+        val j_k = inner %%+ j_k
+        val tail_app_cost1 = if is_tail_call e1 then (0, 0)
+                            else (C_App_BeforeCC, M_App_BeforeCC)
+        val tail_app_cost2 = if is_tail_call e2 then (0, 0)
+                            else (C_App_BeforeCC, M_App_BeforeCC)
+        val (e1, i_e1) = cps (e1, t_res) (EV x_k, mapPair' to_real N tail_app_cost1 %%+ j_k)
+        val (e2, i_e2) = cps (e2, t_res) (EV x_k, mapPair' to_real N tail_app_cost2 %%+ j_k)
+        val y = fresh_evar ()
+        val c = EIfiClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
+        val c = ELetClose ((x_k, "k", k), c)
+        val t_y = cps_t t_e
+        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c), NONE)
+        val i_c = mapPair' to_real N (C_Ifi_BeforeCodeGen, 0) %%+ outer %%+ IMaxPair (i_e1, TN C_JUMPDEST %%+ i_e2)
+      in
+        cps (e, t_e) (c, i_c)
+      end
     | S.ECase (e, bind1, bind2) =>
       (* [[ case e (x.e1) (x.e2) ]](k) = [[e]](\y. case y (x. [[e1]](k)) (x. [[e2]](k))) *)
       let
@@ -820,30 +851,6 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                 end
       in
         cps_EUnOp t_e (fn x => EUnOp (opr, EV x))
-      end
-    | S.EIfi (e, bind1, bind2) =>
-      (* [[ ifi e (x.e1) (x.e2) ]](k) = [[e]](\y. ifi y (x. [[e1]](k)) (x. [[e2]](k))) *)
-      let
-        val (e, st_e) = assert_EAscState e
-        val (name_x_1, e1) = unBindSimp2 bind1
-        val (name_x_2, e2) = unBindSimp2 bind2
-        val x = fresh_evar ()
-        val e1 = open0_e_e x e1
-        val e2 = open0_e_e x e2
-        val t_res = t_e
-        val (e, t_e) = assert_EAscType e
-        val t_res = cps_t t_res
-        val x_k = fresh_evar ()
-        val (e1, i_e1) = cps (e1, t_res) (EV x_k, j_k)
-        val (e2, i_e2) = cps (e2, t_res) (EV x_k, j_k)
-        val y = fresh_evar ()
-        val c = EIfiClose (EV y, ((x, name_x_1), e1), ((x, name_x_2), e2))
-        val c = ELetClose ((x_k, "k", k), c)
-        val t_y = cps_t t_e
-        val c = EAbs (st_e %++ F, close0_e_e_anno ((y, "y", t_y), c), NONE)
-        val i_c = IMaxPair (i_e1, i_e2)
-      in
-        cps (e, t_e) (c, i_c)
       end
     | S.ELet (e1, bind) =>
       (* [[ let x = e1 in e2 ]](k) = [[e1]](\x. [[e2]](k)) *)

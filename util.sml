@@ -375,6 +375,8 @@ structure Range = struct
 
 type range = int * int
 
+val range = id
+              
 fun zero_to length = (0, length)
 
 fun foldl f init (start, len) =
@@ -386,6 +388,7 @@ fun foldl f init (start, len) =
 fun for f init range = foldl f init range
 
 fun map f range = rev $ foldl (fn (i, acc) => f i :: acc) [] range
+fun to_list a = map id a
                              
 fun app f range = foldl (fn (i, ()) => (f i; ())) () range
 
@@ -393,6 +396,7 @@ end
 
 fun int_mapi f n = Range.map f $ Range.zero_to n
 fun int_appi f n = Range.app f $ Range.zero_to n
+val list_of_range = Range.to_list
   
 fun repeat_app f n = Range.app (fn _ => f ()) (Range.zero_to n)
 

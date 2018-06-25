@@ -238,6 +238,7 @@ fun is_tail_call e =
     | EAppT _ => true
     | EAppI _ => true
     | ECase _ => true 
+    | EIfi _ => true 
     | ETriOp (ETIte (), _, _, _) => true
     | EUnOp (EUTiML (EUAnno _), e) => is_tail_call e
     | EAscTime (e, _) => is_tail_call e
