@@ -45,6 +45,7 @@ fun live_vars_expr_visitor_vtable cast () =
         in
           case e of
               EVar _ => false
+            | EState _ => false
             | EAscTime (e, _) => f e
             | EAscSpace (e, _) => f e
             | EAscState (e, _) => f e
@@ -80,6 +81,9 @@ fun live_vars_expr_visitor_vtable cast () =
             end
         end
     fun visit_es this env es =
+        case es of
+            [] => []
+          | _ => 
         let
           val vtable = cast this
           (* delegate to visit_e2 *)

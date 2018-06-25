@@ -1,5 +1,5 @@
-test-state.timl
-(* unit-test-basic1.timl *)
+(* test-state.timl *)
+unit-test-basic1.timl
 
 (* pervasive.timl *)
 (* basic.timl *)

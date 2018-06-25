@@ -56,6 +56,7 @@ val C_vector_push_back = C_DUP * 2 + C_SLOAD + C_SWAP + C_DUP + C_PUSH + C_ADD +
 val C_VectorPushBack = C_vector_push_back + C_PUSH
 val C_VectorLen = C_SLOAD
 val C_VectorClear = C_PUSH + C_SWAP + C_SSTORE + C_PUSH
+(* val C_VectorClear = C_PUSH + C_SWAP + C_sreset + C_PUSH *)
 val C_VectorSet = C_SWAP + C_vector_ptr + C_SSTORE + C_PUSH
 val C_StorageSet = C_SWAP + C_SSTORE + C_PUSH
 (* val C_State = C_PUSH *)

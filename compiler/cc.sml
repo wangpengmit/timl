@@ -721,7 +721,7 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
           val (binds, e) = collect_EAbsIT e
           val (st, (t_y, (name_y, e)), i_spec) = assert_EAbs e
           val (e, _) = assert_EAscState e
-          val (e, _) = assert_EAscTimeSpace e
+          (* val (e, _) = assert_EAscTimeSpace e *)
           val (e, _) = assert_EAscType e
           val e = #visit_expr (cast this) this env e
           val e = EAbs (st, EBindAnno ((name_y, t_y), e), i_spec)
@@ -744,7 +744,8 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
               )
             else (default_fun_name, name_y)
         val (e, post) = assert_EAscState e
-        val (e, i) = assert_EAscTimeSpace e
+        (* val (e, i) = assert_EAscTimeSpace e *)
+        val i = assert_SOME i_spec
         val (_, t_e) = assert_EAscType e
         val e = #visit_expr (cast this) this env e
         val e = EAbs (pre, EBindAnno (((name_y, r), t_y), e), i_spec)

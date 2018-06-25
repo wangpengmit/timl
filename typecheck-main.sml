@@ -1592,7 +1592,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                 else raise Error (r, ["must be value"])
               val () = app check_value es
               val (e, n_live_vars) = U.assert_EAnnoLiveVars (fn () => raise Error (r, ["Should be EAnnoLiveVars"])) e
-              val e = U.ESetModify (false, x, es, (U.EApp (e, U.EAnnoLiveVars (U.EGet (x, es, r), n_live_vars, r))), r)
+              (* fun asc_time e = U.EAscTime (e, U.IUVar ((), r)) *)
+              val e = U.ESetModify (false, x, es, (* asc_time $  *)U.EApp (e, U.EAnnoLiveVars ((* asc_time $  *)U.EGet (x, es, r), n_live_vars, r)), r)
             in
               get_mtype ctx_st e
             end

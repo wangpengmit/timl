@@ -220,6 +220,11 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
   let
     fun itctxn () = itctx_names itctx
     val str_t = fn t => ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctxn ()) t
+    fun str_ts ts = surround "[" "]" $ join ",\n" $ map (trim o str_t) ts
+    (* val () = println "tc() start: " *)
+    (* val () = println $ str_ts sctx *)
+    (* val inst_input_str = EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctxn ()) inst *)
+    (* val () = print $ inst_input_str *)
     fun arith int_result nat_result name f =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
@@ -548,13 +553,16 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val offset = assert_TNat $ whnf itctx t0
         val (t, len, lowest, (len_inited, is_upward)) = assert_TPreArray $ whnf itctx t1
         val () = is_eq_ty itctx (t2, t)
+        (* val () = println $ "is_upward = " ^ str_bool is_upward *)
+        (* val () = println $ "offset = " ^ (ExportPP.str_i $ ExportPP.export_i (fst $ itctxn ()) offset) *)
+        (* val () = println $ "lowest = " ^ (ExportPP.str_i $ ExportPP.export_i (fst $ itctxn ()) lowest) *)
       in
         if is_upward then
           (check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %= lowest);
-           ((itctx, rctx, TNat len :: TPreArray (t, len, lowest %+ N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
+           ((itctx, rctx, TNat offset :: TPreArray (t, len, lowest %+ N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
         else
           (check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest);
-           ((itctx, rctx, TNat len :: TPreArray (t, len, lowest %- N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
+           ((itctx, rctx, TNat offset :: TPreArray (t, len, lowest %- N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
       end
     | MACRO_array_init_len () =>
       let
@@ -720,8 +728,11 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | ASCSPACE _ => err ()
     | MACRO_br_sum () => err ()
     (* val () = println $ "before time_ref = " ^ (ExportPP.str_i $ ExportPP.export_i [] $ !time_ref) *)
+    val ret = (ctx, (!time_ref, !space_ref), !ishift_ref)
+    (* val () = println "tc() finished:" *)
+    (* val () = print $ inst_input_str *)
   in
-    (ctx, (!time_ref, !space_ref), !ishift_ref)
+    ret
   end
       
 fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)

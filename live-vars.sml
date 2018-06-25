@@ -82,7 +82,7 @@ fun live_vars_expr_visitor_vtable cast () =
     (* has_cont_var: a continuation variable will also be alive (which is invisible before CPS), so the number of live variables should be added by one *)
     fun num_lvars (lvars, has_k, has_cont_var) = (Set.numItems (!lvars) + b2i has_cont_var, has_k)
     fun set_has_k (lvars, _, has_cont_var) = (lvars, true, has_cont_var)
-    fun output lvars n = (println "output"; binop_ref (curry Set.add) lvars n)
+    fun output lvars n = ((* println "output";  *)binop_ref (curry Set.add) lvars n)
     fun output_set lvars s = Set.app (output lvars) s
     fun add_AnnoLiveVars (bind, n, r) =
       let
@@ -135,6 +135,9 @@ fun live_vars_expr_visitor_vtable cast () =
             end
         end
     fun visit_es this env es =
+        case es of
+            [] => []
+          | _ => 
         let
           val vtable = cast this
           (* delegate to visit_e2 *)
@@ -149,6 +152,25 @@ fun live_vars_expr_visitor_vtable cast () =
           val e = #visit_expr vtable this env $ to_adds es
         in
           from_adds len e
+        end
+    fun visit_es_left this env es =
+        case es of
+            [] => []
+          | _ => 
+        let
+          val vtable = cast this
+          (* delegate to visit_e2 *)
+          val len = length es
+          fun to_adds es = foldl_nonempty (fn (e, acc) => EIntAdd (acc, e)) $ es
+          fun from_adds n e =
+            if n <= 1 then [e]
+            else
+              case e of
+                  EBinOp (EBPrim (EBPIntAdd ()), e1, e2) => e2 :: from_adds (n-1) e1
+                | _ => raise Impossible "live-vars/visit_es()"
+          val e = #visit_expr vtable this env $ to_adds es
+        in
+          rev $ from_adds len e
         end
     fun visit_e3 this env (e1, e2, e3) =
       case visit_es this env [e1, e2, e3] of
@@ -203,14 +225,28 @@ fun live_vars_expr_visitor_vtable cast () =
               EIfi (e, bind1, add_AnnoLiveVars (bind2, n_lvars, r), r)
             end
           | ESetModify (b, x, es, e, r) =>
-            let
-              val n_lvars = num_lvars env
-              val es = visit_es this env $ es @ [e]
-              val (e, es) = assert_cons $ rev es
-              val es = rev es
-            in
-              ESetModify (b, x, es, EAnnoLiveVars (e, n_lvars, dummy), r)
-            end
+            if b then
+              let
+                val e = ESetModify (false, x, es, (EApp (e, EGet (x, es, r))), r)
+                val e = #visit_expr vtable this env e
+                val (es, e, e2) = case e of
+                                      ESetModify (false, x, es, (EBinOp (EBApp (), e, e2)), r) =>
+                                      (es, e, e2)
+                                    | _ => raise Impossible "live-vars/ESetModify/1"
+                val n_lvars = case e2 of
+                                  EUnOp (EUAnno (EALiveVars n_lvars), _, _) => n_lvars
+                                | _ => raise Impossible "live-vars/ESetModify/2"
+              in
+                ESetModify (b, x, es, EAnnoLiveVars (e, n_lvars, r), r)
+              end
+            else
+              let
+                val es = visit_es_left this env $ es @ [e]
+                val (e, es) = assert_cons $ rev es
+                val es = rev es
+              in
+                ESetModify (b, x, es, e, r)
+              end
           | EGet (x, es, r) => EGet (x, visit_es this env es, r)
       in
         ret
@@ -567,7 +603,7 @@ fun live_vars_expr_visitor_vtable cast () =
       end
     fun visit_DVal this ctx (name, bind, r) =
       let
-        val () = println "visit_DVal"
+        (* val () = println "visit_DVal" *)
         val vtable = cast this
         val name = visit_ebinder this ctx name
         val (tbinders, e) = unBind $ unOuter bind
@@ -592,7 +628,7 @@ fun live_vars_expr_visitor_vtable cast () =
                 | TypingST pn => get_num_ebind_pn pn) $ unTeles $ unRebind stbinds
     fun visit_DRec this ctx (name, bind, r) =
       let
-        val () = println "visit_DRec"
+        (* val () = println "visit_DRec" *)
         val env = !(#current ctx)
         val lvars = #1 env
         val vtable = cast this

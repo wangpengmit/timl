@@ -867,6 +867,7 @@ fun test1 dirname =
               (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *)
               concatMap (VCSolver.print_unsat true filename) vcs
             )
+    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
     val () = check_vcs vcs
     val () = println "Finished TiML typechecking"
                      
@@ -897,6 +898,8 @@ fun test1 dirname =
     val (e, _) = MicroTiMLLiveVars.live_vars e
     val e = set_is_rec false e
     val e = set_free_evars e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
+    val () = write_file (join_dir_file' dirname $ "unit-test-after-translation-before-tc.tmp", e_str)
     val () = phase := PhBeforeCPS ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
@@ -943,6 +946,8 @@ fun test1 dirname =
     val () = println "Started MicroTiML typechecking #_2 ..."
     val e = set_is_rec true e
     val e = set_free_evars e
+    val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
+    val () = write_file (join_dir_file' dirname $ "unit-test-after-cps-before-tc.tmp", e_str)
     val () = phase := PhBeforeCC ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs

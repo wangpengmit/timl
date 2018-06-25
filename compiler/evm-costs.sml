@@ -6,6 +6,7 @@ val C_low = 5
 val C_mid = 8
 val C_high = 10
 val C_sset = 20000
+val C_sreset = 5000
 val C_logtopic = 375
 val C_logdata = 8
 val C_sha3word = 6

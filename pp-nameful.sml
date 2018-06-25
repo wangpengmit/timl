@@ -400,6 +400,7 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
       fun space () = PP.space s 1
       fun add_space a = (space (); a)
       fun str v = PP.string s v
+      fun strs s = (str s; space ())
       fun comma () = (str ","; space ())
       fun colon () = (str ":"; space ())
       fun open_hbox () = PP.openHBox s
@@ -441,21 +442,15 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
         | EConst (c, _) =>
           (
             open_hbox ();
-            str "EConst";
-            space ();
-            str "(";
+            strs "EConst";
             str $ str_expr_const c;
-            str ")";
             close_box ()
           )
         | EState (x, _) =>
           (
             open_hbox ();
-            str "EState";
-            space ();
-            str "(";
+            strs "EState";
             str x;
-            str ")";
             close_box ()
           )
         | EUnOp (opr, e, _) =>
