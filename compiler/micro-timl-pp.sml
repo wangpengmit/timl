@@ -686,6 +686,20 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
+      | EUnOp (EUTiML (EUAnno (EALiveVars (n, b))), e) =>
+        (
+          open_hbox ();
+          str "ELiveVars";
+          space ();
+          str "(";
+          str $ str_int n;
+          comma ();
+          str $ str_bool b;
+          comma ();
+          pp_e e;
+          str ")";
+          close_box ()
+        )
       | EUnOp (EUFold t, e) =>
         (
           open_hbox ();

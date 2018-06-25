@@ -91,21 +91,26 @@ fun live_vars_expr_visitor_vtable cast () =
         BindSimp (name, EAnnoLiveVars (e, n, r))
       end
                                                                 
+    fun long_id_to_var data =
+      case data of
+          ID (n, _) => inl n
+        | QID ((m, _), (n, _)) => inr (m, n)
     fun shift n x =
       case x of
           inl x => inl $ x + n
         | inr _ => x
     fun forget n s = Set.map (fn x => case x of inl x => inl $ x - n | inr _ => x) $ Set.filter (fn inl x => x >= n | inr _ => true) s
-    fun need_intro_new_var e =
+    fun is_var_or_state e =
         let
-          val f = need_intro_new_var
+          val f = is_var_or_state
         in
           case e of
-              EVar _ => false
+              EVar (x, _) => SOME $ SOME $ long_id_to_var x
+            | EState _ => SOME NONE
             | EEI (EEIAscTime (), e, _) => f e
             | EEI (EEIAscSpace (), e, _) => f e
             | EET (EETAsc (), e, _) => f e
-            | _ => true
+            | _ => NONE
         end
     fun forget01_e_e a = forget_e_e 0 1 a
     fun visit_e2 this env (e1, e2) =
@@ -114,25 +119,27 @@ fun live_vars_expr_visitor_vtable cast () =
           val lvars = #1 env
           val env = set_has_k env
         in
-          if need_intro_new_var e1 then
-            let
-              val () = unop_ref (Set.map (shift 1)) lvars
-              val () = unop_ref (curry Set.add' $ inl 0) lvars
-              val e2 = shift_e_e e2
-              val e2 = #visit_expr vtable this env e2
-              val e2 = forget01_e_e e2
-              val () = unop_ref (forget 1) lvars
-              val e1 = #visit_expr vtable this env e1
-            in
-              (e1, e2)
-            end
-          else
-            let
-              val e2 = #visit_expr vtable this env e2
-              val e1 = #visit_expr vtable this env e1
-            in
-              (e1, e2)
-            end
+          case is_var_or_state e1 of
+              NONE =>
+              let
+                val () = unop_ref (Set.map (shift 1)) lvars
+                val () = unop_ref (curry Set.add' $ inl 0) lvars
+                val e2 = shift_e_e e2
+                val e2 = #visit_expr vtable this env e2
+                val e2 = forget01_e_e e2
+                val () = unop_ref (forget 1) lvars
+                val e1 = #visit_expr vtable this env e1
+              in
+                (e1, e2)
+              end
+            | SOME x =>
+              let
+                val () = Option.app (fn x => unop_ref (fn s => Set.add (s, x)) lvars) x
+                val e2 = #visit_expr vtable this env e2
+                val e1 = #visit_expr vtable this env e1
+              in
+                (e1, e2)
+              end
         end
     fun visit_es this env es =
         case es of
@@ -252,10 +259,7 @@ fun live_vars_expr_visitor_vtable cast () =
         ret
       end
     fun visit_var this (lvars, _, _) data =
-      ((case data of
-            ID (n, _) => output lvars $ inl n
-          | QID ((m, _), (n, _)) => output lvars $ inr (m, n)
-       );
+      (output lvars $ long_id_to_var data;
        data)
     fun visit_EVar this env data =
       let

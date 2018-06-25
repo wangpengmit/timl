@@ -39,18 +39,18 @@ fun live_vars_expr_visitor_vtable cast () =
     (* has_cont_var: a continuation variable will also be alive (which is invisible before CPS), so the number of live variables should be added by one *)
     fun num_lvars (lvars, has_k, has_cont_var) = (ISet.numItems (!lvars) + b2i has_cont_var, has_k)
     fun set_has_k (lvars, _, has_cont_var) = (lvars, true, has_cont_var)
-    fun need_intro_new_var e =
+    fun is_var_or_state e =
         let
-          val f = need_intro_new_var
+          val f = is_var_or_state
         in
           case e of
-              EVar _ => false
-            | EState _ => false
+              EVar (ID (n, _)) => SOME (SOME n)
+            | EState _ => SOME NONE
             | EAscTime (e, _) => f e
             | EAscSpace (e, _) => f e
             | EAscState (e, _) => f e
             | EAscType (e, _) => f e
-            | _ => true
+            | _ => NONE
         end
     fun forget_e_e a = shift_e_e_fn forget_var a
     fun forget01_e_e a = forget_e_e 0 1 a
@@ -60,25 +60,27 @@ fun live_vars_expr_visitor_vtable cast () =
           val lvars = #1 env
           val env = set_has_k env
         in
-          if need_intro_new_var e1 then
-            let
-              val () = unop_ref (ISet.map inc) lvars
-              val () = unop_ref (fn s => s @%+ 0) lvars
-              val e2 = shift01_e_e e2
-              val e2 = #visit_expr vtable this env e2
-              val e2 = forget01_e_e e2
-              val () = unop_ref (fn s => ISet.map dec (s @%- 0)) lvars
-              val e1 = #visit_expr vtable this env e1
-            in
-              (e1, e2)
-            end
-          else
-            let
-              val e2 = #visit_expr vtable this env e2
-              val e1 = #visit_expr vtable this env e1
-            in
-              (e1, e2)
-            end
+          case is_var_or_state e1 of
+              NONE =>
+              let
+                val () = unop_ref (ISet.map inc) lvars
+                val () = unop_ref (fn s => s @%+ 0) lvars
+                val e2 = shift01_e_e e2
+                val e2 = #visit_expr vtable this env e2
+                val e2 = forget01_e_e e2
+                val () = unop_ref (fn s => ISet.map dec (s @%- 0)) lvars
+                val e1 = #visit_expr vtable this env e1
+              in
+                (e1, e2)
+              end
+            | SOME x =>
+              let
+                val () = Option.app (fn x => unop_ref (fn s => s @%+ x) lvars) x
+                val e2 = #visit_expr vtable this env e2
+                val e1 = #visit_expr vtable this env e1
+              in
+                (e1, e2)
+              end
         end
     fun visit_es this env es =
         case es of

@@ -453,6 +453,20 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str x;
             close_box ()
           )
+        | EUnOp (EUAnno (EALiveVars (n, b)), e, _) =>
+          (
+            open_hbox ();
+            str "ELiveVars";
+            space ();
+            str "(";
+            str $ str_int n;
+            comma ();
+            str $ str_bool b;
+            comma ();
+            pp_e e;
+            str ")";
+            close_box ()
+          )
         | EUnOp (opr, e, _) =>
           (
             open_hbox ();
