@@ -264,12 +264,12 @@ fun fact_tail {n : Nat} (n : nat {n}, acc) =
                  
 val a = (%fact_tail (#4, 1)) using _, _
                   
-(* fun fact {n : Nat} (n : nat {n}) = *)
-(*   ifdec n #< #1 then 1 *)
-(*   else *)
-(*     __&nat2int n * fact (n #- #1) using 4.0 * $n *)
+fun fact {n : Nat} (n : nat {n}) =
+  ifdec n #< #1 then waste_time(); 1
+  else
+    __&nat2int n * %fact (n #- #1) using $(2170*n+1454), 31*n+13
                  
-(* val a = fact #4 *)
+val a = (%fact #4) using _, _
                  
 (* val () = __&halt a *)
               

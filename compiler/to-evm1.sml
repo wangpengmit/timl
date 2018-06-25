@@ -1005,6 +1005,7 @@ fun test1 dirname =
     val st_int2name = invert_map st_name2int
     val (i, (vcs, admits)) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
+    val () = println $ "#VCs = " ^ (str_int $ length vcs)
     val () = check_vcs vcs
     val () = println "Finished EVM1 typechecking"
     val () = println $ "num-of-registers: " ^ str_int num_regs

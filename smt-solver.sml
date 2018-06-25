@@ -67,7 +67,7 @@ fun smt_solver filename get_ce(*get counterexample?*) solver vcs =
           case solver of
               Z3 => "z3"
             (* | Cvc4 => "cvc4 --incremental" *)
-      (* val () = print $ sprintf "Solving by SMT solver \"$\" ... " [smt_cmd] *)
+      (* val () = println $ sprintf "Calling SMT solver \"$\" ... " [smt_cmd] *)
       val _ = system (sprintf "$ $ > $" [smt_cmd, smt2_filename, resp_filename])
       (* val () = println "Finished SMT solving." *)
       (* val () = println $ read_file resp_filename *)
