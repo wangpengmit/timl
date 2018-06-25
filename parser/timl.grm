@@ -112,6 +112,7 @@ open Ast
     | POST
     | PLUS_PLUS
     | PLUS_EQ
+    | PERCENT
 
 %nonterm start of prog
        | exp of exp
@@ -171,6 +172,7 @@ open Ast
        | optional_colon_sort of sort option
        | optional_eq_idx of idx option
        | decorated_id of long_id * bool
+       | decorated_eid of long_id * (bool * bool)
        | long_id of long_id
        | prog of prog
        | top_bind of top_bind
@@ -349,7 +351,7 @@ exp : aexp (aexp)
      | set_modify id_square_plus exp (ESetModify (set_modify, id_square_plus, exp, (set_modifyleft, expright)))
      | exp aexp (EApp (exp, aexp, (expleft, aexpright)))
 
-aexp : decorated_id (EVar decorated_id)
+aexp : decorated_eid (EVar decorated_eid)
      | LPAREN exp_comma_star RPAREN (ETuple (exp_comma_star, (LPARENleft, RPARENright)))
      | FN bind_plus return DARROW exp (EAbs (bind_plus, return, exp, (FNleft, expright)))
      | CASE exp return OF rule_bar_star (ECase (exp, return, rule_bar_star, (CASEleft, rule_bar_starright)))
@@ -383,6 +385,11 @@ long_id : id ((NONE, id))
            
 decorated_id : long_id ((long_id, false))
              | AT long_id ((long_id, true))          
+           
+decorated_eid : long_id ((long_id, (false, false)))
+              | AT long_id ((long_id, (true, false)))          
+              | PERCENT long_id ((long_id, (false, true)))          
+              | AT PERCENT long_id ((long_id, (true, true)))          
            
 idx : aidx (aidx)
     | idx PLUS idx (IBinOp (IBAdd (), idx1, idx2, (idx1left, idx2right)))

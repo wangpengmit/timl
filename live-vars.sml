@@ -105,7 +105,7 @@ fun live_vars_expr_visitor_vtable cast () =
           val f = is_var_or_state
         in
           case e of
-              EVar (x, _) => SOME $ SOME $ long_id_to_var x
+              EVar (x, (_, false)) => SOME $ SOME $ long_id_to_var x
             | EState _ => SOME NONE
             | EEI (EEIAscTime (), e, _) => f e
             | EEI (EEIAscSpace (), e, _) => f e

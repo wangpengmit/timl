@@ -34,7 +34,7 @@ fun remove_DOpen_expr_visitor_vtable cast () : ('this, unit) expr_visitor_vtable
         val decls = mapi (fn (i, name) => DIdxDef (name, Outer NONE, Outer $ IVar (V i, []))) sctx @ decls
         val decls = mapi (fn (i, name) => DTypeDef (name, Outer $ TVar $ V i)) kctx @ decls
         val decls = mapi (fn (i, name) => DConstrDef (name, Outer $ V i)) cctx @ decls
-        val decls = mapi (fn (i, name) => MakeDVal (unBinderName name, [], EVar (V i, true), dummy)) tctx @ decls
+        val decls = mapi (fn (i, name) => MakeDVal (unBinderName name, [], EVar (V i, (true, false)), dummy)) tctx @ decls
         val decls = rev decls
       in
         decls

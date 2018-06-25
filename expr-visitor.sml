@@ -21,7 +21,7 @@ infixr 0 $
 type ('this, 'env) expr_visitor_vtable =
      {
        visit_expr : 'this -> 'env -> expr -> T.expr,
-       visit_EVar : 'this -> 'env -> var * bool -> T.expr,
+       visit_EVar : 'this -> 'env -> var * (bool * bool) -> T.expr,
        visit_EConst : 'this -> 'env -> expr_const * region -> T.expr,
        visit_EUnOp : 'this -> 'env -> expr_un_op * expr * region -> T.expr,
        visit_EBinOp : 'this -> 'env -> expr_bin_op * expr * expr -> T.expr,
@@ -31,7 +31,7 @@ type ('this, 'env) expr_visitor_vtable =
        visit_ET : 'this -> 'env -> expr_T * mtype * region -> T.expr,
        visit_EAbs : 'this -> 'env -> idx StMap.map * (ptrn, expr) bind * (idx * idx) option -> T.expr,
        visit_EAbsI : 'this -> 'env -> (sort, expr) ibind_anno * region -> T.expr,
-       visit_EAppConstr : 'this -> 'env -> (cvar * bool) * mtype list * idx list * expr * (int * mtype) option -> T.expr,
+       visit_EAppConstr : 'this -> 'env -> (cvar * (bool * bool)) * mtype list * idx list * expr * (int * mtype) option -> T.expr,
        visit_ECase : 'this -> 'env -> expr * return * (ptrn, expr) bind list * region -> T.expr,
        visit_ELet : 'this -> 'env -> return * (decl tele, expr) bind * region -> T.expr,
        visit_ECaseSumbool : 'this -> 'env -> expr * expr ibind * expr ibind * region -> T.expr,

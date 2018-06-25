@@ -44,7 +44,7 @@ fun spec2decl mid (sctx, kctx, cctx, tctx) spec =
         SpecVal (ename, t) =>
         let
           val n = indexOf (curry op= $ fst ename) tctx !! (fn () => raise Impossible "spec2decl/SpecVal")
-          val e = EVar (V n, true)
+          val e = EVar (V n, (true, false))
                        (* todo: use [t] to add type annotations *)
         in
           MakeDVal (ename, [], e, dummy)

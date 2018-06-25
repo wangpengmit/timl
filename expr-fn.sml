@@ -31,7 +31,7 @@ datatype stbind =
 type scoping_ctx = ibinder list * tbinder list * cbinder list * ebinder list
      
 datatype expr =
-	 EVar of var * bool(*explicit index arguments (EIA)*)
+	 EVar of var * (bool(*explicit index arguments (EIA)*) * bool)
          | EConst of expr_const * region
          | EState of string * region
          | EUnOp of expr_un_op * expr * region
@@ -43,7 +43,7 @@ datatype expr =
          | ENewArrayValues of mtype * expr list * region
 	 | EAbs of idx StMap.map * (ptrn, expr) bind * (idx * idx) option
 	 | EAbsI of (sort, expr) ibind_anno * region
-	 | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option
+	 | EAppConstr of (cvar * (bool * bool)) * mtype list * idx list * expr * (int * mtype) option
 	 | ECase of expr * return * (ptrn, expr) bind list * region
          | ECaseSumbool of expr * expr ibind * expr ibind * region
          | EIfi of expr * expr ibind * expr ibind * region

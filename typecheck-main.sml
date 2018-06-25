@@ -1267,141 +1267,140 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     fun main () =
       case e_all of
 	  U.EVar (x, eia) => raise Impossible "EVar should be surrounded by EAnnoLiveVars"
+	| U.EUnOp (opr as EUAnno (EALiveVars (n_live_vars, has_k)), U.EVar (x, (eia, has_insert)), r) =>
+          let
+            val r = U.get_region_long_id x
+            val t = fetch_type gctx (tctx, x)
+            val () = println $ "has_k = " ^ str_bool has_k
+            val () = println $ "n_live_vars = " ^ str_int n_live_vars
+            fun assert err p = if p then () else err ()
+            fun has_insert_err () = raise Error (r, ["implicit index/type arguments must be annotated with %"])
+          in
+            if eia then
+              let
+                fun insert_type_args t =
+                  case t of
+                      PTMono t => (t, TN0 dummy, [])
+                    | PTUni (d2, Bind (_, t), _) =>
+                      let
+                        (* val t_arg = fresh_mt (sctx, kctx) r *)
+                        val t_arg = U.TUVar ((), r)
+                        val t_arg = check_kind_Type gctx (skctx, t_arg)
+                        val t = subst_t_t t_arg t
+                        val (t, cost, t_args) = insert_type_args t
+                        val closure_cost =
+                            if has_k then
+                              (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                               M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                            else (0, 0)
+                        val () = println $ "d2 = " ^ (str_i gctxn sctxn $ simp_i $ fst d2)
+                        val () = println $ "closure_cost = " ^ str_int (fst closure_cost)
+                        val cost = cost %%+ mapPair' to_real N (closure_cost ++ (C_App_BeforeCC, M_App_BeforeCC)) %%+ d2
+                      in
+                        (t, cost, t_arg :: t_args)
+                      end
+                val (t, cost, t_args) = insert_type_args t
+                val () = assert has_insert_err (imply (length t_args > 0) has_insert)
+                val e = EVar (x, (true, false))
+                val e = EAppTs (e, t_args)
+                val () = println $ "cost = " ^ (str_i gctxn sctxn $ simp_i $ fst cost)
+              in
+                (e, t, TN C_EVar %%+ cost, st)
+              end
+            else
+              let
+                val (_, t) = collect_PTUni t
+                val (ibinds, _) = collect_TUniI t
+                val () = assert has_insert_err (imply (length ibinds > 0) has_insert)
+                val e = U.EAnnoLiveVars (U.EVar (x, (true, has_insert)), (n_live_vars, has_k), r)
+                val e = U.EAppIs (e, repeat (length ibinds) (U.IUVar ((), r)))
+              in
+                get_mtype (ctx, st) e
+              end
+          end
         | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), TN C_EConst, st)
-        | U.EUnOp (opr, e, r) =>
-          (case opr of
-	       EUProj proj => 
-	       let 
-                 (* val r = U.get_region_e e *)
-                 val t1 = fresh_mt gctx (sctx, kctx) r
-                 val t2 = fresh_mt gctx (sctx, kctx) r
-                 val (e, d, st) = check_mtype ctx_st (e, TProd (t1, t2)) 
-               in 
-                 (EUnOp (opr, e, r), choose (t1, t2) proj, d %%+ TN C_EProj, st)
-	       end
-             | EUPrintc () =>
-               let
-                 val (e, d, st) = check_mtype ctx_st (e, TByte r) 
-               in
-                 (EUnOp (opr, e, r), TUnit r, d %%+ TN C_EPrintc, st)
-               end
-             (* | EUPrint => *)
-             (*   let *)
-             (*     val (e, d) = check_mtype (ctx, e, TBase (String, dummy))  *)
-             (*   in *)
-             (*     (EUnOp (EUPrint, e, r), TUnit dummy, d) *)
-             (*   end *)
-             | EUPrim opr =>
-               let
-                 val (e, d, st) = check_mtype ctx_st (e, TBase (get_prim_expr_un_op_arg_ty opr, r)) 
-               in
-                 (EUnOp (EUPrim opr, e, r), TBase (get_prim_expr_un_op_res_ty opr, r), d %%+ TN (C_EUPrim opr), st)
-               end
-	     | EUArrayLen () =>
-               let
-                 val r = U.get_region_e e_all
-                 val t = fresh_mt gctx (sctx, kctx) r
-                 val i = fresh_i gctx sctx BSNat r
-                 val (e, d, st) = check_mtype ctx_st (e, TArray (t, i))
-               in
-                 (EUnOp (opr, e, r), TNat (i, r), d %%+ TN C_EArrayLen, st)
-               end
-	     | EUNat2Int () =>
-               let
-                 val r = U.get_region_e e_all
-                 val i = fresh_i gctx sctx BSNat r
-                 val (e, d, st) = check_mtype ctx_st (e, TNat (i, r))
-               in
-                 (EUnOp (opr, e, r), TInt r, d %%+ TN C_ENat2Int, st)
-               end
-	     | EUInt2Nat () =>
-               let
-                 val r = U.get_region_e e_all
-                 val (e, d, st) = check_mtype ctx_st (e, TInt r)
-               in
-                 (EUnOp (opr, e, r), TVar $ QID $ qid_add_r r SOME_NAT_ID, d %%+ TN C_EInt2Nat, st)
-               end
-             | EUStorageGet () =>
-               let
-                 val r = U.get_region_e e_all
-                 val (e, t, j, st) = get_mtype ctx_st e
-                 val t = whnf_mt true gctx kctx t
-                 val t = assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
-               in
-                 (EUnOp (opr, e, r), t, j %%+ TN C_EStorageGet, st)
-               end
-             | EUVectorLen () =>
-               let
-                 val (e, t, j, st) = get_mtype (ctx, st) e
-                 val t = whnf_mt true gctx kctx t
-                 val (_, _, len) = get_vector (fn () => r) t
-               in
-                 (EUnOp (opr, e, r), TNat (len, r), j %%+ TN C_EVectorLen, st)
-               end
-             | EUVectorClear () =>
-               let
-                 val (e, t, j, st) = get_mtype (ctx, st) e
-                 val t = whnf_mt true gctx kctx t
-                 val (x, _, _) = get_vector (fn () => r) t
-               in
-                 (EUnOp (opr, e, r), TUnit r, j %%+ TN C_EVectorClear, st @+ (x, N0 r))
-               end
-             | EUAnno anno =>
-               case (anno, e) of
-	           (EALiveVars (n_live_vars, has_k), U.EVar (x, eia)) =>
-                   let
-                     val r = U.get_region_long_id x
-                     val t = fetch_type gctx (tctx, x)
-                     val () = println $ "has_k = " ^ str_bool has_k
-                     val () = println $ "n_live_vars = " ^ str_int n_live_vars
-                   in
-                     if eia then
-                       let
-                         fun insert_type_args t =
-                             case t of
-                                 PTMono t => (t, TN0 dummy, [])
-                               | PTUni (d2, Bind (_, t), _) =>
-                                 let
-                                   (* val t_arg = fresh_mt (sctx, kctx) r *)
-                                   val t_arg = U.TUVar ((), r)
-                                   val t_arg = check_kind_Type gctx (skctx, t_arg)
-                                   val t = subst_t_t t_arg t
-                                   val (t, cost, t_args) = insert_type_args t
-                                   val closure_cost =
-                                       if has_k then
-                                         (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
-                                          M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
-                                       else (0, 0)
-                                   val () = println $ "d2 = " ^ (str_i gctxn sctxn $ simp_i $ fst d2)
-                                   val () = println $ "closure_cost = " ^ str_int (fst closure_cost)
-                                   val cost = cost %%+ mapPair' to_real N (closure_cost ++ (C_App_BeforeCC, M_App_BeforeCC)) %%+ d2
-                                 in
-                                   (t, cost, t_arg :: t_args)
-                                 end
-                         val (t, cost, t_args) = insert_type_args t
-                         val e = EVar (x, true)
-                         val e = EAppTs (e, t_args)
-                         val () = println $ "cost = " ^ (str_i gctxn sctxn $ simp_i $ fst cost)
-                       in
-                         (e, t, TN C_EVar %%+ cost, st)
-                       end
-                     else
-                       let
-                         val (_, t) = collect_PTUni t
-                         val (ibinds, _) = collect_TUniI t
-                         val e = U.EAnnoLiveVars (U.EVar (x, true), (n_live_vars, has_k), r)
-                         val e = U.EAppIs (e, repeat (length ibinds) (U.IUVar ((), r)))
-                       in
-                         get_mtype (ctx, st) e
-                       end
-                   end
-                 | _ =>                   
-                   let
-                     val (e, t, i, st) = get_mtype (ctx, st) e
-                   in
-                     (EUnOp (opr, e, r), t, i, st)
-                   end
-          )
+        | U.EUnOp (opr as EUProj proj, e, r) =>
+	  let 
+            (* val r = U.get_region_e e *)
+            val t1 = fresh_mt gctx (sctx, kctx) r
+            val t2 = fresh_mt gctx (sctx, kctx) r
+            val (e, d, st) = check_mtype ctx_st (e, TProd (t1, t2)) 
+          in 
+            (EUnOp (opr, e, r), choose (t1, t2) proj, d %%+ TN C_EProj, st)
+	  end
+        | U.EUnOp (opr as EUPrintc (), e, r) =>
+          let
+            val (e, d, st) = check_mtype ctx_st (e, TByte r) 
+          in
+            (EUnOp (opr, e, r), TUnit r, d %%+ TN C_EPrintc, st)
+          end
+        (* | EUPrint => *)
+        (*   let *)
+        (*     val (e, d) = check_mtype (ctx, e, TBase (String, dummy))  *)
+        (*   in *)
+        (*     (EUnOp (EUPrint, e, r), TUnit dummy, d) *)
+        (*   end *)
+        | U.EUnOp (EUPrim opr, e, r) =>
+          let
+            val (e, d, st) = check_mtype ctx_st (e, TBase (get_prim_expr_un_op_arg_ty opr, r)) 
+          in
+            (EUnOp (EUPrim opr, e, r), TBase (get_prim_expr_un_op_res_ty opr, r), d %%+ TN (C_EUPrim opr), st)
+          end
+	| U.EUnOp (opr as EUArrayLen (), e, r) =>
+          let
+            val r = U.get_region_e e_all
+            val t = fresh_mt gctx (sctx, kctx) r
+            val i = fresh_i gctx sctx BSNat r
+            val (e, d, st) = check_mtype ctx_st (e, TArray (t, i))
+          in
+            (EUnOp (opr, e, r), TNat (i, r), d %%+ TN C_EArrayLen, st)
+          end
+	| U.EUnOp (opr as EUNat2Int (), e, r) =>
+          let
+            val r = U.get_region_e e_all
+            val i = fresh_i gctx sctx BSNat r
+            val (e, d, st) = check_mtype ctx_st (e, TNat (i, r))
+          in
+            (EUnOp (opr, e, r), TInt r, d %%+ TN C_ENat2Int, st)
+          end
+	| U.EUnOp (opr as EUInt2Nat (), e, r) =>
+          let
+            val r = U.get_region_e e_all
+            val (e, d, st) = check_mtype ctx_st (e, TInt r)
+          in
+            (EUnOp (opr, e, r), TVar $ QID $ qid_add_r r SOME_NAT_ID, d %%+ TN C_EInt2Nat, st)
+          end
+	| U.EUnOp (opr as EUStorageGet (), e, r) =>
+          let
+            val r = U.get_region_e e_all
+            val (e, t, j, st) = get_mtype ctx_st e
+            val t = whnf_mt true gctx kctx t
+            val t = assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
+          in
+            (EUnOp (opr, e, r), t, j %%+ TN C_EStorageGet, st)
+          end
+	| U.EUnOp (opr as EUVectorLen (), e, r) =>
+          let
+            val (e, t, j, st) = get_mtype (ctx, st) e
+            val t = whnf_mt true gctx kctx t
+            val (_, _, len) = get_vector (fn () => r) t
+          in
+            (EUnOp (opr, e, r), TNat (len, r), j %%+ TN C_EVectorLen, st)
+          end
+	| U.EUnOp (opr as EUVectorClear (), e, r) =>
+          let
+            val (e, t, j, st) = get_mtype (ctx, st) e
+            val t = whnf_mt true gctx kctx t
+            val (x, _, _) = get_vector (fn () => r) t
+          in
+            (EUnOp (opr, e, r), TUnit r, j %%+ TN C_EVectorClear, st @+ (x, N0 r))
+          end
+	| U.EUnOp (opr as EUAnno anno, e, r) =>
+          let
+            val (e, t, i, st) = get_mtype (ctx, st) e
+          in
+            (EUnOp (opr, e, r), t, i, st)
+          end
 	| U.EBinOp (opr, e1, e2) =>
           (case opr of
 	       EBPair () => 
@@ -1863,14 +1862,14 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EIfi (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %%+ smart_max_pair j1 j2, st1)
           end
-	| U.EAppConstr ((x, eia), ts, is, e, ot) => 
+	| U.EAppConstr ((x, (eia, _)), ts, is, e, ot) => 
 	  let
             val () = assert (fn () => null ts) "get_mtype()/EAppConstr: null ts"
             val () = assert (fn () => isNone ot) "get_mtype()/EAppConstr: isNone ot"
             val tc = fetch_constr_type gctx (cctx, x)
 	    (* delegate to checking [x {is} e] *)
             val r = U.get_region_long_id x
-	    val f = U.EAnnoLiveVars (U.EVar ((ID (0, r)), eia), (0, true), r)
+	    val f = U.EAnnoLiveVars (U.EVar ((ID (0, r)), (eia, true)), (0, true), r)
 	    val f = foldl (fn (i, e) => U.EAppI (e, i)) f is
 	    val e = U.EApp (U.EAnnoConstr (f, r), UShift.shift_e_e $ U.EAnnoLiveVars (e, (0, true), r))
             val f_name = str_var #3 (gctx_names gctx) (names cctx) x
@@ -1884,8 +1883,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                       val (f, is) = collect_EAppI f
                       val (f, ts) = collect_EAppT f
                       val () = case f of
-                                   EVar (_, true) => ()
-                                 | _ => raise Impossible "get_mtype()/EAppConstr: EVar (_, true)"
+                                   EVar (_, (true, false)) => ()
+                                 | _ => raise Impossible "get_mtype()/EAppConstr: EVar (_, (true, false))"
                     in
                       (ts, is, e)
                     end
@@ -1906,7 +1905,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val num_inj = get_num_inj (length siblings, pos_in_family)
             val cost = d %%+ mapPair' to_real N ((len_is + 1) * C_EPack + num_inj * C_EInj + C_EFold, num_inj * M_Inj)
 	  in
-	    (EAppConstr ((x, true), ts, is, e, SOME (pos_in_family, family_type)), t, cost, st)
+	    (EAppConstr ((x, (true, false)), ts, is, e, SOME (pos_in_family, family_type)), t, cost, st)
 	  end
 	| U.ECase (e, return, rules, r) => 
 	  let

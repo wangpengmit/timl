@@ -309,23 +309,24 @@ local
       
   fun elab e =
       case e of
-	  S.EVar (id as (m, (x, r)), eia) =>
+	  S.EVar (id as (m, (x, r)), (eia, has_insert)) =>
           let
-            fun def () = EVar (to_long_id id, eia)
+            fun def () = EVar (to_long_id id, (eia, has_insert))
+            val no_decorate = not eia andalso not has_insert
           in
             case m of
                 NONE =>
-                if x = "__&true" andalso eia = false then
+                if no_decorate andalso x = "__&true" then
                   EConst (ECBool true, r)
-                else if x = "__&false" andalso eia = false then
+                else if no_decorate andalso x = "__&false" then
                   EConst (ECBool false, r)
-                else if x = "__&itrue" andalso eia = false then
+                else if no_decorate andalso x = "__&itrue" then
                   EConst (ECiBool true, r)
-                else if x = "__&ifalse" andalso eia = false then
+                else if no_decorate andalso x = "__&ifalse" then
                   EConst (ECiBool false, r)
-                (* else if x = "never" andalso eia = false then *)
+                (* else if no_decorate andalso x = "never" then *)
                 (*   ENever (elab_mt (S.TVar (NONE, ("_", r))), r) *)
-                else if x = "__&empty_array" andalso eia = false then
+                else if no_decorate andalso x = "__&empty_array" then
                   EEmptyArray (elab_mt (S.TVar (NONE, ("_", r))), r)
                 else if x = "__&builtin" then raise Error (r, "should be '__&builtin \"name\"'")
                 else
@@ -394,7 +395,7 @@ local
 	    fun default () = EApp (elab e1, elab e2)
 	  in
 	    case e1 of
-		S.EVar ((m, (x, _)), false) =>
+		S.EVar ((m, (x, _)), (false, false)) =>
                 (case m of
                      NONE =>
 		     if x = "__&fst" then EFst (elab e2, r)
@@ -451,7 +452,7 @@ local
         | S.ETriOp (S.ETIfDec (), e, e1, e2, r) => ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.EIfi (e, e1, e2, r) => EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.TVar (NONE, ("_", r))), r)
-        | S.EStrConcat (e1, e2, r) => EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, false), EPair (elab e1, elab e2))
+        | S.EStrConcat (e1, e2, r) => EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
         | S.ESetModify (is_modify, (x, offsets), e, r) => ESetModify (is_modify, fst x, map elab offsets, elab e, r)
         | S.EGet ((x, offsets), r) => EGet (fst x, map elab offsets, r)
 

@@ -115,7 +115,7 @@ structure S = TiML
                 
 fun shift_e_pn a = shift_e_pn_fn shift_e_e a
 
-fun SEV n = S.EVar (ID (n, dummy), true)
+fun SEV n = S.EVar (ID (n, dummy), (true, false))
 fun SMakeECase (e, rules) = S.ECase (e, (NONE, NONE, NONE), map Bind rules, dummy)
 fun SMakeELet (decls, e) = S.ELet ((NONE, NONE, NONE), Bind (decls, e), dummy)
 
@@ -267,9 +267,9 @@ fun on_e (e : S.expr) : mtiml_expr =
     (*   in *)
     (*     e *)
     (*   end *)
-    | S.EAppConstr ((x, eia), ts, is, e, ot) =>
+    | S.EAppConstr ((x, (eia, has_insert)), ts, is, e, ot) =>
       let
-        val () = if eia then () else raise Impossible "to-micro-timl/AppConstr/eia"
+        val () = if eia andalso not has_insert then () else raise Impossible "to-micro-timl/AppConstr/eia"
         val ts = map on_mt ts
         val e = on_e e
         val e = EAppConstr (EVarConstr x, ts, is, e)

@@ -304,6 +304,7 @@ fun strn_t t =
     | PTUni _ => strn_uni (collect_PTUni_TUniI t)
 
 fun decorate_var eia s = (if eia then "@" else "") ^ s
+fun decorate_evar (eia, has_insert) s = (if eia then "@" else "") ^ (if has_insert then "%" else "") ^ s
     
 fun strn_pn pn =
   case pn of
@@ -327,7 +328,7 @@ open ExprUtil
        
 fun strn_e e =
   case e of
-      EVar (x, b) => decorate_var b x
+      EVar (x, b) => decorate_evar b x
     | EConst (c, _) => str_expr_const c
     | EState (x, _) => x
     | EUnOp (opr, e, _) => sprintf "($ $)" [str_expr_un_op opr, strn_e e]
@@ -390,7 +391,7 @@ fun strn_e e =
       end
     | EAppConstr ((x, b), ts, is, e, _) =>
       sprintf "([$]$$ $)" [
-        decorate_var b x,
+        decorate_evar b x,
         (join "" o map (prefix " ") o map (fn t => sprintf "{$}" [strn_mt t])) ts,
         (join "" o map (prefix " ") o map (fn i => sprintf "{$}" [strn_i i])) is,
         strn_e e]

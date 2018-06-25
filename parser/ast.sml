@@ -106,7 +106,7 @@ datatype expr_tri_op =
 type state = (id * idx) list
      
 datatype exp = 
-	 EVar of long_id * bool
+	 EVar of long_id * (bool * bool)
          | ETuple of exp list * region
          | EAbs of bind list * return * exp * region
          (* | App of exp * exp * region *)
@@ -140,9 +140,10 @@ fun EIte (e1, e2, e3, r) = ETriOp (ETIte (), e1, e2, e3, r)
 (* fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r) *)
 fun EApp (e1, e2, r) = EBinOp (EBApp (), e1, e2, r)
 fun short_id id = ((NONE, id), false)
+fun short_eid id = ((NONE, id), (false, false))
 fun PnShortVar (x, r) = PnConstr (short_id (x, r), [], NONE, r)
 (* fun EIte (e, e1, e2, r) = Case (e, (NONE, NONE), [(PShortVar ("true", r), e1), (PShortVar ("false", r), e2)], r) *)
-fun EShortVar id = EVar (short_id id)
+fun EShortVar id = EVar (short_eid id)
 fun ECons (e1, e2, r) = EApp (EShortVar ("Cons", r), ETuple ([e1, e2], r), r)
 fun PnCons (pn1, pn2, r) = PnConstr (short_id ("Cons", r), [], SOME (PnTuple ([pn1, pn2], r)), r)
 fun ENil r = EShortVar ("Nil", r)

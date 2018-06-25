@@ -589,6 +589,8 @@ datatype 'a my_option =
 datatype my_bool =
          True of unit
          | False of unit
-                     
+
+fun imply a b = not a orelse b
+                               
 end
 

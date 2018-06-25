@@ -427,7 +427,7 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
            Option.app (str o str_i) j)
     in
       case e of
-          EVar (x, b) =>
+          EVar (x, (b1, b2)) =>
           (
             open_hbox ();
             str "EVar";
@@ -435,7 +435,9 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str "(";
             str x;
             comma ();
-            str $ str_bool b;
+            str $ str_bool b1;
+            comma ();
+            str $ str_bool b2;
             str ")";
             close_box ()
           )
@@ -729,7 +731,7 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str "End";
             close_box ()
           end
-        | EAppConstr ((x, b), ts, is, e, _) =>
+        | EAppConstr ((x, (b1, b2)), ts, is, e, _) =>
           (
             open_hbox ();
             str "EAppConstr";
@@ -737,7 +739,9 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str "(";
             str x;
             comma ();
-            str $ str_bool b;
+            str $ str_bool b1;
+            comma ();
+            str $ str_bool b2;
             comma ();
             app (fn t => (pp_t t; comma ())) ts;
             app (fn i => (str $ str_i i; comma ())) is;

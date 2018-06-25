@@ -174,6 +174,7 @@ string = [^\"];
 <INITIAL>";" => (T.SEMI_COLON (make_region (yypos, size yytext)));
 <INITIAL>"++" => (T.PLUS_PLUS (make_region (yypos, size yytext)));
 <INITIAL>"+=" => (T.PLUS_EQ (make_region (yypos, size yytext)));
+<INITIAL>"%" => (T.PERCENT (make_region (yypos, size yytext)));
 
 <INITIAL>{digit}+\.{digit}+ => ((T.NNREAL o flat)
                  (yytext, make_region (yypos, size yytext)));

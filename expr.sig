@@ -22,7 +22,7 @@ signature EXPR = sig
   type scoping_ctx = Binders.ibinder list * Binders.tbinder list * Binders.cbinder list * Binders.ebinder list
                                                                                        
   datatype expr =
-	   EVar of var * bool(*explicit index arguments (EIA)*)
+	   EVar of var * (bool(*explicit index arguments (EIA)*) * bool(*will have implicit index/type arguments *))
            | EConst of Operators.expr_const * Region.region
            | EState of string * Region.region
            | EUnOp of Operators.expr_un_op * expr * Region.region
@@ -34,7 +34,7 @@ signature EXPR = sig
            | ENewArrayValues of mtype * expr list * Region.region
 	   | EAbs of idx StMap.map * (ptrn, expr) Unbound.bind * (idx * idx) option
 	   | EAbsI of (sort, expr) Binders.ibind_anno * Region.region
-	   | EAppConstr of (cvar * bool) * mtype list * idx list * expr * (int * mtype) option
+	   | EAppConstr of (cvar * (bool * bool)) * mtype list * idx list * expr * (int * mtype) option
 	   | ECase of expr * return * (ptrn, expr) Unbound.bind list * Region.region
            | ECaseSumbool of expr * expr Binders.ibind * expr Binders.ibind * Region.region
            | EIfi of expr * expr Binders.ibind * expr Binders.ibind * Region.region
