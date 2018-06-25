@@ -223,8 +223,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     fun str_ts ts = surround "[" "]" $ join ",\n" $ map (trim o str_t) ts
     (* val () = println "tc() start: " *)
     (* val () = println $ str_ts sctx *)
-    (* val inst_input_str = EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctxn ()) inst *)
-    (* val () = print $ inst_input_str *)
+    val inst_input_str = EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctxn ()) inst
+    val () = print $ inst_input_str
     fun arith int_result nat_result name f =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
@@ -748,6 +748,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
     val tc_insts = tc_insts params
     fun itctxn () = itctx_names itctx
     val str_t = fn t => ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctxn ()) t
+    fun str_ts ts = surround "[" "]" $ join ",\n" $ map (trim o str_t) ts
     fun is_eq_stack itctx (sctx, sctx') =
       let
         fun itctxn () = itctx_names itctx
@@ -811,6 +812,8 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         case inst of
             JUMPI () =>
             let
+              val () = println $ str_ts sctx
+              val () = println "JUMPI"
               val (t0, t1, sctx) = assert_cons2 sctx
             in
               case whnf itctx t1 of
@@ -836,9 +839,11 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                     val make_exists = make_exists "__p"
                     val t1 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
                     val t2 = make_exists (SSubset_from_prop dummy $ i %= Itrue)
-                    val () = is_eq_stack itctx (t1 :: sctx, sctx')
+                    val () = println "before is_eq_stack"
+                    val () = is_eq_stack itctx (t2 :: sctx, sctx')
+                    val () = println "after is_eq_stack"
                     val () = is_eq_st ictx (st, st')
-                    val (i1, ni) = tc_insts (itctx, rctx, t2 :: sctx, st) I
+                    val (i1, ni) = tc_insts (itctx, rctx, t1 :: sctx, st) I
                   in
                     (TN (C_inst inst) %%+ IMaxPair (i1, shiftn_i_2i ni i2), ni)
                   end
