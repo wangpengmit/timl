@@ -114,6 +114,7 @@ open Ast
     | PLUS_EQ
     | PERCENT
     | PRAGMA
+    | CONTRACT
 
 %nonterm start of prog
        | exp of exp
@@ -243,6 +244,7 @@ prog : top_bind prog (top_bind :: prog)
 top_bind : STRUCTURE id EQ id LPAREN id RPAREN (TBFunctorApp (id1, id2, id3))
          | FUNCTOR id LPAREN id COLON sgn RPAREN EQ module (TBFunctor (id1, (id2, sgn), module))
          | STRUCTURE id EQ module (TBMod (id, module))
+         | CONTRACT id EQ module (TBMod (id, module))
          (* | STRUCTURE id sig_anno_opt EQ module (TopModBind (id, add_sig_anno module sig_anno_opt)) *)
          | STRUCTURE id COLON_GT sgn EQ module (TBMod (id, ModSeal (module, sgn)))
          | STRUCTURE id COLON sgn EQ module (TBMod (id, ModTransparentAsc (module, sgn)))
@@ -250,6 +252,7 @@ top_bind : STRUCTURE id EQ id LPAREN id RPAREN (TBFunctorApp (id1, id2, id3))
          | PRAGMA id STR_CONCAT NNREAL (TBPragma (id, NNREAL))
 
 module : STRUCT decl_star END (ModComponents (decl_star, (decl_starleft, decl_starright)))
+       | CONTRACT decl_star END (ModComponents (decl_star, (decl_starleft, decl_starright)))
     (* | module COLON_GT sgn (ModSeal (module, sgn)) *)
     (* | module COLON sgn (ModTransparentAsc (module, sgn)) *)
 

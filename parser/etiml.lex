@@ -83,6 +83,7 @@ val keywords = [
     ("pre", T.PRE),
     ("post", T.POST),
     ("pragma", T.PRAGMA),
+    ("contract", T.CONTRACT),
     ("as", T.AS)
 ]
  

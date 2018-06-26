@@ -72,6 +72,7 @@ region.sml
 time.sml
 operators.sml
 parser/ast.sml
+parser/parser-util.sml
 sexp/sexp.sml
 }
 
@@ -106,6 +107,7 @@ print %{
 sexp/parser.sml
 parser/parser.sml
 parser/etiml-parser.sml
+parser/parser-factory.sml
 cont-util.sml
 module-context.sml
 to-string-util.sml

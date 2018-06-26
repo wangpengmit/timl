@@ -2,8 +2,6 @@ structure TiML = struct
 structure E = NamefulExpr
 open Expr
 open Util
-structure Parser = ETiMLParser
-open Parser
 open Elaborate
 structure NR = NameResolve
 open NR
@@ -131,7 +129,7 @@ fun do_process_file is_library gctx (pos_or_neg, filename) =
              else ()
     val (succeeded, prog, gctx, admits) =
         let
-          val prog = parse_file filename
+          val prog = ParserFactory.parse_file filename
           val prog = elaborate_prog prog
           (* val () = (app println o map (suffix "\n") o fst o E.str_decls ctxn) decls *)
           (* val () = (app println o map (suffix "\n") o fst o UnderscoredExpr.str_decls ctxn) decls *)
@@ -169,7 +167,7 @@ fun do_process_file is_library gctx (pos_or_neg, filename) =
   | NameResolve.Error (r, msg) => raise Error $ str_error "Error" filename r ["Resolve error: " ^ msg]
   | TypeCheck.Error (r, msg) => raise Error $ str_error "Error" filename r ((* "Type error: " :: *) msg)
   | BigOSolver.MasterTheoremCheckFail (r, msg) => raise Error $ str_error "Error" filename r ((* "Type error: " :: *) msg)
-  | Parser.Error => raise Error "Unknown parse error"
+  | ParserFactory.Error => raise Error "Unknown parse error"
   | SMTError msg => raise Error $ "SMT error: " ^ msg
   | IO.Io e => raise Error $ sprintf "IO error in function $ on file $" [#function e, #name e]
   | OS.SysErr (msg, err) => raise Error $ sprintf "System error$: $" [(default "" o Option.map (prefix " " o OS.errorName)) err, msg]
@@ -298,6 +296,7 @@ fun usage () =
       val () = println "  --repeat n: repeat the whole thing for [n] times (for profiling purpose)"
       val () = println "  --unit-test <dir-name>: do unit test under directory dir-name"
       val () = println "  -n <file-name>: typecheck a negative file (succeeds only when there are errors)"
+      val () = println "  --etiml: use ETiML syntax"
     in
       ()
     end
@@ -344,6 +343,7 @@ fun parse_arguments (opts : options, args) =
 	    (* | parseArgs ("-A" :: arg :: ts) = (do_A arg;       parseArgs ts) *)
 	    (* | parseArgs ("-B"        :: ts) = (do_B();         parseArgs ts) *)
 	    | "-n" :: arg :: ts => (push_ref positionals (false, arg); parseArgs ts)
+	    | "--etiml" :: ts => (ParserFactory.set ETiMLParser.parse_file; parseArgs ts)
 	    | arg :: ts =>
               if String.isPrefix "-" arg then
 	        raise ParseArgsError ("Unrecognized option: " ^ arg)
