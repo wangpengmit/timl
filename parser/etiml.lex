@@ -84,6 +84,9 @@ val keywords = [
     ("post", T.POST),
     ("pragma", T.PRAGMA),
     ("contract", T.CONTRACT),
+    ("public", T.PUBLIC),
+    ("private", T.PRIVATE),
+    ("interface", T.INTERFACE),
     ("as", T.AS)
 ]
  
@@ -139,6 +142,7 @@ string = [^\"];
 <INITIAL>"<->" => (T.IFF (make_region (yypos, size yytext)));
 <INITIAL>"=" => (T.EQ (make_region (yypos, size yytext)));
 <INITIAL>"<>" => (T.NEQ (make_region (yypos, size yytext)));
+<INITIAL>"!=" => (T.BANG_EQ (make_region (yypos, size yytext)));
 <INITIAL>"<=" => (T.LE (make_region (yypos, size yytext)));
 <INITIAL>"<" => (T.LT (make_region (yypos, size yytext)));
 <INITIAL>">=" => (T.GE (make_region (yypos, size yytext)));
@@ -171,11 +175,14 @@ string = [^\"];
 <INITIAL>"$" => (T.DOLLAR (make_region (yypos, size yytext)));
 <INITIAL>"@" => (T.AT (make_region (yypos, size yytext)));
 <INITIAL>"." => (T.DOT (make_region (yypos, size yytext)));
+<INITIAL>".." => (T.DOTDOT (make_region (yypos, size yytext)));
 <INITIAL>"<==" => (T.BIG_O_INFIX (make_region (yypos, size yytext)));
 <INITIAL>"^" => (T.STR_CONCAT (make_region (yypos, size yytext)));
 <INITIAL>";" => (T.SEMI_COLON (make_region (yypos, size yytext)));
 <INITIAL>"++" => (T.PLUS_PLUS (make_region (yypos, size yytext)));
 <INITIAL>"+=" => (T.PLUS_EQ (make_region (yypos, size yytext)));
+<INITIAL>"-=" => (T.MINUS_EQ (make_region (yypos, size yytext)));
+<INITIAL>":=" => (T.COLON_EQ (make_region (yypos, size yytext)));
 <INITIAL>"%" => (T.PERCENT (make_region (yypos, size yytext)));
 
 <INITIAL>{digit}+\.{digit}+ => ((T.NNREAL o flat)

@@ -5,10 +5,10 @@ structure Util = struct
   fun subBy b a = a - b
   (* val op+= = add *)
   (* val op-= subBy *)
-  fun require b = if b then () else __&halt 1
+  fun require b = if b then () else __&halt 1 end
 end
 
-contract MyToken = contract
+contract MyToken = struct
 
   open Util
 
@@ -17,7 +17,7 @@ contract MyToken = contract
 
   (* Initializes contract with initial supply tokens to the creator of the contract *)
   fun init (initialSupply : uint256) using 11.0 =
-    set balanceOf[msg_sender] initialSupply           (* Give the creator all initial tokens *)
+    set balanceOf[msg.sender] initialSupply           (* Give the creator all initial tokens *)
 
   (* Send coins *)
   fun transfer (_to : address, _value : uint256) using 23.0 =

@@ -390,7 +390,7 @@ local
                 in
                   e
                 end)
-	| S.EBinOp (EBApp (), e1, e2, r) =>
+	| S.EBinOp (EBTiML (EBApp ()), e1, e2, r) =>
 	  let 
 	    fun default () = EApp (elab e1, elab e2)
 	  in
@@ -446,15 +446,22 @@ local
                 )
 	      | _ => default ()
 	  end
-        | S.EBinOp (opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
+        | S.EBinOp (EBTiML opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
+        | S.EBinOp (EBStrConcat (), e1, e2, r) =>
+          EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
+        | S.EBinOp (EBSetRef (), e1, e2, _) => raise Impossible "elaborate/ESetRef"
         | S.EUnOp (opr, e, r) => EUnOp (opr, elab e, r)
-        | S.ETriOp (S.ETIte (), e1, e2, e3, _) => ETriOp (ETIte (), elab e1, elab e2, elab e3)
-        | S.ETriOp (S.ETIfDec (), e, e1, e2, r) => ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
-        | S.EIfi (e, e1, e2, r) => EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
+        | S.ETriOp (ETTiML (S.ETIte ()), e1, e2, e3, _) =>
+          ETriOp (ETIte (), elab e1, elab e2, elab e3)
+        | S.ETriOp (ETTiML (S.ETIfDec ()), e, e1, e2, r) =>
+          ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
+        | S.ETriOp (ETIfi (), e, e1, e2, r) =>
+          EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.TVar (NONE, ("_", r))), r)
-        | S.EStrConcat (e1, e2, r) => EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
-        | S.ESetModify (is_modify, (x, offsets), e, r) => ESetModify (is_modify, fst x, map elab offsets, elab e, r)
+        | S.ESetModify (is_modify, (x, offsets), e, r) =>
+          ESetModify (is_modify, fst x, map elab offsets, elab e, r)
         | S.EGet ((x, offsets), r) => EGet (fst x, map elab offsets, r)
+        | S.EField (e, name, r) => raise Impossible "elaborate/EField"
 
   and elab_decl decl =
       case decl of
@@ -517,6 +524,7 @@ local
           end
         | S.DTypeDef (name, t) => DTypeDef (Binder $ TName name, Outer $ elab_mt t)
         | S.DOpen name => DOpen (Inner name, NONE)
+        | S.DState (name, t) => raise Impossible "elaborate/DState"
 
   fun elab_spec spec =
       case spec of
@@ -554,7 +562,7 @@ local
 
   fun is_map t =
     case t of
-        S.TAppT (S.TVar (NONE, (x, _)), t2, _) =>
+        S.TAppT (S.TAppT (S.TVar (NONE, (x, _)), t1, _), t2, _) =>
         if x = "map" then
           case is_map t2 of
               SOME t => SOME $ TCell $ TMap t
@@ -576,6 +584,7 @@ local
                  | NONE => raise Error (S.get_region_t t, "wrong state declaration form")
           )
         | S.TBPragma (name, version) => (name, TBPragma version)
+        | S.TBInterface (name, sgn) => raise Impossible "elaborate/TBInterface"
 
   fun elab_prog prog = map elab_top_bind prog
                            

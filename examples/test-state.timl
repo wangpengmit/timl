@@ -1,5 +1,5 @@
-val TestState_m : map (*int*) int
-val TestState_mm : map (*int*) (map (*int*) int)
+val TestState_m : map int int
+val TestState_mm : map int (map int int)
 val TestState_v : vector int
 
 structure TestState = struct
