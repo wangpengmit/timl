@@ -1,0 +1,580 @@
+open Ast
+
+%%
+
+%name ETiML
+
+%term ID of string
+    | LPAREN
+    | RPAREN
+    | DARROW
+    | FN
+    | FUN
+    | LSQ
+    | RSQ
+    | LSQSQ
+    | RSQSQ
+    | LCUR
+    | RCUR
+    | UNPACK
+    | CASE
+    | OF
+    | COLON
+    | RTRI
+    | LTRI
+    | LET
+    | IN
+    | END
+    | COMMA
+    | RETURN
+    | ARROW
+    | LARROW
+    | DDASH
+    | MULT
+    | EXP
+    | DIV
+    | PLUS
+    | MINUS
+    | NAT_PLUS
+    | NAT_MINUS
+    | NAT_MULT
+    | NAT_DIV
+    | NAT_LT
+    | NAT_GT
+    | NAT_LE
+    | NAT_GE
+    | NAT_EQ
+    | NAT_NEQ
+    | B_LT
+    | B_GT
+    | B_LE
+    | B_GE
+    | B_EQ
+    | B_NEQ
+    | INT of int
+    | NNREAL of string
+    | BAR
+    | TILDE
+    | AND
+    | OR
+    | IFF
+    | EQ
+    | NEQ
+    | DOUBLE_EQ
+    | DOUBLE_POND
+    | DOUBLE_BAR
+    | VAL
+    | DATATYPE
+    | EOF
+    | FORALL
+    | EXISTS
+    (* | APP (* dummy terminal for precedence *) *)
+    | APPR (* dummy terminal for precedence *)
+    | MAX
+    | MIN
+    | BOGUS of string
+    | AS
+    | DOLLAR
+    | AT
+    | LE
+    | LT
+    | GE
+    | GT
+    | BIG_O_INFIX
+    | IDX
+    | TYPE
+    (* | ABSTYPE *)
+    | ABSIDX
+    | WITH
+    | DOT
+    | STRUCTURE
+    | STRUCT
+    | FUNCTOR
+    | SIG
+    | OPEN
+    | COLON_GT
+    | ZERO_ARROW
+    | IF
+    | THEN
+    | ELSE
+    | DCOLON
+    | SHARP
+    | STRING of string
+    | CHAR of Char.char
+    | STR_CONCAT
+    | SEMI_COLON
+    | NEVER
+    | IFDEC
+    | MOD
+    | SET
+    | MODIFY
+    | PRE
+    | POST
+    | PLUS_PLUS
+    | PLUS_EQ
+    | PERCENT
+    | PRAGMA
+
+%nonterm start of prog
+       | exp of exp
+       | aexp of exp
+       | ty of ty
+       | ty_term of ty
+       | ty_atom of ty
+       | idx of idx
+       | aidx of idx
+       | sort of sort
+       | bsort of bsort
+       | prop of prop
+       | id of id
+       | exp_comma_star of exp list
+       | comma_exp_star of exp list
+       | bind_plus of bind list
+       | bind_star of bind list
+       | bind of bind list
+       | sort_bind_plus of sort_bind list
+       | sort_bind_star of sort_bind list
+       | sort_bind of sort_bind list
+       | return of return
+       (* | rec_return of ty option * idx option *)
+       | rule_bar_star of (ptrn * exp) list
+       | bar_rule_star of (ptrn * exp) list
+       | rule of ptrn * exp
+       | ptrn of ptrn
+       | aptrn of ptrn
+       | ptrn_opt of ptrn option
+       | ptrn_comma_star of ptrn list
+       | comma_ptrn_star of ptrn list
+       | idx_ids of id list
+       | id_plus of id list
+       | id_star of id list
+       | decl_star of decl list
+       | decl of decl
+       | quan of quan
+       | cur_sort of sort
+       | cur_sort_star of sort list
+       | cur_sort_plus of sort list
+       | cur_bsort of bsort
+       | cur_bsort_star of bsort list
+       | cur_bsort_plus of bsort list
+       (* | sort_plus of sort list *)
+       | constr_bar_star of constr_decl list
+       | bar_constr_star of constr_decl list
+       | constr of constr_decl
+       | constr_core_opt of constr_core option
+       | constr_result_opt of ty option
+       | sorting_star of sort_bind list
+       | sorting of sort_bind list
+       | bsorting_star of bsort_bind list
+       | bsorting of bsort_bind list
+       (* | idx_un_op of idx_un_op *)
+       | tname of id
+       | tnames of id list
+       | optional_colon_sort of sort option
+       | optional_eq_idx of idx option
+       | decorated_id of long_id * bool
+       | decorated_eid of long_id * (bool * bool)
+       | long_id of long_id
+       | prog of prog
+       | top_bind of top_bind
+       | module of mod
+       | sgn of sgn
+       | spec of spec
+       | specs of spec list
+       | datatype_def of datatype_def
+         (* | sig_anno_opt of sig_anno option *)
+       | datatype_def_kind of bsort list
+       | id_or_bsort_bind of id_or_bsort_bind list
+       | id_or_bsort_bind_plus of id_or_bsort_bind list
+       | id_or_bsort_bind_star of id_or_bsort_bind list
+       | set_modify of bool
+       | id_square_plus of id * exp list
+       | square_plus of exp list
+       | square_star of exp list
+       | square of exp
+       | pre of state
+       | post of state option
+       | state of state
+       | state_field_star of state
+       | state_field_plus of state
+       | state_field of id * idx
+
+
+%keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
+
+%pos pos
+
+		(* %nonassoc LET *)
+%left RTRI COLON COLON_GT
+%nonassoc LSQ LCUR
+%left COMMA
+%right SEMI_COLON
+%right LTRI
+%right DCOLON
+%nonassoc IFF
+%right DDASH LARROW ARROW ZERO_ARROW
+%right OR
+%right AND
+%left DOUBLE_BAR
+%left DOUBLE_POND
+%left DOUBLE_EQ
+%nonassoc TILDE
+%nonassoc EQ NEQ LE LT GE GT NAT_EQ NAT_NEQ NAT_LT NAT_GT NAT_LE NAT_GE B_EQ B_NEQ B_LT B_GT B_LE B_GE
+%left PLUS MINUS NAT_PLUS NAT_MINUS
+%left MULT DIV MOD MAX MIN NAT_MULT NAT_DIV
+%left EXP
+(* %left APP *)
+(* %left APPR *)
+
+%eop EOF
+%noshift EOF
+%nodefault
+%verbose
+
+%arg (reporter) : reporter
+
+%%
+
+start : prog (prog)
+
+prog : top_bind prog (top_bind :: prog)
+     | ([])
+
+top_bind : STRUCTURE id EQ id LPAREN id RPAREN (TBFunctorApp (id1, id2, id3))
+         | FUNCTOR id LPAREN id COLON sgn RPAREN EQ module (TBFunctor (id1, (id2, sgn), module))
+         | STRUCTURE id EQ module (TBMod (id, module))
+         (* | STRUCTURE id sig_anno_opt EQ module (TopModBind (id, add_sig_anno module sig_anno_opt)) *)
+         | STRUCTURE id COLON_GT sgn EQ module (TBMod (id, ModSeal (module, sgn)))
+         | STRUCTURE id COLON sgn EQ module (TBMod (id, ModTransparentAsc (module, sgn)))
+         | VAL id COLON ty (TBState (id, ty))
+         | PRAGMA id STR_CONCAT NNREAL (TBPragma (id, NNREAL))
+
+module : STRUCT decl_star END (ModComponents (decl_star, (decl_starleft, decl_starright)))
+    (* | module COLON_GT sgn (ModSeal (module, sgn)) *)
+    (* | module COLON sgn (ModTransparentAsc (module, sgn)) *)
+
+(* sig_anno_opt : COLON_GT sgn (SOME (Seal sgn)) *)
+(*              | COLON sgn (SOME (Transparent sgn)) *)
+(*              | (NONE) *)
+      
+sgn : SIG specs END (SigComponents (specs, (specsleft, specsright)))
+
+specs : spec specs (spec :: specs)
+  | ([])
+
+spec : VAL id tnames COLON ty (SpecVal (id, tnames, ty, (VALleft, tyright)))
+  | DATATYPE datatype_def (SpecDatatype datatype_def)
+  | IDX id COLON sort (SpecIdx (id, sort))
+  | TYPE id EQ ty (SpecTypeDef (id, ty))
+  | TYPE id_plus cur_bsort_star (SpecType (id_plus, cur_bsort_star, (TYPEleft, cur_bsort_starright)))
+  | TYPE id (SpecType ([id], [], (TYPEleft, idright))) (* need this rule. don't know why *)
+
+decl : VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, expright)))
+     | FUN id tnames bind_star pre post return EQ exp (DRec (tnames, id, bind_star, pre, post, return, exp, (FUNleft, expright)))
+     | DATATYPE datatype_def (DDatatype datatype_def)
+     | IDX id optional_colon_sort EQ idx (DIdxDef (id, optional_colon_sort, idx))
+     | ABSIDX id optional_colon_sort EQ idx (DAbsIdx2 (id, optional_colon_sort, idx))
+     | ABSIDX id optional_colon_sort optional_eq_idx WITH decl_star END (DAbsIdx (id, optional_colon_sort, optional_eq_idx, decl_star, (ABSIDXleft, ENDright)))
+     | ABSIDX LCUR id COLON bsort BAR prop RCUR optional_eq_idx WITH decl_star END (DAbsIdx (id, SOME (SSubset (bsort, id, prop, (LCURleft, RCURright))), optional_eq_idx, decl_star, (ABSIDXleft, ENDright)))
+     | ABSIDX LCUR id BAR prop RCUR optional_eq_idx WITH decl_star END (DAbsIdx (id, SOME (SSubset (BSId ("_", (idleft, idright)), id, prop, (LCURleft, RCURright))), optional_eq_idx, decl_star, (ABSIDXleft, ENDright)))
+     | TYPE id EQ ty (DTypeDef (id, ty))
+     | OPEN id (DOpen id)
+
+pre : PRE state (state)
+    | (empty_state)
+
+post : POST state (SOME state)
+     | (NONE)
+
+state : LCUR state_field_star RCUR (state_field_star)
+
+state_field : id COLON idx ((id, idx))
+
+state_field_star : state_field state_field_star (state_field :: state_field_star)
+	| ([])
+state_field_plus : state_field state_field_star (state_field :: state_field_star)
+
+datatype_def : id_plus bsorting_star datatype_def_kind EQ constr_bar_star (case map fst id_plus of id :: id_star => (id, id_star, bsorting_star, datatype_def_kind, constr_bar_star, (id_plusleft, constr_bar_starright)) | [] => raise Impossible "id_plus can't be empty")
+                       
+datatype_def_kind : COLON cur_bsort_plus (cur_bsort_plus)
+                  | ([])
+                    
+ty : ty_term (ty_term)
+   | ty DDASH idx LARROW ty (TArrow (ty1, (idx, INat (0, (idxleft, idxright))), ty2, (ty1left, ty2right)))
+   | ty DDASH idx COMMA idx LARROW ty (TArrow (ty1, (idx1, idx2), ty2, (ty1left, ty2right)))
+   | ty ARROW ty (TArrow (ty1, (IVar (underscore (ty1left, ty2right)), INat (0, (ty1left, ty2right))), ty2, (ty1left, ty2right)))
+   | ty ZERO_ARROW ty (TArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), INat (0, (ty1left, ty2right))), ty2, (ty1left, ty2right)))
+   | ty MULT ty (TProd (ty1, ty2, (ty1left, ty2right)))
+
+ty_term : ty_atom (ty_atom)
+        | ty_term ty_atom (TAppT (ty_term, ty_atom, (ty_termleft, ty_atomright)))
+        | ty_term LCUR idx RCUR (TAppI (ty_term, idx, (ty_termleft, RCURright)))
+        | ty_term LCUR RCUR (TAppI (ty_term, IVar (underscore (LCURleft, RCURright)), (ty_termleft, RCURright)))
+                  
+ty_atom : long_id (TVar long_id)
+        | LPAREN ty RPAREN (ty)
+        | quan sort_bind_plus COMMA ty (TQuan (quan, sort_bind_plus, ty, (quanleft, tyright)))
+        | FN id_or_bsort_bind_plus DARROW ty (TAbs (id_or_bsort_bind_plus, ty, (FNleft, tyright)))
+
+exp : aexp (aexp)
+     | exp PLUS exp (EBinOp (EBPrim (EBPIntAdd ()), exp1, exp2, (exp1left, exp2right)))
+     | exp MINUS exp (EBinOp (EBPrim (EBPIntMinus ()), exp1, exp2, (exp1left, exp2right)))
+     | exp MULT exp (EBinOp (EBPrim (EBPIntMult ()), exp1, exp2, (exp1left, exp2right)))
+     | exp DIV exp (EBinOp (EBPrim (EBPIntDiv ()), exp1, exp2, (exp1left, exp2right)))
+     | exp MOD exp (EBinOp (EBPrim (EBPIntMod ()), exp1, exp2, (exp1left, exp2right)))
+     | exp LT exp (EBinOp (EBPrim (EBPIntLt ()), exp1, exp2, (exp1left, exp2right)))
+     | exp GT exp (EBinOp (EBPrim (EBPIntGt ()), exp1, exp2, (exp1left, exp2right)))
+     | exp LE exp (EBinOp (EBPrim (EBPIntLe ()), exp1, exp2, (exp1left, exp2right)))
+     | exp GE exp (EBinOp (EBPrim (EBPIntGe ()), exp1, exp2, (exp1left, exp2right)))
+     | exp EQ exp (EBinOp (EBPrim (EBPIntEq ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NEQ exp (EBinOp (EBPrim (EBPIntNEq ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_PLUS exp (EBinOp (EBNat (EBNAdd ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_MINUS exp (EBinOp (EBNat (EBNBoundedMinus ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_MULT exp (EBinOp (EBNat (EBNMult ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_DIV exp (EBinOp (EBNat (EBNDiv ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_LT exp (EBinOp (EBNatCmp (NCLt ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_GT exp (EBinOp (EBNatCmp (NCGt ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_LE exp (EBinOp (EBNatCmp (NCLe ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_GE exp (EBinOp (EBNatCmp (NCGe ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_EQ exp (EBinOp (EBNatCmp (NCEq ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_NEQ exp (EBinOp (EBNatCmp (NCNEq ()), exp1, exp2, (exp1left, exp2right)))
+     | exp DOUBLE_POND exp (EBinOp (EBPrim (EBPBoolAnd ()), exp1, exp2, (exp1left, exp2right)))
+     | exp DOUBLE_BAR exp (EBinOp (EBPrim (EBPBoolOr ()), exp1, exp2, (exp1left, exp2right)))
+     | exp STR_CONCAT exp (EStrConcat (exp1, exp2, (exp1left, exp2right)))
+     | exp LTRI exp (EApp (exp1, exp2, (exp1left, exp2right)))
+     | exp SEMI_COLON exp (ESemiColon (exp1, exp2, (exp1left, exp2right)))
+     | exp DCOLON exp (ECons (exp1, exp2, (exp1left, exp2right)))
+     | exp COLON ty (EAsc (exp, ty, (expleft, tyright)))
+     | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
+     | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
+     | exp LCUR idx RCUR (EAppI (exp, idx, (expleft, idxright)))
+     | exp LCUR RCUR (EAppI (exp, IVar (underscore (LCURleft, RCURright)), (expleft, RCURright)))
+     | set_modify id_square_plus exp (ESetModify (set_modify, id_square_plus, exp, (set_modifyleft, expright)))
+     | exp aexp (EApp (exp, aexp, (expleft, aexpright)))
+
+aexp : decorated_eid (EVar decorated_eid)
+     | LPAREN exp_comma_star RPAREN (ETuple (exp_comma_star, (LPARENleft, RPARENright)))
+     | FN bind_plus return DARROW exp (EAbs (bind_plus, return, exp, (FNleft, expright)))
+     | CASE exp return OF rule_bar_star (ECase (exp, return, rule_bar_star, (CASEleft, rule_bar_starright)))
+     | IF exp THEN exp ELSE exp (EIte (exp1, exp2, exp3, (IFleft, exp3right)))
+     | IFDEC exp THEN exp ELSE exp (EIfi (exp1, exp2, exp3, (IFDECleft, exp3right)))
+     | LET return decl_star IN exp END (ELet (return, decl_star, exp, (LETleft, ENDright)))
+     | SHARP INT (EConst (ECNat INT, (SHARPleft, INTright)))
+     | INT (EConst (ECInt INT, (INTleft, INTright)))
+     | STRING (EConst (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
+     | CHAR (EConst (ECChar CHAR, (CHARleft, CHARright)))
+     | LSQ exp_comma_star RSQ (EList (exp_comma_star, (LSQleft, RSQright)))
+     | TILDE aexp (EUnOp (EUPrim (EUPIntNeg ()), aexp, (TILDEleft, aexpright)))
+     | NEVER (ENever (NEVERleft, NEVERright))
+     | id_square_plus (EGet (id_square_plus, (id_square_plusleft, id_square_plusright)))
+     | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
+     | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
+
+id_square_plus : id square_plus ((id, square_plus))
+
+square : LSQSQ exp RSQSQ (exp)
+                    
+square_star : square square_star (square :: square_star)
+	| ([])
+square_plus : square square_star (square :: square_star)
+
+set_modify : SET (false)
+           | MODIFY (true)
+
+long_id : id ((NONE, id))
+        | id DOT id (SOME id1, id2)
+           
+decorated_id : long_id ((long_id, false))
+             | AT long_id ((long_id, true))          
+           
+decorated_eid : long_id ((long_id, (false, false)))
+              | AT long_id ((long_id, (true, false)))          
+              | PERCENT long_id ((long_id, (false, true)))          
+              | AT PERCENT long_id ((long_id, (true, true)))          
+           
+idx : aidx (aidx)
+    | idx PLUS idx (IBinOp (IBAdd (), idx1, idx2, (idx1left, idx2right)))
+    | idx MINUS idx (IBinOp (IBBoundedMinus (), idx1, idx2, (idx1left, idx2right)))
+    | idx MAX idx (IBinOp (IBMax (), idx1, idx2, (idx1left, idx2right)))
+    | idx MIN idx (IBinOp (IBMin (), idx1, idx2, (idx1left, idx2right)))
+    | idx MULT idx (IBinOp (IBMult (), idx1, idx2, (idx1left, idx2right)))
+    | idx DIV INT (IDiv (idx, (INT, (INTleft, INTright)), (idxleft, INTright)))
+    | idx EXP idx (IBinOp (IBExpN (), idx1, idx2, (idx1left, idx2right)))
+    | idx B_EQ idx (IBinOp (IBEq (), idx1, idx2, (idx1left, idx2right)))
+    | idx B_NEQ idx (let val r = (idx1left, idx2right) in IUnOp (IUNeg (), IBinOp (IBEq (), idx1, idx2, r), r) end)
+    | idx B_LT idx (IBinOp (IBLt (), idx1, idx2, (idx1left, idx2right)))
+    | idx B_GT idx (IBinOp (IBGt (), idx1, idx2, (idx1left, idx2right)))
+    | idx B_LE idx (IBinOp (IBLe (), idx1, idx2, (idx1left, idx2right)))
+    | idx B_GE idx (IBinOp (IBGe (), idx1, idx2, (idx1left, idx2right)))
+    | idx DOUBLE_POND idx (IBinOp (IBAnd (), idx1, idx2, (idx1left, idx2right)))
+    | idx aidx (IBinOp (IBApp (), idx, aidx, (idxleft, aidxright)))
+
+aidx : long_id (IVar long_id)
+    | INT (INat (INT, (INTleft, INTright)))
+    | NNREAL (ITime (NNREAL, (NNREALleft, NNREALright)))
+    | DOLLAR aidx (IBinOp (IBApp (), IVar (NONE, (str_idx_un_op (IUToReal ()), (DOLLARleft, DOLLARright))), aidx, (DOLLARleft, aidxright)))
+    | LPAREN RPAREN (ITT (LPARENleft, RPARENright))
+    | LPAREN idx RPAREN (idx)
+    | FN id_plus DARROW idx (IAbs (id_plus, idx, (FNleft, idxright)))
+
+prop : id (PConst id)
+     | TILDE prop (PNot (prop, (TILDEleft, propright)))
+     | prop AND prop (PBinConn (BCAnd (), prop1, prop2, (prop1left, prop2right)))
+     | prop OR prop (PBinConn (BCOr (), prop1, prop2, (prop1left, prop2right)))
+     | prop ARROW prop (PBinConn (BCImply (), prop1, prop2, (prop1left, prop2right)))
+     | prop IFF prop (PBinConn (BCIff (), prop1, prop2, (prop1left, prop2right)))
+     | idx EQ idx (PBinPred (BPEq (), idx1, idx2, (idx1left, idx2right)))
+     | idx NEQ idx (PNot (PBinPred (BPEq (), idx1, idx2, (idx1left, idx2right)), (idx1left, idx2right)))
+     | idx LE idx (PBinPred (BPLe (), idx1, idx2, (idx1left, idx2right)))
+     | idx LT idx (PBinPred (BPLt (), idx1, idx2, (idx1left, idx2right)))
+     | idx GE idx (PBinPred (BPGe (), idx1, idx2, (idx1left, idx2right)))
+     | idx GT idx (PBinPred (BPGt (), idx1, idx2, (idx1left, idx2right)))
+     | idx BIG_O_INFIX idx (PBinPred (BPBigO (), idx1, idx2, (idx1left, idx2right)))
+     | LPAREN prop RPAREN (prop)
+
+optional_eq_idx : EQ idx (SOME idx)
+                | (NONE)
+              
+sort : bsort (SBasic bsort)
+     | LCUR id COLON bsort BAR prop RCUR (SSubset (bsort, id, prop, (LCURleft, RCURright)))
+     | LCUR id BAR prop RCUR (SSubset (BSId ("_", (idleft, idright)), id, prop, (LCURleft, RCURright)))
+     | ID idx (SBigO (ID, BSId ("_", (IDleft, IDright)), idx, (IDleft, idxright)))
+
+bsort : id (BSId id)
+
+id : ID ((ID, (IDleft, IDright)))
+
+exp_comma_star : exp comma_exp_star (exp :: comma_exp_star)
+	       | ([])
+
+comma_exp_star : COMMA exp comma_exp_star (exp :: comma_exp_star)
+	       | ([])
+
+bind_star : bind bind_star (bind @ bind_star)
+	  | ([])
+bind_plus : bind bind_star (bind @ bind_star)
+
+bind : aptrn ([BindTyping (aptrn)])
+     | sorting (map BindSorting sorting)
+     | LPAREN bind RPAREN (bind)
+
+sort_bind_star : sort_bind sort_bind_star (sort_bind @ sort_bind_star)
+	   | ([])
+sort_bind_plus : sort_bind sort_bind_star (sort_bind @ sort_bind_star)
+
+sort_bind : sorting (sorting)
+      | LPAREN sort_bind RPAREN (sort_bind)
+
+return : RETURN ty RTRI idx ((SOME ty, SOME idx, NONE))
+       | RETURN ty RTRI idx COMMA idx ((SOME ty, SOME idx1, SOME idx2))
+       | RETURN ty ((SOME ty, NONE, NONE))
+       | RETURN RTRI idx ((NONE, SOME idx, NONE))
+       | RETURN RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2))
+       | ((NONE, NONE, NONE))
+
+(* rec_return : COLON ty RTRI idx ((SOME ty, SOME idx)) *)
+(*        | COLON ty ((SOME ty, NONE)) *)
+(*        | RTRI idx ((NONE, SOME idx)) *)
+(*        | ((NONE, NONE)) *)
+
+rule_bar_star : rule bar_rule_star (rule :: bar_rule_star)
+	      | ([])
+
+bar_rule_star : BAR rule bar_rule_star (rule :: bar_rule_star)
+	      | ([])
+
+rule : ptrn DARROW exp ((ptrn, exp))
+
+ptrn : decorated_id idx_ids ptrn_opt (PnConstr (decorated_id, map fst idx_ids, ptrn_opt, (decorated_idleft, ptrn_optright)))
+     | id AS ptrn (PnAlias (id, ptrn, (idleft, ptrnright)))
+     | ptrn COLON ty (PnAnno (ptrn, ty, (ptrnleft, tyright)))
+     | ptrn DCOLON ptrn (PnCons (ptrn1, ptrn2, (ptrn1left, ptrn2right)))
+     | aptrn (aptrn)
+
+aptrn : LPAREN ptrn_comma_star RPAREN (PnTuple (ptrn_comma_star, (LPARENleft, RPARENright)))
+      | decorated_id (PnConstr (decorated_id, [], NONE, (decorated_idleft, decorated_idright)))
+      | LSQ ptrn_comma_star RSQ (PnList (ptrn_comma_star, (LSQleft, RSQright)))
+
+ptrn_opt : ptrn (SOME ptrn)
+         | (NONE)
+               
+ptrn_comma_star : ptrn comma_ptrn_star (ptrn :: comma_ptrn_star)
+	       | ([])
+comma_ptrn_star : COMMA ptrn comma_ptrn_star (ptrn :: comma_ptrn_star)
+	        | ([])
+
+idx_ids : LCUR id_plus RCUR idx_ids (id_plus @ idx_ids)
+	| ([])
+
+id_star : id id_star (id :: id_star)
+	| ([])
+id_plus : id id_star (id :: id_star)
+
+quan : FORALL (Forall ())
+
+decl_star : decl decl_star (decl :: decl_star)
+	 | ([])
+
+constr : id sorting_star constr_core_opt ((id, sorting_star, constr_core_opt, (idleft, constr_core_optright)))
+constr_core_opt : OF ty constr_result_opt (SOME (ty, constr_result_opt))
+                | (NONE)
+constr_result_opt : LARROW ty (SOME (ty))
+(* constr_result_opt : ARROW ty (SOME (ty)) *)
+                  | (NONE)
+
+cur_sort : LCUR sort RCUR (sort)                       
+cur_sort_plus : cur_sort cur_sort_star (cur_sort :: cur_sort_star)
+cur_sort_star :  cur_sort_plus (cur_sort_plus)
+	      | ([])
+                         
+cur_bsort : LCUR bsort RCUR (bsort)                       
+cur_bsort_plus : cur_bsort cur_bsort_star (cur_bsort :: cur_bsort_star)
+cur_bsort_star :  cur_bsort_plus (cur_bsort_plus)
+	      | ([])
+                         
+(* sort_plus : sort cur_sort_star (sort :: cur_sort_star) *)
+
+constr_bar_star : constr bar_constr_star (constr :: bar_constr_star)
+	        | ([])
+
+bar_constr_star : BAR constr bar_constr_star (constr :: bar_constr_star)
+	        | ([])
+
+sorting : LCUR id_plus COLON sort RCUR (sortings (id_plus, sort, (LCURleft, RCURright)))
+        | LCUR id COLON sort RCUR ([(id, sort, (LCURleft, RCURright))])
+        | LCUR id COLON bsort BAR prop RCUR ([(id, SSubset (bsort, id, prop, (LCURleft, RCURright)), (LCURleft, RCURright))])
+        | LCUR id BAR prop RCUR ([(id, SSubset (BSId ("_", (idleft, idright)), id, prop, (LCURleft, RCURright)), (LCURleft, RCURright))])
+        | LCUR prop RCUR (
+            let
+              val r = (LCURleft, RCURright)
+              val id = ("__tt", r)
+              val bsort = BSId ("Unit", r)
+            in
+              [(id, SSubset (bsort, id, prop, r), r)]
+            end
+          )
+
+sorting_star : sorting sorting_star (sorting @ sorting_star)
+	   | ([])
+
+bsorting : LCUR id_plus COLON bsort RCUR (bsortings (id_plus, bsort, (LCURleft, RCURright)))
+        | LCUR id COLON bsort RCUR ([(id, bsort, (LCURleft, RCURright))])
+
+bsorting_star : bsorting bsorting_star (bsorting @ bsorting_star)
+	   | ([])
+
+(* idx_un_op : LOG2 (Log2) *)
+
+tnames : LSQ id_star RSQ (id_star)
+       | ([])
+
+optional_colon_sort : COLON sort (SOME sort)
+                    | (NONE)
+
+id_or_bsort_bind : id ([inl id])
+                 | bsorting (map inr bsorting)
+id_or_bsort_bind_star : id_or_bsort_bind id_or_bsort_bind_star (id_or_bsort_bind @ id_or_bsort_bind_star)
+	  | ([])
+id_or_bsort_bind_plus : id_or_bsort_bind id_or_bsort_bind_star (id_or_bsort_bind @ id_or_bsort_bind_star)
+
+                        

@@ -2725,6 +2725,7 @@ fun check_top_bind gctx (name, bind) =
             in
               (TBState (is_map, t), [])
             end
+          | U.TBPragma s => (TBPragma s, [])
     (* val () = println $ sprintf "Typechecked program:" [] *)
     (* val () = app println $ map fst gctxd *)
     (* val () = app println $ str_gctx (gctx_names gctx) gctxd *)

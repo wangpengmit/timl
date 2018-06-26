@@ -160,6 +160,7 @@ fun collect_names_top_name rev_p name =
       | TBFunctor (_, body) => collect_names_mod body
       | TBFunctorApp (name1, name2) => collect_names_top_name rev_p name1
       | TBState _ => ([], [], [], [])
+      | TBPragma _ => ([], [], [], [])
   end
 
 fun top_bind_to_mod rev_p (name, bind) =
@@ -185,6 +186,7 @@ fun top_bind_to_mod rev_p (name, bind) =
       in
         []
       end
+    | TBPragma _ => []
 
 fun prog2modules' p =
   case p of

@@ -845,7 +845,7 @@ fun test1 dirname =
     val () = println "ToEVM1.UnitTest started"
     val filename = join_dir_file' dirname "to-evm1-test.pkg"
     val filenames = map snd $ ParseFilename.expand_pkg (fn msg => raise Impossible msg) (true, filename)
-    open Parser
+    open ETiMLParser
     val prog = concatMap parse_file filenames
     open Elaborate
     val prog = elaborate_prog prog

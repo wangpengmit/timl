@@ -99,6 +99,7 @@ datatype top_bind =
          | TBFunctor of (name * sgn) (* list *) * mod
          | TBFunctorApp of mod_id * mod_id (* list *)
          | TBState of bool * mtype
+         | TBPragma of string
 
 type prog = (name * top_bind) list
 

@@ -2,6 +2,7 @@ structure TiML = struct
 structure E = NamefulExpr
 open Expr
 open Util
+structure Parser = ETiMLParser
 open Parser
 open Elaborate
 structure NR = NameResolve

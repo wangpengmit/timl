@@ -31,7 +31,7 @@ fun parse_filename (on_file, on_error) (pos_or_neg, filename) =
       in
         parse_filenames (on_file, on_error) filenames
       end
-    else if ext = SOME "timl" then
+    else if ext = SOME "timl" orelse ext = SOME "etiml" then
       on_file (pos_or_neg, filename)
     else on_error $ sprintf "Unknown filename extension $ of $" [default "<EMPTY>" ext, filename]
   end

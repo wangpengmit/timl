@@ -177,6 +177,7 @@ datatype top_bind =
          | TBFunctor of name * (name * sgn) * mod
          | TBFunctorApp of name * id * id
          | TBState of name * ty
+         | TBPragma of name * string
 
 type prog = top_bind list
 

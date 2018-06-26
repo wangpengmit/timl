@@ -82,6 +82,8 @@ sexp/sexp.grm
 sexp/sexp.lex
 parser/timl.grm
 parser/timl.lex
+parser/etiml.grm
+parser/etiml.lex
 }
 
 elsif target == :mlton then
@@ -93,6 +95,9 @@ sexp/sexp.lex.sml
 parser/timl.grm.sig
 parser/timl.grm.sml
 parser/timl.lex.sml
+parser/etiml.grm.sig
+parser/etiml.grm.sml
+parser/etiml.lex.sml
 }
 
 end
@@ -100,6 +105,7 @@ end
 print %{
 sexp/parser.sml
 parser/parser.sml
+parser/etiml-parser.sml
 cont-util.sml
 module-context.sml
 to-string-util.sml

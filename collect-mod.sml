@@ -616,6 +616,7 @@ fun on_top_bind acc b =
     | TBFunctorApp (functor_name, arg_name) =>
       on_mod_id (on_mod_id acc functor_name) arg_name
     | TBState _ => acc
+    | TBPragma _ => acc
 
 fun on_prog acc b =
   let

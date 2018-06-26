@@ -686,6 +686,7 @@ fun on_top_bind gctx (name, bind) =
         in
           (TBState (b, on_mtype Gctx.empty ([], []) t), [])
         end
+      | S.TBPragma s => (TBPragma s, [])
           
 and on_prog gctx binds =
     let

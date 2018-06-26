@@ -568,12 +568,14 @@ local
         | S.TBFunctor (name, (arg_name, arg), body) => (name, TBFunctor ((arg_name, elab_sig arg), elab_mod body))
         | S.TBFunctorApp (name, f, arg) => (name, TBFunctorApp (f, arg))
         | S.TBState (name, t) =>
-          case is_vector t of
-              SOME t => (name, TBState (false, t))
-            | NONE =>
-              case is_map t of
-                  SOME t => (name, TBState (true, t))
-                | NONE => raise Error (S.get_region_t t, "wrong state declaration form")
+          (case is_vector t of
+               SOME t => (name, TBState (false, t))
+             | NONE =>
+               case is_map t of
+                   SOME t => (name, TBState (true, t))
+                 | NONE => raise Error (S.get_region_t t, "wrong state declaration form")
+          )
+        | S.TBPragma (name, version) => (name, TBPragma version)
 
   fun elab_prog prog = map elab_top_bind prog
                            

@@ -9,10 +9,12 @@ mlton: main
 FILES = $(shell ruby generate-file-list.rb Makefile)
 
 main: main.mlb $(FILES)
-	mlyacc parser/timl.grm
-	mllex parser/timl.lex
 	mlyacc sexp/sexp.grm
 	mllex sexp/sexp.lex
+	mlyacc parser/timl.grm
+	mllex parser/timl.lex
+	mlyacc parser/etiml.grm
+	mllex parser/etiml.lex
 	./format-mlton.rb mlton $(MLTON_FLAGS) -default-ann "'nonexhaustiveMatch error'" -default-ann "'redundantMatch error'" main.mlb
 
 main.mlb: generate-file-list.rb
