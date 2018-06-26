@@ -56,9 +56,6 @@ datatype ty =
 	 | TAppI of ty * idx * region
 	 | TAbs of id_or_bsort_bind list * ty * region
 
-type constr_core = ty * ty option
-type constr_decl = id * sort_bind list * constr_core option * region
-
 datatype ptrn =
 	 PnConstr of (long_id * bool) * string list * ptrn option * region
          | PnTuple of ptrn list * region
@@ -71,6 +68,8 @@ datatype bind =
 
 type return = ty option * idx option * idx option
 
+type constr_core = ty * ty option
+type constr_decl = id * sort_bind list * constr_core option * region
 type datatype_def = string * string list * bsort_bind list * bsort list * constr_decl list * region
 
 datatype exp_const =
