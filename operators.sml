@@ -118,7 +118,7 @@ fun str_expr_const c =
     | ECNat n => sprintf "#$" [str_int n]
     | ECiBool b => sprintf "#$" [str_bool b]
     | ECBool b => str_bool b
-    | ECByte c => Char.toCString c
+    | ECByte c => str_char c
     (* | ECString s => surround "\"" "\"" s *)
                                 
 fun str_proj opr =

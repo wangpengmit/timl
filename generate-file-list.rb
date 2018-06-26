@@ -71,7 +71,9 @@ unique-map.sml
 region.sml
 time.sml
 operators.sml
+pp-util.sml
 parser/ast.sml
+parser/ast-pp.sml
 parser/parser-util.sml
 sexp/sexp.sml
 }
@@ -150,7 +152,6 @@ export.sml
 to-string-raw.sml
 to-string-nameful.sml
 to-string.sml
-pp-util.sml
 pp-nameful.sml
 pretty-print.sml
 uvar.sml

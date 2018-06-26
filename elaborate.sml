@@ -160,7 +160,18 @@ local
       end
 
   fun IUnderscore r = elab_i (S.IVar (NONE, ("_", r)))
-  fun IUnderscore2 r = (IUnderscore r, IUnderscore r)        
+  fun IUnderscore2 r = (IUnderscore r, IUnderscore r)
+                         
+  fun elab_state r ls =
+    let
+      fun check_new_key m k =
+        case m @! k of
+            SOME _ => raise Error (r, sprintf "state field $ already exists" [k])
+          | NONE => ()
+    in
+      foldl (fn (((k, _), v), m) => (check_new_key m k; m @+ (k, elab_i v))) StMap.empty ls
+    end
+      
   fun elab_mt t =
       case t of
 	  S.TVar (id as (m, (x, r))) =>
@@ -185,7 +196,7 @@ local
                   def ()
               | SOME _ => def ()
           end
-	| S.TArrow (t1, (j, i), t2, _) => TPureArrow (elab_mt t1, (elab_i j, elab_i i), elab_mt t2)
+	| S.TArrow ((st1, t1), (j, i), (st2, t2), r) => TArrow ((elab_state r st1, elab_mt t1), (elab_i j, elab_i i), (elab_state r st1, elab_mt t2))
 	| S.TProd (t1, t2, _) => TProd (elab_mt t1, elab_mt t2)
 	| S.TQuan (quan, binds, t, r) =>
 	  let
@@ -297,16 +308,6 @@ local
         (dt, r)
       end
 
-  fun elab_state r ls =
-    let
-      fun check_new_key m k =
-        case m @! k of
-            SOME _ => raise Error (r, sprintf "state field $ already exists" [k])
-          | NONE => ()
-    in
-      foldl (fn (((k, _), v), m) => (check_new_key m k; m @+ (k, elab_i v))) StMap.empty ls
-    end
-      
   fun elab e =
       case e of
 	  S.EVar (id as (m, (x, r)), (eia, has_insert)) =>
@@ -451,9 +452,9 @@ local
           EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
         | S.EBinOp (EBSetRef (), e1, e2, _) => raise Impossible "elaborate/ESetRef"
         | S.EUnOp (opr, e, r) => EUnOp (opr, elab e, r)
-        | S.ETriOp (ETTiML (S.ETIte ()), e1, e2, e3, _) =>
+        | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
           ETriOp (ETIte (), elab e1, elab e2, elab e3)
-        | S.ETriOp (ETTiML (S.ETIfDec ()), e, e1, e2, r) =>
+        | S.ETriOp (S.ETIfDec (), e, e1, e2, r) =>
           ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ETriOp (ETIfi (), e, e1, e2, r) =>
           EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)

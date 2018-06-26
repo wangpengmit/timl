@@ -72,19 +72,15 @@ type constr_core = ty * ty option
 type constr_decl = id * sort_bind list * constr_core option * region
 type datatype_def = string * string list * bsort_bind list * bsort list * constr_decl list * region
 
-datatype exp_const =
+datatype visi =
+         ViPublic
+         | ViPrivate
+
+datatype expr_const =
          ECInt of int
          | ECNat of int
          | ECString of string
          | ECChar of Char.char
-
-datatype expr_tri_op =
-         ETIte of unit
-         | ETIfDec of unit
-
-datatype visi =
-         ViPublic
-         | ViPrivate
 
 datatype ast_expr_binop =
          EBTiML of expr_bin_op
@@ -92,9 +88,10 @@ datatype ast_expr_binop =
          | EBSetRef of unit
 
 datatype ast_expr_triop =
-         ETTiML of expr_tri_op
+         ETIte of unit
+         | ETIfDec of unit
          | ETIfi of unit
-                         
+
 datatype exp = 
 	 EVar of long_id * (bool * bool)
          | ETuple of exp list * region
@@ -105,7 +102,7 @@ datatype exp =
          | EAscTime of exp * idx * region
          | EAscSpace of exp * idx * region
          | ELet of return * decl list * exp * region
-         | EConst of exp_const * region
+         | EConst of expr_const * region
          | EUnOp of expr_un_op * exp * region
          | EBinOp of ast_expr_binop * exp * exp * region
          | ETriOp of ast_expr_triop * exp * exp * exp * region
@@ -192,11 +189,10 @@ fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
 
 fun IUnOp (opr, i, r) = IBinOp (IBApp (), IVar (NONE, (str_idx_un_op opr, r)), i, r)
 
-fun TPureArrow (t1, i, t2) = TArrow ((empty_state, t1), i, (empty_state, t2))
+fun TPureArrow (t1, i, t2, r) = TArrow ((empty_state, t1), i, (empty_state, t2), r)
                                
-fun ETriOp' (opr, e1, e2, e3, r) = ETriOp (ETTiML opr, e1, e2, e3, r)
 fun EBinOp' (opr, e1, e2, r) = EBinOp (EBTiML opr, e1, e2, r)
-fun EIte (e1, e2, e3, r) = ETriOp' (ETIte (), e1, e2, e3, r)
+fun EIte (e1, e2, e3, r) = ETriOp (ETIte (), e1, e2, e3, r)
 (* fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r) *)
 fun EApp (e1, e2, r) = EBinOp' (EBApp (), e1, e2, r)
 fun short_id id = ((NONE, id), false)

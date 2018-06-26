@@ -2,19 +2,31 @@
 
 structure AstPP = struct
 
-open Expr
-open Idx
-open Type
+open Util
 open Region
-open BaseSorts
-open BaseTypes
 open Operators
-open Pattern
+open Ast
 
 infixr 0 $
 
+fun str_long_id (m, (x, _)) = default "" (Option.map (fn (m, _) => m ^ "..") m) ^ x
+      
 fun pp_i s i =
     let
+      val pp_i = pp_i s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
+      fun pp_int n = str $ str_int n
+      fun pp_bool n = str $ str_bool n
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
     in
       case i of
 	 IVar x => pp_long_id x
@@ -35,13 +47,13 @@ fun pp_i s i =
            close_box ()
          )
        | ITT r => str "ITT"
-       | IAbs (is, i, _) =>
+       | IAbs (names, i, _) =>
          (
            open_hbox ();
            str "IAbs";
            space ();
            str "(";
-           app (fn i => (pp_i i; comma ())) is;
+           app (fn name => (pp_id name; comma ())) names;
            pp_i i;
            str ")";
            close_box ()
@@ -62,9 +74,24 @@ fun pp_i s i =
 
 fun pp_p s p =
     let
+      val pp_i = pp_i s
+      val pp_p = pp_p s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
+      fun pp_int n = str $ str_int n
+      fun pp_bool n = str $ str_bool n
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
     in
       case p of
-	  PConst s => str s
+	  PConst (s, _) => str s
         | PNot (p, _) =>
           (
             open_hbox ();
@@ -104,9 +131,44 @@ fun pp_p s p =
            close_box ()
          )
     end
+
+fun pp_bsort s bs =
+    let
+      fun space () = PP.space s 1
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun pp_id x = str $ fst x
+      fun open_hbox () = PP.openHBox s
+      fun close_box () = PP.closeBox s
+    in
+      case bs of
+          BSId x =>
+          (
+            open_hbox ();
+            strs "BSId";
+            pp_id x;
+            close_box ()
+          )
+    end
       
 fun pp_s s sort =
     let
+      val pp_i = pp_i s
+      val pp_p = pp_p s
+      val pp_bsort = pp_bsort s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
+      fun pp_int n = str $ str_int n
+      fun pp_bool n = str $ str_bool n
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
     in
       case sort of
 	 SBasic bs => pp_bsort bs
@@ -140,10 +202,13 @@ fun pp_s s sort =
          )
     end
       
-fun pp_st str_i s st =
+fun pp_st s st =
     let
+      val pp_i = pp_i s
       fun str v = PP.string s v
       fun space () = PP.space s 1
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
       fun comma () = (str ","; space ())
       fun colon () = (str ":"; space ())
       fun open_hbox () = PP.openHBox s
@@ -152,21 +217,71 @@ fun pp_st str_i s st =
       (
         open_hbox ();
         str "{";
-        StMap.appi (fn (k, i) => (str k; colon (); str $ str_i i; comma ())) st;
+        app (fn (k, i) => (pp_id k; colon (); pp_i i; comma ())) st;
         str "}";
         close_box ()
       )
     end
-         
-fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string)) s t =
+
+fun str_quan q =
+    case q of
+        Forall () => "Forall"
+                    
+fun pp_sort_bind s (name, sort, _) =
     let
-      val pp_t = pp_t params s
-      val pp_st = pp_st str_i s
+      val pp_s = pp_s s
+      fun space () = PP.space s 1
+      fun str v = PP.string s v
+      fun pp_id x = str $ fst x
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun close_box () = PP.closeBox s
+    in
+        open_hbox ();
+        str "(";
+        pp_id name;
+        colon ();
+        pp_s sort;
+        str ")";
+        close_box ()
+    end
+      
+fun pp_bsort_bind s (name, bsort, _) =
+    let
+      val pp_bsort = pp_bsort s
+      fun space () = PP.space s 1
+      fun str v = PP.string s v
+      fun pp_id x = str $ fst x
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun close_box () = PP.closeBox s
+    in
+        open_hbox ();
+        str "(";
+        pp_id name;
+        colon ();
+        pp_bsort bsort;
+        str ")";
+        close_box ()
+    end
+      
+fun pp_t s t =
+    let
+      val pp_i = pp_i s
+      val pp_t = pp_t s
+      val pp_st = pp_st s
+      val pp_sort_bind = pp_sort_bind s
+      val pp_bsort_bind = pp_bsort_bind s
       fun space () = PP.space s 1
       fun add_space a = (space (); a)
       fun str v = PP.string s v
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
       fun comma () = (str ","; space ())
       fun colon () = (str ":"; space ())
+      fun pp_id_or_bsort_bind b = app_inl_inr pp_id pp_bsort_bind b
       fun open_hbox () = PP.openHBox s
       (* fun open_vbox () = PP.openVBox s (PP.Abs 2) *)
       fun open_vbox () = PP.openVBox s (PP.Rel 2)
@@ -174,7 +289,7 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
     in
       case t of
 	 TVar x => pp_long_id x
-       | TArrow ((st1, t1), (i, j), (st2, t2)) =>
+       | TArrow ((st1, t1), (i, j), (st2, t2), _) =>
           (
             open_hbox ();
             str "TArrow";
@@ -256,13 +371,56 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
          )
     end
 
-fun pp_pn (params as pp_t) s pn =
+fun pp_datatype s (name, tnames, binds, basic_sorts, constr_decls, _) =
     let
-      val pp_pn = pp_pn params s
+      val pp_t = pp_t s
+      val pp_bsort = pp_bsort s
+      val pp_sort_bind = pp_sort_bind s
+      val pp_bsort_bind = pp_bsort_bind s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun pp_id_or_bsort_bind b = app_inl_inr pp_id pp_bsort_bind b
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
+      fun str_constr_decl (name, binds, core, _) =
+          (
+            comma ();
+            str "[";
+            pp_id name;
+            colon ();
+            app (fn bind => (pp_sort_bind bind; comma ())) binds;
+            Option.app (fn (t1, t2) => (pp_t t1; comma (); Option.app pp_t t2)) core;
+            str "]"
+          )
+    in
+      (
+        open_hbox ();
+        str name;
+        app (fn name => (comma (); str name)) tnames;
+        app (fn b => (comma (); pp_bsort_bind b)) binds;
+        app (fn b => (comma (); pp_bsort b)) basic_sorts;
+        app str_constr_decl constr_decls;
+        close_box ()
+      )
+    end
+            
+fun pp_pn s pn =
+    let
+      val pp_pn = pp_pn s
       val pp_t = pp_t s
       fun space () = PP.space s 1
       fun str v = PP.string s v
       fun strs s = (str s; space ())
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
+      fun pp_int n = str $ str_int n
+      fun pp_bool n = str $ str_bool n
       fun comma () = (str ","; space ())
       fun open_hbox () = PP.openHBox s
       fun close_box () = PP.closeBox s
@@ -315,62 +473,61 @@ fun pp_pn (params as pp_t) s pn =
          )
     end
 
-fun pp_bind bind =
+fun pp_bind s bind =
     case bind of
-        SortingST (name, Outer s) =>
-        (
-          open_hbox ();
-          str "{";
-          str $ binder2str name;
-          colon ();
-          str $ str_s s;
-          str "}";
-          close_box ()
-        )
-      | TypingST pn =>
-        (
-          open_hbox ();
-          str "(";
-          pp_pn pn;
-          str ")";
-          close_box ()
-        )
-          
-fun pp_datatype (name, tnames, binds, basic_sorts, constr_decls, _) =
+        BindSorting bind => pp_sort_bind s bind
+      | BindTyping pn => pp_pn s pn
+
+fun str_expr_const c =
+    case c of
+        ECInt n => str_int n
+      | ECNat n => "#" ^ str_int n
+      | ECString s => sprintf "\"$\"" [s]
+      | ECChar c => sprintf "'$'" [str_char c]
+
+fun str_ast_expr_binop opr =
+    case opr of
+         EBTiML opr => str_expr_bin_op opr
+       | EBStrConcat () => "str_concat"
+       | EBSetRef () => "set_ref"
+
+fun str_ast_expr_triop opr =
+    case opr of
+        ETIte () => "EIte"
+      | ETIfDec () => "EIfDec"
+      | ETIfi () => "EIfi"
+
+fun pp_return s (t, i, j) =
     let
-      fun str_constr_decl (name, binds, core, _) =
-          (
-            comma ();
-            str "[";
-            pp_id name;
-            colon ();
-            app (fn bind => (pp_sort_bind bind; comma ())) binds;
-            Option.app (fn (t1, t2) => (pp_t t1; comma (), Option.app pp_t t2)) core;
-            str "]"
-          )
-    in
-      (
-        open_hbox ();
-        str $ fst name;
-        app (fn name => (comma (); pp_id name)) tnames;
-        app (fn b => (comma (); pp_bsort_bind b)) binds;
-        app (fn b => (comma (); pp_bsort b)) basic_sorts;
-        app str_constr_decl constr_decls;
-        close_box ()
-      )
-    end
-            
-fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
-    let
-      val pp_e = pp_e params s
-      val pp_decls = pp_decls params s
+      val pp_i = pp_i s
       val pp_t = pp_t s
+      fun space () = PP.space s 1
+      fun str v = PP.string s v
+      fun comma () = (str ","; space ())
+    in
+      (Option.app pp_t; comma ();
+       Option.app (pp_i) i; comma ();
+       Option.app (pp_i) j)
+    end
+      
+fun pp_e s e =
+    let
+      val pp_e = pp_e s
+      val pp_decls = pp_decls s
+      val pp_i = pp_i s
+      val pp_t = pp_t s
+      val pp_return = pp_return s
       val pp_pn = pp_pn s
-      val pp_st = pp_st str_i s
+      val pp_st = pp_st s
+      val pp_bind = pp_bind s
       fun space () = PP.space s 1
       fun add_space a = (space (); a)
       fun str v = PP.string s v
       fun strs s = (str s; space ())
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
+      fun pp_int n = str $ str_int n
+      fun pp_bool n = str $ str_bool n
       fun comma () = (str ","; space ())
       fun colon () = (str ":"; space ())
       fun open_hbox () = PP.openHBox s
@@ -391,10 +548,23 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str ")";
             close_box ()
           )
-      fun pp_return (t, i, j) =
-          (Option.app pp_t; comma ();
-           Option.app (str o str_i) i; comma ();
-           Option.app (str o str_i) j)
+      fun pp_list f ls =
+          case ls of
+              [] => ()
+            | [x] => f x
+            | x :: xs =>
+              (
+                f x;
+                comma ();
+                pp_list f xs
+              )
+      fun pp_bracket f =
+          (
+            str "[";
+            f ();
+            str "]"
+          )
+      fun pp_list_bracket f ls = pp_bracket $ (fn () => pp_list f ls)
     in
       case e of
           EVar (x, (b1, b2)) =>
@@ -515,7 +685,7 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str ")";
             close_box ()
           )
-        | EBinOp (opr, e1, e2) =>
+        | EBinOp (opr, e1, e2, _) =>
           (
             open_hbox ();
             str "EBinOp";
@@ -529,14 +699,21 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str ")";
             close_box ()
           )
-        | ETriOp (ETTiML (ETIte ()), e, e1, e2) =>
+        | ETriOp (ETIte (), e, e1, e2, _) =>
           (
             open_vbox (); open_hbox (); str "ETIte"; space (); str "("; pp_e e; close_box (); comma ();
     	    open_vbox_noindent (); pp_e e1; comma ();
             space ();
             pp_e e2; close_box (); str ")"; close_box ()
           )
-        | ETriOp (opr, e1, e2, e3) =>
+        | ETriOp (ETIfi (), e, e1, e2, _) =>
+          (
+            open_vbox (); open_hbox (); str "ETIfi"; space (); str "("; pp_e e; close_box (); comma ();
+    	    open_vbox_noindent (); pp_e e1; comma ();
+            space ();
+            pp_e e2; close_box (); str ")"; close_box ()
+          )
+        | ETriOp (opr, e1, e2, e3, _) =>
           (
             open_hbox ();
             str $ str_ast_expr_triop opr;
@@ -593,46 +770,36 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           )
     end
 
-and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
+and pp_d s d =
     let
-      val pp_d = pp_d params s
-      val pp_e = pp_e params s
+      val pp_d = pp_d s
+      val pp_e = pp_e s
+      val pp_i = pp_i s
       val pp_t = pp_t s
       val pp_pn = pp_pn s
-      val pp_st = pp_st str_i s
+      val pp_st = pp_st s
+      val pp_return = pp_return s
+      val pp_bind = pp_bind s
+      val pp_datatype = pp_datatype s
+      val pp_s = pp_s s
       fun space () = PP.space s 1
       fun str v = PP.string s v
       fun strs s = (str s; space ())
       fun comma () = (str ","; space ())
       fun colon () = (str ":"; space ())
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
       fun open_hbox () = PP.openHBox s
       fun open_vbox () = PP.openVBox s (PP.Rel 2)
       fun close_box () = PP.closeBox s
       fun equal () = (str "="; space ())
-      fun pp_list f ls =
-          case ls of
-              [] => ()
-            | [x] => f x
-            | x :: xs =>
-              (
-                f x;
-                comma ();
-                pp_list f xs
-              )
-      fun pp_bracket f =
-          (
-            str "[";
-            f ();
-            str "]"
-          )
-      fun pp_list_bracket f ls = pp_bracket $ (fn () => pp_list f ls)
     in
       case d of
           DVal (names, pn, e, _) =>
           (
             open_hbox ();
             strs "DVal";
-            app (fn name => (pn_id name; space ())) names;
+            app (fn name => (pp_id name; space ())) names;
             pp_pn pn;
             space ();
             equal ();
@@ -644,8 +811,9 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
             open_vbox ();
             open_hbox ();
             strs "DRec";
-            strs name;
-            app (fn name => (str "["; str name; str "]"; space ())) tnames;
+            pp_id name;
+            space ();
+            app (fn name => (str "["; pp_id name; str "]"; space ())) tnames;
             app (fn bind => (pp_bind bind; space ())) binds;
             comma ();
             pp_st pre_st;
@@ -674,7 +842,7 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
             open_hbox ();
             strs "DIdxDef";
             pp_id name;
-            Option.app (fn s => (strs ":"; pp_sort s)) s; space ();
+            Option.app (fn s => (strs ":"; pp_s s)) s; space ();
             strs "=";
             pp_i i;
             close_box ()
@@ -684,7 +852,7 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
             open_hbox ();
             strs "DAbsIdx2";
             pp_id name;
-            Option.app (fn s => (strs ":"; pp_sort s)) s; space ();
+            Option.app (fn s => (strs ":"; pp_s s)) s; space ();
             strs "=";
             pp_i i;
             close_box ()
@@ -693,10 +861,11 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
           (
             open_hbox ();
             strs "DAbsIdx";
-            str name;
-            Option.app (fn s => (strs ":"; pp_sort s)) s; space ();
+            pp_id name;
+            space ();
+            Option.app (fn s => (strs ":"; pp_s s)) s; space ();
             strs "=";
-            Option.app (fn s => (space (); pp_i i)) i; 
+            Option.app (fn i => (space (); pp_i i)) i; 
             close_box ();
             strs "With";
             app (fn d => (pp_d d; space ())) decls;
@@ -732,7 +901,7 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
       
 and pp_decls s decls =
   let
-    val pp_d = pp_d params s
+    val pp_d = pp_d s
     fun space () = PP.space s 1
     fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
     fun close_box () = PP.closeBox s
@@ -744,6 +913,28 @@ and pp_decls s decls =
 
 fun pp_spec s spec =
     let
+      val pp_d = pp_d s
+      val pp_e = pp_e s
+      val pp_i = pp_i s
+      val pp_t = pp_t s
+      val pp_pn = pp_pn s
+      val pp_st = pp_st s
+      val pp_return = pp_return s
+      val pp_bind = pp_bind s
+      val pp_datatype = pp_datatype s
+      val pp_s = pp_s s
+      val pp_bsort = pp_bsort s
+      fun space () = PP.space s 1
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
+      fun equal () = (str "="; space ())
     in
       case spec of
           SpecVal (name, names, t, _) =>
@@ -774,7 +965,7 @@ fun pp_spec s spec =
             str "(";
             pp_id name;
             comma ();
-            pp_sort s;
+            pp_s s;
             str ")";
             close_box ()
           )
@@ -803,6 +994,12 @@ fun pp_spec s spec =
       
 fun pp_sgn s sgn =
     let
+      val pp_spec = pp_spec s
+      fun space () = PP.space s 1
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+      fun close_box () = PP.closeBox s
     in
       case sgn of
           SigComponents (specs, _) =>
@@ -815,10 +1012,20 @@ fun pp_sgn s sgn =
           )
     end
 
-fun pp_mod s mod =
+fun pp_mod s m =
     let
+      val pp_d = pp_d s
+      val pp_mod = pp_mod s
+      val pp_sgn = pp_sgn s
+      fun space () = PP.space s 1
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+      fun close_box () = PP.closeBox s
     in
-      case mod of
+      case m of
           ModComponents (decls, _) =>
           (
             open_vbox_noindent ();
@@ -827,20 +1034,20 @@ fun pp_mod s mod =
             str "End";
             close_box ()
           )
-        | ModSeal (mod, sgn) =>
+        | ModSeal (m, sgn) =>
           (
             open_vbox ();
             strs "ModSeal";
-            pp_mod mod;
+            pp_mod m;
             strs ":";
             pp_sgn sgn;
             close_box ()
           )
-        | ModTransparentAsc (mod, sgn) =>
+        | ModTransparentAsc (m, sgn) =>
           (
             open_vbox ();
             strs "ModTransAsc";
-            pp_mod mod;
+            pp_mod m;
             strs ":";
             pp_sgn sgn;
             close_box ()
@@ -849,19 +1056,37 @@ fun pp_mod s mod =
       
 fun pp_top_bind s top_bind =
     let
+      val pp_t = pp_t s
+      val pp_d = pp_d s
+      val pp_mod = pp_mod s
+      val pp_sgn = pp_sgn s
+      fun space () = PP.space s 1
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun pp_id x = str $ fst x
+      fun pp_long_id x = str $ str_long_id x
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+      fun close_box () = PP.closeBox s
     in
       case top_bind of
-          TBMod (name, mod) =>
+          TBMod (name, m) =>
           (
             open_vbox ();
+            open_hbox ();
             strs "TBMod";
             pp_id name;
             space ();
-            strs "=";
-            pp_mod mod;
+            str "=";
+            close_box ();
+            space ();
+            pp_mod m;
             close_box ()
           )
-        | TBFunctor (name1, (name2, sgn), mod) =>
+        | TBFunctor (name1, (name2, sgn), m) =>
           (
             open_vbox ();
             open_hbox ();
@@ -876,7 +1101,7 @@ fun pp_top_bind s top_bind =
             str "=";
             close_box ();
             space ();
-            pp_mod mod;
+            pp_mod m;
             close_box ()
           )
         | TBFunctorApp (id1, id2, id3) =>
@@ -924,9 +1149,16 @@ fun pp_top_bind s top_bind =
             pp_sgn sgn;
             close_box ()
           )
-
-and pp_prog s prog =
+    end
+      
+fun pp_prog s prog =
   let
+    val pp_top_bind = pp_top_bind s
+    fun space () = PP.space s 1
+    fun str v = PP.string s v
+    fun strs s = (str s; space ())
+    fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+    fun close_box () = PP.closeBox s
   in
     open_vbox_noindent ();
     app (fn tb => (pp_top_bind tb; space ())) prog;
@@ -936,36 +1168,9 @@ and pp_prog s prog =
           
 open WithPP
        
-fun pp_t_fn params t = withPP ("", 80, TextIO.stdOut) (fn s => pp_t params s t)
-val pp_t_to_fn = pp_t
-fun pp_t_to_os_fn params os t = withPP ("", 80, os) (fn s => pp_t params s t)
-fun pp_t_to_string_fn params t =
-    pp_to_string "pp_t_to_string.tmp" (fn os => pp_t_to_os_fn params os t)
-                              
-fun pp_e_to_fn params s e = withPP ("", 80, s) (fn s => pp_e params s e)
-fun pp_e_fn params = pp_e_to_fn params TextIO.stdOut
-fun pp_e_to_string_fn params e =
-    pp_to_string "pp_e_to_string.tmp" (fn os => pp_e_to_fn params os e)
+fun pp_prog_to s e = withPP ("", 80, s) (fn s => pp_prog s e)
+fun pp_prog_to_stdout a = pp_prog_to TextIO.stdOut a
+fun pp_prog_to_string e =
+    pp_to_string "pp_prog_to_string.tmp" (fn os => pp_prog_to os e)
                  
-fun pp_d_to_fn params s e = withPP ("", 80, s) (fn s => pp_d params s e)
-fun pp_d_fn params = pp_d_to_fn params TextIO.stdOut
-fun pp_d_to_string_fn params e =
-    pp_to_string "pp_d_to_string.tmp" (fn os => pp_d_to_fn params os e)
-                 
-fun pp_decls_to_fn params s e = withPP ("", 80, s) (fn s => pp_decls params s e)
-fun pp_decls_fn params = pp_decls_to_fn params TextIO.stdOut
-fun pp_decls_to_string_fn params e =
-    pp_to_string "pp_decls_to_string.tmp" (fn os => pp_decls_to_fn params os e)
-                 
-open Unbound
-open Binders
-      
-fun get_bind b = mapFst binder2str $ unBind b
-fun get_bind_anno b =
-    let
-      val ((name, anno), t) = unBindAnno b
-    in
-      (Name2str name, anno, t)
-    end
-
 end

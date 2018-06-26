@@ -83,6 +83,7 @@ fun str_int i =
     String.implode $ sgn @ (rev $ nat2list abs)
   end
 fun str_bool b = if b then "true" else "false"
+val str_char = Char.toCString
 
 fun id x = x
 val return1 = id
