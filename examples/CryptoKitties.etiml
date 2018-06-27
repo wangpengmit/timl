@@ -1,14 +1,12 @@
 pragma etiml ^0.1
 
-
 (**
  * @title Ownable
  * @dev The Ownable contract has an owner address, and provides basic authorization control
  * functions, this simplifies the implementation of "user permissions".
  *)
 contract Ownable = struct
-  public val owner : ref address 
-
+  public state owner : ref address 
 
   (**
    * @dev The Ownable constructor sets the original `owner` of the contract to the sender
@@ -17,7 +15,6 @@ contract Ownable = struct
   fun init () =
     owner := msg.sender
 
-
   (**
    * @dev Throws if called by any account other than the owner.
    *)
@@ -25,27 +22,24 @@ contract Ownable = struct
     require(msg.sender == owner);
     k ()
 
-
   (**
    * @dev Allows the current owner to transfer control of the contract to a newOwner.
    * @param newOwner The address to transfer ownership to.
    *)
-  fun transferOwnership (newOwner : address) guarded_by onlyOwner =
+  fun transferOwnership (newOwner : address) guard onlyOwner =
     if (newOwner != address(0)) then
-      owner := newOwner;
+      owner := newOwner
     end
 
 end
-
-
 
 (* @title Interface for contracts conforming to ERC-721: Non-Fungible Tokens*)
 (* @author Dieter Shirley <dete@axiomzen.co> (https://github.com/dete)*)
 interface ERC721 = sig
   (* Required methods*)
-  public fun totalSupply () view returns (total : uint256)
-  public fun balanceOf (_owner : address) view returns (balance : uint256)
-  external fun ownerOf (_tokenId : uint256) view returns (owner : address)
+  public fun totalSupply () view return (total : uint256)
+  public fun balanceOf (_owner : address) view return (balance : uint256)
+  external fun ownerOf (_tokenId : uint256) view return (owner : address)
   external fun approve (_to : address, _tokenId : uint256)
   external fun transfer (_to : address, _tokenId : uint256)
   external fun transferFrom (_from : address, _to : address, _tokenId : uint256)
@@ -55,49 +49,35 @@ interface ERC721 = sig
   event Approval(owner : address, approved : address, tokenId : uint256)
 
   (* Optional*)
-  (* public fun name () view returns (name : string)*)
-  (* public fun symbol () view returns (symbol : string)*)
-  (* external fun tokensOfOwner (_owner : address) view returns (uint256[] tokenIds)*)
-  (* public fun tokenMetadata (_tokenId : uint256, _preferredTransport : string) view returns (infoUrl : string)*)
+  (* public fun name () view return (name : string)*)
+  (* public fun symbol () view return (symbol : string)*)
+  (* external fun tokensOfOwner (_owner : address) view return (uint256[] tokenIds)*)
+  (* public fun tokenMetadata (_tokenId : uint256, _preferredTransport : string) view return (infoUrl : string)*)
 
   (* ERC-165 Compatibility (https://github.com/ethereum/EIPs/issues/165)*)
-  external fun supportsInterface (_interfaceID : bytes4) view returns bool
+  external fun supportsInterface (_interfaceID : bytes4) view return bool
 end
-
 
 (* // Auction wrapper funs*)
 
-
 (* Auction wrapper funs*)
 
-
-
-
-
-
-
 (* @title SEKRETOOOO*)
-contract GeneScienceInterface = contract
+interface GeneScienceInterface = sig
   (* @dev simply a boolean to indicate this is the contract we expect to be*)
-  public fun isGeneScience () pure returns bool
+  public fun isGeneScience () pure return bool
 
   (* @dev given genes of kitten 1 & 2, return a genetic combination - may have a random factor*)
   (* @param genes1 genes of mom*)
   (* @param genes2 genes of sire*)
   (* @return the genes that are supposed to be passed down the child*)
-  public fun mixGenes (genes1 : uint256, genes2 : uint256, targetBlock : uint256) returns uint256
-end_contract
-
-
-
-
-
-
+  public fun mixGenes (genes1 : uint256, genes2 : uint256, targetBlock : uint256) return uint256
+end
 
 (* @title A facet of KittyCore that manages special access privileges.*)
 (* @author Axiom Zen (https://www.axiomzen.co)*)
 (* @dev See the KittyCore contract documentation to understand how the various contract facets are arranged.*)
-contract KittyAccessControl = contract
+contract KittyAccessControl = struct
   (* This facet controls access control for CryptoKitties. There are four roles managed here:*)
   (**)
   (*   - The CEO: The CEO can reassign other roles and change the addresses of our dependent smart*)
@@ -119,12 +99,12 @@ contract KittyAccessControl = contract
   event ContractUpgrade(newContract : address)
 
   (* The addresses of the accounts (or contracts) that can execute actions within each roles.*)
-  public val ceoAddress : ref address 
-  public val cfoAddress : ref address 
-  public val cooAddress : ref address 
+  public state ceoAddress : ref address 
+  public state cfoAddress : ref address 
+  public state cooAddress : ref address 
 
   (* @dev Keeps track whether the contract is paused. When that is true, most actions are blocked*)
-  public val paused : ref bool = ref false
+  public state paused : ref bool = false
 
   (* @dev Access fun for CEO-only funality*)
   fun onlyCEO k =
@@ -151,30 +131,27 @@ contract KittyAccessControl = contract
 
   (* @dev Assigns a new address to act as the CEO. Only available to the current CEO.*)
   (* @param _newCEO The address of the new CEO*)
-  external fun setCEO (_newCEO : address) guarded_by onlyCEO =
+  external fun setCEO (_newCEO : address) guard onlyCEO =
     require(_newCEO != address(0));
-
     ceoAddress := _newCEO
 
   (* @dev Assigns a new address to act as the CFO. Only available to the current CEO.*)
   (* @param _newCFO The address of the new CFO*)
-  external fun setCFO (_newCFO : address) guarded_by onlyCEO =
+  external fun setCFO (_newCFO : address) guard onlyCEO =
     require(_newCFO != address(0));
-
     cfoAddress := _newCFO
 
   (* @dev Assigns a new address to act as the COO. Only available to the current CEO.*)
   (* @param _newCOO The address of the new COO*)
-  external fun setCOO (_newCOO : address) guarded_by onlyCEO =
+  external fun setCOO (_newCOO : address) guard onlyCEO =
     require(_newCOO != address(0));
-
     cooAddress := _newCOO
 
   (*** Pausable funality adapted from OpenZeppelin ***)
 
   (* @dev Modifier to allow actions only when the contract IS NOT paused*)
   fun whenNotPaused k =
-    require(!paused);
+    require(paused);
     k ()
 
   (* @dev Modifier to allow actions only when the contract IS paused*)
@@ -184,7 +161,7 @@ contract KittyAccessControl = contract
 
   (* @dev Called by any "C-level" role to pause the contract. Used only when*)
   (*  a bug or exploit is detected and we need to limit damage.*)
-  external fun pause () guarded_by onlyCLevel, whenNotPaused =
+  external fun pause () guard onlyCLevel, whenNotPaused =
     paused := true
 
   (* @dev Unpauses the smart contract. Can only be called by the CEO, since*)
@@ -192,19 +169,16 @@ contract KittyAccessControl = contract
   (*  compromised.*)
   (* @notice This is public rather than external so it can be called by*)
   (*  derived contracts.*)
-  public fun unpause () guarded_by onlyCEO, whenPaused =
+  public fun unpause () guard onlyCEO, whenPaused =
     (* can't unpause if contract was upgraded*)
     paused := false
 
-end_contract
-
-
-
+end
 
 (* @title Base contract for CryptoKitties. Holds all common structs, events and base variables.*)
 (* @author Axiom Zen (https://www.axiomzen.co)*)
 (* @dev See the KittyCore contract documentation to understand how the various contract facets are arranged.*)
-contract KittyBase = contract inherited_from KittyAccessControl 
+contract KittyBase = struct inherit KittyAccessControl 
   (*** EVENTS ***)
 
   (* @dev The Birth event is fired whenever a new kitten comes into existence. This obviously*)
@@ -274,7 +248,7 @@ contract KittyBase = contract inherited_from KittyAccessControl
   (*  is bred, encouraging owners not to just keep breeding the same cat over*)
   (*  and over again. Caps out at one week (a cat can breed an unbounded number*)
   (*  of times, and the maximum cooldown is always seven days).*)
-  public val cooldowns : array uint32 {14} = {
+  public state cooldowns : array uint32 {14} = {
     uint32(1 minutes),
     uint32(2 minutes),
     uint32(5 minutes),
@@ -288,11 +262,11 @@ contract KittyBase = contract inherited_from KittyAccessControl
     uint32(1 days),
     uint32(2 days),
     uint32(4 days),
-    uint32(7 days)
-  };
+    uint32(7 days),
+  }
 
   (* An approximation of currently how many seconds are in between blocks.*)
-  public val secondsPerBlock : ref uint256 = ref 15
+  public state secondsPerBlock : ref uint256 = 15
 
   (*** STORAGE ***)
 
@@ -301,35 +275,35 @@ contract KittyBase = contract inherited_from KittyAccessControl
   (*  the unKitty, the mythical beast that is the parent of all gen0 cats. A bizarre*)
   (*  creature that is both matron and sire... to itself! Has an invalid genetic code.*)
   (*  In other words, cat ID 0 is invalid... ;-)*)
-  val kitties : vector Kitty
+  state kitties : vector Kitty
 
   (* @dev A mapping from cat IDs to the address that owns them. All cats have*)
   (*  some valid owner address, even gen0 cats are created with a non-zero owner.*)
-  public val kittyIndexToOwner : map uint256 address
+  public state kittyIndexToOwner : map uint256 address
 
   (* @dev A mapping from owner address to count of tokens that address owns.*)
   (*  Used internally inside balanceOf() to resolve ownership count.*)
-  val ownershipTokenCount : map address uint256
+  state ownershipTokenCount : map address uint256
 
   (* @dev A mapping from KittyIDs to an address that has been approved to call*)
   (*  transferFrom(). Each Kitty can only have one approved address for transfer*)
   (*  at any time. A zero value means no approval is outstanding.*)
-  public val kittyIndexToApproved : map uint256 address
+  public state kittyIndexToApproved : map uint256 address
 
   (* @dev A mapping from KittyIDs to an address that has been approved to use*)
   (*  this Kitty for siring via breedWith(). Each Kitty can only have one approved*)
   (*  address for siring at any time. A zero value means no approval is outstanding.*)
-  public val sireAllowedToAddress : map uint256 address
+  public state sireAllowedToAddress : map uint256 address
 
   (* @dev The address of the ClockAuction contract that handles sales of Kitties. This*)
   (*  same contract handles both peer-to-peer sales as well as the gen0 sales which are*)
   (*  initiated every 15 minutes.*)
-  public val saleAuction : ref option SaleClockAuction 
+  public state saleAuction : ref option SaleClockAuction 
 
   (* @dev The address of a custom ClockAuction subclassed contract that handles siring*)
   (*  auctions. Needs to be separate from saleAuction because the actions taken on success*)
   (*  after a sales and siring auction are quite different.*)
-  public val siringAuction : ref option SiringClockAuction 
+  public state siringAuction : ref option SiringClockAuction 
 
   (* @dev Assigns ownership of a specific Kitty to an address.*)
   fun _transfer (_from : address, _to : address, _tokenId : uint256) internal =
@@ -344,7 +318,7 @@ contract KittyBase = contract inherited_from KittyAccessControl
       set sireAllowedToAddress[_tokenId] zero_value;
       (* clear any previously approved ownership exchange*)
       set kittyIndexToApproved[_tokenId] zero_value
-    endif;
+    end;
     (* Emit the transfer event.*)
     Transfer(_from, _to, _tokenId)
 
@@ -365,7 +339,7 @@ contract KittyBase = contract inherited_from KittyAccessControl
     address _owner
   )
     internal
-    returns uint
+    return uint
   =
     (* These requires are not strictly necessary, our calling code should make*)
     (* sure that these conditions are never broken. However! _createKitty() is already*)
@@ -418,16 +392,13 @@ contract KittyBase = contract inherited_from KittyAccessControl
     require(secs < cooldowns[0]);
     secondsPerBlock := secs
 
-end_contract
-
-
-
+end
 
 (* @title The external contract that is responsible for generating metadata for the kitties,*)
 (*  it has one fun that will return the data as bytes.*)
 contract ERC721Metadata = contract
-  (* @dev Given a token Id, returns a byte array that is supposed to be converted into string.*)
-  public fun getMetadata (_tokenId : uint256, _: string) view returns (buffer : array bytes32 {4}, count : uint256) =
+  (* @dev Given a token Id, return a byte array that is supposed to be converted into string.*)
+  public fun getMetadata (_tokenId : uint256, _: string) view return (buffer : array bytes32 {4}, count : uint256) =
     let buffer : array bytes32 {4}
     let count : ref uint256;
     if (_tokenId == 1) then
@@ -447,12 +418,11 @@ contract ERC721Metadata = contract
 
 end_contract
 
-
 (* @title The facet of the CryptoKitties core contract that manages ownership, ERC-721 (draft) compliant.*)
 (* @author Axiom Zen (https://www.axiomzen.co)*)
 (* @dev Ref: https://github.com/ethereum/EIPs/issues/721*)
 (*  See the KittyCore contract documentation to understand how the various contract facets are arranged.*)
-contract KittyOwnership = contract inherited_from KittyBase, ERC721
+contract KittyOwnership = contract inherit KittyBase, ERC721
 
   (* @notice Name and symbol of the non fungible token, as defined in ERC721.*)
   public val name : string = "CryptoKitties"
@@ -479,7 +449,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
   (* @notice Introspection interface as per ERC-165 (https://github.com/ethereum/EIPs/issues/165).*)
   (*  Returns true for any standardized interfaces implemented by this contract. We implement*)
   (*  ERC-165 (obviously!) and ERC-721.*)
-  external fun supportsInterface (_interfaceID : bytes4) view returns bool =
+  external fun supportsInterface (_interfaceID : bytes4) view return bool =
     (* DEBUG ONLY*)
     (*require((InterfaceSignature_ERC165 == 0x01ffc9a7) && (InterfaceSignature_ERC721 == 0x9a20483d));*)
 
@@ -487,7 +457,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
 
   (* @dev Set the address of the sibling contract that tracks metadata.*)
   (*  CEO only.*)
-  public fun setMetadataAddress (_contractAddress : address) guarded_by onlyCEO =
+  public fun setMetadataAddress (_contractAddress : address) guard onlyCEO =
     erc721Metadata := SOME $ ERC721Metadata(_contractAddress)
 
   (* Internal utility funs: These funs all assume that their input arguments*)
@@ -497,13 +467,13 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
   (* @dev Checks if a given address is the current owner of a particular Kitty.*)
   (* @param _claimant the address we are validating against.*)
   (* @param _tokenId kitten id, only valid when > 0*)
-  fun _owns (_claimant : address, _tokenId : uint256) internal view returns bool =
+  fun _owns (_claimant : address, _tokenId : uint256) internal view return bool =
     kittyIndexToOwner[_tokenId] == _claimant
 
   (* @dev Checks if a given address currently has transferApproval for a particular Kitty.*)
   (* @param _claimant the address we are confirming kitten is approved for.*)
   (* @param _tokenId kitten id, only valid when > 0*)
-  fun _approvedFor (_claimant : address, _tokenId : uint256) internal view returns bool =
+  fun _approvedFor (_claimant : address, _tokenId : uint256) internal view return bool =
     kittyIndexToApproved[_tokenId] == _claimant
 
   (* @dev Marks an address as being approved for transferFrom(), overwriting any previous*)
@@ -517,7 +487,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
   (* @notice Returns the number of Kitties owned by a specific address.*)
   (* @param _owner The owner address to check.*)
   (* @dev Required for ERC-721 compliance*)
-  public fun balanceOf (_owner : address) view returns (count : uint256) =
+  public fun balanceOf (_owner : address) view return (count : uint256) =
     ownershipTokenCount[_owner]
 
   (* @notice Transfers a Kitty to another address. If transferring to a smart*)
@@ -531,7 +501,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
     uint256 _tokenId
   )
     external
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     (* Safety check to prevent against an unexpected 0x0 default.*)
     require(_to != address(0));
@@ -562,7 +532,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
     _tokenId : uint256
   )
     external
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     (* Only an owner can grant transfer approval.*)
     require(_owns(msg.sender, _tokenId));
@@ -586,7 +556,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
     _tokenId : uint256 
   )
     external
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     (* Safety check to prevent against an unexpected 0x0 default.*)
     require(_to != address(0));
@@ -603,7 +573,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
 
   (* @notice Returns the total number of Kitties currently in existence.*)
   (* @dev Required for ERC-721 compliance.*)
-  public fun totalSupply () view returns uint =
+  public fun totalSupply () view return uint =
     length kitties - 1
 
   (* @notice Returns the address currently assigned ownership of a given Kitty.*)
@@ -611,7 +581,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
   fun ownerOf (_tokenId : uint256)
     external
     view
-    returns (owner : address)
+    return (owner : address)
   =
     let owner = kittyIndexToOwner[_tokenId];
     require(owner != address(0));
@@ -621,9 +591,9 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
   (* @param _owner The owner whose Kitties we are interested in.*)
   (* @dev This method MUST NEVER be called by smart contract code. First, it's fairly*)
   (*  expensive (it walks the entire Kitty array looking for cats belonging to owner),*)
-  (*  but it also returns a dynamic array, which is only supported for web3 calls, and*)
+  (*  but it also return a dynamic array, which is only supported for web3 calls, and*)
   (*  not contract-to-contract calls.*)
-  external fun tokensOfOwner {len : Nat | len > 0} (_owner : address) view pre {kitties : len} post {kitties : len} returns (ownerTokens : vector uint256) using $(16 + len * 11) =
+  external fun tokensOfOwner {len : Nat | len > 0} (_owner : address) view pre {kitties : len} post {kitties : len} return (ownerTokens : vector uint256) using $(16 + len * 11) =
     let tokenCount : uint256 = balanceOf(_owner);
 
     if (tokenCount == 0) then
@@ -670,7 +640,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
   (* @dev Adapted from toString(slice) by @arachnid (Nick Johnson <arachnid@notdot.net>)*)
   (*  This method is licenced under the Apache License.*)
   (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*)
-  fun _toString (_rawBytes : array bytes32 {4}, _stringLength : uint256) private view returns string =
+  fun _toString (_rawBytes : array bytes32 {4}, _stringLength : uint256) private view return string =
     let outputString = string_of_length _stringLength;
     let outputPtr : uint256;
     let bytesPtr : uint256;
@@ -687,7 +657,7 @@ contract KittyOwnership = contract inherited_from KittyBase, ERC721
   (* @notice Returns a URI pointing to a metadata package for this token conforming to*)
   (*  ERC-721 (https://github.com/ethereum/EIPs/issues/721)*)
   (* @param _tokenId The ID number of the Kitty whose metadata should be returned.*)
-  external fun tokenMetadata (_tokenId : uint256, _preferredTransport : string) view returns (infoUrl : string) =
+  external fun tokenMetadata (_tokenId : uint256, _preferredTransport : string) view return (infoUrl : string) =
     require(isSome erc721Metadata);
     let (buffer, count) = erc721Metadata.getMetadata(_tokenId, _preferredTransport);
 
@@ -720,7 +690,7 @@ contract KittyBreeding = contract KittyOwnership
 
   (* @dev Update the address of the genetic contract, can only be called by the CEO.*)
   (* @param _address An address of a GeneScience contract instance to be used from this point forward.*)
-  external fun setGeneScienceAddress (_address : address) guarded_by onlyCEO =
+  external fun setGeneScienceAddress (_address : address) guard onlyCEO =
     let candidateContract : GeneScienceInterface = GeneScienceInterface(_address);
 
     (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*)
@@ -732,7 +702,7 @@ contract KittyBreeding = contract KittyOwnership
   (* @dev Checks that a given kitten is able to breed. Requires that the*)
   (*  current cooldown is finished (for sires) and also checks that there is*)
   (*  no pending pregnancy.*)
-  fun _isReadyToBreed (_kit : Kitty) internal view returns bool =
+  fun _isReadyToBreed (_kit : Kitty) internal view return bool =
     (* In addition to checking the cooldownEndBlock, we also need to check to see if*)
     (* the cat has a pending birth; there can be some period of time between the end*)
     (* of the pregnacy timer and the birth event.*)
@@ -741,7 +711,7 @@ contract KittyBreeding = contract KittyOwnership
   (* @dev Check if a sire has authorized breeding with this matron. True if both sire*)
   (*  and matron have the same owner, or if the sire has given siring permission to*)
   (*  the matron's owner (via approveSiring()).*)
-  fun _isSiringPermitted (_sireId : uint256, _matronId : uint256) internal view returns bool =
+  fun _isSiringPermitted (_sireId : uint256, _matronId : uint256) internal view return bool =
     let matronOwner : address = kittyIndexToOwner[_matronId];
     let sireOwner : address = kittyIndexToOwner[_sireId];
 
@@ -769,7 +739,7 @@ contract KittyBreeding = contract KittyOwnership
   (* @param _sireId A Kitty that you own that _addr will now be able to sire with.*)
   fun approveSiring (_addr : address, _sireId : uint256)
     external
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     require(_owns(msg.sender, _sireId));
     set sireAllowedToAddress[_sireId] _addr
@@ -777,12 +747,12 @@ contract KittyBreeding = contract KittyOwnership
   (* @dev Updates the minimum payment required for calling giveBirthAuto(). Can only*)
   (*  be called by the COO address. (This fee is used to offset the gas cost incurred*)
   (*  by the autobirth daemon).*)
-  external fun setAutoBirthFee (value : uint256) guarded_by onlyCOO =
+  external fun setAutoBirthFee (value : uint256) guard onlyCOO =
     autoBirthFee := value
 
   (* @dev Checks to see if a given Kitty is pregnant and (if so) if the gestation*)
   (*  period has passed.*)
-  fun _isReadyToGiveBirth (_matron : Kitty) private view returns bool =
+  fun _isReadyToGiveBirth (_matron : Kitty) private view return bool =
     (_matron.siringWithId.v != 0) && (_matron.cooldownEndBlock <= uint64(block.number))
 
   (* @notice Checks that a given kitten is able to breed (i.e. it is not pregnant or*)
@@ -791,7 +761,7 @@ contract KittyBreeding = contract KittyOwnership
   fun isReadyToBreed (_kittyId : uint256)
     public
     view
-    returns bool
+    return bool
   =
     require(_kittyId > 0);
     let storage kit : Kitty = kitties[_kittyId];
@@ -802,7 +772,7 @@ contract KittyBreeding = contract KittyOwnership
   fun isPregnant (_kittyId : uint256)
     public
     view
-    returns bool
+    return bool
   =
     require(_kittyId > 0);
     (* A kitty is pregnant if and only if this field is set*)
@@ -822,7 +792,7 @@ contract KittyBreeding = contract KittyOwnership
   )
     private
     view
-    returns bool
+    return bool
   =
     (* A Kitty can't breed with itself!*)
     if (_matronId == _sireId) then
@@ -859,7 +829,7 @@ contract KittyBreeding = contract KittyOwnership
   fun _canBreedWithViaAuction (_matronId : uint256, _sireId : uint256)
     internal
     view
-    returns bool
+    return bool
   =
     let storage matron : Kitty = kitties[_matronId];
     let storage sire : Kitty = kitties[_sireId];
@@ -874,7 +844,7 @@ contract KittyBreeding = contract KittyOwnership
   fun canBreedWith (_matronId : uint256, _sireId : uint256)
     external
     view
-    returns bool
+    return bool
   =
     require(_matronId > 0);
     require(_sireId > 0);
@@ -916,7 +886,7 @@ contract KittyBreeding = contract KittyOwnership
   fun breedWithAuto (_matronId : uint256, _sireId : uint256)
     external
     payable
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     (* Checks for payment.*)
     require(msg.value >= autoBirthFee);
@@ -973,8 +943,8 @@ contract KittyBreeding = contract KittyOwnership
   (*  are willing to pay the gas!), but the new kitten always goes to the mother's owner.*)
   fun giveBirth (_matronId : uint256)
     external
-    guarded_by whenNotPaused
-    returns uint256
+    guard whenNotPaused
+    return uint256
   =
     (* Grab a reference to the matron in storage.*)
     let storage matron : Kitty = kitties[_matronId];
@@ -1063,7 +1033,7 @@ contract ClockAuctionBase = contract
   (* @dev Returns true if the claimant owns the token.*)
   (* @param _claimant - Address claiming to own the token.*)
   (* @param _tokenId - ID of token whose ownership to verify.*)
-  fun _owns (_claimant : address, _tokenId : uint256) internal view returns bool =
+  fun _owns (_claimant : address, _tokenId : uint256) internal view return bool =
     (nonFungibleContract.ownerOf(_tokenId) == _claimant);
 
   (* @dev Escrows the NFT, assigning ownership to this contract.*)
@@ -1110,7 +1080,7 @@ contract ClockAuctionBase = contract
   (* Does NOT transfer ownership of token.*)
   fun _bid (_tokenId : uint256, _bidAmount : uint256)
     internal
-    returns uint256
+    return uint256
   =
     (* Get a reference to the auction struct*)
     let storage auction : Auction = tokenIdToAuction[_tokenId];
@@ -1175,7 +1145,7 @@ contract ClockAuctionBase = contract
 
   (* @dev Returns true if the NFT is on auction.*)
   (* @param _auction - Auction to check.*)
-  fun _isOnAuction (storage _auction : Auction) internal view returns bool =
+  fun _isOnAuction (storage _auction : Auction) internal view return bool =
     (_auction.startedAt > 0);
 
   (* @dev Returns current price of an NFT on auction. Broken into two*)
@@ -1185,7 +1155,7 @@ contract ClockAuctionBase = contract
   fun _currentPrice (storage _auction : Auction)
     internal
     view
-    returns uint256
+    return uint256
   =
     let secondsPassed : ref uint256 = ref 0;
 
@@ -1215,7 +1185,7 @@ contract ClockAuctionBase = contract
   )
     internal
     pure
-    returns uint256
+    return uint256
   =
     (* NOTE: We don't use SafeMath (or similar) in this fun because*)
     (*  all of our public funs carefully cap the maximum values for*)
@@ -1245,7 +1215,7 @@ contract ClockAuctionBase = contract
 
   (* @dev Computes owner's cut of a sale.*)
   (* @param _price - Sale price of NFT.*)
-  fun _computeCut (_price : uint256) internal view returns uint256 =
+  fun _computeCut (_price : uint256) internal view return uint256 =
     (* NOTE: We don't use SafeMath (or similar) in this fun because*)
     (*  all of our entry funs carefully cap the maximum values for*)
     (*  currency (at 128-bits), and ownerCut <= 10000 (see the require()*)
@@ -1265,7 +1235,7 @@ end_contract
  * @title Pausable
  * @dev Base contract which allows children to implement an emergency stop mechanism.
  *)
-contract Pausable = contract inherited_from Ownable 
+contract Pausable = contract inherit Ownable 
   event Pause()
   event Unpause()
 
@@ -1289,15 +1259,15 @@ contract Pausable = contract inherited_from Ownable
   (**
    * @dev called by the owner to pause, triggers stopped state
    *)
-  fun pause () guarded_by onlyOwner, whenNotPaused returns bool =
+  fun pause () guard onlyOwner, whenNotPaused return bool =
     paused := true;
     Pause();
     true;
 
   (**
-   * @dev called by the owner to unpause, returns to normal state
+   * @dev called by the owner to unpause, return to normal state
    *)
-  fun unpause () guarded_by onlyOwner, whenPaused returns bool =
+  fun unpause () guard onlyOwner, whenPaused return bool =
     paused := false;
     Unpause();
     true;
@@ -1307,7 +1277,7 @@ end_contract
 
 (* @title Clock auction for non-fungible tokens.*)
 (* @notice We omit a fallback fun to prevent accidental sends to this contract.*)
-contract ClockAuction = contract inherited_from Pausable, ClockAuctionBase 
+contract ClockAuction = contract inherit Pausable, ClockAuctionBase 
 
   (* @dev The ERC-165 interface signature for ERC-721.*)
   (*  Ref: https://github.com/ethereum/EIPs/issues/165*)
@@ -1357,7 +1327,7 @@ contract ClockAuction = contract inherited_from Pausable, ClockAuctionBase
     _seller : address 
   )
     external
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     (* Sanity check that no inputs overflow how many bits we've allocated*)
     (* to store them in the auction struct.*)
@@ -1382,7 +1352,7 @@ contract ClockAuction = contract inherited_from Pausable, ClockAuctionBase
   fun bid (_tokenId : uint256)
     external
     payable
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     (* _bid will throw if the bid or funds transfer fails*)
     _bid(_tokenId, msg.value);
@@ -1407,7 +1377,7 @@ contract ClockAuction = contract inherited_from Pausable, ClockAuctionBase
   (*  the seller. This should only be used in emergencies.*)
   (* @param _tokenId - ID of the NFT on auction to cancel.*)
   fun cancelAuctionWhenPaused (_tokenId : uint256)
-    guarded_by whenPaused,
+    guard whenPaused,
     onlyOwner
     external
   =
@@ -1420,7 +1390,7 @@ contract ClockAuction = contract inherited_from Pausable, ClockAuctionBase
   fun getAuction (_tokenId : uint256)
     external
     view
-    returns
+    return
   (
     seller : address,
     startingPrice : uint256,
@@ -1443,7 +1413,7 @@ contract ClockAuction = contract inherited_from Pausable, ClockAuctionBase
   fun getCurrentPrice (_tokenId : uint256)
     external
     view
-    returns uint256
+    return uint256
   =
     let storage auction : Auction = tokenIdToAuction[_tokenId];
     require(_isOnAuction(auction));
@@ -1454,7 +1424,7 @@ end_contract
 
 (* @title Reverse auction modified for siring*)
 (* @notice We omit a fallback fun to prevent accidental sends to this contract.*)
-contract SiringClockAuction = contract inherited_from ClockAuction 
+contract SiringClockAuction = contract inherit ClockAuction 
 
   (* @dev Sanity check that allows us to ensure that we are pointing to the*)
   (*  right auction in our setSiringAuctionAddress() call.*)
@@ -1499,7 +1469,7 @@ contract SiringClockAuction = contract inherited_from ClockAuction
 
   (* @dev Places a bid for siring. Requires the sender*)
   (* is the KittyCore contract because all bid methods*)
-  (* should be wrapped. Also returns the kitty to the*)
+  (* should be wrapped. Also return the kitty to the*)
   (* seller rather than the winner.*)
   fun bid (_tokenId : uint256)
     external
@@ -1521,7 +1491,7 @@ end_contract
 
 (* @title Clock auction modified for sale of kitties*)
 (* @notice We omit a fallback fun to prevent accidental sends to this contract.*)
-contract SaleClockAuction = contract inherited_from ClockAuction
+contract SaleClockAuction = contract inherit ClockAuction
 
   (* @dev Sanity check that allows us to ensure that we are pointing to the*)
   (*  right auction in our setSaleAuctionAddress() call.*)
@@ -1585,7 +1555,7 @@ contract SaleClockAuction = contract inherited_from ClockAuction
       modify gen0SaleCount ++;
     endif
 
-  external fun averageGen0SalePrice () view returns uint256 =
+  external fun averageGen0SalePrice () view return uint256 =
     let sum : ref uint256 = ref 0;
     for (i : uint256 = 0; i < 5; ++)
       modify sum += lastGen0SalePrices[i];
@@ -1598,7 +1568,7 @@ end_contract
 (* @title Handles creating auctions for sale and siring of kitties.*)
 (*  This wrapper of ReverseAuction exists only so that users can create*)
 (*  auctions with only one transaction.*)
-contract KittyAuction = contract inherited_from KittyBreeding
+contract KittyAuction = contract inherit KittyBreeding
 
   (* @notice The auction contract variables are defined in KittyBase to allow*)
   (*  us to refer to them in KittyOwnership to prevent accidental transfers.*)
@@ -1607,7 +1577,7 @@ contract KittyAuction = contract inherited_from KittyBreeding
 
   (* @dev Sets the reference to the sale auction.*)
   (* @param _address - Address of sale contract.*)
-  external fun setSaleAuctionAddress (_address : address) guarded_by onlyCEO =
+  external fun setSaleAuctionAddress (_address : address) guard onlyCEO =
     let candidateContract : SaleClockAuction = SaleClockAuction(_address);
 
     (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*)
@@ -1618,7 +1588,7 @@ contract KittyAuction = contract inherited_from KittyBreeding
 
   (* @dev Sets the reference to the siring auction.*)
   (* @param _address - Address of siring contract.*)
-  external fun setSiringAuctionAddress (_address : address) guarded_by onlyCEO =
+  external fun setSiringAuctionAddress (_address : address) guard onlyCEO =
     let candidateContract : SiringClockAuction = SiringClockAuction(_address);
 
     (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*)
@@ -1636,7 +1606,7 @@ contract KittyAuction = contract inherited_from KittyBreeding
     _duration : uint256 
   )
     external
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     (* Auction contract checks input sizes*)
     (* If kitty is already on any auction, this will throw*)
@@ -1667,7 +1637,7 @@ contract KittyAuction = contract inherited_from KittyBreeding
     _duration : uint256 
   )
     external
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     (* Auction contract checks input sizes*)
     (* If kitty is already on any auction, this will throw*)
@@ -1695,7 +1665,7 @@ contract KittyAuction = contract inherited_from KittyBreeding
   )
     external
     payable
-    guarded_by whenNotPaused
+    guard whenNotPaused
   =
     (* Auction contract checks input sizes*)
     require(_owns(msg.sender, _matronId));
@@ -1713,7 +1683,7 @@ contract KittyAuction = contract inherited_from KittyBreeding
   (* @dev Transfers the balance of the sale auction contract*)
   (* to the KittyCore contract. We use two-step withdrawal to*)
   (* prevent two transfer calls in the auction bid fun.*)
-  external fun withdrawAuctionBalances () guarded_by onlyCLevel =
+  external fun withdrawAuctionBalances () guard onlyCLevel =
     saleAuction.valOf().withdrawBalance();
     siringAuction.valOf().withdrawBalance();
 
@@ -1721,7 +1691,7 @@ end_contract
 
 
 (* @title all funs related to creating kittens*)
-contract KittyMinting = contract inherited_from KittyAuction
+contract KittyMinting = contract inherit KittyAuction
 
   (* Limits the number of cats the contract owner can ever create.*)
   public val PROMO_CREATION_LIMIT : uint256 = 5000
@@ -1738,7 +1708,7 @@ contract KittyMinting = contract inherited_from KittyAuction
   (* @dev we can create promo kittens, up to a limit. Only callable by COO*)
   (* @param _genes the encoded genes of the kitten to be created, any value is accepted*)
   (* @param _owner the future owner of the created kittens. Default to contract COO*)
-  external fun createPromoKitty (_genes : uint256, _owner : address) guarded_by onlyCOO =
+  external fun createPromoKitty (_genes : uint256, _owner : address) guard onlyCOO =
     let kittyOwner : ref address = ref _owner;
     if (kittyOwner.v == address(0)) then
        kittyOwner := cooAddress;
@@ -1750,7 +1720,7 @@ contract KittyMinting = contract inherited_from KittyAuction
 
   (* @dev Creates a new gen0 kitty with the given genes and*)
   (*  creates an auction for it.*)
-  external fun createGen0Auction (_genes : uint256) guarded_by onlyCOO =
+  external fun createGen0Auction (_genes : uint256) guard onlyCOO =
     require(gen0CreatedCount.v < GEN0_CREATION_LIMIT);
 
     let kittyId : uint256 = _createKitty(0, 0, 0, _genes, address(this));
@@ -1768,7 +1738,7 @@ contract KittyMinting = contract inherited_from KittyAuction
 
   (* @dev Computes the next gen0 auction starting price, given*)
   (*  the average of the past 5 prices + 50%.*)
-  fun _computeNextGen0Price () internal view returns uint256 =
+  fun _computeNextGen0Price () internal view return uint256 =
     let avePrice : uint256 = saleAuction.valOf().averageGen0SalePrice();
 
     (* Sanity check to ensure we don't overflow arithmetic*)
@@ -1789,7 +1759,7 @@ end_contract
 (* @title CryptoKitties: Collectible, breedable, and oh-so-adorable cats on the Ethereum blockchain.*)
 (* @author Axiom Zen (https://www.axiomzen.co)*)
 (* @dev The main CryptoKitties contract, keeps track of kittens so they don't wander around and get lost.*)
-contract KittyCore = contract inherited_from KittyMinting
+contract KittyCore = contract inherit KittyMinting
 
   (* This is the main CryptoKitties contract. In order to keep our code seperated into logical sections,*)
   (* we've broken it up in two ways. First, we have several seperately-instantiated sibling contracts*)
@@ -1852,7 +1822,7 @@ contract KittyCore = contract inherited_from KittyMinting
   (*  contract to update to the new contract address in that case. (This contract will*)
   (*  be paused indefinitely if such an upgrade takes place.)*)
   (* @param _v2Address new address*)
-  external fun setNewAddress (_v2Address : address) guarded_by onlyCEO, whenPaused =
+  external fun setNewAddress (_v2Address : address) guard onlyCEO, whenPaused =
     (* See README.md for updgrade plan*)
     newContractAddress := _v2Address;
     ContractUpgrade(_v2Address);
@@ -1871,7 +1841,7 @@ contract KittyCore = contract inherited_from KittyMinting
   fun getKitty (_id : uint256)
     external
     view
-    returns (
+    return (
     isGestating : bool,
     isReady : bool,
     cooldownIndex : uint256,
@@ -1904,7 +1874,7 @@ contract KittyCore = contract inherited_from KittyMinting
   (*  newContractAddress set either, because then the contract was upgraded.*)
   (* @notice This is public rather than external so we can call super.unpause*)
   (*  without using an expensive CALL.*)
-  public fun unpause () guarded_by onlyCEO, whenPaused =
+  public fun unpause () guard onlyCEO, whenPaused =
     require(isSome saleAuction);
     require(isSome siringAuction);
     require(isSome geneScience);
@@ -1914,7 +1884,7 @@ contract KittyCore = contract inherited_from KittyMinting
     super unpause();
 
   (* @dev Allows the CFO to capture the balance available to the contract.*)
-  external fun withdrawBalance () guarded_by onlyCFO =
+  external fun withdrawBalance () guard onlyCFO =
     let balance : uint256 = this.balance;
     (* Subtract all the currently pregnant kittens we have, plus 1 of margin.*)
     let subtractFees : uint256 = (pregnantKitties + 1) * autoBirthFee;

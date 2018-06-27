@@ -87,6 +87,13 @@ val keywords = [
     ("public", T.PUBLIC),
     ("private", T.PRIVATE),
     ("interface", T.INTERFACE),
+    ("guard", T.GUARD),
+    ("view", T.VIEW),
+    ("pure", T.PURE),
+    ("event", T.EVENT),
+    ("external", T.EXTERNAL),
+    ("inherit", T.INHERIT),
+    ("state", T.STATE),
     ("as", T.AS)
 ]
  

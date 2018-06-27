@@ -55,6 +55,7 @@ datatype ty =
 	 | TAppT of ty * ty * region
 	 | TAppI of ty * idx * region
 	 | TAbs of id_or_bsort_bind list * ty * region
+         | TRecord of (id * ty) list * region
 
 datatype ptrn =
 	 PnConstr of (long_id * bool) * string list * ptrn option * region
@@ -75,7 +76,12 @@ type datatype_def = string * string list * bsort_bind list * bsort list * constr
 datatype visi =
          ViPublic
          | ViPrivate
+         | ViExternal
 
+datatype fun_modifier =
+         FmView
+         | FmPure
+             
 datatype expr_const =
          ECInt of int
          | ECNat of int
@@ -120,7 +126,12 @@ datatype exp =
          | DAbsIdx of id * sort option * idx option * decl list * region
          | DTypeDef of id * ty
          | DOpen of id
-         | DState of id * ty
+         | DState of id * ty * init option
+         | DEvent of id * ty list
+
+     and init =
+         InitExpr of exp
+         | InitArray of exp list
 
 datatype spec =
          SpecVal of id * id list * ty * region
@@ -128,12 +139,14 @@ datatype spec =
          | SpecIdx of id * sort
          | SpecType of id list * bsort list * region
          | SpecTypeDef of id * ty
+         | SpecFun of id * ty list * return
+         | SpecEvent of id * ty list
                                    
 datatype sgn =
          SigComponents of spec list * region
 
 datatype mod =
-         ModComponents of decl list * region
+         ModComponents of id list * decl list * region
          | ModSeal of mod * sgn
          | ModTransparentAsc of mod * sgn
                                                
@@ -175,6 +188,7 @@ fun get_region_t t =
       | TAppT (_, _, r) => r
       | TAppI (_, _, r) => r
       | TAbs (_, _, r) => r
+      | TRecord (_, r) => r
 
 fun get_region_pn pn =
     case pn of
@@ -208,12 +222,15 @@ fun PnNil r = PnShortVar ("Nil", r)
 fun PnList (pns, r) = foldr (fn (pn, acc) => PnCons (pn, acc, r)) (PnNil r) pns
 fun ESemiColon (e1, e2, r) = ELet ((NONE, NONE, NONE), [DVal ([], PnShortVar ("_", r), e1, r)], e2, r)
 fun EInc r =EShortVar ("inc", r)
+fun EDec r =EShortVar ("dec", r)
 fun EAdd r =EShortVar ("add", r)
 fun ESubBy r =EShortVar ("subBy", r)
 fun EAscTimeSpace (e, (i, j), r) = EAscSpace (EAscTime (e, i, r), j, r)
 fun EIfi (e1, e2, e3, r) = ETriOp (ETIfi (), e1, e2, e3, r)
 fun EStrConcat (e1, e2, r) = EBinOp (EBStrConcat (), e1, e2, r)
 fun ESetRef (e1, e2, r) = EBinOp (EBSetRef (), e1, e2, r)
-                               
+
+type typing = id * ty
+                     
 end
 

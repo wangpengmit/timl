@@ -226,6 +226,7 @@ local
 	  in
 	    foldr f (elab_mt t) binds
 	  end
+        | S.TRecord (ts, r) => raise Impossible "elaborate/TRecord"
 
   fun elab_return (t, i, j) = (Option.map elab_mt t, Option.map elab_i i, Option.map elab_i j)
                                    
@@ -525,7 +526,8 @@ local
           end
         | S.DTypeDef (name, t) => DTypeDef (Binder $ TName name, Outer $ elab_mt t)
         | S.DOpen name => DOpen (Inner name, NONE)
-        | S.DState (name, t) => raise Impossible "elaborate/DState"
+        | S.DState (name, t, init) => raise Impossible "elaborate/DState"
+        | S.DEvent (name, ts) => raise Impossible "elaborate/DEvent"
 
   fun elab_spec spec =
       case spec of
@@ -543,6 +545,8 @@ local
           in
             SpecTypeDef (fst $ unBind dt, TDatatype (dt, r))
           end
+        | S.SpecFun (name, ts, return) => raise Impossible "elaborate/SpecFun"
+        | S.SpecEvent (name, ts) => raise Impossible "elaborate/SpecEvent"
 
   fun elab_sig sg =
       case sg of
@@ -550,7 +554,7 @@ local
 
   fun elab_mod m =
       case m of
-          S.ModComponents (comps, r) => ModComponents (map elab_decl comps, r)
+          S.ModComponents (inherits, comps, r) => ModComponents (map elab_decl comps, r)
         | S.ModSeal (m, sg) => ModSeal (elab_mod m, elab_sig sg)
         | S.ModTransparentAsc (m, sg) => ModTransparentAsc (elab_mod m, elab_sig sg)
 

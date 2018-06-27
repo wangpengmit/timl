@@ -13,7 +13,7 @@ contract MyToken = struct
   open Util
 
   (* This creates an array with all balances *)
-  public val balanceOf : map address uint256
+  public state balanceOf : map address uint256
 
   (* Initializes contract with initial supply tokens to the creator of the contract *)
   fun init (initialSupply : uint256) using 11.0 =

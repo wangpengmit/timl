@@ -369,6 +369,16 @@ fun pp_t s t =
            str ")";
            close_box ()
          )
+       | TRecord (ts, _) =>
+         (
+           open_hbox ();
+           str "TRecord";
+           space ();
+           str "(";
+           app (fn (name, t) => (pp_id name; colon (); pp_t t; comma ())) ts;
+           str ")";
+           close_box ()
+         )
     end
 
 fun pp_datatype s (name, tnames, binds, basic_sorts, constr_decls, _) =
@@ -791,6 +801,7 @@ and pp_d s d =
       fun pp_long_id x = str $ str_long_id x
       fun open_hbox () = PP.openHBox s
       fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
       fun close_box () = PP.closeBox s
       fun equal () = (str "="; space ())
     in
@@ -888,13 +899,38 @@ and pp_d s d =
             pp_id x;
             close_box ()
           )
-        | DState (name, t) =>
+        | DState (name, t, init) =>
+          let
+            fun pp_init init =
+                case init of
+                    InitExpr e => pp_e e
+                  | InitArray es =>
+                    (
+                      open_vbox_noindent ();
+                      str "{";
+                      app (fn e => (pp_e e; comma ())) es;
+                      str "}";
+                      close_box ()
+                    )
+          in
           (
             open_hbox ();
             strs "DState";
             pp_id name;
             space ();
             pp_t t;
+            Option.app (fn init => (space (); equal (); pp_init init)) init;
+            close_box ()
+          )
+          end
+        | DEvent (name, ts) =>
+          (
+            open_hbox ();
+            strs "DEvent";
+            str "(";
+            pp_id name;
+            app (fn t => (comma (); pp_t t)) ts;
+            str ")";
             close_box ()
           )
     end
@@ -990,6 +1026,28 @@ fun pp_spec s spec =
             str ")";
             close_box ()
           )
+        | SpecFun (name, ts, return) =>
+          (
+            open_hbox ();
+            strs "SpecFun";
+            str "(";
+            pp_id name;
+            app (fn t => (comma (); pp_t t)) ts;
+            comma ();
+            pp_return return;
+            str ")";
+            close_box ()
+          )
+        | SpecEvent (name, ts) =>
+          (
+            open_hbox ();
+            strs "SpecEvent";
+            str "(";
+            pp_id name;
+            app (fn t => (comma (); pp_t t)) ts;
+            str ")";
+            close_box ()
+          )
     end
       
 fun pp_sgn s sgn =
@@ -1020,16 +1078,23 @@ fun pp_mod s m =
       fun space () = PP.space s 1
       fun str v = PP.string s v
       fun strs s = (str s; space ())
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun pp_id x = str $ fst x
       fun open_hbox () = PP.openHBox s
       fun open_vbox () = PP.openVBox s (PP.Rel 2)
       fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
       fun close_box () = PP.closeBox s
     in
       case m of
-          ModComponents (decls, _) =>
+          ModComponents (ids, decls, _) =>
           (
             open_vbox_noindent ();
-            strs "Mod";
+            open_hbox ();
+            str "Mod";
+            app (fn id => (comma (); pp_id id)) ids;
+            close_box ();
+            space ();
             app (fn d => (pp_d d; space ())) decls;
             str "End";
             close_box ()

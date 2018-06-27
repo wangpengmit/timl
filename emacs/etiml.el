@@ -51,7 +51,7 @@
   "Set font-lock–related settings for ETiML."
   (setq prettify-symbols-alist etiml-prettify-symbols-alist)
   (let ((etiml-builtins '("BigO" "ceil" "floor" "b2n" "forall" "never" "log2" "log10"))
-        (etiml-keywords '("return" "using" "absidx" "returns" "public" "private" "external" "internal" "payable" "constant" "pure" "view" "guarded_by" "forward_to" "inherited_from" "contract" "endcontract" "end_contract" "interface" "endinterface" "end_interface" "elseif" "endif" "for" "endfor" "while" "endwhile" "event" "map" "array" "vector" "address" "int" "uint" "uint8" "uint16" "uint32" "uint64" "uint128" "uint256" "int256" "bytes" "bytes4" "bytes32" "bool" "true" "false" "sha3" "sha256" "keccak256" "ecrecover" "super" "ref" "zero_value" "empty" "set" "modify" "minutes" "hours" "days" "ether" "finney" "wei" "assert" "require" "throw" "pragma" "not" "indexed" "string" "option" "this" "memory" "storage")))
+        (etiml-keywords '("return" "using" "absidx" "returns" "public" "private" "external" "internal" "payable" "constant" "pure" "view" "guarded_by" "guard" "forward_to" "inherited_from" "inherit" "contract" "endcontract" "end_contract" "interface" "endinterface" "end_interface" "elseif" "endif" "for" "endfor" "while" "endwhile" "event" "map" "array" "vector" "address" "int" "uint" "uint8" "uint16" "uint32" "uint64" "uint128" "uint256" "int256" "bytes" "bytes4" "bytes32" "bool" "true" "false" "sha3" "sha256" "keccak256" "ecrecover" "super" "ref" "zero_value" "empty" "set" "modify" "minutes" "hours" "days" "ether" "finney" "wei" "assert" "require" "throw" "pragma" "not" "indexed" "string" "option" "this" "memory" "storage" "state")))
     (font-lock-add-keywords
      nil
      `(("\\_<'[a-z]\\_>" 0 '((:slant italic)))
