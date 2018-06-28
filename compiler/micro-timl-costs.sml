@@ -22,6 +22,7 @@ fun C_BPrim opr =
      | EBPIntMinus () => C_SWAP + C_SUB
      | EBPIntDiv () => C_SWAP + C_SDIV
      | EBPIntMod () => C_SWAP + C_MOD
+     | EBPIntExp () => raise Impossible "C_BPrim/EBPIntExp"
      | EBPIntLt () => C_SWAP + C_LT
      | EBPIntGt () => C_SWAP + C_GT
      | EBPIntLe () => C_GT + C_ISZERO
