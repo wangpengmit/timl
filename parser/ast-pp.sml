@@ -778,6 +778,30 @@ fun pp_e s e =
             str ")";
             close_box ()
           )
+        | ESemis (es, _) =>
+          (
+            open_vbox_noindent ();
+            open_hbox ();
+            strs "EField";
+            str "(";
+            close_box ();
+            space ();
+            app (fn e => (pp_e e; strs ";")) es;
+            str ")";
+            close_box ()
+          )
+        | ELet2 (st, name, t, e, _) =>
+          (
+            open_hbox ();
+            strs "ELet2";
+            str "(";
+            Option.app () st;
+            pp_e e;
+            comma ();
+            pp_id name;
+            str ")";
+            close_box ()
+          )
     end
 
 and pp_d s d =

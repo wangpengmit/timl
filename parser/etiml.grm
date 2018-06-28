@@ -148,6 +148,8 @@ open Ast
        | comma_exp_star of exp list
        | aexp_comma_star of exp list
        | comma_aexp_star of exp list
+       | exp_semi_plus of exp list
+       | semi_exp_star of exp list
        | id_comma_plus of id list
        | id_comma_star of id list
        | comma_id_star of id list
@@ -193,6 +195,7 @@ open Ast
        | tname of id
        | tnames of id list
        | optional_colon_sort of sort option
+       | optional_colon_ty of ty option
        | optional_eq_idx of idx option
        | decorated_id of long_id * bool
        | decorated_eid of long_id * (bool * bool)
@@ -232,6 +235,8 @@ open Ast
        | optional_init of init option
        | optional_inherit of id list
        | init of init
+       | exps of exp list
+       | optional_storage of storage option
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
 
@@ -346,6 +351,16 @@ init : exp (InitExpr exp)
 optional_guard : GUARD aexp_comma_star (aexp_comma_star)
                | ([])
 
+exps : exp_semi_plus (ESemis (exp_semi_plus, (exp_semi_plusleft, exp_semi_plusright)))
+         
+exp_semi_plus : exp semi_exp_star (exp :: semi_exp_star)
+
+semi_exp_star : SEMI_COLON exp semi_exp_star (exp :: semi_exp_star)
+	       | ([])
+
+optional_storage : MEMORY (SOME StMemory)
+                 | (NONE)
+                   
 exp : exp_term (exp_term)
      | exp PLUS exp (EBinOp' (EBPrim (EBPIntAdd ()), exp1, exp2, (exp1left, exp2right)))
      | exp MINUS exp (EBinOp' (EBPrim (EBPIntMinus ()), exp1, exp2, (exp1left, exp2right)))
@@ -375,7 +390,7 @@ exp : exp_term (exp_term)
      | exp DOUBLE_BAR exp (EBinOp' (EBPrim (EBPBoolOr ()), exp1, exp2, (exp1left, exp2right)))
      | exp STR_CONCAT exp (EStrConcat (exp1, exp2, (exp1left, exp2right)))
      | exp LTRI exp (EApp (exp1, exp2, (exp1left, exp2right)))
-     | exp SEMI_COLON exp (ESemiColon (exp1, exp2, (exp1left, exp2right)))
+     (* | exp SEMI_COLON exp (ESemiColon (exp1, exp2, (exp1left, exp2right))) *)
      | exp DCOLON exp (ECons (exp1, exp2, (exp1left, exp2right)))
      | exp COLON ty (EAsc (exp, ty, (expleft, tyright)))
      | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
@@ -389,12 +404,13 @@ exp_term : aexp (aexp)
            
 aexp : decorated_eid (EVar decorated_eid)
      | LPAREN exp_comma_star RPAREN (ETuple (exp_comma_star, (LPARENleft, RPARENright)))
-     | FN bind_plus return DARROW exp (EAbs (bind_plus, return, exp, (FNleft, expright)))
+     | FN bind_plus return DARROW exps (EAbs (bind_plus, return, exps, (FNleft, expsright)))
      | CASE exp return OF rule_bar_star (ECase (exp, return, rule_bar_star, (CASEleft, rule_bar_starright)))
-     | IF exp THEN exp ELSE exp END (EIte (exp1, exp2, exp3, (IFleft, ENDright)))
-     | IF exp THEN exp END (EIte (exp1, exp2, ETuple ([], (ENDleft, ENDright)), (IFleft, ENDright)))
+     | IF exp THEN exps ELSE exps END (EIte (exp, exps1, exps2, (IFleft, ENDright)))
+     | IF exp THEN exps END (EIte (exp, exps, ETuple ([], (ENDleft, ENDright)), (IFleft, ENDright)))
      | IFDEC exp THEN exp ELSE exp (EIfi (exp1, exp2, exp3, (IFDECleft, exp3right)))
-     | LET return decl_star IN exp END (ELet (return, decl_star, exp, (LETleft, ENDright)))
+     (* | LET return decl_star IN exp END (ELet (return, decl_star, exp, (LETleft, ENDright))) *)
+     | LET optional_storage id optional_colon_ty EQ exp (ELet2 (optional_storage, id, optional_colon_ty, exp, (LETleft, expright)))
      | SHARP INT (EConst (ECNat INT, (SHARPleft, INTright)))
      | INT (EConst (ECInt INT, (INTleft, INTright)))
      | STRING (EConst (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
@@ -601,7 +617,7 @@ rule_bar_star : rule bar_rule_star (rule :: bar_rule_star)
 bar_rule_star : BAR rule bar_rule_star (rule :: bar_rule_star)
 	      | ([])
 
-rule : ptrn DARROW exp ((ptrn, exp))
+rule : ptrn DARROW exps ((ptrn, exps))
 
 ptrn_opt : ptrn (SOME ptrn)
          | (NONE)
@@ -678,6 +694,9 @@ tnames : LSQ id_star RSQ (id_star)
 
 optional_colon_sort : COLON sort (SOME sort)
                     | (NONE)
+
+optional_colon_ty : COLON ty (SOME ty)
+                  | (NONE)
 
 id_or_bsort_bind : id ([inl id])
                  | bsorting (map inr bsorting)
