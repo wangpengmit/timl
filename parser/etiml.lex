@@ -98,7 +98,8 @@ val keywords = [
     ("for", T.FOR),
     ("as", T.AS),
     ("assembly", T.ASSEMBLY),
-    ("memory", T.MEMORY)
+    ("memory", T.MEMORY),
+    ("storage", T.STORAGE)
 ]
  
 fun find (m, k : string) = Option.map #2 (List.find (fn (k', _) => k' = k) m)

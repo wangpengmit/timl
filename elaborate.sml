@@ -460,8 +460,9 @@ local
         | S.ETriOp (ETIfi (), e, e1, e2, r) =>
           EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.TVar (NONE, ("_", r))), r)
-        | S.ESetModify (is_modify, (x, offsets), e, r) =>
+        | S.ESetModify (is_modify, (S.EVar ((NONE, x), (false, false)), offsets), e, r) =>
           ESetModify (is_modify, fst x, map elab offsets, elab e, r)
+        | S.ESetModify _ => raise Impossible "elaborate/ESetModify/non-EVar"
         | S.EGet ((x, offsets), r) => EGet (fst x, map elab offsets, r)
         | S.ERecord (es, r) => raise Impossible "elaborate/ERecord"
         | S.EField (e, name, r) => raise Impossible "elaborate/EField"

@@ -130,6 +130,7 @@ open Ast
     | INHERIT
     | STATE
     | MEMORY
+    | STORAGE
     | ELSEIF
     | FOR
     | ASSEMBLY
@@ -242,6 +243,7 @@ open Ast
        | optional_inherit of id list
        | init of init
        | exps of exp
+       | storage of storage
        | optional_storage of storage option
        | ifs of ifelse list
        | elses of ifelse list
@@ -412,7 +414,7 @@ exp : exp_term (exp_term)
      | exp COLON ty (EAsc (exp, ty, (expleft, tyright)))
      | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
-     | set_modify id square_star exp (ESetModify (set_modify, (id, square_star), exp, (set_modifyleft, expright)))
+     | set_modify aexp square_star exp (ESetModify (set_modify, (aexp, square_star), exp, (set_modifyleft, expright)))
 
 exp_term : aexp (aexp)
          | exp_term aexp (EApp (exp_term, aexp, (exp_termleft, aexpright)))
@@ -428,7 +430,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | ifs (EIfs (ifs, (ifsleft, ifsright)))
      | IFDEC exp THEN exps ELSE exps (EIfi (exp, exps1, exps2, (IFDECleft, exps2right)))
      (* | LET return decl_star IN exp END (ELet (return, decl_star, exp, (LETleft, ENDright))) *)
-     | LET optional_storage id optional_colon_ty optional_eq_exp (ELet2 (optional_storage, id, optional_colon_ty, optional_eq_exp, (LETleft, optional_eq_expright)))
+     | LET optional_storage ptrn optional_eq_exp (ELet2 (optional_storage, ptrn, optional_eq_exp, (LETleft, optional_eq_expright)))
      | SHARP INT (EConst (ECNat INT, (SHARPleft, INTright)))
      | INT (EConst (ECInt INT, (INTleft, INTright)))
      | STRING (EConst (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
@@ -525,6 +527,7 @@ ptrn : decorated_id idx_ids ptrn_opt (PnConstr (decorated_id, map fst idx_ids, p
      | ptrn COLON ty (PnAnno (ptrn, ty, (ptrnleft, tyright)))
      | ptrn DCOLON ptrn (PnCons (ptrn1, ptrn2, (ptrn1left, ptrn2right)))
      | aptrn (aptrn)
+     | optional_storage ptrn (ptrn)
 
 aptrn : LPAREN ptrn_comma_star RPAREN (PnTuple (ptrn_comma_star, (LPARENleft, RPARENright)))
       | decorated_id (PnConstr (decorated_id, [], NONE, (decorated_idleft, decorated_idright)))
@@ -549,7 +552,10 @@ exp_semi_plus : exp semi_exp_star (exp :: semi_exp_star)
 semi_exp_star : SEMI exp semi_exp_star (exp :: semi_exp_star)
 	       | ([])
 
-optional_storage : MEMORY (SOME StMemory)
+storage : MEMORY (StMemory)
+        | STORAGE (StStorage)
+                   
+optional_storage : storage (SOME storage)
                  | (NONE)
                    
 named_ty : ty (ty)

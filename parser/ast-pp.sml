@@ -523,6 +523,7 @@ fun pp_return s (t, i, j) =
 fun str_storage st =
     case st of
         StMemory => "memory"
+      | StStorage => "storage"
       
 fun pp_e s e =
     let
@@ -742,7 +743,7 @@ fun pp_e s e =
             close_box ()
           )
         | ENever r => str "ENever"
-        | ESetModify (b, (x, es), e, _) =>
+        | ESetModify (b, (e1, es), e2, _) =>
           (
             open_hbox ();
             str "ESetModify";
@@ -750,11 +751,11 @@ fun pp_e s e =
             str "(";
             pp_bool b;
             comma ();
-            pp_id x;
+            pp_e e1;
             comma ();
             pp_list_bracket pp_e es;
             comma ();
-            pp_e e;
+            pp_e e2;
             str ")";
             close_box ()
           )
@@ -831,15 +832,14 @@ fun pp_e s e =
             str ")";
             close_box ()
           )
-        | ELet2 (st, name, t, e, _) =>
+        | ELet2 (st, pn, e, _) =>
           (
             open_hbox ();
             strs "ELet2";
             str "(";
             Option.app (fn st => (strs $ str_storage st; comma ())) st;
-            pp_id name;
+            pp_pn pn;
             comma ();
-            Option.app (fn t => (pp_t t; comma ())) t;
             Option.app pp_e e;
             str ")";
             close_box ()

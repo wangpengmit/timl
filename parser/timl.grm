@@ -348,7 +348,7 @@ exp : aexp (aexp)
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
      | exp LCUR idx RCUR (EAppI (exp, idx, (expleft, idxright)))
      | exp LCUR RCUR (EAppI (exp, IVar (underscore (LCURleft, RCURright)), (expleft, RCURright)))
-     | set_modify id_square_plus exp (ESetModify (set_modify, id_square_plus, exp, (set_modifyleft, expright)))
+     | set_modify aexp square_plus exp (ESetModify (set_modify, (aexp, square_plus), exp, (set_modifyleft, expright)))
      | exp aexp (EApp (exp, aexp, (expleft, aexpright)))
 
 aexp : decorated_eid (EVar decorated_eid)

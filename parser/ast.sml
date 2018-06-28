@@ -96,6 +96,7 @@ datatype ast_expr_triop =
 
 datatype storage =
          StMemory
+         | StStorage
                       
 datatype exp = 
 	 EVar of long_id * (bool * bool)
@@ -112,12 +113,12 @@ datatype exp =
          | EBinOp of ast_expr_binop * exp * exp * region
          | ETriOp of ast_expr_triop * exp * exp * exp * region
          | ENever of region
-         | ESetModify of bool(*is modify?*) * (id * exp list) * exp * region
+         | ESetModify of bool(*is modify?*) * (exp * exp list) * exp * region
          | EGet of (id * exp list) * region
          | ERecord of (id * exp) list * region
          | EField of exp * id * region
          | ESemis of exp list * region
-         | ELet2 of storage option * id * ty option * exp option * region
+         | ELet2 of storage option * ptrn * exp option * region
          | EIfs of ifelse list * region
          | EFor of id * ty option * exp * exp * exp * exp * region
          | EAsm of exp * region
