@@ -452,7 +452,8 @@ local
         | S.EBinOp (EBStrConcat (), e1, e2, r) =>
           EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
         | S.EBinOp (EBSetRef (), e1, e2, _) => raise Impossible "elaborate/ESetRef"
-        | S.EUnOp (opr, e, r) => EUnOp (opr, elab e, r)
+        | S.EUnOp (EUTiML opr, e, r) => EUnOp (opr, elab e, r)
+        | S.EUnOp (opr, e, r) => raise Impossible "elaborate/EUnOp"
         | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
           ETriOp (ETIte (), elab e1, elab e2, elab e3)
         | S.ETriOp (S.ETIfDec (), e, e1, e2, r) =>
@@ -460,16 +461,19 @@ local
         | S.ETriOp (ETIfi (), e, e1, e2, r) =>
           EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.TVar (NONE, ("_", r))), r)
+        | S.EGet ((S.EVar ((NONE, x), (false, false)), offsets), r) =>
+          EGet (fst x, map elab offsets, r)
+        | S.EGet _ => raise Impossible "elaborate/EGet/non-EVar"
         | S.ESetModify (is_modify, (S.EVar ((NONE, x), (false, false)), offsets), e, r) =>
           ESetModify (is_modify, fst x, map elab offsets, elab e, r)
         | S.ESetModify _ => raise Impossible "elaborate/ESetModify/non-EVar"
-        | S.EGet ((x, offsets), r) => EGet (fst x, map elab offsets, r)
         | S.ERecord (es, r) => raise Impossible "elaborate/ERecord"
         | S.EField (e, name, r) => raise Impossible "elaborate/EField"
         | S.ESemis (es, r) => raise Impossible "elaborate/ESemis"
         | S.ELet2 _ => raise Impossible "elaborate/ELet2"
         | S.EIfs _ => raise Impossible "elaborate/EIfs"
         | S.EFor _ => raise Impossible "elaborate/EFor"
+        | S.EWhile _ => raise Impossible "elaborate/EWhile"
         | S.EAsm _ => raise Impossible "elaborate/EAsm"
         | S.EReturn _ => raise Impossible "elaborate/EReturn"
 

@@ -495,6 +495,11 @@ fun str_expr_const c =
       | ECString s => sprintf "\"$\"" [s]
       | ECChar c => sprintf "'$'" [str_char c]
 
+fun str_ast_expr_unop opr =
+    case opr of
+        EUTiML opr => str_expr_un_op opr
+      | EUDeref () => "deref"
+                            
 fun str_ast_expr_binop opr =
     case opr of
          EBTiML opr => str_expr_bin_op opr
@@ -695,7 +700,7 @@ fun pp_e s e =
             str "EUnOp";
             space ();
             str "(";
-            str $ str_expr_un_op opr;
+            str $ str_ast_expr_unop opr;
             comma ();
             pp_e e;
             str ")";
@@ -760,13 +765,13 @@ fun pp_e s e =
             str ")";
             close_box ()
           )
-        | EGet ((x, es), _) =>
+        | EGet ((e, es), _) =>
           (
             open_hbox ();
             str "EGet";
             space ();
             str "(";
-            pp_id x;
+            pp_e e;
             comma ();
             pp_list_bracket pp_e es;
             str ")";
@@ -828,6 +833,19 @@ fun pp_e s e =
             close_box ();
             space ();
             pp_e e4;
+            close_box ()
+          )
+        | EWhile (e1, e2, _) =>
+          (
+            open_vbox ();
+            open_hbox ();
+            strs "EWhile";
+            str "(";
+            pp_e e1;
+            str ")";
+            close_box ();
+            space ();
+            pp_e e2;
             close_box ()
           )
         | ESemis (es, _) =>

@@ -315,9 +315,9 @@ contract KittyBase = struct inherit KittyAccessControl
     if (_from != address(0)) then
       modify ownershipTokenCount[_from] --;
       (* once the kitten is transferred also clear sire allowances*)
-      set sireAllowedToAddress[_tokenId] zero_value;
+      set sireAllowedToAddress[_tokenId] zero;
       (* clear any previously approved ownership exchange*)
-      set kittyIndexToApproved[_tokenId] zero_value
+      set kittyIndexToApproved[_tokenId] zero
     end;
     (* Emit the transfer event.*)
     Transfer(_from, _to, _tokenId)
@@ -356,14 +356,14 @@ contract KittyBase = struct inherit KittyAccessControl
     end;
 
     let memory _kitty : Kitty = Kitty({
-      genes: _genes,
-      birthTime: uint64(now),
-      cooldownEndBlock: ref 0,
-      matronId: uint32(_matronId),
-      sireId: uint32(_sireId),
-      siringWithId: ref 0,
-      cooldownIndex: ref cooldownIndex,
-      generation: uint16(_generation),
+      genes = _genes,
+      birthTime = uint64(now),
+      cooldownEndBlock = ref 0,
+      matronId = uint32(_matronId),
+      sireId = uint32(_sireId),
+      siringWithId = ref 0,
+      cooldownIndex = ref cooldownIndex,
+      generation = uint16(_generation),
     });
     push_back (kitties, _kitty);
     let newKittenId : uint256 = length kitties - 1;
@@ -866,8 +866,8 @@ contract KittyBreeding = struct inherit KittyOwnership
 
     (* Clear siring permission for both parents. This may not be strictly necessary*)
     (* but it's likely to avoid confusion!*)
-    set sireAllowedToAddress[_matronId] zero_value;
-    set sireAllowedToAddress[_sireId] zero_value;
+    set sireAllowedToAddress[_matronId] zero;
+    set sireAllowedToAddress[_sireId] zero;
 
     (* Every time a kitty gets pregnant, counter is incremented.*)
     modify pregnantKitties ++;
@@ -971,7 +971,7 @@ contract KittyBreeding = struct inherit KittyOwnership
 
     (* Clear the reference to sire from the matron (REQUIRED! Having siringWithId*)
     (* set is what marks a matron as being pregnant.)*)
-    matron.siringWithId := zero_value;
+    matron.siringWithId := zero;
 
     (* Every time a kitty gives birth counter is decremented.*)
     modify pregnantKitties --;
@@ -1138,7 +1138,7 @@ contract ClockAuctionBase = struct
   (* @dev Removes an auction from the list of open auctions.*)
   (* @param _tokenId - ID of NFT on auction.*)
   fun _removeAuction (_tokenId : uint256) internal =
-    set tokenIdToAuction[_tokenId] zero_value
+    set tokenIdToAuction[_tokenId] zero
 
   (* @dev Returns true if the NFT is on auction.*)
   (* @param _auction - Auction to check.*)

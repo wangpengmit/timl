@@ -98,11 +98,15 @@ val keywords = [
     ("inherit", T.INHERIT),
     ("state", T.STATE),
     ("for", T.FOR),
+    ("while", T.WHILE),
     ("as", T.AS),
-    ("assembly", T.ASSEMBLY),
+    ("constant", T.CONSTANT),
     ("indexed", T.INDEXED),
     ("memory", T.MEMORY),
-    ("storage", T.STORAGE)
+    ("storage", T.STORAGE),
+    ("zero", T.ZERO),
+    ("super", T.SUPER),
+    ("assembly", T.ASSEMBLY)
 ]
  
 fun find (m, k : string) = Option.map #2 (List.find (fn (k', _) => k' = k) m)
@@ -158,6 +162,7 @@ string = [^\"];
 <INITIAL>"=" => (T.EQ (make_region (yypos, size yytext)));
 <INITIAL>"<>" => (T.NEQ (make_region (yypos, size yytext)));
 <INITIAL>"!=" => (T.BANG_EQ (make_region (yypos, size yytext)));
+<INITIAL>"!" => (T.BANG (make_region (yypos, size yytext)));
 <INITIAL>"<=" => (T.LE (make_region (yypos, size yytext)));
 <INITIAL>"<" => (T.LT (make_region (yypos, size yytext)));
 <INITIAL>">=" => (T.GE (make_region (yypos, size yytext)));
@@ -197,6 +202,7 @@ string = [^\"];
 <INITIAL>"++" => (T.PLUS_PLUS (make_region (yypos, size yytext)));
 <INITIAL>"+=" => (T.PLUS_EQ (make_region (yypos, size yytext)));
 <INITIAL>"-=" => (T.MINUS_EQ (make_region (yypos, size yytext)));
+<INITIAL>"|=" => (T.BAR_EQ (make_region (yypos, size yytext)));
 <INITIAL>":=" => (T.COLON_EQ (make_region (yypos, size yytext)));
 <INITIAL>"%" => (T.PERCENT (make_region (yypos, size yytext)));
 

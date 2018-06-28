@@ -60,6 +60,7 @@ open Ast
     | IFF
     | EQ
     | NEQ
+    | BANG
     | BANG_EQ
     | DOUBLE_EQ
     | DOUBLE_POND
@@ -114,6 +115,7 @@ open Ast
     | PLUS_PLUS
     | PLUS_EQ
     | MINUS_EQ
+    | BAR_EQ
     | PERCENT
     | PRAGMA
     | CONTRACT
@@ -136,7 +138,9 @@ open Ast
     | INDEXED
     | ELSEIF
     | FOR
+    | WHILE
     | ASSEMBLY
+    | CONSTANT
 
 %nonterm start of prog
        | exp of exp
@@ -157,6 +161,8 @@ open Ast
        | comma_exp_star of exp list
        | aexp_comma_star of exp list
        | comma_aexp_star of exp list
+       | exp_term_comma_plus of exp list
+       | comma_exp_term_star of exp list
        | exp_semi_plus of exp list
        | semi_exp_star of exp list
        | id_comma_plus of id list
@@ -332,7 +338,8 @@ spec : VAL id tnames COLON ty (SpecVal (id, tnames, ty, (VALleft, tyright)))
 fun_modifier : VIEW (FmView)
              | PURE (FmPure)
              | PAYABLE (FmPayable)
-             | GUARD aexp_comma_star (FmGuard aexp_comma_star)
+             | CONSTANT (FmConst)
+             | GUARD exp_term_comma_plus (FmGuard exp_term_comma_plus)
              | visi (FmVisi visi)
              | PRE state (FmPre state)
              | POST state (FmPost state)
@@ -402,8 +409,8 @@ exps : exp_semi_plus (ESemis (exp_semi_plus, (exp_semi_plusleft, exp_semi_plusri
 exp : exp_term (exp_term)
      | exp PLUS exp (EBinOp' (EBPrim (EBPIntAdd ()), exp1, exp2, (exp1left, exp2right)))
      | exp MINUS exp (EBinOp' (EBPrim (EBPIntMinus ()), exp1, exp2, (exp1left, exp2right)))
-     | MINUS exp (EUnOp (EUPrim (EUPIntNeg ()), exp, (MINUSleft, expright)))
-     (* | TILDE aexp (EUnOp (EUPrim (EUPIntNeg ()), aexp, (TILDEleft, aexpright))) *)
+     | MINUS exp (EUnOp' (EUPrim (EUPIntNeg ()), exp, (MINUSleft, expright)))
+     (* | TILDE aexp (EUnOp' (EUPrim (EUPIntNeg ()), aexp, (TILDEleft, aexpright))) *)
      | exp MULT exp (EBinOp' (EBPrim (EBPIntMult ()), exp1, exp2, (exp1left, exp2right)))
      | exp DIV exp (EBinOp' (EBPrim (EBPIntDiv ()), exp1, exp2, (exp1left, exp2right)))
      | exp MOD exp (EBinOp' (EBPrim (EBPIntMod ()), exp1, exp2, (exp1left, exp2right)))
@@ -460,15 +467,18 @@ aexp : decorated_eid (EVar decorated_eid)
      | CHAR (EConst (ECChar CHAR, (CHARleft, CHARright)))
      | LSQSQ exp_comma_star RSQSQ (EList (exp_comma_star, (LSQSQleft, RSQSQright)))
      | NEVER (ENever (NEVERleft, NEVERright))
-     | id square_plus (EGet ((id, square_plus), (idleft, square_plusright)))
+     | aexp square_plus (EGet ((aexp, square_plus), (aexpleft, square_plusright)))
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
      | DDASH (EDec (DDASHleft, DDASHright))
      | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
      | MINUS_EQ (ESubBy (MINUS_EQleft, MINUS_EQright))
+     | BAR_EQ (EOrBy (BAR_EQleft, BAR_EQright))
      | aexp DOT id (EField (aexp, id, (aexpleft, idright)))
      | LCUR assign_comma_star_trailing RCUR (ERecord (assign_comma_star_trailing, (LCURleft, RCURright)))
      | FOR LPAREN id optional_colon_ty EQ exp SEMI exp SEMI exp RPAREN exps END (EFor (id, optional_colon_ty, exp1, exp2, exp3, exps, (FORleft, ENDright)))
+     | WHILE LPAREN exp RPAREN exps END (EWhile (exp, exps, (WHILEleft, ENDright)))
      | ASSEMBLY LCUR exps RCUR (EAsm (exps, (ASSEMBLYleft, ASSEMBLYright)))
+     | BANG aexp (EUnOp (EUDeref (), aexp, (BANGleft, aexpright)))
 
 ifs : IF exp THEN exps elses (If (exp, exps, (IFleft, expsright)) :: elses)
 elses : ELSEIF exp THEN exps elses (Elseif (exp, exps, (ELSEIFleft, expsright)) :: elses)
@@ -629,7 +639,7 @@ bsort : id (BSId id)
 
 id : ID ((ID, (IDleft, IDright)))
 
-assign_comma_star_trailing : id COLON exp COMMA assign_comma_star_trailing ((id, exp) :: assign_comma_star_trailing)
+assign_comma_star_trailing : id EQ exp COMMA assign_comma_star_trailing ((id, exp) :: assign_comma_star_trailing)
 	                | ([])
 
 exp_comma_star_trailing : exp COMMA exp_comma_star_trailing (exp :: exp_comma_star_trailing)
@@ -645,6 +655,11 @@ aexp_comma_star : aexp comma_aexp_star (aexp :: comma_aexp_star)
 	       | ([])
 
 comma_aexp_star : COMMA aexp comma_aexp_star (aexp :: comma_aexp_star)
+	       | ([])
+
+exp_term_comma_plus : exp_term comma_exp_term_star (exp_term :: comma_exp_term_star)
+
+comma_exp_term_star : COMMA exp_term comma_exp_term_star (exp_term :: comma_exp_term_star)
 	       | ([])
 
 id_comma_plus : id comma_id_star (id :: comma_id_star)

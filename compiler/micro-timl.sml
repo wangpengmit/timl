@@ -70,6 +70,7 @@ datatype 'ty expr_un_op =
          | EUUnfold of unit
          | EUTiML of Operators.expr_un_op
          | EUTupleProj of int
+         (* | EUExfalso of 'ty *)
 
 (* term *)
 datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =

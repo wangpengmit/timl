@@ -96,7 +96,7 @@ datatype prim_expr_un_op =
          | EUPInt2Byte of unit
          | EUPByte2Int of unit
          (* | EUPInt2Str of unit *)
-         (* | EUPStrLen of unit *)
+(* | EUPStrLen of unit *)
 
 datatype expr_un_op =
          EUProj of projector

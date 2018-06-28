@@ -85,6 +85,10 @@ datatype expr_const =
          | ECString of string
          | ECChar of Char.char
 
+datatype ast_expr_unop =
+         EUTiML of expr_un_op
+         | EUDeref of unit
+                       
 datatype ast_expr_binop =
          EBTiML of expr_bin_op
          | EBStrConcat of unit
@@ -111,18 +115,19 @@ datatype exp =
          | EAscSpace of exp * idx * region
          | ELet of return * decl list * exp * region
          | EConst of expr_const * region
-         | EUnOp of expr_un_op * exp * region
+         | EUnOp of ast_expr_unop * exp * region
          | EBinOp of ast_expr_binop * exp * exp * region
          | ETriOp of ast_expr_triop * exp * exp * exp * region
          | ENever of region
          | ESetModify of bool(*is modify?*) * (exp * exp list) * exp * region
-         | EGet of (id * exp list) * region
+         | EGet of (exp * exp list) * region
          | ERecord of (id * exp) list * region
          | EField of exp * id * region
          | ESemis of exp list * region
          | ELet2 of storage option * ptrn * exp option * region
          | EIfs of ifelse list * region
          | EFor of id * ty option * exp * exp * exp * exp * region
+         | EWhile of exp * exp * region
          | EAsm of exp * region
          | EReturn of exp * region
 
@@ -147,6 +152,7 @@ datatype exp =
          FmView
          | FmPure
          | FmPayable
+         | FmConst
          | FmGuard of exp list
          | FmVisi of visi
          | FmPre of state
@@ -229,6 +235,7 @@ fun IUnOp (opr, i, r) = IBinOp (IBApp (), IVar (NONE, (str_idx_un_op opr, r)), i
 fun TPureArrow (t1, i, t2, r) = TArrow ((empty_state, t1), i, (empty_state, t2), r)
 fun TTuple (ts, r) = foldl_nonempty (fn (t, acc) => TProd (acc, t, r)) ts
                                
+fun EUnOp' (opr, e, r) = EUnOp (EUTiML opr, e, r)
 fun EBinOp' (opr, e1, e2, r) = EBinOp (EBTiML opr, e1, e2, r)
 fun EIte (e1, e2, e3, r) = ETriOp (ETIte (), e1, e2, e3, r)
 (* fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r) *)
@@ -249,6 +256,7 @@ fun EInc r =EShortVar ("inc", r)
 fun EDec r =EShortVar ("dec", r)
 fun EAdd r =EShortVar ("add", r)
 fun ESubBy r =EShortVar ("subBy", r)
+fun EOrBy r =EShortVar ("orBy", r)
 fun EAscTimeSpace (e, (i, j), r) = EAscSpace (EAscTime (e, i, r), j, r)
 fun EIfi (e1, e2, e3, r) = ETriOp (ETIfi (), e1, e2, e3, r)
 fun EStrConcat (e1, e2, r) = EBinOp (EBStrConcat (), e1, e2, r)

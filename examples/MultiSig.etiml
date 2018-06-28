@@ -1,0 +1,418 @@
+(*
+//sol Wallet
+// Multi-sig, daily-limited account proxy/wallet.
+// @authors:
+// Gav Wood <g@ethdev.com>
+// inheritable "property" contract that enables methods to be protected by requiring the acquiescence of either a
+// single, or, crucially, each of a number of, designated owners.
+// usage:
+// use modifiers onlyowner (just own owned) or onlymanyowners(hash), whereby the same hash must be provided by
+// some number (specified in constructor) of the set of owners (specified in the constructor, modifiable) before the
+// interior is executed.
+*)
+
+contract multiowned = struct
+
+  (* TYPES *)
+
+  (* struct for the status of a pending operation. *)
+  type PendingState = {
+      yetNeeded : ref uint,
+      ownersDone : ref uint,
+      index : uint,
+  }
+
+  (* EVENTS *)
+
+  (* this contract only has five types of events: it can accept a confirmation, in which case *)
+  (* we record owner and operation (hash) alongside it. *)
+  event Confirmation(owner : address, operation : bytes32)
+  event Revoke(owner : address, operation : bytes32)
+  (* some others are in the case of an owner changing. *)
+  event OwnerChanged(oldOwner : address, newOwner : address)
+  event OwnerAdded(newOwner : address)
+  event OwnerRemoved(oldOwner : address)
+  (* the last one is emitted if the required signatures change *)
+  event RequirementChanged(newRequirement : uint)
+
+  (* MODIFIERS *)
+
+  (* simple single-sig function modifier. *)
+  fun onlyowner k =
+    if isOwner msg.sender then
+      k ()
+    else
+      throw
+    end
+
+  (* multi-sig function modifier: the operation must have an intrinsic hash in order *)
+  (* that later attempts can be realised as the same underlying operation and *)
+  (* thus count as confirmations. *)
+  fun onlymanyowners (_operation : bytes32) k =
+    if confirmAndCheck(_operation) then
+      k ()
+    else
+      throw
+    end
+
+  (* METHODS *)
+
+  (* constructor is given number of sigs required to do protected "onlymanyowners" transactions *)
+  (* as well as the selection of addresses capable of confirming them. *)
+  fun init {len : Nat} (_owners : array address {len}, _required : uint) using $(15 + len * 4) =
+    m_numOwners := length _owners + 1;
+    set m_owners[1] uint(msg.sender);
+    set m_ownerIndex[uint(msg.sender)] 1;
+    for (i : uint = 0; i < length _owners; inc)
+      (* PW: is 2+i<256 ? *)
+      set m_owners[2 + i] uint(_owners[i]);
+      set m_ownerIndex[uint(_owners[i])] 2 + i
+    end;
+    m_required := _required
+
+  (* Revokes a prior confirmation of the given operation *)
+  external fun revoke (_operation : bytes32) =
+    let ownerIndex : uint = m_ownerIndex[uint(msg.sender)];
+    (* make sure they're an owner *)
+    if ownerIndex = 0 then
+      return ()
+    end;
+    let ownerIndexBit : uint = 2**ownerIndex;
+    let pending = m_pending[_operation];
+    if pending.ownersDone && ownerIndexBit > 0 then
+      modify pending.yetNeeded inc;
+      modify pending.ownersDone -= ownerIndexBit;
+      Revoke(msg.sender, _operation)
+    end
+
+  (* Replaces an owner `_from` with another `_to`. *)
+  external fun changeOwner (_from : address, _to : address) guard onlymanyowners(sha3(msg.data, block.number)) =
+    if isOwner(_to) then
+      return ()
+    end;
+    let ownerIndex : uint = m_ownerIndex[uint(_from)];
+    if ownerIndex = 0 then
+      return ()
+    end;
+
+    clearPending();
+    set m_owners[ownerIndex] uint(_to);
+    set m_ownerIndex[uint(_from)] 0;
+    set m_ownerIndex[uint(_to)] ownerIndex;
+    OwnerChanged(_from, _to)
+
+  external fun addOwner (_owner : address) guard onlymanyowners(sha3(msg.data, block.number)) =
+    if isOwner(_owner) then
+      return ()
+    end;
+
+    clearPending();
+    if !m_numOwners >= c_maxOwners then
+      reorganizeOwners()
+    end;                
+    if m_numOwners >= c_maxOwners then
+      return ()
+    end;
+    modify m_numOwners inc;
+    set m_owners[!m_numOwners] uint(_owner);
+    set m_ownerIndex[uint(_owner)] m_numOwners;
+    OwnerAdded(_owner)
+
+  external fun removeOwner (_owner : address) guard onlymanyowners(sha3(msg.data, block.number)) =
+    let ownerIndex : uint  = m_ownerIndex[uint(_owner)];
+    if ownerIndex = 0 then
+      return ()
+    end;
+    if m_required > m_numOwners - 1 then
+      return ()
+    end;
+
+    set m_owners[ownerIndex] 0;
+    set m_ownerIndex[uint(_owner)] 0;
+    clearPending();
+    reorganizeOwners(); (* make sure m_numOwner is equal to the number of owners and always points to the optimal free slot *)
+    OwnerRemoved(_owner)
+
+  external fun changeRequirement (_newRequired : uint) guard onlymanyowners(sha3(msg.data, block.number)) =
+    if _newRequired > !m_numOwners then
+      return ()
+    end;
+    m_required := _newRequired;
+    clearPending();
+    RequirementChanged(_newRequired)
+
+  fun isOwner (_addr : address) return bool =
+    m_ownerIndex[uint(_addr)] > 0
+
+  fun hasConfirmed (_operation : bytes32, _owner : address) constant return bool =
+    let pending = m_pending[_operation];
+    let ownerIndex : uint = m_ownerIndex[uint(_owner)];
+
+    (* make sure they're an owner *)
+    if ownerIndex = 0 then
+      return false
+    end;
+
+    (* determine the bit to set for this owner. *)
+    let ownerIndexBit : uint = 2**ownerIndex;
+    if !pending.ownersDone && ownerIndexBit = 0 then
+      false
+    else 
+      true
+    end
+
+  (* INTERNAL METHODS *)
+
+  internal fun confirmAndCheck (_operation : bytes32) return bool =
+    (* determine what index the present sender is: *)
+    let ownerIndex : uint = m_ownerIndex[uint(msg.sender)];
+    (* make sure they're an owner *)
+    if ownerIndex = 0 then
+      return false
+    end;
+
+    let pending = m_pending[_operation];
+    (* if we're not yet working on this operation, switch over and reset the confirmation status. *)
+    if !pending.yetNeeded = 0 then
+      (* reset count of confirmations needed. *)
+      pending.yetNeeded := !m_required;
+      (* reset which owners have confirmed (none) - set our bitmap to 0. *)
+      pending.ownersDone := 0;
+      pending.index := length m_pendingIndex;
+      push_back m_pendingIndex _operation
+    end;
+    (* determine the bit to set for this owner. *)
+    let ownerIndexBit : uint = 2**ownerIndex;
+    (* make sure we (the message sender) haven't confirmed this operation previously. *)
+    if !pending.ownersDone && ownerIndexBit = 0 then
+      Confirmation(msg.sender, _operation);
+      (* ok - check if count is enough to go ahead. *)
+      if !pending.yetNeeded <= 1 then
+        (* enough confirmations: reset and run interior. *)
+        set m_pendingIndex[m_pending[_operation].index] zero;
+        set m_pending[_operation] zero;
+        true
+      else
+        (* not enough: record that this owner in particular confirmed. *)
+        modify pending.yetNeeded dec;
+        modify pending.ownersDone |= ownerIndexBit;
+        false
+      end
+    else
+      false
+    end
+
+  private fun reorganizeOwners {len numNonzeros : Nat} () pre {m_numOwners : len} post {m_numOwners : numNonzeros} return bool using $(4 + len * 20) =
+    let free : ref uint = ref 1;
+    while (!free < m_numOwners)
+      while (!free < m_numOwners && m_owners[!free] != 0) modify free inc end;
+      while (m_numOwners > 1 && m_owners[m_numOwners] = 0) modify m_numOwners dec end;
+      if !free < m_numOwners && m_owners[m_numOwners] != 0 && m_owners[!free] = 0 then
+        set m_owners[!free] m_owners[m_numOwners];
+        set m_ownerIndex[m_owners[!free] ] (!free);
+        set m_owners[m_numOwners] 0
+      end
+    end;
+    false  
+
+  internal fun clearPending {len : Nat} () pre {m_pendingIndex : len} post {m_pendingIndex : 0} using $(11 + len * 3) =
+    let length : uint = length m_pendingIndex;
+    for (i : uint = 0; i < length; inc)
+      if m_pendingIndex[i] != 0 then
+        set m_pending [m_pendingIndex[i] ] zero
+      end
+    end;
+    empty m_pendingIndex
+
+  (* FIELDS *)
+
+  (* the number of owners that must confirm the same operation before it is run. *)
+  (* zerofiable types can omit initialization *)
+  public state m_required : ref uint
+  (* pointer used to find a free slot in m_owners *)
+  public state m_numOwners : ref uint
+
+  (* list of owners *)
+  state m_owners : array uint {256}
+  val c_maxOwners : uint = 250
+  (* index on the list of owners to allow reverse lookup *)
+  state m_ownerIndex : map uint uint
+  (* the ongoing operations. *)
+  state m_pending : map bytes32 PendingState
+  state m_pendingIndex : vector bytes32
+
+end    
+
+(* *)
+(* // inheritable "property" contract that enables methods to be protected by placing a linear limit (specifiable) *)
+(* // on a particular resource per calendar day. is multiowned to allow the limit to be altered. resource that method *)
+(* // uses is specified in the modifier. *)
+(* *)
+
+contract daylimit = struct inherit multiowned
+
+  (* MODIFIERS *)
+
+  (* simple modifier for daily limit. *)
+  fun limitedDaily (_value : uint) k =
+    if underLimit(_value) then
+      k ()
+    else
+      throw
+    end
+
+  (* METHODS *)
+
+  (* constructor - stores initial daily limit and records the present day's index. *)
+  fun init (_limit : uint ) =
+    m_dailyLimit := _limit;
+    m_lastDay := today()
+
+  (* (re)sets the daily limit. needs many of the owners to confirm. doesn't alter the amount already spent today. *)
+  external fun setDailyLimit (_newLimit : uint) guard onlymanyowners(sha3(msg.data, block.number)) =
+    m_dailyLimit := _newLimit
+
+  external fun resetSpentToday () guard onlymanyowners(sha3(msg.data, block.number)) =
+    m_spentToday := 0
+
+  (* INTERNAL METHODS *)
+
+  (* checks to see if there is at least `_value` left from the daily limit today. if there is, subtracts it and *)
+  (* return true. otherwise just return false. *)
+  internal fun underLimit (_value : uint) guard onlyowner return bool =
+    (* reset the spend limit if we're on a different day to last time. *)
+    if today() > !m_lastDay then
+      m_spentToday := 0;
+      m_lastDay := today()
+    end;
+    (* check to see if there's enough left - if so, subtract and return true. *)
+    if !m_spentToday + _value >= !m_spentToday && !m_spentToday + _value <= !m_dailyLimit then
+      modify m_spentToday += _value;
+      true
+    else
+      false
+    end
+
+  (* determines today's index. *)
+  private fun today () constant return uint = now / 1 days
+
+  (* FIELDS *)
+
+  public state m_dailyLimit : ref uint
+  public state m_spentToday : ref uint
+  public state m_lastDay : ref uint
+
+end
+
+(* interface contract for multisig proxy contracts; see below for docs. *)
+(* PW: this is an incomplete contract *)
+interface multisig = sig
+
+  (* EVENTS *)
+
+  (* logged events: *)
+  (* Funds has arrived into the wallet (record how much). *)
+  event Deposit(from : address, value : uint)
+  (* Single transaction going out of the wallet (record who signed for it, how much, and to whom it's going). *)
+  event SingleTransact(owner : address, value : uint, to : address, data : bytes)
+  (* Multi-sig transaction going out of the wallet (record who signed for it last, the operation hash, how much, and to whom it's going). *)
+  event MultiTransact(owner : address, operation : bytes32, value : uint, to : address, data : bytes)
+  (* Confirmation still needed for a transaction. *)
+  event ConfirmationNeeded(operation : bytes32, initiator : address, value : uint, to : address, data : bytes)
+
+  (* FUNCTIONS *)
+
+  (* TODO: document *)
+  external fun changeOwner (_from : address, _to : address)
+  external fun execute (_to : address, _value : uint, _data : bytes) return bytes32
+  fun confirm (_h : bytes32) return bool
+
+end
+
+(* *)
+(* // usage: *)
+(* // bytes32 h = Wallet(w).from(oneOwner).transact(to, value, data); *)
+(* // Wallet(w).from(anotherOwner).confirm(h); *)
+(* *)
+contract Wallet = struct inherit multisig, multiowned, daylimit
+
+  public val version : uint = 2
+
+  (* TYPES *)
+
+  (* Transaction structure to remember details of transaction lest it need be saved for a later call. *)
+  type Transaction = {
+    to : ref address,
+    value : ref uint,
+    data : ref bytes,
+  }
+
+  (* METHODS *)
+
+  (* constructor - just pass on the owner array to the multiowned and *)
+  (* the limit to daylimit *)
+  fun init (_owners : vector address, _required : uint, _daylimit : uint)
+    forward_to multiowned(_owners, _required) guard daylimit(_daylimit) = ()
+
+  (* kills the contract sending everything to `_to`. *)
+  external fun kill (_to : address) guard onlymanyowners(sha3(msg.data, block.number)) =
+    suicide(_to)
+
+  (* gets called when no other function matches *)
+  fun default () =
+    (* just being sent some cash? *)
+    if msg.value > 0 then
+      Deposit(msg.sender, msg.value)
+    end
+
+  (* *)
+(*   // Outside-visible transact entry point. Executes transacion immediately if below daily spend limit. *)
+(*   // If not, goes into multisig process. We provide a hash on return to allow the sender to provide *)
+(*   // shortcuts for the other confirmations (allowing them to avoid replicating the _to, _value *)
+(*   // and _data arguments). They still get the option of using them if they want, anyways. *)
+(*   *)
+  external fun execute (_to : address, _value : uint, _data : bytes) guard onlyowner return bytes32 =
+    (* first, take the opportunity to check that we're under the daily limit. *)
+    if underLimit(_value) then
+      SingleTransact(msg.sender, _value, _to, _data);
+      (* yes - just execute the call. *)
+      call_with_value (_to, _value, _data);
+      return 0
+    end;
+    (* determine our operation hash. *)
+    let _r = sha3(msg.data, block.number);
+    if not confirm(_r) && !m_txs[_r].to == 0 then
+      m_txs[_r].to := _to;
+      m_txs[_r].value := _value;
+      m_txs[_r].data := _data;
+      ConfirmationNeeded(_r, msg.sender, _value, _to, _data)
+    end;
+    _r
+
+  (* confirm a transaction through just the hash. we use the previous transactions map, m_txs, in order *)
+  (* to determine the body of the transaction from the hash provided. *)
+  fun confirm (_h : bytes32) guard onlymanyowners(_h) return bool =
+    if !m_txs[_h].to != 0 then
+      call_with_value (!m_txs[_h].to, !m_txs[_h].value, !m_txs[_h].data);
+      MultiTransact(msg.sender, _h, !m_txs[_h].value, !m_txs[_h].to, !m_txs[_h].data);
+      set m_txs[_h] zero;
+      true
+    else
+      false
+    end
+
+  (* INTERNAL METHODS *)
+
+  internal fun clearPending () =
+    let length : uint = length m_pendingIndex;
+    for (i : uint = 0; i < length; inc)
+      set m_txs[m_pendingIndex[i] ] zero
+    end;
+    super clearPending()
+
+  (* FIELDS *)
+
+  (* pending transactions we have at present. *)
+  val m_txs : map bytes32 Transaction
+                                                  
+end
