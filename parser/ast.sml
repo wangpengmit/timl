@@ -78,10 +78,6 @@ datatype visi =
          | ViPrivate
          | ViExternal
 
-datatype fun_modifier =
-         FmView
-         | FmPure
-             
 datatype expr_const =
          ECInt of int
          | ECNat of int
@@ -118,9 +114,10 @@ datatype exp =
          | ENever of region
          | ESetModify of bool(*is modify?*) * (id * exp list) * exp * region
          | EGet of (id * exp list) * region
+         | ERecord of (id * exp) list * region
          | EField of exp * id * region
          | ESemis of exp list * region
-         | ELet2 of storage option * id * ty option * exp * region
+         | ELet2 of storage option * id * ty option * exp option * region
 
      and decl =
          DVal of id list * ptrn * exp * region
@@ -134,6 +131,11 @@ datatype exp =
          | DState of id * ty * init option
          | DEvent of id * ty list
 
+     and fun_modifier =
+         FmView
+         | FmPure
+         | FmGuard of exp list
+             
      and init =
          InitExpr of exp
          | InitArray of exp list
@@ -209,6 +211,7 @@ fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
 fun IUnOp (opr, i, r) = IBinOp (IBApp (), IVar (NONE, (str_idx_un_op opr, r)), i, r)
 
 fun TPureArrow (t1, i, t2, r) = TArrow ((empty_state, t1), i, (empty_state, t2), r)
+fun TTuple (ts, r) = foldl_nonempty (fn (t, acc) => TProd (acc, t, r)) ts
                                
 fun EBinOp' (opr, e1, e2, r) = EBinOp (EBTiML opr, e1, e2, r)
 fun EIte (e1, e2, e3, r) = ETriOp (ETIte (), e1, e2, e3, r)

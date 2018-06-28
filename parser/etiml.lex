@@ -94,6 +94,7 @@ val keywords = [
     ("external", T.EXTERNAL),
     ("inherit", T.INHERIT),
     ("state", T.STATE),
+    ("memory", T.MEMORY),
     ("as", T.AS)
 ]
  

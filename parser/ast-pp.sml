@@ -519,6 +519,10 @@ fun pp_return s (t, i, j) =
        Option.app (pp_i) i; comma ();
        Option.app (pp_i) j)
     end
+
+fun str_storage st =
+    case st of
+        StMemory => "memory"
       
 fun pp_e s e =
     let
@@ -766,6 +770,16 @@ fun pp_e s e =
             str ")";
             close_box ()
           )
+        | ERecord (es, _) =>
+          (
+            open_hbox ();
+            str "ERecord";
+            space ();
+            str "(";
+            app (fn (name, e) => (pp_id name; colon (); pp_e e; comma ())) es;
+            str ")";
+            close_box ()
+          )
         | EField (e, name, _) =>
           (
             open_hbox ();
@@ -782,7 +796,7 @@ fun pp_e s e =
           (
             open_vbox_noindent ();
             open_hbox ();
-            strs "EField";
+            strs "ESemis";
             str "(";
             close_box ();
             space ();
@@ -795,10 +809,11 @@ fun pp_e s e =
             open_hbox ();
             strs "ELet2";
             str "(";
-            Option.app () st;
-            pp_e e;
-            comma ();
+            Option.app (fn st => (strs $ str_storage st; comma ())) st;
             pp_id name;
+            comma ();
+            Option.app (fn t => (pp_t t; comma ())) t;
+            Option.app pp_e e;
             str ")";
             close_box ()
           )

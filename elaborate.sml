@@ -463,7 +463,10 @@ local
         | S.ESetModify (is_modify, (x, offsets), e, r) =>
           ESetModify (is_modify, fst x, map elab offsets, elab e, r)
         | S.EGet ((x, offsets), r) => EGet (fst x, map elab offsets, r)
+        | S.ERecord (es, r) => raise Impossible "elaborate/ERecord"
         | S.EField (e, name, r) => raise Impossible "elaborate/EField"
+        | S.ESemis (es, r) => raise Impossible "elaborate/ESemis"
+        | S.ELet2 _ => raise Impossible "elaborate/ELet2"
 
   and elab_decl decl =
       case decl of

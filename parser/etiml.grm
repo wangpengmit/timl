@@ -129,6 +129,7 @@ open Ast
     | EXTERNAL
     | INHERIT
     | STATE
+    | MEMORY
 
 %nonterm start of prog
        | exp of exp
@@ -143,6 +144,7 @@ open Ast
        | bsort of bsort
        | prop of prop
        | id of id
+       | assign_comma_star_trailing of (id * exp) list
        | exp_comma_star_trailing of exp list
        | exp_comma_star of exp list
        | comma_exp_star of exp list
@@ -197,6 +199,7 @@ open Ast
        | optional_colon_sort of sort option
        | optional_colon_ty of ty option
        | optional_eq_idx of idx option
+       | optional_eq_exp of exp option
        | decorated_id of long_id * bool
        | decorated_eid of long_id * (bool * bool)
        | long_id of long_id
@@ -226,16 +229,16 @@ open Ast
        | optional_visi of visi option
        | typing of id * ty
        | typing_comma_star_trailing of typing list
+       | typing_comma_plus of typing list
        | typing_comma_star of typing list
        | comma_typing_star of typing list
        | fun_modifier of fun_modifier
        | fun_modifiers of fun_modifier list
-       | optional_guard of exp list
        | named_ty of ty
        | optional_init of init option
        | optional_inherit of id list
        | init of init
-       | exps of exp list
+       | exps of exp
        | optional_storage of storage option
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
@@ -314,6 +317,7 @@ spec : VAL id tnames COLON ty (SpecVal (id, tnames, ty, (VALleft, tyright)))
 
 fun_modifier : VIEW (FmView)
              | PURE (FmPure)
+             | GUARD aexp_comma_star (FmGuard aexp_comma_star)
                     
 fun_modifiers : fun_modifier fun_modifiers (fun_modifier :: fun_modifiers)
               | ([])
@@ -321,6 +325,8 @@ fun_modifiers : fun_modifier fun_modifiers (fun_modifier :: fun_modifiers)
 typing_comma_star_trailing : typing COMMA typing_comma_star_trailing (typing :: typing_comma_star_trailing)
 	                   | ([])
 
+typing_comma_plus : typing comma_typing_star (typing :: comma_typing_star)
+                               
 typing_comma_star : typing comma_typing_star (typing :: comma_typing_star)
 	          | ([])
 
@@ -330,7 +336,7 @@ comma_typing_star : COMMA typing comma_typing_star (typing :: comma_typing_star)
 typing : id COLON ty ((id, ty))
 
 decl : VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, expright)))
-     | optional_visi FUN id tnames bind_star pre post optional_guard return EQ exp (DRec (tnames, id, bind_star, pre, post, return, exp, (FUNleft, expright)))
+     | optional_visi FUN id tnames bind_star pre post fun_modifiers return EQ exps (DRec (tnames, id, bind_star, pre, post, return, exps, (FUNleft, expsright)))
      | DATATYPE datatype_def (DDatatype datatype_def)
      | IDX id optional_colon_sort EQ idx (DIdxDef (id, optional_colon_sort, idx))
      | ABSIDX id optional_colon_sort EQ idx (DAbsIdx2 (id, optional_colon_sort, idx))
@@ -348,19 +354,8 @@ optional_init : EQ init (SOME init)
 init : exp (InitExpr exp)                  
      | LCUR exp_comma_star_trailing RCUR (InitArray exp_comma_star_trailing)
                   
-optional_guard : GUARD aexp_comma_star (aexp_comma_star)
-               | ([])
-
 exps : exp_semi_plus (ESemis (exp_semi_plus, (exp_semi_plusleft, exp_semi_plusright)))
          
-exp_semi_plus : exp semi_exp_star (exp :: semi_exp_star)
-
-semi_exp_star : SEMI_COLON exp semi_exp_star (exp :: semi_exp_star)
-	       | ([])
-
-optional_storage : MEMORY (SOME StMemory)
-                 | (NONE)
-                   
 exp : exp_term (exp_term)
      | exp PLUS exp (EBinOp' (EBPrim (EBPIntAdd ()), exp1, exp2, (exp1left, exp2right)))
      | exp MINUS exp (EBinOp' (EBPrim (EBPIntMinus ()), exp1, exp2, (exp1left, exp2right)))
@@ -395,7 +390,7 @@ exp : exp_term (exp_term)
      | exp COLON ty (EAsc (exp, ty, (expleft, tyright)))
      | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
-     | set_modify id_square_plus exp_term (ESetModify (set_modify, id_square_plus, exp_term, (set_modifyleft, exp_termright)))
+     | set_modify id_square_plus exp (ESetModify (set_modify, id_square_plus, exp, (set_modifyleft, expright)))
 
 exp_term : aexp (aexp)
          | exp_term aexp (EApp (exp_term, aexp, (exp_termleft, aexpright)))
@@ -408,9 +403,9 @@ aexp : decorated_eid (EVar decorated_eid)
      | CASE exp return OF rule_bar_star (ECase (exp, return, rule_bar_star, (CASEleft, rule_bar_starright)))
      | IF exp THEN exps ELSE exps END (EIte (exp, exps1, exps2, (IFleft, ENDright)))
      | IF exp THEN exps END (EIte (exp, exps, ETuple ([], (ENDleft, ENDright)), (IFleft, ENDright)))
-     | IFDEC exp THEN exp ELSE exp (EIfi (exp1, exp2, exp3, (IFDECleft, exp3right)))
+     | IFDEC exp THEN exps ELSE exps (EIfi (exp, exps1, exps2, (IFDECleft, exps2right)))
      (* | LET return decl_star IN exp END (ELet (return, decl_star, exp, (LETleft, ENDright))) *)
-     | LET optional_storage id optional_colon_ty EQ exp (ELet2 (optional_storage, id, optional_colon_ty, exp, (LETleft, expright)))
+     | LET optional_storage id optional_colon_ty optional_eq_exp (ELet2 (optional_storage, id, optional_colon_ty, optional_eq_exp, (LETleft, optional_eq_expright)))
      | SHARP INT (EConst (ECNat INT, (SHARPleft, INTright)))
      | INT (EConst (ECInt INT, (INTleft, INTright)))
      | STRING (EConst (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
@@ -424,6 +419,10 @@ aexp : decorated_eid (EVar decorated_eid)
      | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
      | MINUS_EQ (ESubBy (MINUS_EQleft, MINUS_EQright))
      | aexp DOT id (EField (aexp, id, (aexpleft, idright)))
+     | LCUR assign_comma_star_trailing RCUR (ERecord (assign_comma_star_trailing, (LCURleft, RCURright)))
+
+optional_colon_ty : COLON ty (SOME ty)
+                  | (NONE)
 
 ty : ty_term (ty_term)
    | ty DDASH idx LARROW ty (TPureArrow (ty1, (idx, INat (0, (idxleft, idxright))), ty2, (ty1left, ty2right)))
@@ -512,8 +511,16 @@ return : RETURN named_ty RTRI idx ((SOME named_ty, SOME idx, NONE))
 (*        | RTRI idx ((NONE, SOME idx)) *)
 (*        | ((NONE, NONE)) *)
 
+exp_semi_plus : exp semi_exp_star (exp :: semi_exp_star)
+
+semi_exp_star : SEMI_COLON exp semi_exp_star (exp :: semi_exp_star)
+	       | ([])
+
+optional_storage : MEMORY (SOME StMemory)
+                 | (NONE)
+                   
 named_ty : ty (ty)
-         | LPAREN id COLON ty RPAREN (ty)
+         | LPAREN typing_comma_plus RPAREN (TTuple (map snd typing_comma_plus, (LPARENleft, RPARENright)))
            
 long_id : id ((NONE, id))
         | id DOTDOT id (SOME id1, id2)
@@ -558,6 +565,9 @@ datatype_def_kind : COLON cur_bsort_plus (cur_bsort_plus)
 optional_eq_idx : EQ idx (SOME idx)
                 | (NONE)
               
+optional_eq_exp : EQ exp (SOME exp)
+                | (NONE)
+              
 id_square_plus : id square_plus ((id, square_plus))
 
 square : LSQ exp RSQ (exp)
@@ -572,6 +582,9 @@ set_modify : SET (false)
 bsort : id (BSId id)
 
 id : ID ((ID, (IDleft, IDright)))
+
+assign_comma_star_trailing : id COLON exp COMMA assign_comma_star_trailing ((id, exp) :: assign_comma_star_trailing)
+	                | ([])
 
 exp_comma_star_trailing : exp COMMA exp_comma_star_trailing (exp :: exp_comma_star_trailing)
 	                | ([])
@@ -694,9 +707,6 @@ tnames : LSQ id_star RSQ (id_star)
 
 optional_colon_sort : COLON sort (SOME sort)
                     | (NONE)
-
-optional_colon_ty : COLON ty (SOME ty)
-                  | (NONE)
 
 id_or_bsort_bind : id ([inl id])
                  | bsorting (map inr bsorting)
