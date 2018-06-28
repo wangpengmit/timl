@@ -125,8 +125,10 @@ open Ast
     | GUARD
     | VIEW
     | PURE
+    | PAYABLE
     | EVENT
     | EXTERNAL
+    | INTERNAL
     | INHERIT
     | STATE
     | MEMORY
@@ -324,6 +326,7 @@ spec : VAL id tnames COLON ty (SpecVal (id, tnames, ty, (VALleft, tyright)))
 
 fun_modifier : VIEW (FmView)
              | PURE (FmPure)
+             | PAYABLE (FmPayable)
              | GUARD aexp_comma_star (FmGuard aexp_comma_star)
              | visi (FmVisi visi)
              | PRE state (FmPre state)
@@ -335,6 +338,7 @@ fun_modifiers : fun_modifier fun_modifiers (fun_modifier :: fun_modifiers)
 visi : PUBLIC (ViPublic)
      | PRIVATE (ViPrivate)
      | EXTERNAL (ViExternal)
+     | INTERNAL (ViInternal)
 
 optional_visi : visi (SOME visi)
               | (NONE)
@@ -415,6 +419,7 @@ exp : exp_term (exp_term)
      | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
      | set_modify aexp square_star exp (ESetModify (set_modify, (aexp, square_star), exp, (set_modifyleft, expright)))
+     | RETURN exp (EReturn (exp, (RETURNleft, expright)))
 
 exp_term : aexp (aexp)
          | exp_term aexp (EApp (exp_term, aexp, (exp_termleft, aexpright)))

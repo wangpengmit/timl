@@ -471,6 +471,7 @@ local
         | S.EIfs _ => raise Impossible "elaborate/EIfs"
         | S.EFor _ => raise Impossible "elaborate/EFor"
         | S.EAsm _ => raise Impossible "elaborate/EAsm"
+        | S.EReturn _ => raise Impossible "elaborate/EReturn"
 
   and elab_decl decl =
       case decl of

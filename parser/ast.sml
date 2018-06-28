@@ -77,6 +77,7 @@ datatype visi =
          ViPublic
          | ViPrivate
          | ViExternal
+         | ViInternal
 
 datatype expr_const =
          ECInt of int
@@ -122,6 +123,7 @@ datatype exp =
          | EIfs of ifelse list * region
          | EFor of id * ty option * exp * exp * exp * exp * region
          | EAsm of exp * region
+         | EReturn of exp * region
 
      and decl =
          DVal of id list * ptrn * exp * region
@@ -143,6 +145,7 @@ datatype exp =
      and fun_modifier =
          FmView
          | FmPure
+         | FmPayable
          | FmGuard of exp list
          | FmVisi of visi
          | FmPre of state

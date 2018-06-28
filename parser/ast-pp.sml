@@ -800,6 +800,15 @@ fun pp_e s e =
             str ")";
             close_box ()
           )
+        | EReturn (e, _) =>
+          (
+            open_hbox ();
+            strs "EReturn";
+            str "(";
+            pp_e e;
+            str ")";
+            close_box ()
+          )
         | EFor (id, t, e1, e2, e3, e4, _) =>
           (
             open_vbox ();
