@@ -9,24 +9,24 @@ infix  9 @!
          
 fun wc2i c =
   case c of
-      WCTT () => 0
-    | WCNat n => n
-    | WCInt n => n
-    | WCBool b => b2i b
-    | WCByte c => Char.ord c
-    | WCiBool b => b2i b
-    | WCLabel n => n
-    | WCState n => n
+      WCTT () => inl 0
+    | WCNat n => inl n
+    | WCInt n => inr n
+    | WCBool b => inl $ b2i b
+    | WCByte c => inl $ Char.ord c
+    | WCiBool b => inl $ b2i b
+    | WCLabel n => inl $ n
+    | WCState n => inl $ n
                      
 fun w2i w =
   case w of
       WConst c => wc2i c
-    | _ => 0
+    | _ => inl 0
 
-fun hex nBytes i =
+fun hex_fn fmt nBytes i =
   let
     val n = nBytes * 2
-    val s = Int.fmt StringCvt.HEX i
+    val s = fmt StringCvt.HEX i
     val len = String.size s
     val s = if len > n then String.extract (s, len-n, NONE)
             else s
@@ -34,6 +34,10 @@ fun hex nBytes i =
   in
     s
   end
+
+fun hex a = hex_fn Int.fmt a 
+
+fun hex_str len s = hex_fn LargeInt.fmt len $ str2int_large s
 
 fun enc inst =
   let
@@ -64,7 +68,7 @@ fun enc inst =
          | SSTORE () => "55"
     | JUMPI () => "57"
     | JUMPDEST () => "5b"
-    | PUSH (n, w) => hex 1 (0x60+n-1) ^ hex n (w2i $ unInner w)
+    | PUSH (n, w) => hex 1 (0x60+n-1) ^ unify_sum (hex n) (hex_str n) (w2i $ unInner w)
     | DUP n => hex 1 $ 0x80+n-1
     | SWAP n => hex 1 $ 0x90+n-1
     | LOG n => hex 1 $ 0xa0+n

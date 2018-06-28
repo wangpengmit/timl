@@ -490,7 +490,7 @@ fun pp_bind s bind =
 
 fun str_expr_const c =
     case c of
-        ECInt n => str_int n
+        ECInt n => n
       | ECNat n => "#" ^ str_int n
       | ECString s => sprintf "\"$\"" [s]
       | ECChar c => sprintf "'$'" [str_char c]
@@ -524,6 +524,7 @@ fun str_storage st =
     case st of
         StMemory => "memory"
       | StStorage => "storage"
+      (* | StIndexed => "indexed" *)
       
 fun pp_e s e =
     let
@@ -1051,7 +1052,7 @@ and pp_d s d =
             strs "DEvent";
             str "(";
             pp_id name;
-            app (fn t => (comma (); pp_t t)) ts;
+            app (fn (t, b) => (comma (); pp_t t; comma (); str $ str_bool b)) ts;
             str ")";
             close_box ()
           )
@@ -1166,7 +1167,7 @@ fun pp_spec s spec =
             strs "SpecEvent";
             str "(";
             pp_id name;
-            app (fn t => (comma (); pp_t t)) ts;
+            app (fn (t, b) => (comma (); pp_t t; comma (); str $ str_bool b)) ts;
             str ")";
             close_box ()
           )

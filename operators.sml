@@ -67,7 +67,7 @@ type nat = int
 datatype expr_const =
          ECTT of unit
          | ECNat of nat
-         | ECInt of int
+         | ECInt of string
          | ECBool of bool
          | ECiBool of bool
          | ECByte of Char.char
@@ -114,7 +114,7 @@ datatype expr_un_op =
 fun str_expr_const c =
   case c of
       ECTT () => "()"
-    | ECInt n => str_int n
+    | ECInt n => n
     | ECNat n => sprintf "#$" [str_int n]
     | ECiBool b => sprintf "#$" [str_bool b]
     | ECBool b => str_bool b

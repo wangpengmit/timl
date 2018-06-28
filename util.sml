@@ -445,10 +445,11 @@ fun app_inl_inr f1 f2 s =
 fun filter_inl ls = List.mapPartial is_inl ls
 fun filter_inr ls = List.mapPartial is_inr ls
                     
-fun str_sum f1 f2 s =
+fun unify_sum f1 f2 s =
   case s of
       inl e => f1 e
     | inr e => f2 e
+val str_sum = unify_sum
 
 fun find_by_snd p ls =
     Option.map fst (List.find (fn (_, y) => p y) ls)
@@ -582,7 +583,17 @@ fun split_dir_file_ext filename =
 infixr 0 @@
 fun a @@ b = (a; b)
 
-fun scan radix s = StringCvt.scanString (Int.scan radix) s
+fun scan_fn scan radix s = StringCvt.scanString (scan radix) s
+fun str2int_fn scan s =
+    if String.isPrefix "0x" s then
+      Option.valOf (scan_fn scan StringCvt.HEX s)
+    else
+      Option.valOf (scan_fn scan StringCvt.DEC s)
+                                        
+fun scan a = scan_fn Int.scan a
+fun str2int a = str2int_fn Int.scan a
+fun scan_large a = scan_fn LargeInt.scan a
+fun str2int_large a = str2int_fn LargeInt.scan a
                                         
 fun bounded_minus a b = max 0 $ a - b
 

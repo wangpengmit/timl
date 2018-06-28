@@ -51,7 +51,7 @@ open Ast
     | B_GE
     | B_EQ
     | B_NEQ
-    | INT of int
+    | INT of string
     | NNREAL of string
     | BAR
     | TILDE
@@ -133,6 +133,7 @@ open Ast
     | STATE
     | MEMORY
     | STORAGE
+    | INDEXED
     | ELSEIF
     | FOR
     | ASSEMBLY
@@ -238,6 +239,9 @@ open Ast
        | typing_comma_plus of typing list
        | typing_comma_star of typing list
        | comma_typing_star of typing list
+       | indexed_typing_comma_star of indexed_typing list
+       | comma_indexed_typing_star of indexed_typing list
+       | indexed_typing of id * (ty * bool)
        | fun_modifier of fun_modifier
        | fun_modifiers of fun_modifier list
        | named_ty of ty
@@ -249,6 +253,7 @@ open Ast
        | optional_storage of storage option
        | ifs of ifelse list
        | elses of ifelse list
+       | optional_indexed of bool
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
 
@@ -322,7 +327,7 @@ spec : VAL id tnames COLON ty (SpecVal (id, tnames, ty, (VALleft, tyright)))
      | TYPE id_plus cur_bsort_star (SpecType (id_plus, cur_bsort_star, (TYPEleft, cur_bsort_starright)))
      | TYPE id (SpecType ([id], [], (TYPEleft, idright))) (* need this rule. don't know why *)
      | optional_visi FUN id LPAREN typing_comma_star RPAREN fun_modifiers return (SpecFun (id, map snd typing_comma_star, return))
-     | EVENT id LPAREN typing_comma_star RPAREN (SpecEvent (id, map snd typing_comma_star))
+     | EVENT id LPAREN indexed_typing_comma_star RPAREN (SpecEvent (id, map snd indexed_typing_comma_star))
 
 fun_modifier : VIEW (FmView)
              | PURE (FmPure)
@@ -362,6 +367,17 @@ comma_typing_star : COMMA typing comma_typing_star (typing :: comma_typing_star)
 
 typing : id COLON ty ((id, ty))
 
+indexed_typing_comma_star : indexed_typing comma_indexed_typing_star (indexed_typing :: comma_indexed_typing_star)
+	          | ([])
+
+comma_indexed_typing_star : COMMA indexed_typing comma_indexed_typing_star (indexed_typing :: comma_indexed_typing_star)
+	          | ([])
+
+indexed_typing : optional_indexed id COLON ty ((id, (ty, optional_indexed)))
+
+optional_indexed : INDEXED (true)
+                 | (false)
+
 decl : optional_visi VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, expright)))
      | optional_visi FUN id tnames bind_star fun_modifiers return EQ exps (DRec (tnames, id, bind_star, empty_state, NONE, return, exps, (FUNleft, expsright)))
      | DATATYPE datatype_def (DDatatype datatype_def)
@@ -373,7 +389,7 @@ decl : optional_visi VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, 
      | TYPE id EQ ty (DTypeDef (id, ty))
      | OPEN id (DOpen id)
      | optional_visi STATE id COLON ty optional_init (DState (id, ty, optional_init))
-     | EVENT id LPAREN typing_comma_star RPAREN (DEvent (id, map snd typing_comma_star))
+     | EVENT id LPAREN indexed_typing_comma_star RPAREN (DEvent (id, map snd indexed_typing_comma_star))
 
 optional_init : EQ init (SOME init)
               | (NONE)
@@ -386,6 +402,8 @@ exps : exp_semi_plus (ESemis (exp_semi_plus, (exp_semi_plusleft, exp_semi_plusri
 exp : exp_term (exp_term)
      | exp PLUS exp (EBinOp' (EBPrim (EBPIntAdd ()), exp1, exp2, (exp1left, exp2right)))
      | exp MINUS exp (EBinOp' (EBPrim (EBPIntMinus ()), exp1, exp2, (exp1left, exp2right)))
+     | MINUS exp (EUnOp (EUPrim (EUPIntNeg ()), exp, (MINUSleft, expright)))
+     (* | TILDE aexp (EUnOp (EUPrim (EUPIntNeg ()), aexp, (TILDEleft, aexpright))) *)
      | exp MULT exp (EBinOp' (EBPrim (EBPIntMult ()), exp1, exp2, (exp1left, exp2right)))
      | exp DIV exp (EBinOp' (EBPrim (EBPIntDiv ()), exp1, exp2, (exp1left, exp2right)))
      | exp MOD exp (EBinOp' (EBPrim (EBPIntMod ()), exp1, exp2, (exp1left, exp2right)))
@@ -436,12 +454,11 @@ aexp : decorated_eid (EVar decorated_eid)
      | IFDEC exp THEN exps ELSE exps (EIfi (exp, exps1, exps2, (IFDECleft, exps2right)))
      (* | LET return decl_star IN exp END (ELet (return, decl_star, exp, (LETleft, ENDright))) *)
      | LET optional_storage ptrn optional_eq_exp (ELet2 (optional_storage, ptrn, optional_eq_exp, (LETleft, optional_eq_expright)))
-     | SHARP INT (EConst (ECNat INT, (SHARPleft, INTright)))
+     | SHARP INT (EConst (ECNat (str2int INT), (SHARPleft, INTright)))
      | INT (EConst (ECInt INT, (INTleft, INTright)))
      | STRING (EConst (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
      | CHAR (EConst (ECChar CHAR, (CHARleft, CHARright)))
      | LSQSQ exp_comma_star RSQSQ (EList (exp_comma_star, (LSQSQleft, RSQSQright)))
-     | TILDE aexp (EUnOp (EUPrim (EUPIntNeg ()), aexp, (TILDEleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
      | id square_plus (EGet ((id, square_plus), (idleft, square_plusright)))
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
@@ -488,7 +505,7 @@ idx : aidx (aidx)
     | idx MAX idx (IBinOp (IBMax (), idx1, idx2, (idx1left, idx2right)))
     | idx MIN idx (IBinOp (IBMin (), idx1, idx2, (idx1left, idx2right)))
     | idx MULT idx (IBinOp (IBMult (), idx1, idx2, (idx1left, idx2right)))
-    | idx DIV INT (IDiv (idx, (INT, (INTleft, INTright)), (idxleft, INTright)))
+    | idx DIV INT (IDiv (idx, (str2int INT, (INTleft, INTright)), (idxleft, INTright)))
     | idx EXP idx (IBinOp (IBExpN (), idx1, idx2, (idx1left, idx2right)))
     | idx B_EQ idx (IBinOp (IBEq (), idx1, idx2, (idx1left, idx2right)))
     | idx B_NEQ idx (let val r = (idx1left, idx2right) in IUnOp (IUNeg (), IBinOp (IBEq (), idx1, idx2, r), r) end)
@@ -500,7 +517,7 @@ idx : aidx (aidx)
     | idx aidx (IBinOp (IBApp (), idx, aidx, (idxleft, aidxright)))
 
 aidx : long_id (IVar long_id)
-    | INT (INat (INT, (INTleft, INTright)))
+    | INT (INat (str2int INT, (INTleft, INTright)))
     | NNREAL (ITime (NNREAL, (NNREALleft, NNREALright)))
     | DOLLAR aidx (IBinOp (IBApp (), IVar (NONE, (str_idx_un_op (IUToReal ()), (DOLLARleft, DOLLARright))), aidx, (DOLLARleft, aidxright)))
     | LPAREN RPAREN (ITT (LPARENleft, RPARENright))
@@ -559,6 +576,7 @@ semi_exp_star : SEMI exp semi_exp_star (exp :: semi_exp_star)
 
 storage : MEMORY (StMemory)
         | STORAGE (StStorage)
+        (* | INDEXED (StIndexed) *)
                    
 optional_storage : storage (SOME storage)
                  | (NONE)

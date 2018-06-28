@@ -80,7 +80,7 @@ datatype visi =
          | ViInternal
 
 datatype expr_const =
-         ECInt of int
+         ECInt of string
          | ECNat of int
          | ECString of string
          | ECChar of Char.char
@@ -98,6 +98,7 @@ datatype ast_expr_triop =
 datatype storage =
          StMemory
          | StStorage
+         (* | StIndexed *)
                       
 datatype exp = 
 	 EVar of long_id * (bool * bool)
@@ -135,7 +136,7 @@ datatype exp =
          | DTypeDef of id * ty
          | DOpen of id
          | DState of id * ty * init option
-         | DEvent of id * ty list
+         | DEvent of id * (ty * bool) list
 
      and ifelse =
          If of exp * exp * region
@@ -162,7 +163,7 @@ datatype spec =
          | SpecType of id list * bsort list * region
          | SpecTypeDef of id * ty
          | SpecFun of id * ty list * return
-         | SpecEvent of id * ty list
+         | SpecEvent of id * (ty * bool) list
                                    
 datatype sgn =
          SigComponents of spec list * region
@@ -254,6 +255,7 @@ fun EStrConcat (e1, e2, r) = EBinOp (EBStrConcat (), e1, e2, r)
 fun ESetRef (e1, e2, r) = EBinOp (EBSetRef (), e1, e2, r)
 
 type typing = id * ty
+type indexed_typing = id * (ty * bool)
 
 end
 

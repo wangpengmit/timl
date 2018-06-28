@@ -250,7 +250,7 @@ fun cg_c c =
                                 
 fun impl_prim_expr_un_opr opr =
   case opr of
-      EUPIntNeg () => [PUSH1 $ WInt 0, SUB ()]
+      EUPIntNeg () => [PUSH1 $ WInt "0", SUB ()]
     | EUPBoolNeg () => [ISZERO ()]
     | EUPInt2Byte () => int2byte
     | EUPByte2Int () => byte2int

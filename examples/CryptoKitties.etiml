@@ -1281,613 +1281,614 @@ contract ClockAuction = struct inherit Pausable, ClockAuctionBase
   (*  Ref: https://github.com/ethereum/EIPs/issues/721*)
   val InterfaceSignature_ERC721 : bytes4 = bytes4(0x9a20483d)
 
-  (* (* @dev Constructor creates a reference to the NFT ownership contract*) *)
-  (* (*  and verifies the owner cut is in the valid range.*) *)
-  (* (* @param _nftAddress - address of a deployed contract implementing*) *)
-  (* (*  the Nonfungible Interface.*) *)
-  (* (* @param _cut - percent cut the owner takes on each auction, must be*) *)
-  (* (*  between 0-10,000.*) *)
-  (* public fun init (_nftAddress : address, _cut : uint256) = *)
-  (*   require(_cut <= 10000); *)
-  (*   ownerCut := _cut; *)
+  (* @dev Constructor creates a reference to the NFT ownership contract*)
+  (*  and verifies the owner cut is in the valid range.*)
+  (* @param _nftAddress - address of a deployed contract implementing*)
+  (*  the Nonfungible Interface.*)
+  (* @param _cut - percent cut the owner takes on each auction, must be*)
+  (*  between 0-10,000.*)
+  public fun init (_nftAddress : address, _cut : uint256) =
+    require(_cut <= 10000);
+    ownerCut := _cut;
 
-  (*   let candidateContract : ERC721 = ERC721(_nftAddress); *)
-  (*   require(candidateContract.supportsInterface(InterfaceSignature_ERC721)); *)
-  (*   nonFungibleContract := SOME candidateContract; *)
+    let candidateContract : ERC721 = ERC721(_nftAddress);
+    require(candidateContract.supportsInterface(InterfaceSignature_ERC721));
+    nonFungibleContract := SOME candidateContract
 
-  (* (* @dev Remove all Ether from the contract, which is the owner's cuts*) *)
-  (* (*  as well as any Ether sent directly to the contract address.*) *)
-  (* (*  Always transfers to the NFT contract, but can be called either by*) *)
-  (* (*  the owner or the NFT contract.*) *)
-  (* external fun withdrawBalance () = *)
-  (*   let nftAddress : address = address(nonFungibleContract); *)
+  (* @dev Remove all Ether from the contract, which is the owner's cuts*)
+  (*  as well as any Ether sent directly to the contract address.*)
+  (*  Always transfers to the NFT contract, but can be called either by*)
+  (*  the owner or the NFT contract.*)
+  external fun withdrawBalance () =
+    let nftAddress : address = address(nonFungibleContract);
 
-  (*   require( *)
-  (*     msg.sender == owner || *)
-  (*     msg.sender == nftAddress *)
-  (*   ); *)
-  (*   (* We are using this boolean method to make sure that even if one fails it will still work*) *)
-  (*   let res : bool = send nftAddress (this.balance); *)
+    require(
+      msg.sender == owner ||
+      msg.sender == nftAddress
+    );
+    (* We are using this boolean method to make sure that even if one fails it will still work*)
+    let res : bool = send nftAddress (this.balance);
+    res
 
-  (* (* @dev Creates and begins a new auction.*) *)
-  (* (* @param _tokenId - ID of token to auction, sender must be owner.*) *)
-  (* (* @param _startingPrice - Price of item (in wei) at beginning of auction.*) *)
-  (* (* @param _endingPrice - Price of item (in wei) at end of auction.*) *)
-  (* (* @param _duration - Length of time to move between starting*) *)
-  (* (*  price and ending price (in seconds).*) *)
-  (* (* @param _seller - Seller, if not the message sender*) *)
-  (* fun createAuction ( *)
-  (*   _tokenId : uint256, *)
-  (*   _startingPrice : uint256, *)
-  (*   _endingPrice : uint256, *)
-  (*   _duration : uint256, *)
-  (*   _seller : address *)
-  (* ) *)
-  (*   external *)
-  (*   guard whenNotPaused *)
-  (* = *)
-  (*   (* Sanity check that no inputs overflow how many bits we've allocated*) *)
-  (*   (* to store them in the auction struct.*) *)
-  (*   require(_startingPrice == uint256(uint128(_startingPrice))); *)
-  (*   require(_endingPrice == uint256(uint128(_endingPrice))); *)
-  (*   require(_duration == uint256(uint64(_duration))); *)
+  (* @dev Creates and begins a new auction.*)
+  (* @param _tokenId - ID of token to auction, sender must be owner.*)
+  (* @param _startingPrice - Price of item (in wei) at beginning of auction.*)
+  (* @param _endingPrice - Price of item (in wei) at end of auction.*)
+  (* @param _duration - Length of time to move between starting*)
+  (*  price and ending price (in seconds).*)
+  (* @param _seller - Seller, if not the message sender*)
+  fun createAuction (
+    _tokenId : uint256,
+    _startingPrice : uint256,
+    _endingPrice : uint256,
+    _duration : uint256,
+    _seller : address
+  )
+    external
+    guard whenNotPaused
+  =
+    (* Sanity check that no inputs overflow how many bits we've allocated*)
+    (* to store them in the auction struct.*)
+    require(_startingPrice == uint256(uint128(_startingPrice)));
+    require(_endingPrice == uint256(uint128(_endingPrice)));
+    require(_duration == uint256(uint64(_duration)));
 
-  (*   require(_owns(msg.sender, _tokenId)); *)
-  (*   _escrow(msg.sender, _tokenId); *)
-  (*   let memory auction : Auction = Auction( *)
-  (*     _seller, *)
-  (*     uint128(_startingPrice), *)
-  (*     uint128(_endingPrice), *)
-  (*     uint64(_duration), *)
-  (*     uint64(now) *)
-  (*   ); *)
-  (*   _addAuction(_tokenId, auction); *)
+    require(_owns(msg.sender, _tokenId));
+    _escrow(msg.sender, _tokenId);
+    let memory auction : Auction = Auction(
+      _seller,
+      uint128(_startingPrice),
+      uint128(_endingPrice),
+      uint64(_duration),
+      uint64(now)
+    );
+    _addAuction(_tokenId, auction)
 
-  (* (* @dev Bids on an open auction, completing the auction and transferring*) *)
-  (* (*  ownership of the NFT if enough Ether is supplied.*) *)
-  (* (* @param _tokenId - ID of token to bid on.*) *)
-  (* fun bid (_tokenId : uint256) *)
-  (*   external *)
-  (*   payable *)
-  (*   guard whenNotPaused *)
-  (* = *)
-  (*   (* _bid will throw if the bid or funds transfer fails*) *)
-  (*   _bid(_tokenId, msg.value); *)
-  (*   _transfer(msg.sender, _tokenId); *)
+  (* @dev Bids on an open auction, completing the auction and transferring*)
+  (*  ownership of the NFT if enough Ether is supplied.*)
+  (* @param _tokenId - ID of token to bid on.*)
+  fun bid (_tokenId : uint256)
+    external
+    payable
+    guard whenNotPaused
+  =
+    (* _bid will throw if the bid or funds transfer fails*)
+    _bid(_tokenId, msg.value);
+    _transfer(msg.sender, _tokenId)
 
-  (* (* @dev Cancels an auction that hasn't been won yet.*) *)
-  (* (*  Returns the NFT to original owner.*) *)
-  (* (* @notice This is a state-modifying fun that can*) *)
-  (* (*  be called while the contract is paused.*) *)
-  (* (* @param _tokenId - ID of token on auction*) *)
-  (* fun cancelAuction (_tokenId : uint256) *)
-  (*   external *)
-  (* = *)
-  (*   let storage auction : Auction = tokenIdToAuction[_tokenId]; *)
-  (*   require(_isOnAuction(auction)); *)
-  (*   let seller : address = auction.seller; *)
-  (*   require(msg.sender == seller); *)
-  (*   _cancelAuction(_tokenId, seller); *)
+  (* @dev Cancels an auction that hasn't been won yet.*)
+  (*  Returns the NFT to original owner.*)
+  (* @notice This is a state-modifying fun that can*)
+  (*  be called while the contract is paused.*)
+  (* @param _tokenId - ID of token on auction*)
+  fun cancelAuction (_tokenId : uint256)
+    external
+  =
+    let storage auction : Auction = tokenIdToAuction[_tokenId];
+    require(_isOnAuction(auction));
+    let seller : address = auction.seller;
+    require(msg.sender == seller);
+    _cancelAuction(_tokenId, seller)
 
-  (* (* @dev Cancels an auction when the contract is paused.*) *)
-  (* (*  Only the owner may do this, and NFTs are returned to*) *)
-  (* (*  the seller. This should only be used in emergencies.*) *)
-  (* (* @param _tokenId - ID of the NFT on auction to cancel.*) *)
-  (* fun cancelAuctionWhenPaused (_tokenId : uint256) *)
-  (*   guard whenPaused, *)
-  (*   onlyOwner *)
-  (*   external *)
-  (* = *)
-  (*   let storage auction : Auction = tokenIdToAuction[_tokenId]; *)
-  (*   require(_isOnAuction(auction)); *)
-  (*   _cancelAuction(_tokenId, auction.seller); *)
+  (* @dev Cancels an auction when the contract is paused.*)
+  (*  Only the owner may do this, and NFTs are returned to*)
+  (*  the seller. This should only be used in emergencies.*)
+  (* @param _tokenId - ID of the NFT on auction to cancel.*)
+  fun cancelAuctionWhenPaused (_tokenId : uint256)
+    guard whenPaused,
+    onlyOwner
+    external
+  =
+    let storage auction : Auction = tokenIdToAuction[_tokenId];
+    require(_isOnAuction(auction));
+    _cancelAuction(_tokenId, auction.seller)
 
-  (* (* @dev Returns auction info for an NFT on auction.*) *)
-  (* (* @param _tokenId - ID of NFT on auction.*) *)
-  (* fun getAuction (_tokenId : uint256) *)
-  (*   external *)
-  (*   view *)
-  (*   return *)
-  (* ( *)
-  (*   seller : address, *)
-  (*   startingPrice : uint256, *)
-  (*   endingPrice : uint256, *)
-  (*   duration : uint256, *)
-  (*   startedAt : uint256 *)
-  (* ) = *)
-  (*   let storage auction : Auction = tokenIdToAuction[_tokenId]; *)
-  (*   require(_isOnAuction(auction)); *)
-  (*   ( *)
-  (*     auction.seller, *)
-  (*     auction.startingPrice, *)
-  (*     auction.endingPrice, *)
-  (*     auction.duration, *)
-  (*     auction.startedAt *)
-  (*   ); *)
+  (* @dev Returns auction info for an NFT on auction.*)
+  (* @param _tokenId - ID of NFT on auction.*)
+  fun getAuction (_tokenId : uint256)
+    external
+    view
+    return
+  (
+    seller : address,
+    startingPrice : uint256,
+    endingPrice : uint256,
+    duration : uint256,
+    startedAt : uint256
+  ) =
+    let storage auction : Auction = tokenIdToAuction[_tokenId];
+    require(_isOnAuction(auction));
+    (
+      auction.seller,
+      auction.startingPrice,
+      auction.endingPrice,
+      auction.duration,
+      auction.startedAt
+    )
 
-  (* (* @dev Returns the current price of an auction.*) *)
-  (* (* @param _tokenId - ID of the token price we are checking.*) *)
-  (* fun getCurrentPrice (_tokenId : uint256) *)
-  (*   external *)
-  (*   view *)
-  (*   return uint256 *)
-  (* = *)
-  (*   let storage auction : Auction = tokenIdToAuction[_tokenId]; *)
-  (*   require(_isOnAuction(auction)); *)
-  (*   _currentPrice(auction); *)
+  (* @dev Returns the current price of an auction.*)
+  (* @param _tokenId - ID of the token price we are checking.*)
+  fun getCurrentPrice (_tokenId : uint256)
+    external
+    view
+    return uint256
+  =
+    let storage auction : Auction = tokenIdToAuction[_tokenId];
+    require(_isOnAuction(auction));
+    _currentPrice(auction)
 
 end
 
 
-(* (* @title Reverse auction modified for siring*) *)
-(* (* @notice We omit a fallback fun to prevent accidental sends to this contract.*) *)
-(* contract SiringClockAuction = struct inherit ClockAuction *)
-
-(*   (* @dev Sanity check that allows us to ensure that we are pointing to the*) *)
-(*   (*  right auction in our setSiringAuctionAddress() call.*) *)
-(*   public val isSiringClockAuction : bool = true *)
-
-(*   (* Delegate constructor*) *)
-(*   public fun init (_nftAddr : address, _cut : uint256) *)
-(*     forward_to ClockAuction(_nftAddr, _cut) = () *)
-
-(*   (* @dev Creates and begins a new auction. Since this fun is wrapped,*) *)
-(*   (* require sender to be KittyCore contract.*) *)
-(*   (* @param _tokenId - ID of token to auction, sender must be owner.*) *)
-(*   (* @param _startingPrice - Price of item (in wei) at beginning of auction.*) *)
-(*   (* @param _endingPrice - Price of item (in wei) at end of auction.*) *)
-(*   (* @param _duration - Length of auction (in seconds).*) *)
-(*   (* @param _seller - Seller, if not the message sender*) *)
-(*   fun createAuction ( *)
-(*     _tokenId : uint256, *)
-(*     _startingPrice : uint256, *)
-(*     _endingPrice : uint256, *)
-(*     _duration : uint256, *)
-(*     _seller : address *)
-(*   ) *)
-(*     external *)
-(*   = *)
-(*     (* Sanity check that no inputs overflow how many bits we've allocated*) *)
-(*     (* to store them in the auction struct.*) *)
-(*     require(_startingPrice == uint256(uint128(_startingPrice))); *)
-(*     require(_endingPrice == uint256(uint128(_endingPrice))); *)
-(*     require(_duration == uint256(uint64(_duration))); *)
-
-(*     require(msg.sender == address(nonFungibleContract)); *)
-(*     _escrow(_seller, _tokenId); *)
-(*     let memory auction : Auction = Auction( *)
-(*       _seller, *)
-(*       uint128(_startingPrice), *)
-(*       uint128(_endingPrice), *)
-(*       uint64(_duration), *)
-(*       uint64(now) *)
-(*     ); *)
-(*     _addAuction(_tokenId, auction); *)
-
-(*   (* @dev Places a bid for siring. Requires the sender*) *)
-(*   (* is the KittyCore contract because all bid methods*) *)
-(*   (* should be wrapped. Also return the kitty to the*) *)
-(*   (* seller rather than the winner.*) *)
-(*   fun bid (_tokenId : uint256) *)
-(*     external *)
-(*     payable *)
-(*   = *)
-(*     require(msg.sender == address(nonFungibleContract)); *)
-(*     let seller : address = tokenIdToAuction[_tokenId].seller; *)
-(*     (* _bid checks that token ID is valid and will throw if bid fails*) *)
-(*     _bid(_tokenId, msg.value); *)
-(*     (* We transfer the kitty back to the seller, the winner will get*) *)
-(*     (* the offspring*) *)
-(*     _transfer(seller, _tokenId); *)
-
-(* end *)
-
-
-
-
-
-(* (* @title Clock auction modified for sale of kitties*) *)
-(* (* @notice We omit a fallback fun to prevent accidental sends to this contract.*) *)
-(* contract SaleClockAuction = struct inherit ClockAuction *)
-
-(*   (* @dev Sanity check that allows us to ensure that we are pointing to the*) *)
-(*   (*  right auction in our setSaleAuctionAddress() call.*) *)
-(*   public val isSaleClockAuction : bool = true *)
-
-(*   (* Tracks last 5 sale price of gen0 kitty sales*) *)
-(*   public val gen0SaleCount : ref uint256 *)
-(*   public val lastGen0SalePrices : array uint256 {5} *)
-
-(*   (* Delegate constructor*) *)
-(*   public fun init (_nftAddr : address, _cut : uint256) *)
-(*     forward_to ClockAuction(_nftAddr, _cut) = () *)
-
-(*   (* @dev Creates and begins a new auction.*) *)
-(*   (* @param _tokenId - ID of token to auction, sender must be owner.*) *)
-(*   (* @param _startingPrice - Price of item (in wei) at beginning of auction.*) *)
-(*   (* @param _endingPrice - Price of item (in wei) at end of auction.*) *)
-(*   (* @param _duration - Length of auction (in seconds).*) *)
-(*   (* @param _seller - Seller, if not the message sender*) *)
-(*   fun createAuction ( *)
-(*     _tokenId : uint256, *)
-(*     _startingPrice : uint256, *)
-(*     _endingPrice : uint256, *)
-(*     _duration : uint256, *)
-(*     _seller : address *)
-(*   ) *)
-(*     external *)
-(*   = *)
-(*     (* Sanity check that no inputs overflow how many bits we've allocated*) *)
-(*     (* to store them in the auction struct.*) *)
-(*     require(_startingPrice == uint256(uint128(_startingPrice))); *)
-(*     require(_endingPrice == uint256(uint128(_endingPrice))); *)
-(*     require(_duration == uint256(uint64(_duration))); *)
-
-(*     require(msg.sender == address(nonFungibleContract)); *)
-(*     _escrow(_seller, _tokenId); *)
-(*     let memory auction : Auction = Auction( *)
-(*       _seller, *)
-(*       uint128(_startingPrice), *)
-(*       uint128(_endingPrice), *)
-(*       uint64(_duration), *)
-(*       uint64(now) *)
-(*     ); *)
-(*     _addAuction(_tokenId, auction); *)
-
-(*   (* @dev Updates lastSalePrice if seller is the nft contract*) *)
-(*   (* Otherwise, works the same as default bid method.*) *)
-(*   fun bid (_tokenId : uint256) *)
-(*     external *)
-(*     payable *)
-(*   = *)
-(*     (* _bid verifies token ID size*) *)
-(*     let seller : address = tokenIdToAuction[_tokenId].seller; *)
-(*     let price : uint256 = _bid(_tokenId, msg.value); *)
-(*     _transfer(msg.sender, _tokenId); *)
-
-(*     (* If not a gen0 auction, exit*) *)
-(*     if (seller == address(nonFungibleContract)) then *)
-(*       (* Track gen0 sale prices*) *)
-(*       set lastGen0SalePrices[gen0SaleCount % 5] price; *)
-(*       modify gen0SaleCount ++; *)
-(*     end *)
-
-(*   external fun averageGen0SalePrice () view return uint256 = *)
-(*     let sum : ref uint256 = ref 0; *)
-(*     for (i : uint256 = 0; i < 5; ++) *)
-(*       modify sum += lastGen0SalePrices[i]; *)
-(*     endfor; *)
-(*     return sum / 5; *)
-
-(* end *)
-
-
-(* (* @title Handles creating auctions for sale and siring of kitties.*) *)
-(* (*  This wrapper of ReverseAuction exists only so that users can create*) *)
-(* (*  auctions with only one transaction.*) *)
-(* contract KittyAuction = struct inherit KittyBreeding *)
-
-(*   (* @notice The auction contract variables are defined in KittyBase to allow*) *)
-(*   (*  us to refer to them in KittyOwnership to prevent accidental transfers.*) *)
-(*   (* `saleAuction` refers to the auction for gen0 and p2p sale of kitties.*) *)
-(*   (* `siringAuction` refers to the auction for siring rights of kitties.*) *)
-
-(*   (* @dev Sets the reference to the sale auction.*) *)
-(*   (* @param _address - Address of sale contract.*) *)
-(*   external fun setSaleAuctionAddress (_address : address) guard onlyCEO = *)
-(*     let candidateContract : SaleClockAuction = SaleClockAuction(_address); *)
-
-(*     (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*) *)
-(*     require(candidateContract.isSaleClockAuction()); *)
-
-(*     (* Set the new contract address*) *)
-(*     saleAuction := SOME candidateContract; *)
-
-(*   (* @dev Sets the reference to the siring auction.*) *)
-(*   (* @param _address - Address of siring contract.*) *)
-(*   external fun setSiringAuctionAddress (_address : address) guard onlyCEO = *)
-(*     let candidateContract : SiringClockAuction = SiringClockAuction(_address); *)
-
-(*     (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*) *)
-(*     require(candidateContract.isSiringClockAuction()); *)
-
-(*     (* Set the new contract address*) *)
-(*     siringAuction := SOME candidateContract; *)
-
-(*   (* @dev Put a kitty up for auction.*) *)
-(*   (*  Does some ownership trickery to create auctions in one tx.*) *)
-(*   fun createSaleAuction ( *)
-(*     _kittyId : uint256, *)
-(*     _startingPrice : uint256, *)
-(*     _endingPrice : uint256, *)
-(*     _duration : uint256 *)
-(*   ) *)
-(*     external *)
-(*     guard whenNotPaused *)
-(*   = *)
-(*     (* Auction contract checks input sizes*) *)
-(*     (* If kitty is already on any auction, this will throw*) *)
-(*     (* because it will be owned by the auction contract.*) *)
-(*     require(_owns(msg.sender, _kittyId)); *)
-(*     (* Ensure the kitty is not pregnant to prevent the auction*) *)
-(*     (* contract accidentally receiving ownership of the child.*) *)
-(*     (* NOTE: the kitty IS allowed to be in a cooldown.*) *)
-(*     require(not isPregnant(_kittyId)); *)
-(*     _approve(_kittyId, saleAuction.valOf()); *)
-(*     (* Sale auction throws if inputs are invalid and clears*) *)
-(*     (* transfer and sire approval after escrowing the kitty.*) *)
-(*     saleAuction.valOf().createAuction( *)
-(*       _kittyId, *)
-(*       _startingPrice, *)
-(*       _endingPrice, *)
-(*       _duration, *)
-(*       msg.sender *)
-(*     ); *)
-
-(*   (* @dev Put a kitty up for auction to be sire.*) *)
-(*   (*  Performs checks to ensure the kitty can be sired, then*) *)
-(*   (*  delegates to reverse auction.*) *)
-(*   fun createSiringAuction ( *)
-(*     _kittyId : uint256, *)
-(*     _startingPrice : uint256, *)
-(*     _endingPrice : uint256, *)
-(*     _duration : uint256 *)
-(*   ) *)
-(*     external *)
-(*     guard whenNotPaused *)
-(*   = *)
-(*     (* Auction contract checks input sizes*) *)
-(*     (* If kitty is already on any auction, this will throw*) *)
-(*     (* because it will be owned by the auction contract.*) *)
-(*     require(_owns(msg.sender, _kittyId)); *)
-(*     require(isReadyToBreed(_kittyId)); *)
-(*     _approve(_kittyId, siringAuction.valOf()); *)
-(*     (* Siring auction throws if inputs are invalid and clears*) *)
-(*     (* transfer and sire approval after escrowing the kitty.*) *)
-(*     siringAuction.valOf().createAuction( *)
-(*       _kittyId, *)
-(*       _startingPrice, *)
-(*       _endingPrice, *)
-(*       _duration, *)
-(*       msg.sender *)
-(*     ); *)
-
-(*   (* @dev Completes a siring auction by bidding.*) *)
-(*   (*  Immediately breeds the winning matron with the sire on auction.*) *)
-(*   (* @param _sireId - ID of the sire on auction.*) *)
-(*   (* @param _matronId - ID of the matron owned by the bidder.*) *)
-(*   fun bidOnSiringAuction ( *)
-(*     _sireId : uint256, *)
-(*     _matronId : uint256 *)
-(*   ) *)
-(*     external *)
-(*     payable *)
-(*     guard whenNotPaused *)
-(*   = *)
-(*     (* Auction contract checks input sizes*) *)
-(*     require(_owns(msg.sender, _matronId)); *)
-(*     require(isReadyToBreed(_matronId)); *)
-(*     require(_canBreedWithViaAuction(_matronId, _sireId)); *)
-
-(*     (* Define the current price of the auction.*) *)
-(*     let currentPrice : uint256 = siringAuction.valOf().getCurrentPrice(_sireId); *)
-(*     require(msg.value >= currentPrice + autoBirthFee); *)
-
-(*     (* Siring auction will throw if the bid fails.*) *)
-(*     apply_with_value siringAuction.valOf().bid value (msg.value - autoBirthFee) (_sireId); *)
-(*     _breedWith(uint32(_matronId), uint32(_sireId)); *)
-
-(*   (* @dev Transfers the balance of the sale auction contract*) *)
-(*   (* to the KittyCore contract. We use two-step withdrawal to*) *)
-(*   (* prevent two transfer calls in the auction bid fun.*) *)
-(*   external fun withdrawAuctionBalances () guard onlyCLevel = *)
-(*     saleAuction.valOf().withdrawBalance(); *)
-(*     siringAuction.valOf().withdrawBalance(); *)
-
-(* end *)
-
-
-(* (* @title all funs related to creating kittens*) *)
-(* contract KittyMinting = struct inherit KittyAuction *)
-
-(*   (* Limits the number of cats the contract owner can ever create.*) *)
-(*   public val PROMO_CREATION_LIMIT : uint256 = 5000 *)
-(*   public val GEN0_CREATION_LIMIT : uint256 = 45000 *)
-
-(*   (* Constants for gen0 auctions.*) *)
-(*   public val GEN0_STARTING_PRICE : uint256 = 10 finney *)
-(*   public val GEN0_AUCTION_DURATION : uint256 = 1 days *)
-
-(*   (* Counts the number of cats the contract owner has created.*) *)
-(*   public val promoCreatedCount : ref uint256 *)
-(*   public val gen0CreatedCount : ref uint256 *)
-
-(*   (* @dev we can create promo kittens, up to a limit. Only callable by COO*) *)
-(*   (* @param _genes the encoded genes of the kitten to be created, any value is accepted*) *)
-(*   (* @param _owner the future owner of the created kittens. Default to contract COO*) *)
-(*   external fun createPromoKitty (_genes : uint256, _owner : address) guard onlyCOO = *)
-(*     let kittyOwner : ref address = ref _owner; *)
-(*     if (kittyOwner.v == address(0)) then *)
-(*        kittyOwner := cooAddress; *)
-(*     end; *)
-(*     require(promoCreatedCount.v < PROMO_CREATION_LIMIT); *)
-
-(*     modify promoCreatedCount ++; *)
-(*     _createKitty(0, 0, 0, _genes, kittyOwner); *)
-
-(*   (* @dev Creates a new gen0 kitty with the given genes and*) *)
-(*   (*  creates an auction for it.*) *)
-(*   external fun createGen0Auction (_genes : uint256) guard onlyCOO = *)
-(*     require(gen0CreatedCount.v < GEN0_CREATION_LIMIT); *)
-
-(*     let kittyId : uint256 = _createKitty(0, 0, 0, _genes, address(this)); *)
-(*     _approve(kittyId, saleAuction.valOf()); *)
-
-(*     saleAuction.valOf().createAuction( *)
-(*       kittyId, *)
-(*       _computeNextGen0Price(), *)
-(*       0, *)
-(*       GEN0_AUCTION_DURATION, *)
-(*       address(this) *)
-(*     ); *)
-
-(*     modify gen0CreatedCount ++; *)
-
-(*   (* @dev Computes the next gen0 auction starting price, given*) *)
-(*   (*  the average of the past 5 prices + 50%.*) *)
-(*   fun _computeNextGen0Price () internal view return uint256 = *)
-(*     let avePrice : uint256 = saleAuction.valOf().averageGen0SalePrice(); *)
-
-(*     (* Sanity check to ensure we don't overflow arithmetic*) *)
-(*     require(avePrice == uint256(uint128(avePrice))); *)
-
-(*     let nextPrice : ref uint256 = ref $ avePrice + (avePrice / 2); *)
-
-(*     (* We never auction for less than starting price*) *)
-(*     if (nextPrice.v < GEN0_STARTING_PRICE) then *)
-(*       nextPrice := GEN0_STARTING_PRICE; *)
-(*     end; *)
-
-(*     nextPrice; *)
-
-(* end *)
-
-
-(* (* @title CryptoKitties: Collectible, breedable, and oh-so-adorable cats on the Ethereum blockchain.*) *)
-(* (* @author Axiom Zen (https://www.axiomzen.co)*) *)
-(* (* @dev The main CryptoKitties contract, keeps track of kittens so they don't wander around and get lost.*) *)
-(* contract KittyCore = struct inherit KittyMinting *)
-
-(*   (* This is the main CryptoKitties contract. In order to keep our code seperated into logical sections,*) *)
-(*   (* we've broken it up in two ways. First, we have several seperately-instantiated sibling contracts*) *)
-(*   (* that handle auctions and our super-top-secret genetic combination algorithm. The auctions are*) *)
-(*   (* seperate since their logic is somewhat complex and there's always a risk of subtle bugs. By keeping*) *)
-(*   (* them in their own contracts, we can upgrade them without disrupting the main contract that tracks*) *)
-(*   (* kitty ownership. The genetic combination algorithm is kept seperate so we can open-source all of*) *)
-(*   (* the rest of our code without making it _too_ easy for folks to figure out how the genetics work.*) *)
-(*   (* Don't worry, I'm sure someone will reverse engineer it soon enough!*) *)
-(*   (**) *)
-(*   (* Secondly, we break the core contract into multiple files using inheritence, one for each major*) *)
-(*   (* facet of funality of CK. This allows us to keep related code bundled together while still*) *)
-(*   (* avoiding a single giant file with everything in it. The breakdown is as follows:*) *)
-(*   (**) *)
-(*   (*    - KittyBase: This is where we define the most fundamental code shared throughout the core*) *)
-(*   (*       funality. This includes our main data storage, constants and data types, plus*) *)
-(*   (*       internal funs for managing these items.*) *)
-(*   (**) *)
-(*   (*    - KittyAccessControl: This contract manages the various addresses and constraints for operations*) *)
-(*   (*       that can be executed only by specific roles. Namely CEO, CFO and COO.*) *)
-(*   (**) *)
-(*   (*    - KittyOwnership: This provides the methods required for basic non-fungible token*) *)
-(*   (*       transactions, following the draft ERC-721 spec (https://github.com/ethereum/EIPs/issues/721).*) *)
-(*   (**) *)
-(*   (*    - KittyBreeding: This file contains the methods necessary to breed cats together, including*) *)
-(*   (*       keeping track of siring offers, and relies on an external genetic combination contract.*) *)
-(*   (**) *)
-(*   (*    - KittyAuctions: Here we have the public methods for auctioning or bidding on cats or siring*) *)
-(*   (*       services. The actual auction funality is handled in two sibling contracts (one*) *)
-(*   (*       for sales and one for siring), while auction creation and bidding is mostly mediated*) *)
-(*   (*       through this facet of the core contract.*) *)
-(*   (**) *)
-(*   (*    - KittyMinting: This final facet contains the funality we use for creating new gen0 cats.*) *)
-(*   (*       We can make up to 5000 "promo" cats that can be given away (especially important when*) *)
-(*   (*       the community is new), and all others can only be created and then immediately put up*) *)
-(*   (*       for auction via an algorithmically determined starting price. Regardless of how they*) *)
-(*   (*       are created, there is a hard limit of 50k gen0 cats. After that, it's all up to the*) *)
-(*   (*       community to breed, breed, breed!*) *)
-
-(*   (* Set in case the core contract is broken and an upgrade is required*) *)
-(*   public val newContractAddress : ref address *)
-
-(*   (* @notice Creates the main CryptoKitties smart contract instance.*) *)
-(*   public fun init () = *)
-(*     (* Starts paused.*) *)
-(*     paused := true; *)
-
-(*     (* the creator of the contract is the initial CEO*) *)
-(*     ceoAddress := msg.sender; *)
-
-(*     (* the creator of the contract is also the initial COO*) *)
-(*     cooAddress := msg.sender; *)
-
-(*     (* start with the mythical kitten 0 - so we don't have generation-0 parent issues*) *)
-(*     _createKitty(0, 0, 0, uint256(-1), address(0)); *)
-
-(*   (* @dev Used to mark the smart contract as upgraded, in case there is a serious*) *)
-(*   (*  breaking bug. This method does nothing but keep track of the new contract and*) *)
-(*   (*  emit a message indicating that the new address is set. It's up to clients of this*) *)
-(*   (*  contract to update to the new contract address in that case. (This contract will*) *)
-(*   (*  be paused indefinitely if such an upgrade takes place.)*) *)
-(*   (* @param _v2Address new address*) *)
-(*   external fun setNewAddress (_v2Address : address) guard onlyCEO, whenPaused = *)
-(*     (* See README.md for updgrade plan*) *)
-(*     newContractAddress := _v2Address; *)
-(*     ContractUpgrade(_v2Address); *)
-
-(*   (* @notice No tipping!*) *)
-(*   (* @dev Reject all Ether from being sent here, unless it's from one of the*) *)
-(*   (*  two auction contracts. (Hopefully, we can prevent user accidents.)*) *)
-(*   fun default () external payable = *)
-(*     require( *)
-(*       msg.sender == address(saleAuction) || *)
-(*       msg.sender == address(siringAuction) *)
-(*     ); *)
-
-(*   (* @notice Returns all the relevant information about a specific kitty.*) *)
-(*   (* @param _id The ID of the kitty of interest.*) *)
-(*   fun getKitty (_id : uint256) *)
-(*     external *)
-(*     view *)
-(*     return ( *)
-(*     isGestating : bool, *)
-(*     isReady : bool, *)
-(*     cooldownIndex : uint256, *)
-(*     nextActionAt : uint256, *)
-(*     siringWithId : uint256, *)
-(*     birthTime : uint256, *)
-(*     matronId : uint256, *)
-(*     sireId : uint256, *)
-(*     generation : uint256, *)
-(*     genes : uint256 *)
-(*   ) = *)
-(*     let storage kit : Kitty = kitties[_id]; *)
-
-(*     (* if this variable is 0 then it's not gestating*) *)
-(*     ( *)
-(*       (kit.siringWithId != 0), *)
-(*       (kit.cooldownEndBlock <= block.number), *)
-(*       uint256(kit.cooldownIndex), *)
-(*       uint256(kit.cooldownEndBlock), *)
-(*       uint256(kit.siringWithId), *)
-(*       uint256(kit.birthTime), *)
-(*       uint256(kit.matronId), *)
-(*       uint256(kit.sireId), *)
-(*       uint256(kit.generation), *)
-(*       kit.genes, *)
-(*     ) *)
-
-(*   (* @dev Override unpause so it requires all external contract addresses*) *)
-(*   (*  to be set before contract can be unpaused. Also, we can't have*) *)
-(*   (*  newContractAddress set either, because then the contract was upgraded.*) *)
-(*   (* @notice This is public rather than external so we can call super.unpause*) *)
-(*   (*  without using an expensive CALL.*) *)
-(*   public fun unpause () guard onlyCEO, whenPaused = *)
-(*     require(isSome saleAuction); *)
-(*     require(isSome siringAuction); *)
-(*     require(isSome geneScience); *)
-(*     require(isNone newContractAddress); *)
-
-(*     (* Actually unpause the contract.*) *)
-(*     super unpause(); *)
-
-(*   (* @dev Allows the CFO to capture the balance available to the contract.*) *)
-(*   external fun withdrawBalance () guard onlyCFO = *)
-(*     let balance : uint256 = this.balance; *)
-(*     (* Subtract all the currently pregnant kittens we have, plus 1 of margin.*) *)
-(*     let subtractFees : uint256 = (pregnantKitties + 1) * autoBirthFee; *)
-
-(*     if (balance > subtractFees) then *)
-(*       cfoAddress.send(balance - subtractFees); *)
-(*     end *)
+(* @title Reverse auction modified for siring*)
+(* @notice We omit a fallback fun to prevent accidental sends to this contract.*)
+contract SiringClockAuction = struct inherit ClockAuction
+
+  (* @dev Sanity check that allows us to ensure that we are pointing to the*)
+  (*  right auction in our setSiringAuctionAddress() call.*)
+  public val isSiringClockAuction : bool = true
+
+  (* Delegate constructor*)
+  public fun init (_nftAddr : address, _cut : uint256) =
+    ClockAuction(_nftAddr, _cut)
+
+  (* @dev Creates and begins a new auction. Since this fun is wrapped,*)
+  (* require sender to be KittyCore contract.*)
+  (* @param _tokenId - ID of token to auction, sender must be owner.*)
+  (* @param _startingPrice - Price of item (in wei) at beginning of auction.*)
+  (* @param _endingPrice - Price of item (in wei) at end of auction.*)
+  (* @param _duration - Length of auction (in seconds).*)
+  (* @param _seller - Seller, if not the message sender*)
+  fun createAuction (
+    _tokenId : uint256,
+    _startingPrice : uint256,
+    _endingPrice : uint256,
+    _duration : uint256,
+    _seller : address
+  )
+    external
+  =
+    (* Sanity check that no inputs overflow how many bits we've allocated*)
+    (* to store them in the auction struct.*)
+    require(_startingPrice == uint256(uint128(_startingPrice)));
+    require(_endingPrice == uint256(uint128(_endingPrice)));
+    require(_duration == uint256(uint64(_duration)));
+
+    require(msg.sender == address(nonFungibleContract));
+    _escrow(_seller, _tokenId);
+    let memory auction : Auction = Auction(
+      _seller,
+      uint128(_startingPrice),
+      uint128(_endingPrice),
+      uint64(_duration),
+      uint64(now)
+    );
+    _addAuction(_tokenId, auction)
+
+  (* @dev Places a bid for siring. Requires the sender*)
+  (* is the KittyCore contract because all bid methods*)
+  (* should be wrapped. Also return the kitty to the*)
+  (* seller rather than the winner.*)
+  fun bid (_tokenId : uint256)
+    external
+    payable
+  =
+    require(msg.sender == address(nonFungibleContract));
+    let seller : address = tokenIdToAuction[_tokenId].seller;
+    (* _bid checks that token ID is valid and will throw if bid fails*)
+    _bid(_tokenId, msg.value);
+    (* We transfer the kitty back to the seller, the winner will get*)
+    (* the offspring*)
+    _transfer(seller, _tokenId)
+
+end
+
+
+
+
+
+(* @title Clock auction modified for sale of kitties*)
+(* @notice We omit a fallback fun to prevent accidental sends to this contract.*)
+contract SaleClockAuction = struct inherit ClockAuction
+
+  (* @dev Sanity check that allows us to ensure that we are pointing to the*)
+  (*  right auction in our setSaleAuctionAddress() call.*)
+  public val isSaleClockAuction : bool = true
+
+  (* Tracks last 5 sale price of gen0 kitty sales*)
+  public state gen0SaleCount : ref uint256
+  public state lastGen0SalePrices : array uint256 {5}
+
+  (* Delegate constructor*)
+  public fun init (_nftAddr : address, _cut : uint256) =
+    ClockAuction(_nftAddr, _cut)
+
+  (* @dev Creates and begins a new auction.*)
+  (* @param _tokenId - ID of token to auction, sender must be owner.*)
+  (* @param _startingPrice - Price of item (in wei) at beginning of auction.*)
+  (* @param _endingPrice - Price of item (in wei) at end of auction.*)
+  (* @param _duration - Length of auction (in seconds).*)
+  (* @param _seller - Seller, if not the message sender*)
+  fun createAuction (
+    _tokenId : uint256,
+    _startingPrice : uint256,
+    _endingPrice : uint256,
+    _duration : uint256,
+    _seller : address
+  )
+    external
+  =
+    (* Sanity check that no inputs overflow how many bits we've allocated*)
+    (* to store them in the auction struct.*)
+    require(_startingPrice == uint256(uint128(_startingPrice)));
+    require(_endingPrice == uint256(uint128(_endingPrice)));
+    require(_duration == uint256(uint64(_duration)));
+
+    require(msg.sender == address(nonFungibleContract));
+    _escrow(_seller, _tokenId);
+    let memory auction : Auction = Auction(
+      _seller,
+      uint128(_startingPrice),
+      uint128(_endingPrice),
+      uint64(_duration),
+      uint64(now)
+    );
+    _addAuction(_tokenId, auction)
+
+  (* @dev Updates lastSalePrice if seller is the nft contract*)
+  (* Otherwise, works the same as default bid method.*)
+  fun bid (_tokenId : uint256)
+    external
+    payable
+  =
+    (* _bid verifies token ID size*)
+    let seller : address = tokenIdToAuction[_tokenId].seller;
+    let price : uint256 = _bid(_tokenId, msg.value);
+    _transfer(msg.sender, _tokenId);
+
+    (* If not a gen0 auction, exit*)
+    if (seller == address(nonFungibleContract)) then
+      (* Track gen0 sale prices*)
+      set lastGen0SalePrices[gen0SaleCount mod 5] price;
+      modify gen0SaleCount ++
+    end
+
+  external fun averageGen0SalePrice () view return uint256 =
+    let sum : ref uint256 = ref 0;
+    for (i : uint256 = 0; i < 5; ++)
+      modify sum += lastGen0SalePrices[i]
+    end;
+    return sum / 5
+
+end
+
+
+(* @title Handles creating auctions for sale and siring of kitties.*)
+(*  This wrapper of ReverseAuction exists only so that users can create*)
+(*  auctions with only one transaction.*)
+contract KittyAuction = struct inherit KittyBreeding
+
+  (* @notice The auction contract variables are defined in KittyBase to allow*)
+  (*  us to refer to them in KittyOwnership to prevent accidental transfers.*)
+  (* `saleAuction` refers to the auction for gen0 and p2p sale of kitties.*)
+  (* `siringAuction` refers to the auction for siring rights of kitties.*)
+
+  (* @dev Sets the reference to the sale auction.*)
+  (* @param _address - Address of sale contract.*)
+  external fun setSaleAuctionAddress (_address : address) guard onlyCEO =
+    let candidateContract : SaleClockAuction = SaleClockAuction(_address);
+
+    (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*)
+    require(candidateContract.isSaleClockAuction());
+
+    (* Set the new contract address*)
+    saleAuction := SOME candidateContract
+
+  (* @dev Sets the reference to the siring auction.*)
+  (* @param _address - Address of siring contract.*)
+  external fun setSiringAuctionAddress (_address : address) guard onlyCEO =
+    let candidateContract : SiringClockAuction = SiringClockAuction(_address);
+
+    (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*)
+    require(candidateContract.isSiringClockAuction());
+
+    (* Set the new contract address*)
+    siringAuction := SOME candidateContract
+
+  (* @dev Put a kitty up for auction.*)
+  (*  Does some ownership trickery to create auctions in one tx.*)
+  fun createSaleAuction (
+    _kittyId : uint256,
+    _startingPrice : uint256,
+    _endingPrice : uint256,
+    _duration : uint256
+  )
+    external
+    guard whenNotPaused
+  =
+    (* Auction contract checks input sizes*)
+    (* If kitty is already on any auction, this will throw*)
+    (* because it will be owned by the auction contract.*)
+    require(_owns(msg.sender, _kittyId));
+    (* Ensure the kitty is not pregnant to prevent the auction*)
+    (* contract accidentally receiving ownership of the child.*)
+    (* NOTE: the kitty IS allowed to be in a cooldown.*)
+    require(not isPregnant(_kittyId));
+    _approve(_kittyId, saleAuction.valOf());
+    (* Sale auction throws if inputs are invalid and clears*)
+    (* transfer and sire approval after escrowing the kitty.*)
+    saleAuction.valOf().createAuction(
+      _kittyId,
+      _startingPrice,
+      _endingPrice,
+      _duration,
+      msg.sender
+    )
+
+  (* @dev Put a kitty up for auction to be sire.*)
+  (*  Performs checks to ensure the kitty can be sired, then*)
+  (*  delegates to reverse auction.*)
+  fun createSiringAuction (
+    _kittyId : uint256,
+    _startingPrice : uint256,
+    _endingPrice : uint256,
+    _duration : uint256
+  )
+    external
+    guard whenNotPaused
+  =
+    (* Auction contract checks input sizes*)
+    (* If kitty is already on any auction, this will throw*)
+    (* because it will be owned by the auction contract.*)
+    require(_owns(msg.sender, _kittyId));
+    require(isReadyToBreed(_kittyId));
+    _approve(_kittyId, siringAuction.valOf());
+    (* Siring auction throws if inputs are invalid and clears*)
+    (* transfer and sire approval after escrowing the kitty.*)
+    siringAuction.valOf().createAuction(
+      _kittyId,
+      _startingPrice,
+      _endingPrice,
+      _duration,
+      msg.sender
+    )
+
+  (* @dev Completes a siring auction by bidding.*)
+  (*  Immediately breeds the winning matron with the sire on auction.*)
+  (* @param _sireId - ID of the sire on auction.*)
+  (* @param _matronId - ID of the matron owned by the bidder.*)
+  fun bidOnSiringAuction (
+    _sireId : uint256,
+    _matronId : uint256
+  )
+    external
+    payable
+    guard whenNotPaused
+  =
+    (* Auction contract checks input sizes*)
+    require(_owns(msg.sender, _matronId));
+    require(isReadyToBreed(_matronId));
+    require(_canBreedWithViaAuction(_matronId, _sireId));
+
+    (* Define the current price of the auction.*)
+    let currentPrice : uint256 = siringAuction.valOf().getCurrentPrice(_sireId);
+    require(msg.value >= currentPrice + autoBirthFee);
+
+    (* Siring auction will throw if the bid fails.*)
+    apply_with_value siringAuction.valOf().bid value (msg.value - autoBirthFee) (_sireId);
+    _breedWith(uint32(_matronId), uint32(_sireId))
+
+  (* @dev Transfers the balance of the sale auction contract*)
+  (* to the KittyCore contract. We use two-step withdrawal to*)
+  (* prevent two transfer calls in the auction bid fun.*)
+  external fun withdrawAuctionBalances () guard onlyCLevel =
+    saleAuction.valOf().withdrawBalance();
+    siringAuction.valOf().withdrawBalance()
+
+end
+
+
+(* @title all funs related to creating kittens*)
+contract KittyMinting = struct inherit KittyAuction
+
+  (* Limits the number of cats the contract owner can ever create.*)
+  public val PROMO_CREATION_LIMIT : uint256 = 5000
+  public val GEN0_CREATION_LIMIT : uint256 = 45000
+
+  (* Constants for gen0 auctions.*)
+  public val GEN0_STARTING_PRICE : uint256 = 10 finney
+  public val GEN0_AUCTION_DURATION : uint256 = 1 days
+
+  (* Counts the number of cats the contract owner has created.*)
+  public state promoCreatedCount : ref uint256
+  public state gen0CreatedCount : ref uint256
+
+  (* @dev we can create promo kittens, up to a limit. Only callable by COO*)
+  (* @param _genes the encoded genes of the kitten to be created, any value is accepted*)
+  (* @param _owner the future owner of the created kittens. Default to contract COO*)
+  external fun createPromoKitty (_genes : uint256, _owner : address) guard onlyCOO =
+    let kittyOwner : ref address = ref _owner;
+    if (kittyOwner.v == address(0)) then
+       kittyOwner := cooAddress
+    end;
+    require(promoCreatedCount.v < PROMO_CREATION_LIMIT);
+
+    modify promoCreatedCount ++;
+    _createKitty(0, 0, 0, _genes, kittyOwner)
+
+  (* @dev Creates a new gen0 kitty with the given genes and*)
+  (*  creates an auction for it.*)
+  external fun createGen0Auction (_genes : uint256) guard onlyCOO =
+    require(gen0CreatedCount.v < GEN0_CREATION_LIMIT);
+
+    let kittyId : uint256 = _createKitty(0, 0, 0, _genes, address(this));
+    _approve(kittyId, saleAuction.valOf());
+
+    saleAuction.valOf().createAuction(
+      kittyId,
+      _computeNextGen0Price(),
+      0,
+      GEN0_AUCTION_DURATION,
+      address(this)
+    );
+
+    modify gen0CreatedCount ++
+
+  (* @dev Computes the next gen0 auction starting price, given*)
+  (*  the average of the past 5 prices + 50%.*)
+  fun _computeNextGen0Price () internal view return uint256 =
+    let avePrice : uint256 = saleAuction.valOf().averageGen0SalePrice();
+
+    (* Sanity check to ensure we don't overflow arithmetic*)
+    require(avePrice == uint256(uint128(avePrice)));
+
+    let nextPrice : ref uint256 = ref $ avePrice + (avePrice / 2);
+
+    (* We never auction for less than starting price*)
+    if (nextPrice.v < GEN0_STARTING_PRICE) then
+      nextPrice := GEN0_STARTING_PRICE
+    end;
+
+    nextPrice
+
+end
+
+
+(* @title CryptoKitties: Collectible, breedable, and oh-so-adorable cats on the Ethereum blockchain.*)
+(* @author Axiom Zen (https://www.axiomzen.co)*)
+(* @dev The main CryptoKitties contract, keeps track of kittens so they don't wander around and get lost.*)
+contract KittyCore = struct inherit KittyMinting
+
+  (* This is the main CryptoKitties contract. In order to keep our code seperated into logical sections,*)
+  (* we've broken it up in two ways. First, we have several seperately-instantiated sibling contracts*)
+  (* that handle auctions and our super-top-secret genetic combination algorithm. The auctions are*)
+  (* seperate since their logic is somewhat complex and there's always a risk of subtle bugs. By keeping*)
+  (* them in their own contracts, we can upgrade them without disrupting the main contract that tracks*)
+  (* kitty ownership. The genetic combination algorithm is kept seperate so we can open-source all of*)
+  (* the rest of our code without making it _too_ easy for folks to figure out how the genetics work.*)
+  (* Don't worry, I'm sure someone will reverse engineer it soon enough!*)
+  (**)
+  (* Secondly, we break the core contract into multiple files using inheritence, one for each major*)
+  (* facet of funality of CK. This allows us to keep related code bundled together while still*)
+  (* avoiding a single giant file with everything in it. The breakdown is as follows:*)
+  (**)
+  (*    - KittyBase: This is where we define the most fundamental code shared throughout the core*)
+  (*       funality. This includes our main data storage, constants and data types, plus*)
+  (*       internal funs for managing these items.*)
+  (**)
+  (*    - KittyAccessControl: This contract manages the various addresses and constraints for operations*)
+  (*       that can be executed only by specific roles. Namely CEO, CFO and COO.*)
+  (**)
+  (*    - KittyOwnership: This provides the methods required for basic non-fungible token*)
+  (*       transactions, following the draft ERC-721 spec (https://github.com/ethereum/EIPs/issues/721).*)
+  (**)
+  (*    - KittyBreeding: This file contains the methods necessary to breed cats together, including*)
+  (*       keeping track of siring offers, and relies on an external genetic combination contract.*)
+  (**)
+  (*    - KittyAuctions: Here we have the public methods for auctioning or bidding on cats or siring*)
+  (*       services. The actual auction funality is handled in two sibling contracts (one*)
+  (*       for sales and one for siring), while auction creation and bidding is mostly mediated*)
+  (*       through this facet of the core contract.*)
+  (**)
+  (*    - KittyMinting: This final facet contains the funality we use for creating new gen0 cats.*)
+  (*       We can make up to 5000 "promo" cats that can be given away (especially important when*)
+  (*       the community is new), and all others can only be created and then immediately put up*)
+  (*       for auction via an algorithmically determined starting price. Regardless of how they*)
+  (*       are created, there is a hard limit of 50k gen0 cats. After that, it's all up to the*)
+  (*       community to breed, breed, breed!*)
+
+  (* Set in case the core contract is broken and an upgrade is required*)
+  public state newContractAddress : ref address
+
+  (* @notice Creates the main CryptoKitties smart contract instance.*)
+  public fun init () =
+    (* Starts paused.*)
+    paused := true;
+
+    (* the creator of the contract is the initial CEO*)
+    ceoAddress := msg.sender;
+
+    (* the creator of the contract is also the initial COO*)
+    cooAddress := msg.sender;
+
+    (* start with the mythical kitten 0 - so we don't have generation-0 parent issues*)
+    _createKitty(0, 0, 0, uint256(-1), address(0))
+
+  (* @dev Used to mark the smart contract as upgraded, in case there is a serious*)
+  (*  breaking bug. This method does nothing but keep track of the new contract and*)
+  (*  emit a message indicating that the new address is set. It's up to clients of this*)
+  (*  contract to update to the new contract address in that case. (This contract will*)
+  (*  be paused indefinitely if such an upgrade takes place.)*)
+  (* @param _v2Address new address*)
+  external fun setNewAddress (_v2Address : address) guard onlyCEO, whenPaused =
+    (* See README.md for updgrade plan*)
+    newContractAddress := _v2Address;
+    ContractUpgrade(_v2Address)
+
+  (* @notice No tipping!*)
+  (* @dev Reject all Ether from being sent here, unless it's from one of the*)
+  (*  two auction contracts. (Hopefully, we can prevent user accidents.)*)
+  fun default () external payable =
+    require(
+      msg.sender == address(saleAuction) ||
+      msg.sender == address(siringAuction)
+    )
+
+  (* @notice Returns all the relevant information about a specific kitty.*)
+  (* @param _id The ID of the kitty of interest.*)
+  fun getKitty (_id : uint256)
+    external
+    view
+    return (
+    isGestating : bool,
+    isReady : bool,
+    cooldownIndex : uint256,
+    nextActionAt : uint256,
+    siringWithId : uint256,
+    birthTime : uint256,
+    matronId : uint256,
+    sireId : uint256,
+    generation : uint256,
+    genes : uint256
+  ) =
+    let storage kit : Kitty = kitties[_id];
+
+    (* if this variable is 0 then it's not gestating*)
+    (
+      (kit.siringWithId != 0),
+      (kit.cooldownEndBlock <= block.number),
+      uint256(kit.cooldownIndex),
+      uint256(kit.cooldownEndBlock),
+      uint256(kit.siringWithId),
+      uint256(kit.birthTime),
+      uint256(kit.matronId),
+      uint256(kit.sireId),
+      uint256(kit.generation),
+      kit.genes
+    )
+
+  (* @dev Override unpause so it requires all external contract addresses*)
+  (*  to be set before contract can be unpaused. Also, we can't have*)
+  (*  newContractAddress set either, because then the contract was upgraded.*)
+  (* @notice This is public rather than external so we can call super.unpause*)
+  (*  without using an expensive CALL.*)
+  public fun unpause () guard onlyCEO, whenPaused =
+    require(isSome saleAuction);
+    require(isSome siringAuction);
+    require(isSome geneScience);
+    require(isNone newContractAddress);
+
+    (* Actually unpause the contract.*)
+    super unpause()
+
+  (* @dev Allows the CFO to capture the balance available to the contract.*)
+  external fun withdrawBalance () guard onlyCFO =
+    let balance : uint256 = this.balance;
+    (* Subtract all the currently pregnant kittens we have, plus 1 of margin.*)
+    let subtractFees : uint256 = (pregnantKitties + 1) * autoBirthFee;
+
+    if (balance > subtractFees) then
+      cfoAddress.send(balance - subtractFees)
+    end
   
-(* end *)
+end

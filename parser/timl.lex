@@ -180,10 +180,10 @@ string = [^\"];
                  (yytext, make_region (yypos, size yytext)));
  
 <INITIAL>{digit}+ => ((T.INT o flat)
-                        (Option.valOf (scan StringCvt.DEC yytext), make_region (yypos, size yytext)));
+                        (yytext, make_region (yypos, size yytext)));
  
 <INITIAL>"0x"{hexdigit}+ => ((T.INT o flat)
-                               (Option.valOf (scan StringCvt.HEX yytext), make_region (yypos, size yytext)));
+                               (yytext, make_region (yypos, size yytext)));
 
 <INITIAL>{id_init}({id_init}|{digit}|&)* => ((getOpt (is_keyword yytext, fn r => (T.ID o flat) (yytext, r)))
 				  (make_region (yypos, size yytext)));
