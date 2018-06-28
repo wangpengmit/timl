@@ -467,6 +467,9 @@ local
         | S.EField (e, name, r) => raise Impossible "elaborate/EField"
         | S.ESemis (es, r) => raise Impossible "elaborate/ESemis"
         | S.ELet2 _ => raise Impossible "elaborate/ELet2"
+        | S.EIfs _ => raise Impossible "elaborate/EIfs"
+        | S.EFor _ => raise Impossible "elaborate/EFor"
+        | S.EAsm _ => raise Impossible "elaborate/EAsm"
 
   and elab_decl decl =
       case decl of

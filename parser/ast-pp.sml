@@ -773,8 +773,7 @@ fun pp_e s e =
         | ERecord (es, _) =>
           (
             open_hbox ();
-            str "ERecord";
-            space ();
+            strs "ERecord";
             str "(";
             app (fn (name, e) => (pp_id name; colon (); pp_e e; comma ())) es;
             str ")";
@@ -783,13 +782,41 @@ fun pp_e s e =
         | EField (e, name, _) =>
           (
             open_hbox ();
-            str "EField";
-            space ();
+            strs "EField";
             str "(";
             pp_e e;
             comma ();
             pp_id name;
             str ")";
+            close_box ()
+          )
+        | EAsm (e, _) =>
+          (
+            open_hbox ();
+            strs "EAsm";
+            str "(";
+            pp_e e;
+            str ")";
+            close_box ()
+          )
+        | EFor (id, t, e1, e2, e3, e4, _) =>
+          (
+            open_vbox ();
+            open_hbox ();
+            strs "EFor";
+            str "(";
+            pp_id id;
+            Option.app (fn t => (comma (); pp_t t)) t;
+            comma ();
+            pp_e e1;
+            comma ();
+            pp_e e2;
+            comma ();
+            pp_e e3;
+            str ")";
+            close_box ();
+            space ();
+            pp_e e4;
             close_box ()
           )
         | ESemis (es, _) =>
@@ -817,6 +844,53 @@ fun pp_e s e =
             str ")";
             close_box ()
           )
+        | EIfs (ifs, _) =>
+          let
+            fun pp_if i =
+              case i of
+                  If (e1, e2, _) =>
+                  (
+                    open_vbox ();
+                    open_hbox ();
+                    strs "If";
+                    str "(";
+                    pp_e e1;
+                    strs ")";
+                    str "Then";
+                    close_box ();
+                    space ();
+                    pp_e e2;
+                    close_box ()
+                  )
+                | Elseif (e1, e2, _) =>
+                  (
+                    open_vbox ();
+                    open_hbox ();
+                    strs "Elseif";
+                    str "(";
+                    pp_e e1;
+                    strs ")";
+                    str "Then";
+                    close_box ();
+                    space ();
+                    pp_e e2;
+                    close_box ()
+                  )
+                | Else (e, _) =>
+                  (
+                    open_vbox ();
+                    strs "Else";
+                    pp_e e;
+                    close_box ()
+                  )
+          in
+          (
+            open_vbox_noindent ();
+            app (fn i => (pp_if i; space ())) ifs;
+            str "End";
+            close_box ()
+          )
+          end
     end
 
 and pp_d s d =

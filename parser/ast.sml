@@ -118,6 +118,9 @@ datatype exp =
          | EField of exp * id * region
          | ESemis of exp list * region
          | ELet2 of storage option * id * ty option * exp option * region
+         | EIfs of ifelse list * region
+         | EFor of id * ty option * exp * exp * exp * exp * region
+         | EAsm of exp * region
 
      and decl =
          DVal of id list * ptrn * exp * region
@@ -131,10 +134,18 @@ datatype exp =
          | DState of id * ty * init option
          | DEvent of id * ty list
 
+     and ifelse =
+         If of exp * exp * region
+         | Elseif of exp * exp * region
+         | Else of exp * region
+
      and fun_modifier =
          FmView
          | FmPure
          | FmGuard of exp list
+         | FmVisi of visi
+         | FmPre of state
+         | FmPost of state
              
      and init =
          InitExpr of exp
@@ -239,6 +250,6 @@ fun EStrConcat (e1, e2, r) = EBinOp (EBStrConcat (), e1, e2, r)
 fun ESetRef (e1, e2, r) = EBinOp (EBSetRef (), e1, e2, r)
 
 type typing = id * ty
-                     
+
 end
 

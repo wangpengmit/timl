@@ -75,6 +75,7 @@ val keywords = [
     ("if", T.IF),
     ("then", T.THEN),
     ("else", T.ELSE),
+    ("elseif", T.ELSEIF),
     ("never", T.NEVER),
     ("ifdec", T.IFDEC),
     ("mod", T.MOD),
@@ -94,8 +95,10 @@ val keywords = [
     ("external", T.EXTERNAL),
     ("inherit", T.INHERIT),
     ("state", T.STATE),
-    ("memory", T.MEMORY),
-    ("as", T.AS)
+    ("for", T.FOR),
+    ("as", T.AS),
+    ("assembly", T.ASSEMBLY),
+    ("memory", T.MEMORY)
 ]
  
 fun find (m, k : string) = Option.map #2 (List.find (fn (k', _) => k' = k) m)
@@ -186,7 +189,7 @@ string = [^\"];
 <INITIAL>".." => (T.DOTDOT (make_region (yypos, size yytext)));
 <INITIAL>"<==" => (T.BIG_O_INFIX (make_region (yypos, size yytext)));
 <INITIAL>"^" => (T.STR_CONCAT (make_region (yypos, size yytext)));
-<INITIAL>";" => (T.SEMI_COLON (make_region (yypos, size yytext)));
+<INITIAL>";" => (T.SEMI (make_region (yypos, size yytext)));
 <INITIAL>"++" => (T.PLUS_PLUS (make_region (yypos, size yytext)));
 <INITIAL>"+=" => (T.PLUS_EQ (make_region (yypos, size yytext)));
 <INITIAL>"-=" => (T.MINUS_EQ (make_region (yypos, size yytext)));

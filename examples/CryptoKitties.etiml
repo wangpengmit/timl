@@ -429,22 +429,22 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   public val symbol : string = "CK"
 
   (* The contract that will return kitty metadata*)
-  public val erc721Metadata : ref option ERC721Metadata
+  public state erc721Metadata : ref option ERC721Metadata
 
   val InterfaceSignature_ERC165 : bytes4 =
-    bytes4(keccak256('supportsInterface(bytes4)'))
+    bytes4(keccak256("supportsInterface(bytes4)"))
 
   val InterfaceSignature_ERC721 : bytes4 =
-    bytes4(keccak256('name()')) ^
-    bytes4(keccak256('symbol()')) ^
-    bytes4(keccak256('totalSupply()')) ^
-    bytes4(keccak256('balanceOf(address)')) ^
-    bytes4(keccak256('ownerOf(uint256)')) ^
-    bytes4(keccak256('approve(address,uint256)')) ^
-    bytes4(keccak256('transfer(address,uint256)')) ^
-    bytes4(keccak256('transferFrom(address,address,uint256)')) ^
-    bytes4(keccak256('tokensOfOwner(address)')) ^
-    bytes4(keccak256('tokenMetadata(uint256,string)'))
+    bytes4(keccak256("name()")) ^
+    bytes4(keccak256("symbol()")) ^
+    bytes4(keccak256("totalSupply()")) ^
+    bytes4(keccak256("balanceOf(address)")) ^
+    bytes4(keccak256("ownerOf(uint256)")) ^
+    bytes4(keccak256("approve(address,uint256)")) ^
+    bytes4(keccak256("transfer(address,uint256)")) ^
+    bytes4(keccak256("transferFrom(address,address,uint256)")) ^
+    bytes4(keccak256("tokensOfOwner(address)")) ^
+    bytes4(keccak256("tokenMetadata(uint256,string)"))
 
   (* @notice Introspection interface as per ERC-165 (https://github.com/ethereum/EIPs/issues/165).*)
   (*  Returns true for any standardized interfaces implemented by this contract. We implement*)
@@ -496,11 +496,10 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   (* @param _to The address of the recipient, can be a user or contract.*)
   (* @param _tokenId The ID of the Kitty to transfer.*)
   (* @dev Required for ERC-721 compliance.*)
-  fun transfer (
+  external fun transfer (
     _to : address,
     uint256 _tokenId
-  )
-    external
+  )    
     guard whenNotPaused
   =
     (* Safety check to prevent against an unexpected 0x0 default.*)
@@ -527,11 +526,10 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   (*  clear all approvals.*)
   (* @param _tokenId The ID of the Kitty that can be transferred if this call succeeds.*)
   (* @dev Required for ERC-721 compliance.*)
-  fun approve (
+  external fun approve (
     _to : address,
     _tokenId : uint256
   )
-    external
     guard whenNotPaused
   =
     (* Only an owner can grant transfer approval.*)
@@ -550,12 +548,11 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   (*  including the caller.*)
   (* @param _tokenId The ID of the Kitty to be transferred.*)
   (* @dev Required for ERC-721 compliance.*)
-  fun transferFrom (
+  external fun transferFrom (
     _from : address,
     _to : address,
     _tokenId : uint256
   )
-    external
     guard whenNotPaused
   =
     (* Safety check to prevent against an unexpected 0x0 default.*)
@@ -593,7 +590,7 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   (*  expensive (it walks the entire Kitty array looking for cats belonging to owner),*)
   (*  but it also return a dynamic array, which is only supported for web3 calls, and*)
   (*  not contract-to-contract calls.*)
-  external fun tokensOfOwner {len : Nat | len > 0} (_owner : address) view pre {kitties : len} post {kitties : len} return (ownerTokens : vector uint256) using $(16 + len * 11) =
+  external fun tokensOfOwner {len : Nat | len > 0} (_owner : address) view pre {kitties : len} return (ownerTokens : vector uint256) using $(16 + len * 11) =
     let tokenCount : uint256 = balanceOf(_owner);
 
     if (tokenCount == 0) then
@@ -609,9 +606,9 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
       for (catId : uint256 = 1; catId <= totalCats; ++)
         if (kittyIndexToOwner[catId] == _owner) then
           set result[resultIndex] catId;
-          modify resultIndex ++;
+          modify resultIndex ++
         end
-      endfor;
+      end;
 
       result
     end
@@ -626,14 +623,14 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
         mstore(_dest, mload(_src))
       };
       modify _dest += 32;
-      modify _src += 32;
-    endfor;
+      modify _src += 32
+    end;
 
     (* Copy remaining bytes*)
     let mask : uint256 = 256 ** (32 - _len) - 1;
     assembly {
-      let srcpart := and(mload(_src), not(mask))
-      let destpart := and(mload(_dest), mask)
+      let srcpart = and(mload(_src), not(mask));
+      let destpart = and(mload(_dest), mask);
       mstore(_dest, or(destpart, srcpart))
     }
 
