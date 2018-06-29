@@ -141,6 +141,7 @@ open Ast
     | WHILE
     | ASSEMBLY
     | CONSTANT
+    | ZERO
 
 %nonterm start of prog
        | exp of exp
@@ -479,6 +480,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | WHILE LPAREN exp RPAREN exps END (EWhile (exp, exps, (WHILEleft, ENDright)))
      | ASSEMBLY LCUR exps RCUR (EAsm (exps, (ASSEMBLYleft, ASSEMBLYright)))
      | BANG aexp (EUnOp (EUDeref (), aexp, (BANGleft, aexpright)))
+     | ZERO (EZero (ZEROleft, ZEROright))
 
 ifs : IF exp THEN exps elses (If (exp, exps, (IFleft, expsright)) :: elses)
 elses : ELSEIF exp THEN exps elses (Elseif (exp, exps, (ELSEIFleft, expsright)) :: elses)

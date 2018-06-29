@@ -84,6 +84,7 @@ datatype expr_const =
          | ECNat of int
          | ECString of string
          | ECChar of Char.char
+         | ECZero of unit
 
 datatype ast_expr_unop =
          EUTiML of expr_un_op
@@ -261,6 +262,7 @@ fun EAscTimeSpace (e, (i, j), r) = EAscSpace (EAscTime (e, i, r), j, r)
 fun EIfi (e1, e2, e3, r) = ETriOp (ETIfi (), e1, e2, e3, r)
 fun EStrConcat (e1, e2, r) = EBinOp (EBStrConcat (), e1, e2, r)
 fun ESetRef (e1, e2, r) = EBinOp (EBSetRef (), e1, e2, r)
+fun EZero r = EConst (ECZero (), r)
 
 type typing = id * ty
 type indexed_typing = id * (ty * bool)

@@ -494,6 +494,7 @@ fun str_expr_const c =
       | ECNat n => "#" ^ str_int n
       | ECString s => sprintf "\"$\"" [s]
       | ECChar c => sprintf "'$'" [str_char c]
+      | ECZero () => "zero"
 
 fun str_ast_expr_unop opr =
     case opr of

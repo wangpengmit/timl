@@ -408,11 +408,11 @@ contract Wallet = struct inherit multisig, multiowned, daylimit
     for (i : uint = 0; i < length; inc)
       set m_txs[m_pendingIndex[i] ] zero
     end;
-    super clearPending()
+    super.clearPending()
 
   (* FIELDS *)
 
   (* pending transactions we have at present. *)
-  val m_txs : map bytes32 Transaction
+  state m_txs : map bytes32 Transaction
                                                   
 end

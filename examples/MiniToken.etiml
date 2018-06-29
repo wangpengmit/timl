@@ -3,9 +3,10 @@ pragma etiml ^0.1
 structure Util = struct
   fun add b a = a + b
   fun subBy b a = a - b
+  fun orBy b a = a  b
   (* val op+= = add *)
   (* val op-= subBy *)
-  fun require b = if b then () else __&halt 1 end
+  fun require b = if b then () else throw 1 end
 end
 
 contract MyToken = struct

@@ -391,7 +391,9 @@ local
                   (* val e = EApp (EVar (QID $ qid_add_r r $ CSTR_STRING_NAMEFUL, false), e) *)
                 in
                   e
-                end)
+                end
+              | S.ECZero () => raise Impossible "elaborate/ECZero"
+            )
 	| S.EBinOp (EBTiML (EBApp ()), e1, e2, r) =>
 	  let 
 	    fun default () = EApp (elab e1, elab e2)
