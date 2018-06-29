@@ -309,6 +309,26 @@ local
         (dt, r)
       end
 
+  fun is_vector t =
+    case t of
+        S.TAppT (S.TVar (NONE, (x, _)), t2, _) =>
+        if x = "vector" then SOME $ elab_mt t2
+        else NONE
+      | _ => NONE
+
+  fun is_map t =
+    case t of
+        S.TAppT (S.TAppT (S.TVar (NONE, (x, _)), t1, _), t2, _) =>
+        if x = "map" then
+          case is_map t2 of
+              SOME t => SOME $ TCell $ TMap t
+            | NONE => SOME $ TCell $ elab_mt t2
+        else NONE
+      | _ => NONE
+
+  val state_decls_ref = ref ([] : (name * top_bind) list)
+  val state_inits_ref = ref ([] : (name * expr) list)
+                          
   fun elab e =
       case e of
 	  S.EVar (id as (m, (x, r)), (eia, has_insert)) =>
@@ -367,7 +387,7 @@ local
 	| S.EAscSpace (e, i, _) =>
 	  EAscSpace (elab e, elab_i i)
 	| S.ELet (return, decs, e, r) =>
-          ELet (elab_return return, Unbound.Bind (Teles $ map elab_decl decs, elab e), r)
+          ELet (elab_return return, Unbound.Bind (Teles $ concatMap elab_decl decs, elab e), r)
 	| S.EConst (c, r) =>
             (case c of
                 S.ECInt n => EConstInt (n, r)
@@ -454,8 +474,16 @@ local
         | S.EBinOp (EBStrConcat (), e1, e2, r) =>
           EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
         | S.EBinOp (EBSetRef (), e1, e2, _) => raise Impossible "elaborate/ESetRef"
-        | S.EUnOp (EUTiML opr, e, r) => EUnOp (opr, elab e, r)
-        | S.EUnOp (opr, e, r) => raise Impossible "elaborate/EUnOp"
+        | S.EBinOp (EBWhile (), e1, e2, _) => raise Impossible "elaborate/EWhile"
+        | S.EUnOp (opr, e, r) =>
+          (case opr of
+               S.EUTiML opr => EUnOp (opr, elab e, r)
+             | S.EUAsm _ => raise Impossible "elaborate/EAsm"
+             | S.EUDeref _ => raise Impossible "elaborate/EDeref"
+             | S.EUReturn _ => raise Impossible "elaborate/EReturn"
+             | S.EUThrow _ => raise Impossible "elaborate/EThrow"
+             | S.EUField _ => raise Impossible "elaborate/EField"
+          )
         | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
           ETriOp (ETIte (), elab e1, elab e2, elab e3)
         | S.ETriOp (S.ETIfDec (), e, e1, e2, r) =>
@@ -470,14 +498,28 @@ local
           ESetModify (is_modify, fst x, map elab offsets, elab e, r)
         | S.ESetModify _ => raise Impossible "elaborate/ESetModify/non-EVar"
         | S.ERecord (es, r) => raise Impossible "elaborate/ERecord"
-        | S.EField (e, name, r) => raise Impossible "elaborate/EField"
-        | S.ESemis (es, r) => raise Impossible "elaborate/ESemis"
-        | S.ELet2 _ => raise Impossible "elaborate/ELet2"
         | S.EIfs _ => raise Impossible "elaborate/EIfs"
         | S.EFor _ => raise Impossible "elaborate/EFor"
-        | S.EWhile _ => raise Impossible "elaborate/EWhile"
-        | S.EAsm _ => raise Impossible "elaborate/EAsm"
-        | S.EReturn _ => raise Impossible "elaborate/EReturn"
+        | S.ELet2 (_, pn, e, r) => raise Error (r, "let-binding are not allowed here ")
+        | S.ESemis (es, r) =>
+          let
+            val es = rev es
+            val (e, es) = case es of
+                              [] => raise Impossible "elaborate/ESemis/es=[]"
+                            | e :: es => (e, es)
+            fun f (body, acc) =
+                case e of
+                    S.ELet2 (_, pn, e, r1) =>
+                    let
+                      val e = default (S.EZero r1) e
+                    in
+                      S.ELet ((NONE, NONE, NONE), [S.DVal ([], pn, e, r1)], body, r)
+                    end
+                  | _ => S.ESemiColon (e, body, r)
+            val e = foldl f e es
+          in
+            elab e
+          end
 
   and elab_decl decl =
       case decl of
@@ -487,10 +529,10 @@ local
           in
             case pn of
                 PnVar name =>
-                DVal (name, Outer $ Unbound.Bind (map (fn nm => (Binder $ TName nm, Outer $ IUnderscore2 r)) tnames, elab e), r)
+                [DVal (name, Outer $ Unbound.Bind (map (fn nm => (Binder $ TName nm, Outer $ IUnderscore2 r)) tnames, elab e), r)]
               | _ =>
                 if null tnames then
-                  DValPtrn (pn, Outer $ elab e, r)
+                  [DValPtrn (pn, Outer $ elab e, r)]
                 else
                   raise Error (r, "compound pattern can't be generalized, so can't have explicit type variables")
           end
@@ -509,19 +551,19 @@ local
             val j = default (IUVar ((), r)) (Option.map elab_i j)
             val e = elab e
           in
-	    DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (fn nm => (Binder $ TName nm, Outer $ IUnderscore2 r)) tnames, Rebind $ Teles binds), ((elab_state r pre, elab_state r post), (t, (d, j)), e)), r)
+	    [DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (fn nm => (Binder $ TName nm, Outer $ IUnderscore2 r)) tnames, Rebind $ Teles binds), ((elab_state r pre, elab_state r post), (t, (d, j)), e)), r)]
           end
         | S.DIdxDef ((name, r), s, i) =>
           let
             val s = default (SUVar ((), r)) $ Option.map elab_s s
           in
-            DIdxDef (Binder $ IName (name, r), Outer $ SOME s, Outer $ elab_i i)
+            [DIdxDef (Binder $ IName (name, r), Outer $ SOME s, Outer $ elab_i i)]
           end
         | S.DAbsIdx2 ((name, r), s, i) =>
           let
             val s = default (SUVar ((), r)) $ Option.map elab_s s
           in
-            DAbsIdx2 (Binder $ IName (name, r), Outer s, Outer $ elab_i i)
+            [DAbsIdx2 (Binder $ IName (name, r), Outer s, Outer $ elab_i i)]
           end
         | S.DAbsIdx ((name, r1), s, i, decls, r) =>
           let
@@ -530,18 +572,32 @@ local
                         SOME i => elab_i i
                       | NONE => IUVar ((), r1)
           in
-            DAbsIdx ((Binder $ IName (name, r1), Outer s, Outer i), Rebind $ Teles $ map elab_decl decls, r)
+            [DAbsIdx ((Binder $ IName (name, r1), Outer s, Outer i), Rebind $ Teles $ concatMap elab_decl decls, r)]
           end
         | S.DDatatype a =>
           let
             val (dt, r) = elab_datatype a
           in
-            DTypeDef (Binder $ TName $ fst $ unBind dt, Outer $ TDatatype (dt, r))
+            [DTypeDef (Binder $ TName $ fst $ unBind dt, Outer $ TDatatype (dt, r))]
           end
-        | S.DTypeDef (name, t) => DTypeDef (Binder $ TName name, Outer $ elab_mt t)
-        | S.DOpen name => DOpen (Inner name, NONE)
-        | S.DState (name, t, init) => raise Impossible "elaborate/DState"
+        | S.DTypeDef (name, t) => [DTypeDef (Binder $ TName name, Outer $ elab_mt t)]
+        | S.DOpen name => [DOpen (Inner name, NONE)]
+        | S.DState (name, t, init) =>
+          let
+            val () = push_ref state_decls_ref $ elab_state_decl (name, t)
+            val () = Option.app (fn e => push_ref state_inits_ref $ (name, elab e)) init
+          in
+            []
+          end
         | S.DEvent (name, ts) => raise Impossible "elaborate/DEvent"
+
+  and elab_state_decl (name, t) =
+      case is_vector t of
+          SOME t => (name, TBState (false, t))
+        | NONE =>
+          case is_map t of
+              SOME t => (name, TBState (true, t))
+            | NONE => raise Error (S.get_region_t t, "wrong state declaration form")
 
   fun elab_spec spec =
       case spec of
@@ -568,40 +624,44 @@ local
 
   fun elab_mod m =
       case m of
-          S.ModComponents (inherits, comps, r) => ModComponents (map elab_decl comps, r)
+          S.ModComponents (inherits, comps, r) =>
+          let
+            val () = state_inits_ref := []
+            val decls = concatMap elab_decl comps
+            fun make_state_init inits =
+                let
+                  fun f (name, init) =
+                      let
+                        val x = EShortVar name
+                      in
+                        case init of
+                            InitExpr (e, r) => [ESet ((x, []), e, r)]
+                          | InitArray (es, r) => mapi (fn (n, e) => ESet ((x, [ENat (n, r)]), e, r)) es
+                      end
+                  val es = concatMap f inits
+                  val body = ESemis (es, r)
+                in
+                  S.DVal ([], S.PnConstr ((NONE, ("__state_init", r)), [], NONE, r), S.EAbs ([], empty_return, body, r))
+                end
+            val state_init = elab_decl $ make_state_init $ rev $ !state_inits_ref
+          in
+            ModComponents (state_init :: decls, r)
+          end
         | S.ModSeal (m, sg) => ModSeal (elab_mod m, elab_sig sg)
         | S.ModTransparentAsc (m, sg) => ModTransparentAsc (elab_mod m, elab_sig sg)
 
-  fun is_vector t =
-    case t of
-        S.TAppT (S.TVar (NONE, (x, _)), t2, _) =>
-        if x = "vector" then SOME $ elab_mt t2
-        else NONE
-      | _ => NONE
-
-  fun is_map t =
-    case t of
-        S.TAppT (S.TAppT (S.TVar (NONE, (x, _)), t1, _), t2, _) =>
-        if x = "map" then
-          case is_map t2 of
-              SOME t => SOME $ TCell $ TMap t
-            | NONE => SOME $ TCell $ elab_mt t2
-        else NONE
-      | _ => NONE
-                                                                         
   fun elab_top_bind bind =
       case bind of
-          S.TBMod (name, m) => (name, TBMod (elab_mod m))
+          S.TBMod (name, m) =>
+          let
+            val () = state_decls_ref := []
+            val ret = (name, TBMod (elab_mod m))
+          in
+            (rev $ !state_decls_ref) @ [ret]
+          end
         | S.TBFunctor (name, (arg_name, arg), body) => (name, TBFunctor ((arg_name, elab_sig arg), elab_mod body))
         | S.TBFunctorApp (name, f, arg) => (name, TBFunctorApp (f, arg))
-        | S.TBState (name, t) =>
-          (case is_vector t of
-               SOME t => (name, TBState (false, t))
-             | NONE =>
-               case is_map t of
-                   SOME t => (name, TBState (true, t))
-                 | NONE => raise Error (S.get_region_t t, "wrong state declaration form")
-          )
+        | S.TBState (name, t) => elab_state_decl (name, t)
         | S.TBPragma (name, version) => (name, TBPragma version)
         | S.TBInterface (name, sgn) => raise Impossible "elaborate/TBInterface"
 

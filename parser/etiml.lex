@@ -55,6 +55,7 @@ val keywords = [
     ("in", T.IN),
     ("end", T.END),
     ("return", T.RETURN),
+    ("throw", T.THROW),
     ("val", T.VAL),
     ("datatype", T.DATATYPE),
     ("forall", T.FORALL),

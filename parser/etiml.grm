@@ -27,6 +27,7 @@ open Ast
     | END
     | COMMA
     | RETURN
+    | THROW
     | ARROW
     | LARROW
     | DDASH
@@ -407,6 +408,11 @@ init : exp (InitExpr exp)
                   
 exps : exp_semi_plus (ESemis (exp_semi_plus, (exp_semi_plusleft, exp_semi_plusright)))
          
+exp_semi_plus : exp semi_exp_star (exp :: semi_exp_star)
+
+semi_exp_star : SEMI exp semi_exp_star (exp :: semi_exp_star)
+	       | ([])
+
 exp : exp_term (exp_term)
      | exp PLUS exp (EBinOp' (EBPrim (EBPIntAdd ()), exp1, exp2, (exp1left, exp2right)))
      | exp MINUS exp (EBinOp' (EBPrim (EBPIntMinus ()), exp1, exp2, (exp1left, exp2right)))
@@ -446,6 +452,7 @@ exp : exp_term (exp_term)
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
      | set_modify aexp square_star exp (ESetModify (set_modify, (aexp, square_star), exp, (set_modifyleft, expright)))
      | RETURN exp (EReturn (exp, (RETURNleft, expright)))
+     | THROW exp (EThrow (exp, (THROWleft, THROWright)))
 
 exp_term : aexp (aexp)
          | exp_term aexp (EApp (exp_term, aexp, (exp_termleft, aexpright)))
@@ -580,11 +587,6 @@ return : RETURN named_ty RTRI idx ((SOME named_ty, SOME idx, NONE))
 (*        | COLON ty ((SOME ty, NONE)) *)
 (*        | RTRI idx ((NONE, SOME idx)) *)
 (*        | ((NONE, NONE)) *)
-
-exp_semi_plus : exp semi_exp_star (exp :: semi_exp_star)
-
-semi_exp_star : SEMI exp semi_exp_star (exp :: semi_exp_star)
-	       | ([])
 
 storage : MEMORY (StMemory)
         | STORAGE (StStorage)

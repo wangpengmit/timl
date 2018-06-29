@@ -500,12 +500,17 @@ fun str_ast_expr_unop opr =
     case opr of
         EUTiML opr => str_expr_un_op opr
       | EUDeref () => "deref"
+      | EUAsm () => "asm"
+      | EUField id => "field " ^ fst id
+      | EUReturn () => "return"
+      | EUThrow () => "throw"
                             
 fun str_ast_expr_binop opr =
     case opr of
          EBTiML opr => str_expr_bin_op opr
        | EBStrConcat () => "str_concat"
        | EBSetRef () => "set_ref"
+       | EBWhile () => "while"
 
 fun str_ast_expr_triop opr =
     case opr of
@@ -695,6 +700,35 @@ fun pp_e s e =
             str $ str_expr_const c;
             close_box ()
           )
+        | EUnOp (EUField name, e, _) =>
+          (
+            open_hbox ();
+            strs "EField";
+            str "(";
+            pp_e e;
+            comma ();
+            pp_id name;
+            str ")";
+            close_box ()
+          )
+        | EUnOp (EUAsm (), e, _) =>
+          (
+            open_hbox ();
+            strs "EAsm";
+            str "(";
+            pp_e e;
+            str ")";
+            close_box ()
+          )
+        | EUnOp (EUReturn (), e, _) =>
+          (
+            open_hbox ();
+            strs "EReturn";
+            str "(";
+            pp_e e;
+            str ")";
+            close_box ()
+          )
         | EUnOp (opr, e, _) =>
           (
             open_hbox ();
@@ -705,6 +739,19 @@ fun pp_e s e =
             comma ();
             pp_e e;
             str ")";
+            close_box ()
+          )
+        | EBinOp (EBWhile (), e1, e2, _) =>
+          (
+            open_vbox ();
+            open_hbox ();
+            strs "EWhile";
+            str "(";
+            pp_e e1;
+            str ")";
+            close_box ();
+            space ();
+            pp_e e2;
             close_box ()
           )
         | EBinOp (opr, e1, e2, _) =>
@@ -787,35 +834,6 @@ fun pp_e s e =
             str ")";
             close_box ()
           )
-        | EField (e, name, _) =>
-          (
-            open_hbox ();
-            strs "EField";
-            str "(";
-            pp_e e;
-            comma ();
-            pp_id name;
-            str ")";
-            close_box ()
-          )
-        | EAsm (e, _) =>
-          (
-            open_hbox ();
-            strs "EAsm";
-            str "(";
-            pp_e e;
-            str ")";
-            close_box ()
-          )
-        | EReturn (e, _) =>
-          (
-            open_hbox ();
-            strs "EReturn";
-            str "(";
-            pp_e e;
-            str ")";
-            close_box ()
-          )
         | EFor (id, t, e1, e2, e3, e4, _) =>
           (
             open_vbox ();
@@ -834,19 +852,6 @@ fun pp_e s e =
             close_box ();
             space ();
             pp_e e4;
-            close_box ()
-          )
-        | EWhile (e1, e2, _) =>
-          (
-            open_vbox ();
-            open_hbox ();
-            strs "EWhile";
-            str "(";
-            pp_e e1;
-            str ")";
-            close_box ();
-            space ();
-            pp_e e2;
             close_box ()
           )
         | ESemis (es, _) =>

@@ -89,11 +89,16 @@ datatype expr_const =
 datatype ast_expr_unop =
          EUTiML of expr_un_op
          | EUDeref of unit
+         | EUReturn of unit
+         | EUThrow of unit
+         | EUAsm of unit
+         | EUField of id
                        
 datatype ast_expr_binop =
          EBTiML of expr_bin_op
          | EBStrConcat of unit
          | EBSetRef of unit
+         | EBWhile of unit
 
 datatype ast_expr_triop =
          ETIte of unit
@@ -123,14 +128,10 @@ datatype exp =
          | ESetModify of bool(*is modify?*) * (exp * exp list) * exp * region
          | EGet of (exp * exp list) * region
          | ERecord of (id * exp) list * region
-         | EField of exp * id * region
          | ESemis of exp list * region
          | ELet2 of storage option * ptrn * exp option * region
          | EIfs of ifelse list * region
          | EFor of id * ty option * exp * exp * exp * exp * region
-         | EWhile of exp * exp * region
-         | EAsm of exp * region
-         | EReturn of exp * region
 
      and decl =
          DVal of id list * ptrn * exp * region
@@ -160,8 +161,8 @@ datatype exp =
          | FmPost of state
              
      and init =
-         InitExpr of exp
-         | InitArray of exp list
+         InitExpr of exp * region
+         | InitArray of exp list * region
 
 datatype spec =
          SpecVal of id * id list * ty * region
@@ -241,13 +242,13 @@ fun EBinOp' (opr, e1, e2, r) = EBinOp (EBTiML opr, e1, e2, r)
 fun EIte (e1, e2, e3, r) = ETriOp (ETIte (), e1, e2, e3, r)
 (* fun EIfDec (e1, e2, e3, r) = ETriOp (ETIfDec, e1, e2, e3, r) *)
 fun EApp (e1, e2, r) = EBinOp' (EBApp (), e1, e2, r)
-fun short_id id = ((NONE, id), false)
+fun short_cid id = ((NONE, id), false)
 fun short_eid id = ((NONE, id), (false, false))
-fun PnShortVar (x, r) = PnConstr (short_id (x, r), [], NONE, r)
+fun PnShortVar (x, r) = PnConstr (short_cid (x, r), [], NONE, r)
 (* fun EIte (e, e1, e2, r) = Case (e, (NONE, NONE), [(PShortVar ("true", r), e1), (PShortVar ("false", r), e2)], r) *)
 fun EShortVar id = EVar (short_eid id)
 fun ECons (e1, e2, r) = EApp (EShortVar ("Cons", r), ETuple ([e1, e2], r), r)
-fun PnCons (pn1, pn2, r) = PnConstr (short_id ("Cons", r), [], SOME (PnTuple ([pn1, pn2], r)), r)
+fun PnCons (pn1, pn2, r) = PnConstr (short_cid ("Cons", r), [], SOME (PnTuple ([pn1, pn2], r)), r)
 fun ENil r = EShortVar ("Nil", r)
 fun EList (es, r) = foldr (fn (e, acc) => ECons (e, acc, r)) (ENil r) es
 fun PnNil r = PnShortVar ("Nil", r)
@@ -263,6 +264,13 @@ fun EIfi (e1, e2, e3, r) = ETriOp (ETIfi (), e1, e2, e3, r)
 fun EStrConcat (e1, e2, r) = EBinOp (EBStrConcat (), e1, e2, r)
 fun ESetRef (e1, e2, r) = EBinOp (EBSetRef (), e1, e2, r)
 fun EZero r = EConst (ECZero (), r)
+fun EReturn (e, r) = EUnOp (EUReturn (), e, r)
+fun EThrow (e, r) = EUnOp (EUThrow (), e, r)
+fun EAsm (e, r) = EUnOp (EUAsm (), e, r)
+fun EField (e, id, r) = EUnOp (EUField id, e, r)
+fun EWhile (e1, e2, r) = EBinOp (EBWhile (), e1, e2, r)
+fun ESet (es, e, r) = ESetModify (false, es, e, r)
+fun ENat (n, r) = EConst (ECNat n, r)
 
 type typing = id * ty
 type indexed_typing = id * (ty * bool)
