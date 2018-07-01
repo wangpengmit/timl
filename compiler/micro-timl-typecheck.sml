@@ -1015,6 +1015,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EUnOp (opr, e), t, j %%+ TN C_EStorageGet, st)
         end
+      | EUnOp (EUTiML (EUField name), e) => raise Impossible "tc()/EField"
       | EUnOp (EUInj (inj, t'), e) =>
         let
           val t' = kc_against_kind itctx (t', KType ())

@@ -501,7 +501,6 @@ fun str_ast_expr_unop opr =
         EUTiML opr => str_expr_un_op opr
       | EUDeref () => "deref"
       | EUAsm () => "asm"
-      | EUField id => "field " ^ fst id
       | EUReturn () => "return"
       | EUThrow () => "throw"
                             
@@ -700,14 +699,14 @@ fun pp_e s e =
             str $ str_expr_const c;
             close_box ()
           )
-        | EUnOp (EUField name, e, _) =>
+        | EUnOp (EUTiML (EUField name), e, _) =>
           (
             open_hbox ();
             strs "EField";
             str "(";
             pp_e e;
             comma ();
-            pp_id name;
+            str name;
             str ")";
             close_box ()
           )
@@ -1306,7 +1305,7 @@ fun pp_top_bind s top_bind =
             pp_id name1;
             space ();
             str "(";
-            pp_id name1;
+            pp_id name2;
             strs ":";
             pp_sgn sgn;
             strs ")";
@@ -1380,6 +1379,11 @@ fun pp_prog s prog =
           
 open WithPP
        
+fun pp_e_to s e = withPP ("", 80, s) (fn s => pp_e s e)
+fun pp_e_to_stdout a = pp_e_to TextIO.stdOut a
+fun pp_e_to_string e =
+    pp_to_string "pp_e_to_string.tmp" (fn os => pp_e_to os e)
+                 
 fun pp_prog_to s e = withPP ("", 80, s) (fn s => pp_prog s e)
 fun pp_prog_to_stdout a = pp_prog_to TextIO.stdOut a
 fun pp_prog_to_string e =

@@ -21,4 +21,9 @@ fun str_raw_long_id str_raw_v id =
       ID (x, _) => str_raw_v x
     | QID ((m, _), (x, _)) => sprintf "QID ($, $)" [m, str_raw_v x]
                        
+fun str_long_id str_v id =
+  case id of
+      ID (x, _) => str_v x
+    | QID ((m, _), (x, _)) => m ^ ".." ^ str_v x
+    
 end

@@ -92,7 +92,6 @@ datatype ast_expr_unop =
          | EUReturn of unit
          | EUThrow of unit
          | EUAsm of unit
-         | EUField of id
                        
 datatype ast_expr_binop =
          EBTiML of expr_bin_op
@@ -267,7 +266,7 @@ fun EZero r = EConst (ECZero (), r)
 fun EReturn (e, r) = EUnOp (EUReturn (), e, r)
 fun EThrow (e, r) = EUnOp (EUThrow (), e, r)
 fun EAsm (e, r) = EUnOp (EUAsm (), e, r)
-fun EField (e, id, r) = EUnOp (EUField id, e, r)
+fun EField (e, id, r) = EUnOp' (EUField (fst id), e, r)
 fun EWhile (e1, e2, r) = EBinOp (EBWhile (), e1, e2, r)
 fun ESet (es, e, r) = ESetModify (false, es, e, r)
 fun ENat (n, r) = EConst (ECNat n, r)

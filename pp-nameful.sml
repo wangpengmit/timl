@@ -7,15 +7,18 @@ functor PPNamefulFn (structure Expr : IDX_TYPE_EXPR
                                               and type Type.region = Region.region
                                               and type Idx.name = string * Region.region
                                               and type Type.name = string * Region.region
-                                              and type Idx.var = string
-                                              and type mod_id = string
-                         sharing type Expr.Type.basic_sort = Expr.Idx.basic_sort
-                         val str_uvar_bs : ('a -> string) -> 'a Expr.Idx.uvar_bs -> string
-                         val str_uvar_i : ('basic_sort -> string) * ('idx -> string) -> ('basic_sort, 'idx) Expr.Idx.uvar_i -> string
-                         val str_uvar_s : ('sort -> string) -> ('basic_sort, 'sort) Expr.Idx.uvar_s -> string
-                         val pp_uvar_mt : ('sort -> string) * ('kind -> string) * ('mtype -> unit) * (string -> unit) -> ('sort, 'kind, 'mtype) Expr.Type.uvar_mt -> unit
-                         val str_ptrn_constr_tag : Expr.ptrn_constr_tag -> string
-                        ) = struct
+                                              (* and type Idx.var = string *)
+                                              (* and type mod_id = string *)
+                     sharing type Expr.Type.basic_sort = Expr.Idx.basic_sort
+                     val str_var : Expr.Idx.var -> string
+                     val str_cvar : Expr.cvar -> string
+                     val str_mod_id : Expr.mod_id -> string
+                     val str_uvar_bs : ('a -> string) -> 'a Expr.Idx.uvar_bs -> string
+                     val str_uvar_i : ('basic_sort -> string) * ('idx -> string) -> ('basic_sort, 'idx) Expr.Idx.uvar_i -> string
+                     val str_uvar_s : ('sort -> string) -> ('basic_sort, 'sort) Expr.Idx.uvar_s -> string
+                     val pp_uvar_mt : ('sort -> string) * ('kind -> string) * ('mtype -> unit) * (string -> unit) -> ('sort, 'kind, 'mtype) Expr.Type.uvar_mt -> unit
+                     val str_ptrn_constr_tag : Expr.ptrn_constr_tag -> string
+                    ) = struct
 
 open Expr
 open Idx
@@ -153,7 +156,7 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
             str ")";
             close_box ()
           )
-        | TVar x => str x
+        | TVar x => str $ str_var x
         | TApp (t1, t2) =>
           (
             open_hbox ();
@@ -306,6 +309,39 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
           )
     end
 
+fun pp_pt (params as (str_b, str_i, str_s, str_k)) s t =
+    let
+      val pp_t = pp_t params s
+      val pp_pt = pp_pt params s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
+    in
+      case t of
+          PTMono t => pp_t t
+	| PTUni ((i, j), Bind (name, t), _) =>
+          (
+            open_hbox ();
+            str "PTUni";
+            space ();
+            str "(";
+            str $ fst name;
+            comma ();
+            str $ str_i i;
+            comma ();
+            str $ str_i j;
+            comma ();
+            pp_pt t;
+            str ")";
+            close_box ()
+          )
+    end
+    
 open Unbound
 open Binders
       
@@ -334,7 +370,7 @@ fun pp_pn (params as pp_t) s pn =
             open_hbox ();
             strs "PnConstr";
             str "(";
-            str x;
+            str $ str_cvar x;
             comma ();
             str $ str_ptrn_constr_tag tag;
             comma ();
@@ -433,7 +469,7 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str "EVar";
             space ();
             str "(";
-            str x;
+            str $ str_var x;
             comma ();
             str $ str_bool b1;
             comma ();
@@ -533,10 +569,12 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           )
         | ETriOp (ETIte (), e, e1, e2) =>
           (
+            open_vbox_noindent ();
             open_vbox (); open_hbox (); str "ETIte"; space (); str "("; pp_e e; close_box (); comma ();
-    	    open_vbox_noindent (); pp_e e1; comma ();
-            space ();
-            pp_e e2; close_box (); str ")"; close_box ()
+    	      pp_e e1; close_box (); space ();
+            open_vbox (); strs "Else";
+              pp_e e2; str ")"; close_box ();
+            close_box ()
           )
         | ETriOp (opr, e1, e2, e3) =>
           (
@@ -737,7 +775,7 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str "EAppConstr";
             space ();
             str "(";
-            str x;
+            str $ str_var x;
             comma ();
             str $ str_bool b1;
             comma ();
@@ -942,7 +980,7 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
             strs "DConstrDef";
             strs $ binder2str name;
             strs "=";
-            str x;
+            str $ str_var x;
             close_box ()
           )
         | DAbsIdx2 (name, Outer s, Outer i) =>
@@ -988,7 +1026,7 @@ and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =
           (
             open_hbox ();
             strs "DOpen";
-            strs $ unInner m;
+            strs $ str_mod_id $ unInner m;
             space ();
             Option.app (fn (a, b, c, d) =>
                            let
@@ -1012,7 +1050,227 @@ and pp_decls params s decls =
     app (fn d => (pp_d d; space ())) decls;
     close_box ()
   end
-    
+
+fun pp_spec (params as (str_b, str_i, str_s, str_k)) s spec =
+    let
+      val pp_t = pp_t params s
+      val pp_pt = pp_pt params s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
+    in
+      case spec of
+          SpecVal (name, t) =>
+          (
+            open_hbox ();
+            strs "SpecVal";
+            str "(";
+            strs $ fst name;
+            strs ",";
+            pp_pt t;
+            str ")";
+            close_box ()
+          )
+        | SpecIdx (name, s) =>
+          (
+            open_hbox ();
+            strs "SpecIdx";
+            str "(";
+            strs $ fst name;
+            strs ",";
+            str $ str_s s;
+            str ")";
+            close_box ()
+          )
+        | SpecType (name, k) => 
+          (
+            open_hbox ();
+            strs "SpecType";
+            str "(";
+            strs $ fst name;
+            strs ",";
+            str $ str_k k;
+            str ")";
+            close_box ()
+          )
+        | SpecTypeDef (name, t) =>
+          (
+            open_hbox ();
+            strs "SpecTypeDef";
+            str "(";
+            strs $ fst name;
+            strs ",";
+            pp_t t;
+            str ")";
+            close_box ()
+          )
+    end
+
+fun pp_sgn (params as (str_b, str_i, str_s, str_k)) s (specs, _) =
+    let
+      val pp_spec = pp_spec params s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
+    in
+      (
+        open_vbox_noindent ();
+        strs "Sig";
+        app (fn spec => (pp_spec spec; space ())) specs;
+        str "End";
+        close_box ()
+      )
+    end
+                         
+fun pp_mod (params as (str_b, str_i, str_s, str_k, pp_t, pp_pn)) s m =
+    let
+      val pp_mod = pp_mod params s
+      val pp_sgn = pp_sgn (str_b, str_i, str_s, str_k) s
+      val pp_decls = pp_decls (str_i, str_s, pp_t, pp_pn) s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
+    in
+      case m of
+          ModComponents (decls, _) =>
+          (
+            open_vbox_noindent ();
+            strs "Mod";
+            pp_decls $ Teles decls;
+            str "End";
+            close_box ()
+          )
+        | ModSeal (m, sgn) =>
+          (
+            open_vbox ();
+            strs "ModSeal";
+            pp_mod m;
+            strs ":";
+            pp_sgn sgn;
+            close_box ()
+          )
+        | ModTransparentAsc (m, sgn) =>
+          (
+            open_vbox ();
+            strs "ModTransAsc";
+            pp_mod m;
+            strs ":";
+            pp_sgn sgn;
+            close_box ()
+          )
+    end
+
+fun pp_top_bind (params as (str_b, str_i, str_s, str_k)) s top_bind =
+    let
+      val pp_top_bind = pp_top_bind params s
+      val pp_t = pp_t (str_b, str_i, str_s, str_k)
+      val pp_pn = pp_pn pp_t
+      val pp_mod = pp_mod (str_b, str_i, str_s, str_k, pp_t, pp_pn) s
+      val pp_sgn = pp_sgn (str_b, str_i, str_s, str_k) s
+      val pp_t = pp_t s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
+    in
+      case top_bind of
+          TBMod m => pp_mod m
+        | TBFunctor ((name, sgn), m) =>
+          (
+            open_vbox ();
+            open_hbox ();
+            strs "TBFunctor";
+            str "(";
+            str $ fst name;
+            strs ":";
+            pp_sgn sgn;
+            strs ")";
+            str "=";
+            close_box ();
+            space ();
+            pp_mod m;
+            close_box ()
+          )
+        | TBFunctorApp (id1, id2) =>
+          (
+            open_hbox ();
+            strs "TBFunctorApp";
+            str "(";
+            str $ str_mod_id id1;
+            comma ();
+            str $ str_mod_id id2;
+            str ")";
+            close_box ()
+          )
+        | TBState (b, t) =>
+          (
+            open_hbox ();
+            strs "TBState";
+            str "(";
+            str $ str_bool b;
+            comma ();
+            pp_t t;
+            str ")";
+            close_box ()
+          )
+        | TBPragma s => str $ "TBPragma " ^ s
+    end
+
+fun pp_prog params s prog =
+  let
+      val pp_top_bind = pp_top_bind params s
+      fun space () = PP.space s 1
+      fun add_space a = (space (); a)
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun open_hbox () = PP.openHBox s
+      fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
+      fun open_vbox () = PP.openVBox s (PP.Rel 2)
+      fun close_box () = PP.closeBox s
+  in
+    open_vbox_noindent ();
+    app (fn (name, tb) =>
+            (open_vbox ();
+             open_hbox ();
+             strs $ fst name;
+             strs "=";
+             close_box ();
+             space ();
+             pp_top_bind tb;
+             close_box ();
+             space ()
+        )) prog;
+    close_box ()
+  end
+      
 open WithPP
        
 fun pp_t_fn params t = withPP ("", 80, TextIO.stdOut) (fn s => pp_t params s t)
@@ -1035,5 +1293,10 @@ fun pp_decls_to_fn params s e = withPP ("", 80, s) (fn s => pp_decls params s e)
 fun pp_decls_fn params = pp_decls_to_fn params TextIO.stdOut
 fun pp_decls_to_string_fn params e =
     pp_to_string "pp_decls_to_string.tmp" (fn os => pp_decls_to_fn params os e)
+                 
+fun pp_prog_to_fn params s e = withPP ("", 80, s) (fn s => pp_prog params s e)
+fun pp_prog_fn params = pp_prog_to_fn params TextIO.stdOut
+fun pp_prog_to_string_fn params e =
+    pp_to_string "pp_prog_to_string.tmp" (fn os => pp_prog_to_fn params os e)
                  
 end

@@ -97,6 +97,9 @@ structure PPNameful = PPNamefulFn (structure Expr = struct
                                    open NamefulExpr
                                    end
                                    open CanToString
+                                   val str_var = id
+                                   val str_cvar = id
+                                   val str_mod_id = id
                                    val str_ptrn_constr_tag = str_ptrn_constr_tag
                                   )
 structure PPN = PPNameful

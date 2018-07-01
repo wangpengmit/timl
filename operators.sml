@@ -110,6 +110,7 @@ datatype expr_un_op =
          | EUVectorClear of unit
          | EUVectorLen of unit
          | EUAnno of expr_anno
+         | EUField of string
 
 fun str_expr_const c =
   case c of
@@ -155,6 +156,7 @@ fun str_expr_un_op opr =
     | EUVectorClear () => "vector_clear"
     | EUVectorLen () => "vector_len"
     | EUAnno a => str_expr_anno a
+    | EUField name => "field " ^ name
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =

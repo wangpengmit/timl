@@ -234,6 +234,7 @@ fun is_value e =
          | EUVectorClear () => false
          | EUVectorLen () => false
          | EUAnno _ => is_value e
+         | EUField _ => false
       )
     | EUnOp (EUTupleProj _, _) => false
     | ETriOp (ETWrite (), _, _, _) => false

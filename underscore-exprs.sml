@@ -37,10 +37,12 @@ fun str_v ctx x : string = x
                                     
 fun lookup_module gctx m = (m, ([], [], [], []))
                 
-fun str_var sel gctx ctx id =
-  case id of
-      ID (x, _) => str_v ctx x
-    | QID ((m, _), (x, _)) => m ^ "." ^ str_v ctx x
+(* fun export_var sel gctx ctx id =  *)
+(*   case id of *)
+(*       ID (x, r) => ID (str_v ctx x, r) *)
+(*     | QID ((m, r1), (x, r2)) => QID ((m, r1), (str_v ctx x, r2)) *)
+    
+fun str_var sel gctx ctx id = str_long_id (str_v ctx) id
     
 end
                                    
@@ -54,15 +56,29 @@ structure NamefulToString = ToStringFn (structure Expr = NamefulExpr
                                         structure CanToString = NamefulCanToString
                                 )
                                 
-structure NamefulPrettyPrint = PrettyPrintFn
-                                 (structure Expr = NamefulExpr
-                                  structure CanToString = NamefulCanToString
-                                  val str_ptrn_constr_tag = fn () => ""
-                                 )
-                                
 structure NamefulToStringRaw = ToStringRawFn (structure Expr = NamefulExpr
                                               open NamefulCanToString
                                    )
+                                
+(* structure NamefulPrettyPrint0 = PrettyPrintFn *)
+(*                                  (structure Expr = NamefulExpr *)
+(*                                   structure CanToString = NamefulCanToString *)
+(*                                   val str_ptrn_constr_tag = fn () => "" *)
+(*                                  ) *)
+                                
+structure NamefulPrettyPrint = struct
+structure PP = PPNamefulFn
+                 (structure Expr = NamefulExpr
+                  open Underscore
+                  val str_var = LongId.str_long_id id
+                  val str_cvar = LongId.str_long_id id
+                  val str_mod_id = fst
+                  val str_ptrn_constr_tag = fn () => ""
+                 )
+open NamefulToString
+open PP
+fun pp_prog_to_string e = pp_prog_to_string_fn (str_bs, str_i Gctx.empty [], str_s Gctx.empty [], str_k) e
+end
                                 
 structure NamefulHasEqual = struct
 open Underscore

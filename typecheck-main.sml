@@ -730,6 +730,7 @@ fun is_value (e : U.expr) : bool =
            | EUVectorClear () => false
            | EUVectorLen () => false
            | EUAnno _ => is_value e
+           | EUField _ => false
         )
       | EBinOp (opr, e1, e2) =>
         (case opr of
@@ -1404,6 +1405,13 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EUnOp (opr, e, r), t, i, st)
           end
+	| U.EUnOp (opr as EUField name, e, r) =>
+          raise Impossible "get_mtype()/EField"
+          (* let *)
+          (*   val (e, t, i, st) = get_mtype (ctx, st) e *)
+          (* in *)
+          (*   (EUnOp (opr, e, r), t, i, st) *)
+          (* end *)
 	| U.EBinOp (opr, e1, e2) =>
           (case opr of
 	       EBPair () => 

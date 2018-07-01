@@ -484,7 +484,10 @@ local
              | S.EUAsm _ => raise Impossible "elaborate/EAsm"
              | S.EUDeref _ => raise Impossible "elaborate/EDeref"
              | S.EUReturn _ => raise Impossible "elaborate/EReturn"
-             | S.EUField _ => raise Impossible "elaborate/EField"
+             (* | S.EUField name =>  *)
+               (* case e of *)
+               (*     EVar ((NONE, ("msg", _)), (false, false)) =>  *)
+               (* raise Impossible "elaborate/EField" *)
           )
         | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
           ETriOp (ETIte (), elab e1, elab e2, elab e3)
@@ -508,7 +511,7 @@ local
             val (e, es) = case es of
                               [] => raise Impossible "elaborate/ESemis/es=[]"
                             | e :: es => (e, es)
-            fun f (body, acc) =
+            fun f (e, body) =
                 case e of
                     S.ELet2 (_, pn, e, r1) =>
                     let
@@ -518,6 +521,8 @@ local
                     end
                   | _ => S.ESemiColon (e, body, r)
             val e = foldl f e es
+            val () = println "elab/ESemis:"
+            val () = println $ AstPP.pp_e_to_string e
           in
             elab e
           end

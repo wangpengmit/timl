@@ -813,6 +813,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                        | EUVectorClear _ => (C_EVectorClear, 0)
                        | EUVectorLen _ => (C_EVectorLen, 0)
                        | EUAnno _ => raise Impossible "cps()/EUnOp/EUAnno"
+                       | EUField _ => raise Impossible "cps()/EUnOp/EUField"
                     )
                   | EUTupleProj _ => (C_ETupleProj, 0)
           in
@@ -1280,6 +1281,7 @@ and check_value e =
          | EUVectorClear () => err ()
          | EUVectorLen () => err ()
          | EUAnno _ => check_value e
+         | EUField _ => err ()
       )
     | EAbs (_, bind, _) =>
       let
