@@ -162,7 +162,7 @@ datatype exp =
              
      and init =
          InitExpr of exp * region
-         | InitArray of exp list * region
+         | InitVector of exp list * region
 
 datatype spec =
          SpecVal of id * id list * ty * region
@@ -271,6 +271,8 @@ fun EField (e, id, r) = EUnOp (EUField id, e, r)
 fun EWhile (e1, e2, r) = EBinOp (EBWhile (), e1, e2, r)
 fun ESet (es, e, r) = ESetModify (false, es, e, r)
 fun ENat (n, r) = EConst (ECNat n, r)
+fun ETT r = ETuple ([], r)
+fun EPushBack (e1, e2, r) = EApp (EShortVar ("push_back", r), ETuple ([e1, e2], r), r)
 
 type typing = id * ty
 type indexed_typing = id * (ty * bool)

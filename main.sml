@@ -130,8 +130,9 @@ fun do_process_file is_library gctx (pos_or_neg, filename) =
     val (succeeded, prog, gctx, admits) =
         let
           val prog = ParserFactory.parse_file filename
-          val () = curry write_file (filename ^ ".tmp") $ AstPP.pp_prog_to_string prog
+          val () = curry write_file (filename ^ ".parsed.tmp") $ AstPP.pp_prog_to_string prog
           val prog = elaborate_prog prog
+          (* val () = curry write_file (filename ^ ".elabed.tmp") $ AstPP.pp_prog_to_string prog *)
           (* val () = (app println o map (suffix "\n") o fst o E.str_decls ctxn) decls *)
           (* val () = (app println o map (suffix "\n") o fst o UnderscoredExpr.str_decls ctxn) decls *)
           (* apply solvers after each top bind *)

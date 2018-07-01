@@ -1050,8 +1050,8 @@ and pp_d s d =
           let
             fun pp_init init =
                 case init of
-                    InitExpr e => pp_e e
-                  | InitArray es =>
+                    InitExpr (e, _) => pp_e e
+                  | InitVector (es, _) =>
                     (
                       open_vbox_noindent ();
                       str "{";

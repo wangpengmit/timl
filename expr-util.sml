@@ -51,6 +51,7 @@ fun EAnno (e, a, r) = EUnOp (EUAnno a, e, r)
 fun EAnnoLiveVars (e, n, r) = EAnno (e, EALiveVars n, r)
 fun EAnnoBodyOfRecur (e, r) = EAnno (e, EABodyOfRecur (), r)
 fun EAnnoConstr (e, r) = EAnno (e, EAConstr (), r)
+fun EHalt (e, t) = EET (EETHalt (), e, t)
 
 infix 0 %:
 infix 0 |>

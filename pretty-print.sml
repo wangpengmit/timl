@@ -192,4 +192,11 @@ fun pp_decls_to_string gctx ctx b =
     (PPN.pp_decls_to_string_fn pp_e_params b, ctx)
   end
 
+(* fun pp_prog_to_string gctx b = *)
+(*   let *)
+(*     val (b, gctxd, gctx) = export_prog gctx b *)
+(*   in *)
+(*     ((* PPN.pp_prog_to_string_fn pp_e_params *) b, gctxd, gctx) *)
+(*   end *)
+
 end

@@ -403,8 +403,8 @@ decl : optional_visi VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, 
 optional_init : EQ init (SOME init)
               | (NONE)
 
-init : exp (InitExpr exp)                  
-     | LCUR exp_comma_star_trailing RCUR (InitArray exp_comma_star_trailing)
+init : exp (InitExpr (exp, (expleft, expright)))                  
+     | LCUR exp_comma_star_trailing RCUR (InitVector (exp_comma_star_trailing, (LCURleft, RCURright)))
                   
 exps : exp_semi_plus (ESemis (exp_semi_plus, (exp_semi_plusleft, exp_semi_plusright)))
          
