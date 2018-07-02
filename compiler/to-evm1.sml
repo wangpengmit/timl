@@ -236,6 +236,24 @@ fun impl_nat_cmp opr =
     | NCEq () => [EQ ()]
     | NCNEq () => [EQ (), ISZERO ()]
       
+fun impl_prim_expr_bin_op opr =
+  case opr of
+       EBPIntAdd () => [ADD ()]
+     | EBPIntMult () => [MUL ()]
+     | EBPIntMinus () => [SWAP1, SUB ()]
+     | EBPIntDiv () => [SWAP1, SDIV ()]
+     | EBPIntMod () => [SWAP1, MOD ()]
+     | EBPIntExp () => raise Impossible "impl_prim_expr_bin_op/EBPIntExp"
+     | EBPIntLt () => [GT ()]
+     | EBPIntGt () => [LT ()]
+     | EBPIntLe () => [LT (), ISZERO ()]
+     | EBPIntGe () => [GT (), ISZERO ()]
+     | EBPIntEq () => [EQ ()]
+     | EBPIntNEq () => [EQ (), ISZERO ()]
+     | EBPBoolAnd () => [AND ()]
+     | EBPBoolOr () => [OR ()]
+     (* | EBPStrConcat () => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat" *)
+                  
 fun concatRepeat n v = List.concat $ repeat n v
                
 fun cg_c c =
@@ -257,24 +275,6 @@ fun impl_prim_expr_un_opr opr =
     (* | EUPStrLen () => [PUSH1nat 32, SWAP1, SUB, MLOAD] *)
     (* | _ => raise Impossible $ "impl_prim_expr_up_op() on " ^ str_prim_expr_un_op opr *)
       
-fun impl_prim_expr_bin_op opr =
-  case opr of
-       EBPIntAdd () => [ADD ()]
-     | EBPIntMult () => [MUL ()]
-     | EBPIntMinus () => [SWAP1, SUB ()]
-     | EBPIntDiv () => [SWAP1, SDIV ()]
-     | EBPIntMod () => [SWAP1, MOD ()]
-     | EBPIntExp () => raise Impossible "impl_prim_expr_bin_op/EBPIntExp"
-     | EBPIntLt () => [SWAP1, LT ()]
-     | EBPIntGt () => [SWAP1, GT ()]
-     | EBPIntLe () => [GT (), ISZERO ()]
-     | EBPIntGe () => [LT (), ISZERO ()]
-     | EBPIntEq () => [EQ ()]
-     | EBPIntNEq () => [EQ (), ISZERO ()]
-     | EBPBoolAnd () => [AND ()]
-     | EBPBoolOr () => [OR ()]
-     (* | EBPStrConcat () => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat" *)
-                  
 fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
@@ -853,8 +853,12 @@ fun test1 dirname =
     val filename = join_dir_file' dirname "to-evm1-test.pkg"
     val filenames = map snd $ ParseFilename.expand_pkg (fn msg => raise Impossible msg) (true, filename)
     val prog = concatMap ParserFactory.parse_file filenames
+    val () = curry write_file (join_dir_file' dirname "unit-test-after-parse.tmp") $
+                   AstPP.pp_prog_to_string prog
     open Elaborate
     val prog = elaborate_prog prog
+    val () = curry write_file (join_dir_file' dirname "unit-test-after-elab.tmp") $
+                   NamefulPrettyPrint.pp_prog_to_string prog
     open NameResolve
     val (prog, _, _) = resolve_prog empty prog
                                     

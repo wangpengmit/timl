@@ -639,22 +639,6 @@ local
               SOME t => (name, TBState (true, t))
             | NONE => raise Error (S.get_region_t t, "wrong state declaration form")
 
-  fun make_state_init r inits =
-      let
-        fun f (name, init) =
-            let
-              val x = EShortVar name
-            in
-              case init of
-                  InitExpr (e, r) => [S.ESet ((x, []), e, r)]
-                | InitVector (es, r) => map (fn e => S.EPushBack (x, e, r)) es
-            end
-        val es = concatMap f inits
-        val body = case es of [] => S.ETT r | _ => ESemis (es, r)
-      in
-        S.DVal ([], S.PnConstr (((NONE, ("__state_init", r)), false), [], NONE, r), S.EAbs ([], empty_return, body, r), r)
-      end
-                  
   fun elab_spec spec =
       case spec of
           S.SpecVal (name, tnames, t, r) => SpecVal (name, foldr (fn (tname, t) => PTUni (IUnderscore2 r, Bind (tname, t), combine_region (snd tname) r)) (PTMono $ elab_mt t) tnames)
@@ -678,6 +662,23 @@ local
       case sg of
           S.SigComponents (specs, r) => (map elab_spec specs, r)
 
+  fun make_state_init r inits =
+      let
+        fun f (name, init) =
+            let
+              val x = EShortVar name
+            in
+              case init of
+                  InitExpr (e, r) => [S.ESet ((x, []), e, r)]
+                | InitVector (es, r) => map (fn e => S.EPushBack (x, e, r)) es
+            end
+        val es = concatMap f inits
+        val e = case es of [] => S.ETT r | _ => ESemis (es, r)
+        (* val e = S.EAbs ([S.BindTyping (S.PnTuple ([], r))], empty_return, e, r) *)
+      in
+        S.DVal ([], S.PnConstr (((NONE, ("__state_init", r)), false), [], NONE, r), e, r)
+      end
+                  
   fun elab_mod m =
       case m of
           S.ModComponents (inherits, comps, r) =>

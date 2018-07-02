@@ -113,6 +113,7 @@ open Ast
     | PLUS_PLUS
     | PLUS_EQ
     | PERCENT
+    | NOT
 
 %nonterm start of prog
        | exp of exp
@@ -364,6 +365,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | CHAR (EConst (ECChar CHAR, (CHARleft, CHARright)))
      | LSQ exp_comma_star RSQ (EList (exp_comma_star, (LSQleft, RSQright)))
      | TILDE aexp (EUnOp' (EUPrim (EUPIntNeg ()), aexp, (TILDEleft, aexpright)))
+     | NOT aexp (EUnOp' (EUPrim (EUPBoolNeg ()), aexp, (NOTleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
      | aexp square_plus (EGet ((aexp, square_plus), (aexpleft, square_plusright)))
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))

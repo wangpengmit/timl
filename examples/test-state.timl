@@ -10,9 +10,11 @@ fun addBy b a = a + b
 fun foo (a : int, b : int) return using _ =
     (* TestState_m[[a]] *)
     (* set TestState_m[[a]] b *)
-    set TestState_m[[a]] ((addBy b a) using _, _) (* TestState_m[[a]] *)
-    (* modify TestState_m[[a]] += b *)
+    (* set TestState_m[[a]] ((((addBy b) using _, _) a) using _, _) (* TestState_m[[a]] *) *)
+    modify TestState_m[[a]] += b
 
+val a = foo (10, 20)
+        
 (* fun foo {len : Nat} () pre {TestState_v : len} post {TestState_v : len+1} = *)
 (*   let *)
 (*     val () = push_back (TestState_v, 1) *)

@@ -286,6 +286,7 @@ fun write_file (filename, s) =
     in
       ()
     end
+fun write_file' a = curry write_file a
 
 (* fun read_file filename = *)
 (*     let *)

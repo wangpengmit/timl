@@ -249,7 +249,7 @@ fun live_vars_expr_visitor_vtable cast () =
               end
             else
               let
-                val es = visit_es_left this env $ es @ [e]
+                val (_, es) = assert_cons $ visit_es_left this env $ [EState (x, r)] @ es @ [e]
                 val (e, es) = assert_cons $ rev es
                 val es = rev es
               in
