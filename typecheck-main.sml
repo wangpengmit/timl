@@ -716,6 +716,7 @@ fun is_value (e : U.expr) : bool =
     case e of
         EVar _ => true (* todo: is this right? *)
       | EConst _ => true
+      | EMsg _ => true
       | EState _ => true
       | EUnOp (opr, e, _) =>
         (case opr of
@@ -783,6 +784,10 @@ fun is_value (e : U.expr) : bool =
       | EGet _ => false
   end
 
+fun get_msg_info_type r name =
+    case name of
+        MsgSender () => TInt r
+
 fun get_expr_const_type (c, r) =
   case c of
       ECNat n => 
@@ -800,7 +805,7 @@ fun get_expr_const_type (c, r) =
     | ECByte _ =>
       TByte r
     (* | ECString s =>  *)
-    (*   TBase (String, r) *)
+(*   TBase (String, r) *)
 
 fun get_prim_expr_un_op_arg_ty opr =
   case opr of
@@ -1323,6 +1328,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
               end
           end
         | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), TN C_EConst, st)
+        | U.EMsg (name, r) => (EMsg (name, r), get_msg_info_type r name, TN $ C_EMsg name, st)
         | U.EUnOp (opr as EUProj proj, e, r) =>
 	  let 
             (* val r = U.get_region_e e *)
@@ -1733,7 +1739,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t = check_kind_Type gctx (skctx, t)
 	         val (e, _, d, st) = get_mtype (ctx, st) e
                in
-	         (EET (opr, e, t), t, d %%+ TN C_Halt, st)
+	         (EET (opr, e, t), t, d %%+ TN C_EHalt, st)
 	       end
           )
 	| U.ET (opr, t, r) =>

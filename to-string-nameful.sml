@@ -412,6 +412,7 @@ fun strn_e e =
       end
     | ESetModify (is_modify, x, es, e, _) => sprintf "($ $$ $)" [if is_modify then "modify" else "set", x, join "" $ map (surround "[" "]" o strn_e) es, strn_e e]
     | EGet (x, es, _) => sprintf "$$" [x, join "" $ map (surround "[" "]" o strn_e) es]
+    | EMsg (name, _) => "msg." ^ str_msg_info name
 
 and strn_decl decl =
     case decl of

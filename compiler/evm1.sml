@@ -42,6 +42,7 @@ datatype ('idx, 'ty) inst =
          | OR of unit
          | BYTE of unit
          | SHA3 of unit
+         | ORIGIN of unit
          | POP of unit
          | MLOAD of unit
          | MSTORE of unit

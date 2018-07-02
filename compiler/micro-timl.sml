@@ -118,6 +118,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EMallocPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr (* These two expressions are only here to determine the types. They have no runtime behavior and should always be values. They are used to avoid type annotations here which could be large. *)
          | EPairAssign of ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | EProjProtected of projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
+         | EMsg of msg_info
 
 (*********** utilities ***************)    
 
@@ -182,6 +183,7 @@ fun is_value e =
   case e of
       EConst _ => true
     | EState _ => true
+    | EMsg _ => true
     | EBinOp (EBPair (), e1, e2) => is_value e1 andalso is_value e2
     | ETuple es => List.all is_value es
     | EUnOp (EUInj _, e) => is_value e

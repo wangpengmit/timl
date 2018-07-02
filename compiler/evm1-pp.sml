@@ -38,6 +38,7 @@ fun str_inst a =
     | AND () => "AND"
     | OR () => "OR"
     | BYTE () => "BYTE"
+    | ORIGIN () => "ORIGIN"
     | POP () => "POP"
     | MLOAD () => "MLOAD"
     | MSTORE () => "MSTORE"

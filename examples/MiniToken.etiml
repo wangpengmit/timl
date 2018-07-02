@@ -1,31 +1,33 @@
-pragma etiml ^0.1
+(* pragma etiml ^0.1 *)
 
-structure Util = struct
-  fun add b a = a + b
-  fun subBy b a = a - b
-  fun orBy b a = a || b
-  (* val op+= = add *)
-  (* val op-= subBy *)
-  fun require b = if b then () else throw 1 end
-end
+(* structure Util = struct *)
+(*   fun addBy b a = a + b *)
+(*   fun subBy b a = a - b *)
+(*   fun orBy b a = a || b *)
+(*   fun require b = if b then () else (throw 1) using _ end *)
+(* end *)
 
 contract MyToken = struct
 
-  open Util
+  (* open Util *)
 
   (* This creates an array with all balances *)
   public state balanceOf : map address uint256
-  public state name : vector int = {10,}
+  (* public state name : vector int = {10,} *)
 
-  (* Initializes contract with initial supply tokens to the creator of the contract *)
-  fun init (initialSupply : uint256) using 11.0 =
-    set balanceOf[msg.sender] initialSupply           (* Give the creator all initial tokens *)
+  (* (* Initializes contract with initial supply tokens to the creator of the contract *) *)
+  (* fun init (initialSupply : uint256) using _ = *)
+  (*   set balanceOf[msg.sender] initialSupply           (* Give the creator all initial tokens *) *)
 
+  fun addBy b a = a + b
+                        
   (* Send coins *)
-  fun transfer (_to : address, _value : uint256) using 23.0 =
-    require(balanceOf[msg.sender] >= _value);           (* Check if the sender has enough *)
-    require(balanceOf[_to] + _value >= balanceOf[_to]); (* Check for overflows *)
-    modify balanceOf[msg.sender] -= _value;                    (* Subtract from the sender *)
-    modify balanceOf[_to] += _value                     (* Add the same to the recipient *)
-
+  fun transfer (_to : address, _value : uint256) using _ =
+    (* require(balanceOf[msg.sender] >= _value);           (* Check if the sender has enough *) *)
+    (* require(balanceOf[_to] + _value >= balanceOf[_to]); (* Check for overflows *) *)
+    (* modify balanceOf[msg.sender] -= _value;                    (* Subtract from the sender *) *)
+      modify balanceOf[_to] += _value                     (* Add the same to the recipient *)
+      (* _to + _value *)
+      (* () *)
+      
 end

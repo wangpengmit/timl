@@ -255,7 +255,7 @@ fun PnList (pns, r) = foldr (fn (pn, acc) => PnCons (pn, acc, r)) (PnNil r) pns
 fun ESemiColon (e1, e2, r) = ELet ((NONE, NONE, NONE), [DVal ([], PnShortVar ("_", r), e1, r)], e2, r)
 fun EInc r =EShortVar ("inc", r)
 fun EDec r =EShortVar ("dec", r)
-fun EAdd r =EShortVar ("add", r)
+fun EAdd r =EShortVar ("addBy", r)
 fun ESubBy r =EShortVar ("subBy", r)
 fun EOrBy r =EShortVar ("orBy", r)
 fun EAscTimeSpace (e, (i, j), r) = EAscSpace (EAscTime (e, i, r), j, r)

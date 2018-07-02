@@ -98,26 +98,26 @@ fun str_raw_t (t : ty) : string =
       PTMono t => str_raw_mt t
     | PTUni ((i, j), t, _) => sprintf "PTUni ($, $, $)" [str_raw_i i, str_raw_i j, str_raw_bind str_raw_t t]
 
-fun str_raw_e e =
-  case e of
-      EAppConstr _ => "EAppConstr (...)"
-    | EVar _ => "EVar (...)"
-    | EConst _ => "EConst (...)"
-    | EState (x, _) => sprintf "EState $" [x]
-    | EUnOp _ => "EUnOp (...)"
-    | EBinOp _ => "EBinOp (...)"
-    | ETriOp _ => "ETriOp (...)"
-    | EEI (opr, e, i) => sprintf "EEI ($, $, $)" [str_expr_EI opr, str_raw_e e, str_raw_i i]
-    | EET (opr, e, t) => sprintf "EET ($, $, $)" [str_expr_ET opr, str_raw_e e, str_raw_mt t]
-    | ET (opr, t, r) => sprintf "ET ($, $)" [str_expr_T opr, str_raw_mt t]
-    | ENewArrayValues (t, es, _) => sprintf "ENewArrayValues [$] ($)" [str_raw_mt t, join ", " $ map str_raw_e es]
-    | EAbs _ => "EAbs (...)"
-    | EAbsI _ => "EAbsI (...)"
-    | ECase _ => "ECase (...)"
-    | ECaseSumbool _ => "ECaseSumbool (...)"
-    | EIfi _ => "EIfi (...)"
-    | ELet _ => "ELet (...)"
-    | ESetModify _ => "ESetModify (...)"
-    | EGet _ => "EGet (...)"
+(* fun str_raw_e e = *)
+(*   case e of *)
+(*       EAppConstr _ => "EAppConstr (...)" *)
+(*     | EVar _ => "EVar (...)" *)
+(*     | EConst _ => "EConst (...)" *)
+(*     | EState (x, _) => sprintf "EState $" [x] *)
+(*     | EUnOp _ => "EUnOp (...)" *)
+(*     | EBinOp _ => "EBinOp (...)" *)
+(*     | ETriOp _ => "ETriOp (...)" *)
+(*     | EEI (opr, e, i) => sprintf "EEI ($, $, $)" [str_expr_EI opr, str_raw_e e, str_raw_i i] *)
+(*     | EET (opr, e, t) => sprintf "EET ($, $, $)" [str_expr_ET opr, str_raw_e e, str_raw_mt t] *)
+(*     | ET (opr, t, r) => sprintf "ET ($, $)" [str_expr_T opr, str_raw_mt t] *)
+(*     | ENewArrayValues (t, es, _) => sprintf "ENewArrayValues [$] ($)" [str_raw_mt t, join ", " $ map str_raw_e es] *)
+(*     | EAbs _ => "EAbs (...)" *)
+(*     | EAbsI _ => "EAbsI (...)" *)
+(*     | ECase _ => "ECase (...)" *)
+(*     | ECaseSumbool _ => "ECaseSumbool (...)" *)
+(*     | EIfi _ => "EIfi (...)" *)
+(*     | ELet _ => "ELet (...)" *)
+(*     | ESetModify _ => "ESetModify (...)" *)
+(*     | EGet _ => "EGet (...)" *)
 
 end

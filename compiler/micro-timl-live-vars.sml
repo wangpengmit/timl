@@ -152,6 +152,7 @@ fun live_vars_expr_visitor_vtable cast () =
         case data of
             EVar data => #visit_EVar vtable this env data
           | EConst data => #visit_EConst vtable this env data
+          | EMsg name => EMsg name
           (* | ELoc data => #visit_ELoc vtable this env data *)
           | EUnOp data => #visit_EUnOp vtable this env data
           | EBinOp data => #visit_EBinOp vtable this env data

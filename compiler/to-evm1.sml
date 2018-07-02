@@ -316,6 +316,10 @@ fun compile st_name2int ectx e =
            )
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
     | EConst c => PUSH_value $ VConst $ cg_c c
+    | EMsg name =>
+      (case name of
+           MsgSender () => [ORIGIN ()]
+      )
     | EState x => (PUSH_value $ VState $ st_name2int @!! x) @ repeat C_MLOAD (JUMPDEST ())(*to make gas cost the same as get_reg, for debugging purpose*)
     | EAppT (e, t) => compile e @ [VALUE_AppT $ Inner $ cg_t t]
     | EAppI (e, i) => compile e @ [VALUE_AppI $ Inner i]
@@ -724,6 +728,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | ETriOp (ETVectorSet (), _, _, _) => err ()
     | EVar _ => err ()
     | EConst _ => err ()
+    | EMsg _ => err ()
     | EState _ => err ()
     | EUnOp _ => err ()
     | EAbs _ => err ()

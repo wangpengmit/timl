@@ -13,6 +13,7 @@ val C_sha3word = 6
 val C_memory = 3
                    
 val C_POP = C_base
+val C_ORIGIN = C_base
               
 val C_ADD = C_verylow
 val C_SUB = C_verylow
@@ -78,5 +79,5 @@ val C_New_post_loop = C_UNPACKI + 3 * C_POP + C_SWAP + C_MARK_PreArray2ArrayPtr 
 
 val C_Ifi_branch_prelude = C_set_reg
 val C_Case_branch_prelude = C_PUSH + C_ADD + C_MLOAD + C_set_reg
-                                                                                    
+
 end

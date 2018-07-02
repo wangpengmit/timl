@@ -50,6 +50,7 @@ datatype expr =
 	 | ELet of return * (decl tele, expr) bind * region
          | ESetModify of bool(*is modify?*) * string * expr list * expr * region
          | EGet of string * expr list * region
+         | EMsg of msg_info * region
 
      and decl =
          DVal of ebinder * ((tbinder * (idx * idx) outer) list, expr) bind outer * region

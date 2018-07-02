@@ -133,6 +133,7 @@ fun on_e (e : S.expr) : mtiml_expr =
   case e of
       S.EVar (x, _) => EVar x
     | S.EConst (c, _) => EConst c
+    | S.EMsg (name, _) => EMsg name
     | S.EState (x, _) => EState x
     | S.EUnOp (opr, e, _) => EUnOp (EUTiML opr, on_e e)
     | S.EBinOp (opr, e1, e2) => EBinOp (opr, on_e e1, on_e e2)

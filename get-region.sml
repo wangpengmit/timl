@@ -151,6 +151,7 @@ fun get_region_e e =
     | ELet (_, _, r) => r
     | ESetModify (_, _, _, _, r) => r
     | EGet (_, _, r) => r
+    | EMsg (_, r) => r
                                               
 fun get_region_rule (pn, e) = combine_region (get_region_pn pn) (get_region_e e)
 

@@ -124,6 +124,7 @@ fun default_evm1_visitor_vtable
           | OR () => OR ()
           | BYTE () => BYTE ()
           | SHA3 () => SHA3 ()
+          | ORIGIN () => ORIGIN ()
           | POP () => POP ()
           | MLOAD () => MLOAD ()
           | MSTORE () => MSTORE ()

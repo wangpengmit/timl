@@ -128,6 +128,7 @@ fun assert_base_storage_ty t =
 fun C_inst b =
   case b of
       POP () => C_POP
+    | ORIGIN () => C_ORIGIN
                   
     | ADD () => C_ADD
     | SUB () => C_SUB
@@ -292,8 +293,9 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
               | (TVectorPtr (x, offset), TNat i) => TVectorPtr (x, offset %%- i)
               | _ => raise Impossible $ sprintf "SUB: can't subtract operands of types ($) and ($)" [str_t t0, str_t t1]
       in
-        ((itctx, rctx, t :: sctx, st))
+        (itctx, rctx, t :: sctx, st)
       end
+    | ORIGIN () => (itctx, rctx, TInt :: sctx, st)
     | MUL () => mul_div "MUL" op%*
     | DIV () => mul_div "DIV" op%/
     | SDIV () => mul_div "SDIV" op%/
@@ -383,7 +385,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, sctx, st))
       end
-    | JUMPDEST () => (ctx)
+    | JUMPDEST () => ctx
     | PUSH (n, w) =>
       (assert_b "tc/PUSH/n" (1 <= n andalso n <= 32); ((itctx, rctx, tc_w (hctx, st_int2name) itctx (unInner w) :: sctx, st)))
     | DUP n => 

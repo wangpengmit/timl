@@ -53,6 +53,7 @@ fun anf_decls_expr_visitor_vtable cast output =
                 | ETriOp (ETIte (), _, _, _) => false
                 | EVar _ => false
                 | EConst _ => false
+                | EMsg _ => false
                 | EState _ => false
                 | EAscType _ => false
                 | EAscTime _ => false

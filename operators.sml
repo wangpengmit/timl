@@ -64,6 +64,9 @@ datatype 'a quan =
 
 type nat = int
 
+datatype msg_info =
+         MsgSender of unit
+             
 datatype expr_const =
          ECTT of unit
          | ECNat of nat
@@ -71,7 +74,7 @@ datatype expr_const =
          | ECBool of bool
          | ECiBool of bool
          | ECByte of Char.char
-         (* | ECString of string *)
+(* | ECString of string *)
 
 (* projector for product type *)
 datatype projector =
@@ -112,6 +115,10 @@ datatype expr_un_op =
          | EUAnno of expr_anno
          | EUField of string
 
+fun str_msg_info name =
+    case name of
+        MsgSender () => "sender"
+                        
 fun str_expr_const c =
   case c of
       ECTT () => "()"
@@ -120,7 +127,7 @@ fun str_expr_const c =
     | ECiBool b => sprintf "#$" [str_bool b]
     | ECBool b => str_bool b
     | ECByte c => str_char c
-    (* | ECString s => surround "\"" "\"" s *)
+(* | ECString s => surround "\"" "\"" s *)
                                 
 fun str_proj opr =
   case opr of

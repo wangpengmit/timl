@@ -184,6 +184,10 @@ local
                   TUnit r
                 else if x = "int" then
                   TInt r
+                else if x = "uint256" then
+                  TInt r
+                else if x = "address" then
+                  TInt r
                 else if x = "bool" then
                   TBool r
                 else if x = "byte" then
@@ -479,15 +483,23 @@ local
         | S.EBinOp (EBWhile (), e1, e2, _) => raise Impossible "elaborate/EWhile"
         | S.EUnOp (opr, e, r) =>
           (case opr of
-               S.EUTiML opr => EUnOp (opr, elab e, r)
+               S.EUTiML opr =>
+               (case (opr, e) of
+                    (S.EUField name, S.EVar ((NONE, ("msg", _)), (false, false))) =>
+                    let
+                      val name = 
+                          case name of
+                              "sender" => MsgSender ()
+                            | _ => raise Error (r, "unknown field of 'msg'")
+                    in
+                      EMsg (name, r)
+                    end
+                  | _ => EUnOp (opr, elab e, r)
+               )
              | S.EUThrow () => EHalt (elab e, TUVar ((), r))
              | S.EUAsm _ => raise Impossible "elaborate/EAsm"
              | S.EUDeref _ => raise Impossible "elaborate/EDeref"
              | S.EUReturn _ => raise Impossible "elaborate/EReturn"
-             (* | S.EUField name =>  *)
-               (* case e of *)
-               (*     EVar ((NONE, ("msg", _)), (false, false)) =>  *)
-               (* raise Impossible "elaborate/EField" *)
           )
         | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
           ETriOp (ETIte (), elab e1, elab e2, elab e3)
@@ -521,8 +533,8 @@ local
                     end
                   | _ => S.ESemiColon (e, body, r)
             val e = foldl f e es
-            val () = println "elab/ESemis:"
-            val () = println $ AstPP.pp_e_to_string e
+            (* val () = println "elab/ESemis:" *)
+            (* val () = println $ AstPP.pp_e_to_string e *)
           in
             elab e
           end
