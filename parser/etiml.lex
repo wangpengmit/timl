@@ -107,6 +107,7 @@ val keywords = [
     ("storage", T.STORAGE),
     ("zero", T.ZERO),
     (* ("super", T.SUPER), *)
+    ("not", T.NOT),
     ("assembly", T.ASSEMBLY)
 ]
  

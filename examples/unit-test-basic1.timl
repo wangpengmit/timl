@@ -1,9 +1,9 @@
 structure UnitTestBasic1 = struct
 
-val f = fn y => 1 + y
-val a = (f 64) using _
-val () = __&halt 0x1111
-val b = (f 64) using _
+(* val f = fn y => 1 + y *)
+(* val a = (f 64) using _ *)
+(* val () = __&halt 0x1111 *)
+(* val b = (f 64) using _ *)
                     
 (* val x = 1 *)
 (* val f = fn y => 1 + y *)

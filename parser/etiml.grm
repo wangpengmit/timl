@@ -143,6 +143,7 @@ open Ast
     | ASSEMBLY
     | CONSTANT
     | ZERO
+    | NOT
 
 %nonterm start of prog
        | exp of exp
@@ -474,6 +475,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | STRING (EConst (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
      | CHAR (EConst (ECChar CHAR, (CHARleft, CHARright)))
      | LSQSQ exp_comma_star RSQSQ (EList (exp_comma_star, (LSQSQleft, RSQSQright)))
+     | NOT aexp (EUnOp' (EUPrim (EUPBoolNeg ()), aexp, (NOTleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
      | aexp square_plus (EGet ((aexp, square_plus), (aexpleft, square_plusright)))
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))

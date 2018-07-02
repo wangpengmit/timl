@@ -525,7 +525,7 @@ fun pp_return s (t, i, j) =
       fun str v = PP.string s v
       fun comma () = (str ","; space ())
     in
-      (Option.app pp_t; comma ();
+      (Option.app pp_t t; comma ();
        Option.app (pp_i) i; comma ();
        Option.app (pp_i) j)
     end
