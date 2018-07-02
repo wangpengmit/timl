@@ -445,7 +445,9 @@ fun live_vars_expr_visitor_vtable cast () =
 	  | EETAsc () => #visit_EAsc vtable this env data
           | EETHalt () =>
             let
-              val env = set_has_k env
+              val lvars = #1 env
+              val () = lvars := Set.empty
+              val env = (lvars, true, false)
             in
               EET (opr, #visit_expr vtable this env e, #visit_mtype vtable this env t)
             end

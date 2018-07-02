@@ -83,7 +83,7 @@ fun C_NewArrayValues n = C_PUSH + C_DUP + C_array_malloc + C_SWAP + C_array_init
 val C_Never = C_PUSH
 val C_Builtin = C_PUSH
 val C_Halt = C_PUSH + C_SWAP + C_DUP + C_MSTORE + C_PUSH + C_SWAP + C_RETURN
-val C_EHalt = C_Halt + C_Var
+val C_EHalt = C_Halt + C_Var + C_Let
                                                                       
 val C_EProj = C_Proj + C_Var + C_Let
 val C_EPair = C_Pair + 2 * C_Var + C_Let
@@ -162,5 +162,6 @@ val () = println $ "C_Let = " ^ str_int C_Let
 val () = println $ "C_Var = " ^ str_int C_Var
 val () = println $ "C_Proj = " ^ str_int C_Proj
 val () = println $ "C_Pair = " ^ str_int C_Pair
+val () = println $ "C_EHalt = " ^ str_int C_EHalt
                                          
 end

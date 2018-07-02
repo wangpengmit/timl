@@ -484,7 +484,9 @@ fun live_vars_expr_visitor_vtable cast () =
     fun visit_EHalt this env (e, t) =
       let
         val vtable = cast this
-        val env = set_has_k env
+        val lvars = #1 env
+        val () = lvars := ISet.empty
+        val env = (lvars, true, false)
         val e = #visit_expr vtable this env e
         val t = #visit_ty vtable this env t
       in

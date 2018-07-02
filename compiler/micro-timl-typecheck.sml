@@ -914,7 +914,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     (* val () = print $ e_input_str *)
     fun err () = raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
     val itctx = (ictx, tctx)
-    fun get_vector t1 =
+    fun get_vector st t1 =
       let
         val x = assert_TState t1 
         val t = assert_fst_false $ st_types @!! x 
@@ -1579,7 +1579,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val st_e1 = st
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val i = assert_TNat_m t2 (fn s => raise MTCError $ "EVectorGet: " ^ s)
-          val (x, t, len) = get_vector $ whnf itctx t1
+          val (x, t, len) = get_vector st $ whnf itctx t1
           val () = check_prop (i %< len)
           val (e1, e2) = if !anno_EVectorGet then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorGet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
@@ -1591,7 +1591,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
           val (e2, t2, j2, st) = tc (ctx, st) e2
-          val (x, t, len) = get_vector $ whnf itctx t1
+          val (x, t, len) = get_vector st $ whnf itctx t1
           val () = is_eq_ty itctx (t2, t)
           val (e1, e2) = if !anno_EVectorPushBack then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_EVectorPushBack_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
@@ -1601,7 +1601,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       | EUnOp (opr as EUTiML (EUVectorLen ()), e) =>
         let
           val (e, t, j, st) = tc (ctx, st) e
-          val (_, _, len) = get_vector $ whnf itctx t
+          val (_, _, len) = get_vector st $ whnf itctx t
           val e = if !anno_EVectorLen then e %: t else e
           val e = if !anno_EVectorLen_state then e %~ st else e
         in
@@ -1610,7 +1610,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       | EUnOp (opr as EUTiML (EUVectorClear ()), e) =>
         let
           val (e, t, j, st) = tc (ctx, st) e
-          val (x, _, _) = get_vector $ whnf itctx t
+          val (x, _, _) = get_vector st $ whnf itctx t
           val e = if !anno_EVectorClear then e %: t else e
           val e = if !anno_EVectorClear_state then e %~ st else e
         in
@@ -1625,7 +1625,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i = assert_TNat_m t2 (fn s => raise MTCError $ "EVectorSet: " ^ s)
           val (e3, t3, j3, st) = tc (ctx, st) e3
           val t1 = whnf itctx t1
-          val (x, t, len) = get_vector t1
+          val (x, t, len) = get_vector st t1
           val () = is_eq_ty itctx (t3, t)
           val () = check_prop (i %< len)
           val (e1, e2, e3) = if !anno_EVectorSet then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)

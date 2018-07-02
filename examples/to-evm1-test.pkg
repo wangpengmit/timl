@@ -1,6 +1,6 @@
 (* test-state.timl *)
-(* unit-test-basic1.timl *)
-MiniToken.etiml
+unit-test-basic1.timl
+(* MiniToken.etiml *)
 
 (* pervasive.timl *)
 (* basic.timl *)

@@ -903,7 +903,7 @@ fun test1 dirname =
                      
     open MicroTiMLTypecheck
     open TestUtil
-    val init_st = IState $ StMap.map (fn _ => INat 0) st_name2ty
+    val init_st = IState $ StMap.map (fn _ => INat 0) $ StMap.filter (fn (is_map, _) => not is_map) st_name2ty
     val () = println "Started MicroTiML typechecking #_1 ..."
     val (e, _) = MicroTiMLLiveVars.live_vars e
     val e = set_is_rec false e

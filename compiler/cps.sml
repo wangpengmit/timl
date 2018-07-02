@@ -788,6 +788,18 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         foldr f (ek, (to_real $ C_ENewArrayValues len, N $ len + 1) %%+ j_k) xs_names_es
       end
     | S.EUnOp (EUTiML (EUAnno _), e) => cps (e, t_e) (k, j_k)
+    | S.EHalt (e, _) =>
+      (* [[ halt e [_] ]](k) = [[e]](\x. halt x [unit]) *)
+      let
+        val (e, st_e) = assert_EAscState e
+        val (e, t_e) = assert_EAscType e
+        val x = fresh_evar ()
+        val c = (* k $$  *)EHalt (EV x, TUnit)
+        val t_x = cps_t t_e
+        val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c), NONE)
+      in
+        cps (e, t_e) (c, TN C_EHalt (* %%+ j_k *))
+      end
     | S.EUnOp (opr, e) =>
       (* [[ opr e ]](k) = [[e]](\x. k (opr x)) *)
       let
@@ -795,8 +807,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         fun cps_EUnOp t_e f =
           let
             val x = fresh_evar ()
-            val c = f x
-            val c = k $$ c
+            val c = k $$ f x
             val t_x = cps_t t_e
             val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c), NONE)
             val cost =
@@ -926,19 +937,6 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val e = EAbs (st_e3 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e), NONE)
       in
         cps (e1, t_e1) (e, i_e)
-      end
-    (* extensions from MicroTiML *)
-    | S.EHalt (e, _) =>
-      (* [[ halt e [_] ]](k) = [[e]](\x. halt x [unit]) *)
-      let
-        val (e, st_e) = assert_EAscState e
-        val (e, t_e) = assert_EAscType e
-        val x = fresh_evar ()
-        val c = EHalt (EV x, TUnit)
-        val t_x = cps_t t_e
-        val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c), NONE)
-      in
-        cps (e, t_e) (c, TN C_EHalt)
       end
     (* | S.ELetConstr (e1, bind) => *)
     (*   (* [[ let constr x = e1 in e2 ]](k) = [[e1]](\y. let constr x = y in [[e2]](k)) *) *)
