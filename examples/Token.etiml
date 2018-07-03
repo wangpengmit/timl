@@ -9,9 +9,9 @@ contract TokenERC20 = struct
   open Util                        
                         
   (* Public variables of the token *)
-  public state name : ref string
+  (* public state name : ref string *)
 
-  public state symbol : ref string
+  (* public state symbol : ref string *)
   public val decimals : uint8 = 18
   (* 18 decimals is the strongly suggested default, avoid changing it *)
   public state totalSupply : ref uint256
@@ -32,14 +32,14 @@ contract TokenERC20 = struct
    * Initializes contract with initial supply tokens to the creator of the contract
    *)
   public fun init (
-        initialSupply : uint256,
-        tokenName : string,
-        tokenSymbol : string
+        initialSupply : uint256
+        (* tokenName : string, *)
+        (* tokenSymbol : string *)
     ) using 14.0 = 
     totalSupply := initialSupply * 10 ** uint256(decimals);  (* Update total supply with the decimal amount *)
-    set balanceOf[msg.sender] totalSupply;                (* Give the creator all initial tokens *)
-    name := tokenName;                                   (* Set the name for display purposes *)
-    symbol := tokenSymbol                               (* Set the symbol for display purposes *)
+    set balanceOf[msg.sender] totalSupply                (* Give the creator all initial tokens *)
+    (* name := tokenName;                                   (* Set the name for display purposes *) *)
+    (* symbol := tokenSymbol                               (* Set the symbol for display purposes *) *)
 
   (**
    * Internal transfer, only can be called by this contract
@@ -57,7 +57,7 @@ contract TokenERC20 = struct
     modify balanceOf[_from] -= _value;
     (* Add the same to the recipient *)
     modify balanceOf[_to] += _value;
-    Transfer(_from, _to, _value);
+    fire Transfer(_from, _to, _value);
     (* Asserts are used to use static analysis to find bugs in your code. They should never fail *)
     assert(balanceOf[_from] + balanceOf[_to] = previousBalances)
 
@@ -109,9 +109,9 @@ contract TokenERC20 = struct
    * @param _extraData some extra information to send to the approved contract
    *)
   public fun approveAndCall (_spender : address, _value : uint256, _extraData : bytes) using 12.0 =
-    let spender : tokenRecipient = tokenRecipient(_spender);
+    let spender = attach _spender tokenRecipient;
     if approve(_spender, _value) then
-      receiveApproval(spender, msg_sender, _value, this, _extraData);
+      call spender receiveApproval(msg_sender, _value, this, _extraData);
       true
     else false end
 
@@ -126,7 +126,7 @@ contract TokenERC20 = struct
     require(balanceOf[msg_sender] >= _value);   (* Check if the sender has enough *)
     modify balanceOf[msg_sender] -= _value;            (* Subtract from the sender *)
     modify totalSupply -= _value;                      (* Updates totalSupply *)
-    Burn(msg_sender, _value);
+    fire Burn(msg_sender, _value);
     true
 
   (**
@@ -143,7 +143,7 @@ contract TokenERC20 = struct
     modify balanceOf[_from] -= _value;                         (* Subtract from the targeted balance *)
     modify allowance[_from][msg_sender] -= _value;             (* Subtract from the sender's allowance *)
     modify totalSupply -= _value;                              (* Update totalSupply *)
-    Burn(_from, _value);
+    fire Burn(_from, _value);
     true
 
 end

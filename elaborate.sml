@@ -313,27 +313,10 @@ local
         (dt, r)
       end
 
-  fun is_vector t =
-    case t of
-        S.TAppT (S.TVar (NONE, (x, _)), t2, _) =>
-        if x = "vector" then SOME $ elab_mt t2
-        else NONE
-      | _ => NONE
-
-  fun is_map t =
-    case t of
-        S.TAppT (S.TAppT (S.TVar (NONE, (x, _)), t1, _), t2, _) =>
-        if x = "map" then
-          case is_map t2 of
-              SOME t => SOME $ TCell $ TMap t
-            | NONE => SOME $ TCell $ elab_mt t2
-        else NONE
-      | _ => NONE
-
   val empty_return = (NONE, NONE, NONE)
 
-  val state_decls_ref = ref ([] : (name * top_bind) list)
-  val state_inits_ref = ref ([] : (name * init) list)
+  val state_decls_ref = ref ([] : (name * S.ty * init option) list)
+  (* val state_inits_ref = ref ([] : (name * init) list) *)
                           
   fun elab e =
       case e of
@@ -624,20 +607,12 @@ local
         | S.DOpen name => [DOpen (Inner name, NONE)]
         | S.DState (name, t, init) =>
           let
-            val () = push_ref state_decls_ref $ elab_state_decl (name, t)
-            val () = Option.app (fn init => push_ref state_inits_ref $ (name, init)) init
+            val () = push_ref state_decls_ref (name, t, init)
+            (* val () = Option.app (fn init => push_ref state_inits_ref $ (name, init)) init *)
           in
             []
           end
         | S.DEvent (name, ts) => raise Impossible "elaborate/DEvent"
-
-  and elab_state_decl (name, t) =
-      case is_vector t of
-          SOME t => (name, TBState (false, t))
-        | NONE =>
-          case is_map t of
-              SOME t => (name, TBState (true, t))
-            | NONE => raise Error (S.get_region_t t, "wrong state declaration form")
 
   fun elab_spec spec =
       case spec of
@@ -662,17 +637,20 @@ local
       case sg of
           S.SigComponents (specs, r) => (map elab_spec specs, r)
 
-  fun make_state_init r inits =
+  fun make_state_init r decls =
       let
-        fun f (name, init) =
+        fun f (name, _, init) =
             let
               val x = EShortVar name
             in
               case init of
-                  InitExpr (e, r) => [S.ESet ((x, []), e, r)]
-                | InitVector (es, r) => map (fn e => S.EPushBack (x, e, r)) es
+                  NONE => []
+                | SOME init =>
+                  case init of
+                      InitExpr (e, r) => [S.ESet ((x, []), e, r)]
+                    | InitVector (es, r) => map (fn e => S.EPushBack (x, e, r)) es
             end
-        val es = concatMap f inits
+        val es = concatMap f decls
         val e = case es of [] => S.ETT r | _ => ESemis (es, r)
         (* val e = S.EAbs ([S.BindTyping (S.PnTuple ([], r))], empty_return, e, r) *)
       in
@@ -683,27 +661,62 @@ local
       case m of
           S.ModComponents (inherits, comps, r) =>
           let
-            val () = state_inits_ref := []
+            val () = state_decls_ref := []
             val decls = concatMap elab_decl comps
-            val state_init = elab_decl $ make_state_init r $ rev $ !state_inits_ref
+            val state_decls = !state_decls_ref
+            val state_init = elab_decl $ make_state_init r $ rev state_decls
           in
-            ModComponents (state_init @ decls, r)
+            (ModComponents (state_init @ decls, r), state_decls)
           end
-        | S.ModSeal (m, sg) => ModSeal (elab_mod m, elab_sig sg)
-        | S.ModTransparentAsc (m, sg) => ModTransparentAsc (elab_mod m, elab_sig sg)
+        | S.ModSeal (m, sg) =>
+          let
+            val (m, state_decls) = elab_mod m
+          in
+            (ModSeal (m, elab_sig sg), state_decls)
+          end
+        | S.ModTransparentAsc (m, sg) =>
+          let
+            val (m, state_decls) = elab_mod m
+          in
+            (ModTransparentAsc (m, elab_sig sg), state_decls)
+          end
+
+  (* fun is_vector t = *)
+  (*   case t of *)
+  (*       S.TAppT (S.TVar (NONE, (x, _)), t2, _) => *)
+  (*       if x = "vector" then SOME $ elab_mt t2 *)
+  (*       else NONE *)
+  (*     | _ => NONE *)
+
+  (* fun is_map t = *)
+  (*   case t of *)
+  (*       S.TAppT (S.TAppT (S.TVar (NONE, (x, _)), t1, _), t2, _) => *)
+  (*       if x = "map" then *)
+  (*         case is_map t2 of *)
+  (*             SOME t => SOME $ TCell $ TMap t *)
+  (*           | NONE => SOME $ TCell $ elab_mt t2 *)
+  (*       else NONE *)
+  (*     | _ => NONE *)
+
+  (* fun elab_state_decl (name, t) = *)
+  (*     case is_vector t of *)
+  (*         SOME t => (name, TBState (false, t)) *)
+  (*       | NONE => *)
+  (*         case is_map t of *)
+  (*             SOME t => (name, TBState (true, t)) *)
+  (*           | NONE => raise Error (S.get_region_t t, "wrong state declaration form") *)
 
   fun elab_top_bind bind =
       case bind of
           S.TBMod (name, m) =>
           let
-            val () = state_decls_ref := []
-            val ret = (name, TBMod (elab_mod m))
+            val (m, state_decls) = elab_mod m
           in
-            (rev $ !state_decls_ref) @ [ret]
+            (map (fn (name, t, _) => (name, TBState $ elab_mt t)) $ rev state_decls) @ [(name, TBMod m)]
           end
         | S.TBFunctor (name, (arg_name, arg), body) => [(name, TBFunctor ((arg_name, elab_sig arg), elab_mod body))]
         | S.TBFunctorApp (name, f, arg) => [(name, TBFunctorApp (f, arg))]
-        | S.TBState (name, t) => [elab_state_decl (name, t)]
+        | S.TBState (name, t) => [(name, TBState $ elab_mt t)]
         | S.TBPragma (name, version) => [(name, TBPragma version)]
         | S.TBInterface (name, sgn) => raise Impossible "elaborate/TBInterface"
 

@@ -1014,7 +1014,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (e, t_e, j, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
-          val t = assert_TCell t_e
+          val t =
+              case t_e of
+                  TState x =>
+                  assert_TCell $ st_types @!! x
+                | _ =>
+                  assert_TCell t_e
           val e = if !anno_EStorageGet then e %: t_e else e
           val e = if !anno_EStorageGet_state then e %~ st else e
         in
@@ -1638,7 +1643,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
           val t1 = whnf itctx t1
-          val t = assert_TCell t1
+          val t =
+              case t1 of
+                  TState x =>
+                  assert_TCell $ st_types @!! x 
+                | _ =>
+                  assert_TCell t1
           val (e2, j2, st) = tc_against_ty (ctx, st) (e2, t)
           val (e1, e2) = if !anno_EStorageSet then (e1 %: t1, e2 %: t) else (e1, e2)
           val (e1, e2) = if !anno_EStorageSet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)

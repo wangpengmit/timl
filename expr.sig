@@ -94,7 +94,7 @@ signature EXPR = sig
            (* | TopModSpec of name * sgn *)
            | TBFunctor of (name * sgn) (* list *) * mod
            | TBFunctorApp of mod_id * mod_id (* list *)
-           | TBState of bool * mtype
+           | TBState of mtype
          | TBPragma of string
 
   type prog = (name * top_bind) list
