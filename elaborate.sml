@@ -184,9 +184,15 @@ local
                   TUnit r
                 else if x = "int" then
                   TInt r
+                else if x = "uint" then
+                  TInt r
+                else if x = "uint8" then
+                  TInt r
                 else if x = "uint256" then
                   TInt r
                 else if x = "address" then
+                  TInt r
+                else if x = "bytes" then
                   TInt r
                 else if x = "bool" then
                   TBool r
@@ -329,7 +335,11 @@ local
                 NONE =>
                 if no_decorate andalso x = "__&true" then
                   EConst (ECBool true, r)
+                else if no_decorate andalso x = "true" then
+                  EConst (ECBool true, r)
                 else if no_decorate andalso x = "__&false" then
+                  EConst (ECBool false, r)
+                else if no_decorate andalso x = "false" then
                   EConst (ECBool false, r)
                 else if no_decorate andalso x = "__&itrue" then
                   EConst (ECiBool true, r)
@@ -462,7 +472,12 @@ local
         | S.EBinOp (EBTiML opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
         | S.EBinOp (EBStrConcat (), e1, e2, r) =>
           EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
-        | S.EBinOp (EBSetRef (), e1, e2, _) => raise Impossible "elaborate/ESetRef"
+        | S.EBinOp (EBSetRef (), e1, e2, r) =>
+          (case e1 of
+               S.EVar ((NONE, x), (false, false)) =>
+               ESet (fst x, [], elab e2, r)
+             | _ => raise Impossible "elaborate/ESetRef/non-EVar"
+          )
         | S.EBinOp (EBWhile (), e1, e2, _) => raise Impossible "elaborate/EWhile"
         | S.EUnOp (opr, e, r) =>
           (case opr of
@@ -488,6 +503,9 @@ local
                )
              | S.EUAsm _ => raise Impossible "elaborate/EAsm"
              | S.EUReturn _ => raise Impossible "elaborate/EReturn"
+             | S.EUCall () => ETT r
+             | S.EUFire () => ETT r
+             | S.EUAttach () => ETT r
           )
         | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
           ETriOp (ETIte (), elab e1, elab e2, elab e3)

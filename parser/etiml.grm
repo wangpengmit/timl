@@ -144,6 +144,9 @@ open Ast
     | CONSTANT
     | ZERO
     | NOT
+    | CALL
+    | FIRE
+    | ATTACH
 
 %nonterm start of prog
        | exp of exp
@@ -454,6 +457,9 @@ exp : exp_term (exp_term)
      | set_modify aexp square_star exp (ESetModify (set_modify, (aexp, square_star), exp, (set_modifyleft, expright)))
      | RETURN exp (EReturn (exp, (RETURNleft, expright)))
      | THROW exp (EThrow (exp, (THROWleft, THROWright)))
+     | CALL exp (ECall (exp, (CALLleft, expright)))
+     | FIRE exp (EFire (exp, (FIREleft, expright)))
+     | ATTACH exp (EAttach (exp, (ATTACHleft, expright)))
 
 exp_term : aexp (aexp)
          | exp_term aexp (EApp (exp_term, aexp, (exp_termleft, aexpright)))

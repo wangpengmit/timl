@@ -108,6 +108,9 @@ val keywords = [
     ("zero", T.ZERO),
     (* ("super", T.SUPER), *)
     ("not", T.NOT),
+    ("call", T.CALL),
+    ("fire", T.FIRE),
+    ("attach", T.ATTACH),
     ("assembly", T.ASSEMBLY)
 ]
  

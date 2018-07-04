@@ -503,6 +503,9 @@ fun str_ast_expr_unop opr =
       | EUAsm () => "asm"
       | EUReturn () => "return"
       | EUThrow () => "throw"
+      | EUCall () => "call"
+      | EUFire () => "fire"
+      | EUAttach () => "attach"
                             
 fun str_ast_expr_binop opr =
     case opr of

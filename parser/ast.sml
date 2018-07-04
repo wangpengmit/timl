@@ -92,6 +92,9 @@ datatype ast_expr_unop =
          | EUReturn of unit
          | EUThrow of unit
          | EUAsm of unit
+         | EUCall of unit
+         | EUAttach of unit
+         | EUFire of unit
                        
 datatype ast_expr_binop =
          EBTiML of expr_bin_op
@@ -272,6 +275,9 @@ fun ESet (es, e, r) = ESetModify (false, es, e, r)
 fun ENat (n, r) = EConst (ECNat n, r)
 fun ETT r = ETuple ([], r)
 fun EPushBack (e1, e2, r) = EApp (EShortVar ("push_back", r), ETuple ([e1, e2], r), r)
+fun ECall (e, r) = EUnOp (EUCall (), e, r)
+fun EFire (e, r) = EUnOp (EUFire (), e, r)
+fun EAttach (e, r) = EUnOp (EUAttach (), e, r)
 
 type typing = id * ty
 type indexed_typing = id * (ty * bool)

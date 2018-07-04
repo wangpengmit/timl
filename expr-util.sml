@@ -52,6 +52,7 @@ fun EAnnoLiveVars (e, n, r) = EAnno (e, EALiveVars n, r)
 fun EAnnoBodyOfRecur (e, r) = EAnno (e, EABodyOfRecur (), r)
 fun EAnnoConstr (e, r) = EAnno (e, EAConstr (), r)
 fun EHalt (e, t) = EET (EETHalt (), e, t)
+fun ESet (x, es, e, r) = ESetModify (false, x, es, e, r)
 
 infix 0 %:
 infix 0 |>
