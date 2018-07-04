@@ -630,7 +630,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, t1, sctx) = assert_cons2 sctx
         val t1 = whnf itctx t1
         val t = case t1 of
-                    TState x => assert_fst_true $ st_name2ty @!! x
+                    TState x => assert_TMap $ st_name2ty @!! x
                   | _ => assert_TMap $ assert_TCell t1
         val () = assert_TInt t0
       in
@@ -649,7 +649,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, t1, sctx) = assert_cons2 sctx
         val vec = assert_TState t1
         val len = st @%!! vec
-        val t = assert_fst_false $ st_name2ty @!! vec
+        val t = assert_TVector $ st_name2ty @!! vec
         val () = is_eq_ty itctx (t0, t)
       in
         ((itctx, rctx, sctx, st @%+ (vec, len %+ N1)))
@@ -663,18 +663,28 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                 TVectorPtr (vec, offset) =>
                 let
                   val len = st @%!! vec
-                  val t = assert_fst_false $ st_name2ty @!! vec
+                  val t = assert_TVector $ st_name2ty @!! vec
                   val () = check_prop (offset %< len)
                 in
                   t
                 end
               | TState vec =>
-                let
-                  val len = st @%!! vec
-                  val _ = assert_fst_false $ st_name2ty @!! vec
-                in
-                  TNat len
-                end
+                (case st_name2ty @!! vec of
+                     TVector _ =>
+                     let
+                       val len = st @%!! vec
+                     in
+                       TNat len
+                     end
+                   | st_t as TTuplePtr _ => 
+                     let
+                       val t = assert_TCell st_t
+                       val () = assert_base_storage_ty t
+                     in
+                       t
+                     end
+                   | _ => def ()
+                )
               | TTuplePtr _ =>
                 let
                   val t = assert_TCell t0
@@ -695,20 +705,31 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                 TVectorPtr (vec, offset) =>
                 let
                   val len = st @%!! vec
-                  val t = assert_fst_false $ st_name2ty @!! vec
+                  val t = assert_TVector $ st_name2ty @!! vec
                   val () = check_prop (offset %< len)
                   val () = is_eq_ty itctx (t1, t)
                 in
                   st
                 end
               | TState vec =>
-                let
-                  val _ = assert_fst_false $ st_name2ty @!! vec
-                  val new = assert_TNat t1
-                  val () = check_prop (new %= N0)
-                in
-                  st @%+ (vec, N0)
-                end
+                (case st_name2ty @!! vec of
+                     TVector _ =>
+                     let
+                       val new = assert_TNat t1
+                       val () = check_prop (new %= N0)
+                     in
+                       st @%+ (vec, N0)
+                     end
+                   | st_t as TTuplePtr _ => 
+                     let
+                       val t = assert_TCell st_t
+                       val () = assert_base_storage_ty t
+                       val () = is_eq_ty itctx (t1, t)
+                     in
+                       st
+                     end
+                   | _ => def ()
+                )
               | TTuplePtr _ =>
                 let
                   val t = assert_TCell t0

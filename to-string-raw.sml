@@ -90,6 +90,7 @@ fun str_raw_mt (t : mtype) : string =
       end
     | TSumbool (s1, s2) => sprintf "TSumbool ($, $)" [str_raw_s s1, str_raw_s s2]
     | TMap t => sprintf "TMap ($)" [str_raw_mt t]
+    | TVector t => sprintf "TVector ($)" [str_raw_mt t]
     | TState (x, _) => sprintf "TState $" [x]
     | TTuplePtr (ts, n, _) => sprintf "TTuplePtr ($, $)" [str_ls str_raw_mt ts, str_int n]
 

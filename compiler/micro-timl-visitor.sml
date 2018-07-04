@@ -141,6 +141,7 @@ fun default_ty_visitor_vtable
           | TTuplePtr (ts, i, b) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, b)
           | TTuple ts => TTuple (visit_list (#visit_ty vtable this) env ts)
           | TMap t => TMap $ #visit_ty vtable this env t
+          | TVector t => TVector $ #visit_ty vtable this env t
           | TState x =>  TState x
           | TVectorPtr (x, i) => TVectorPtr (x, #visit_idx vtable this env i)
       end

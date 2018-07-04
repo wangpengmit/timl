@@ -36,7 +36,7 @@ contract TokenERC20 = struct
         (* tokenName : string, *)
         (* tokenSymbol : string *)
     ) using 14.0 = 
-    totalSupply := initialSupply * 10 ** uint256(decimals);  (* Update total supply with the decimal amount *)
+    totalSupply := initialSupply * 10 ** (decimals : uint256);  (* Update total supply with the decimal amount *)
     set balanceOf[msg.sender] totalSupply                (* Give the creator all initial tokens *)
     (* name := tokenName;                                   (* Set the name for display purposes *) *)
     (* symbol := tokenSymbol                               (* Set the symbol for display purposes *) *)

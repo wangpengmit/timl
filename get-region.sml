@@ -88,6 +88,7 @@ fun get_region_mt t =
     | TDatatype (_, r) => r
     | TSumbool (s1, s2) => combine_region (get_region_s s1) (get_region_s s2)
     | TMap t => get_region_mt t
+    | TVector t => get_region_mt t
     | TState (_, r) => r
     | TTuplePtr (_, _, r) => r
 

@@ -457,6 +457,16 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str ")";
           close_box ()
         )
+      | TVector t =>
+        (
+          open_hbox ();
+          str "TVector";
+          space ();
+          str "(";
+          pp_t t;
+          str ")";
+          close_box ()
+        )
       | TState x => str $ "TState " ^ x
       | TVectorPtr (x, i) =>
         (

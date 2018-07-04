@@ -261,6 +261,11 @@ fun eq_mt t t' =
              TMap t' => eq_mt t t'
            | _ => false
         )
+      | TVector t =>
+        (case t' of
+             TVector t' => eq_mt t t'
+           | _ => false
+        )
       | TState (x, _) =>
         (case t' of
              TState (x', _) => x = x'

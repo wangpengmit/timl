@@ -285,6 +285,16 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
             str ")";
             close_box ()
           )
+        | TVector t =>
+          (
+            open_hbox ();
+            str "TVector";
+            space ();
+            str "(";
+            pp_t t;
+            str ")";
+            close_box ()
+          )
         | TState (x, _) =>
           (
             open_hbox ();
@@ -1229,13 +1239,11 @@ fun pp_top_bind (params as (str_b, str_i, str_s, str_k)) s top_bind =
             str ")";
             close_box ()
           )
-        | TBState (b, t) =>
+        | TBState t =>
           (
             open_hbox ();
             strs "TBState";
             str "(";
-            str $ str_bool b;
-            comma ();
             pp_t t;
             str ")";
             close_box ()

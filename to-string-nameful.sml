@@ -282,6 +282,7 @@ fun strn_mt t =
           sprintf "(datatype $$$ = $)" [fst name, tnames, basic_sorts, constr_decls]
         end
       | TMap t => sprintf "(map $)" [strn_mt t]
+      | TVector t => sprintf "(vector $)" [strn_mt t]
       | TState (x, _) => "typeof " ^ x
       | TTuplePtr (ts, n, _) => sprintf "(tuple_ptr $ $)" [str_ls strn_mt ts, str_int n]
   end

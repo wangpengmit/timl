@@ -136,6 +136,7 @@ string = [^\"];
 <INITIAL>"/\\" => (T.AND (make_region (yypos, size yytext)));
 <INITIAL>"\\/" => (T.OR (make_region (yypos, size yytext)));
 <INITIAL>"<->" => (T.IFF (make_region (yypos, size yytext)));
+<INITIAL>"!" => (T.BANG (make_region (yypos, size yytext)));
 <INITIAL>"=" => (T.EQ (make_region (yypos, size yytext)));
 <INITIAL>"<>" => (T.NEQ (make_region (yypos, size yytext)));
 <INITIAL>"<=" => (T.LE (make_region (yypos, size yytext)));

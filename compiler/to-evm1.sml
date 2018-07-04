@@ -893,7 +893,7 @@ fun test1 dirname =
     val () = write_file (join_dir_file' dirname $ "unit-test-before-translation.tmp", e_str)
     val () = println "Started translating ..."
     val e = trans_e e
-    val st_name2ty = StMap.map (mapSnd trans_mt) st_name2ty
+    val st_name2ty = StMap.map trans_mt st_name2ty
     val () = println "Finished translating"
     open MicroTiMLSimp
     val e = simp_e e
@@ -903,7 +903,7 @@ fun test1 dirname =
                      
     open MicroTiMLTypecheck
     open TestUtil
-    val init_st = IState $ StMap.map (fn _ => INat 0) $ StMap.filter (fn (is_map, _) => not is_map) st_name2ty
+    val init_st = IState $ StMap.map (fn _ => INat 0) $ StMap.filter (fn t => case t of TVector _ => true | _ => false) st_name2ty
     val () = println "Started MicroTiML typechecking #_1 ..."
     val (e, _) = MicroTiMLLiveVars.live_vars e
     val e = set_is_rec false e

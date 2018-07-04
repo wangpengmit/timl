@@ -104,6 +104,7 @@ fun on_mt (t : S.mtype) =
         TRec $ BindAnno ((TName dt_name, k), t)
       end
     | S.TMap t => TMap $ on_mt t
+    | S.TVector t => TVector $ on_mt t
     | S.TState (x, _) => TState x
     | S.TTuplePtr (ts, n, _) => TStorageTuplePtr (map on_mt ts, INat n)
 
@@ -748,7 +749,7 @@ fun test4 dirname =
     (* val () = println "" *)
     val () = println "Started translating ..."
     val e = trans_e e
-    val st_types = StMap.map (mapSnd trans_mt) st_types
+    val st_types = StMap.map trans_mt st_types
     val () = println "Finished translating"
     val e = export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = pp_e (NONE, NONE) e

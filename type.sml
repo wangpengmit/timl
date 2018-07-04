@@ -40,6 +40,7 @@ datatype mtype =
          | TDatatype of mtype datatype_def * region
          | TSumbool of sort * sort
          | TMap of mtype
+         | TVector of mtype
          | TState of string * region
          | TTuplePtr of mtype list * int * region
 

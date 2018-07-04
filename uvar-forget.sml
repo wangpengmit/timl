@@ -212,6 +212,7 @@ fun forget_i_mt x n b =
           | TUVar a => b
           | TDatatype _ => raise Unimpl "uvar_forget/forget_i_mt()/TDatatype"
           | TMap t => TMap $ f x n t
+          | TVector t => TVector $ f x n t
           | TState _ => b
           | TTuplePtr (ts, n, r) => TTuplePtr (map (f x n) ts, n, r)
       end

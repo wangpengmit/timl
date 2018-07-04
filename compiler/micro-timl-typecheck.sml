@@ -559,6 +559,7 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
         (TArrowEVM (st, rctx, ts, i), KType ())
       end
     | TMap t => (TMap $ kc_against_KType ctx t, KType ())
+    | TVector t => (TVector $ kc_against_KType ctx t, KType ())
     | TState x => 
       let
         (* val () = check_state_field x *)
@@ -787,6 +788,10 @@ fun assert_TMap t =
   case t of
       TMap a => a
     | _ => raise assert_fail $ "assert_TMap; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TVector t =
+  case t of
+      TVector a => a
+    | _ => raise assert_fail $ "assert_TVector; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 
 (* fun TCell t = TTuplePtr ([t], N0) *)
 fun assert_TCell t =
@@ -917,7 +922,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     fun get_vector st t1 =
       let
         val x = assert_TState t1 
-        val t = assert_fst_false $ st_types @!! x 
+        val t = assert_TVector $ st_types @!! x 
         val len = st @%!! x
       in
         (x, t, len)
@@ -1570,7 +1575,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val st_e1 = st
           val t1 = whnf itctx t1
           val t = case t1 of
-                      TState x => assert_fst_true $ st_types @!! x 
+                      TState x => assert_TMap $ st_types @!! x 
                     | _ => assert_TMap $ assert_TCell t1
           val (e2, j2, st) = tc_against_ty (ctx, st) (e2, TInt)
           val (e1, e2) = if !anno_EMapPtr then (e1 %: t1, e2 %: TInt) else (e1, e2)
@@ -2327,7 +2332,7 @@ fun test1 dirname =
     (* val () = println "" *)
     val () = println "Started translating ..."
     val e = trans_e e
-    val st_types = StMap.map (mapSnd trans_mt) st_types
+    val st_types = StMap.map trans_mt st_types
     val () = println "Finished translating"
     open ExportPP
     val () = pp_e (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e

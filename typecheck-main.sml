@@ -220,6 +220,9 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
         | U.TMap t =>
 	  (TMap (check_higher_kind_Type (ctx, t)),
            HType)
+        | U.TVector t =>
+	  (TVector (check_higher_kind_Type (ctx, t)),
+           HType)
         | U.TState (x, r) =>
           let
             val () = if Option.isSome $ !(#1 st_types_ref) @! x then ()
@@ -899,6 +902,11 @@ fun assert_TMap err t =
   case t of
       TMap a => a
     | _ => err ()
+fun assert_TVector err t =
+  case t of
+      TVector a => a
+    | _ => err ()
+               
 fun is_constr e =
   case e of
       EUnOp (EUAnno (EAConstr ()), e, _) => (true, e)
@@ -1388,7 +1396,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val t =
                 case t of
                     TState (x, _) =>
-                    assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) $ st_types @! x
+                    assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) $ st_types @!! x
                   | _ =>
                     assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
           in
@@ -1581,7 +1589,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t =
                      case t1 of
                          TState (x, _) =>
-                         assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) $ st_types @! x
+                         assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) $ st_types @!! x
                        | _ =>
                          assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
                  val (e2, j2, st) = check_mtype (ctx, st) (e2, t)
@@ -1592,7 +1600,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
         | U.EState (x, r) => (EState (x, r), TState (x, r), TN C_EState, st)
         | U.EGet (x, es, r) =>
           let
-            val () = if null es then raise Error (r, ["no offsets"]) else ()
             val st_t = case st_types @! x of
                              SOME t => t
                           | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])
@@ -1609,7 +1616,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                     in
                       U.EVectorGet (x, offset)
                     end
-                  | TTuple _ =>
+                  | TTuplePtr _ =>
                     let
                       val () = case es of
                                    [] => ()
@@ -1636,7 +1643,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             end
           else
           let
-            val () = if null es then raise Error (r, ["no offsets"]) else ()
             val st_t = case st_types @! x of
                              SOME t => t
                           | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])

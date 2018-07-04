@@ -217,6 +217,11 @@ fun default_ty_visitor2_vtable
                  TMap t' =>
                  TMap (#visit2_ty vtable this env t t')
                | _ => error (TMap t) other)
+          | TVector t =>
+            (case other of
+                 TVector t' =>
+                 TVector (#visit2_ty vtable this env t t')
+               | _ => error (TVector t) other)
           | TState x =>
             (case other of
                  TState x' =>

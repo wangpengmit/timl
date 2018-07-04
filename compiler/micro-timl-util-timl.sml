@@ -119,14 +119,14 @@ fun assert_TNat_m t err =
   case t of
       TNat a => a
     | _ => err $ "assert_TNat failed; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-fun assert_fst_true p =
-  case p of
-      (true, a) => a
-    | _ => raise Impossible "assert_fst_true"
-fun assert_fst_false p =
-  case p of
-      (false, a) => a
-    | _ => raise Impossible "assert_fst_false"
+(* fun assert_fst_true p = *)
+(*   case p of *)
+(*       (true, a) => a *)
+(*     | _ => raise Impossible "assert_fst_true" *)
+(* fun assert_fst_false p = *)
+(*   case p of *)
+(*       (false, a) => a *)
+(*     | _ => raise Impossible "assert_fst_false" *)
 fun assert_TTuple t =
   case t of
       TTuple a => a

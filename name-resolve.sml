@@ -192,6 +192,30 @@ fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_vi
           | NONE => default ()         
       end
     val vtable = TV.override_visit_TAppI vtable visit_TAppI
+    fun visit_TApp this ctx (data as (t1, t2)) =
+      let
+        val vtable = cast this
+        fun default () = TApp (#visit_mtype vtable this ctx t1, #visit_mtype vtable this ctx t2)
+        val t = S.TApp data
+      in
+        case S.is_TAppV t of
+            SOME (x, ts, is) =>
+            let
+              val ts = map (#visit_mtype vtable this ctx) ts
+              val is = map (#visit_idx vtable this ctx) is
+            in
+              if SE.eq_var (x, (ID ("map", dummy))) andalso length ts = 2 andalso length is = 0 then
+                TMap (List.nth(ts, 1))
+              else if SE.eq_var (x, (ID ("vector", dummy))) andalso length ts = 1 andalso length is = 0 then
+                TVector (hd ts)
+              else if SE.eq_var (x, (ID ("ref", dummy))) andalso length ts = 1 andalso length is = 0 then
+                TCell (hd ts)
+              else
+                default ()
+            end
+          | NONE => default ()         
+      end
+    val vtable = TV.override_visit_TApp vtable visit_TApp
   in
     vtable
   end
@@ -680,11 +704,11 @@ fun on_top_bind gctx (name, bind) =
         in
           (TBFunctorApp ((f, f_r), m), [(name, Sig body), (formal_arg_name, Sig formal_arg)])
         end
-      | S.TBState (b, t) =>
+      | S.TBState t =>
         let
           val () = add_ref st_ref name
         in
-          (TBState (b, on_mtype Gctx.empty ([], []) t), [])
+          (TBState (on_mtype Gctx.empty ([], []) t), [])
         end
       | S.TBPragma s => (TBPragma s, [])
           

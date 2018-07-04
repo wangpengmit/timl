@@ -480,8 +480,13 @@ local
                   | _ => EUnOp (opr, elab e, r)
                )
              | S.EUThrow () => EHalt (elab e, TUVar ((), r))
+             | S.EUDeref () =>
+               (case e of
+                    S.EVar ((NONE, x), (false, false)) =>
+                    EGet (fst x, [], r)
+                  | _ => raise Impossible "elaborate/EDeref/non-EVar"
+               )
              | S.EUAsm _ => raise Impossible "elaborate/EAsm"
-             | S.EUDeref _ => raise Impossible "elaborate/EDeref"
              | S.EUReturn _ => raise Impossible "elaborate/EReturn"
           )
         | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
@@ -612,7 +617,7 @@ local
           in
             []
           end
-        | S.DEvent (name, ts) => raise Impossible "elaborate/DEvent"
+        | S.DEvent (name, ts) => []
 
   fun elab_spec spec =
       case spec of
@@ -714,11 +719,17 @@ local
           in
             (map (fn (name, t, _) => (name, TBState $ elab_mt t)) $ rev state_decls) @ [(name, TBMod m)]
           end
-        | S.TBFunctor (name, (arg_name, arg), body) => [(name, TBFunctor ((arg_name, elab_sig arg), elab_mod body))]
+        | S.TBFunctor (name, (arg_name, arg), body) =>
+          let
+            val (body, state_decls) = elab_mod body
+          in
+            (map (fn (name, t, _) => (name, TBState $ elab_mt t)) $ rev state_decls) @
+            [(name, TBFunctor ((arg_name, elab_sig arg), body))]
+          end
         | S.TBFunctorApp (name, f, arg) => [(name, TBFunctorApp (f, arg))]
         | S.TBState (name, t) => [(name, TBState $ elab_mt t)]
         | S.TBPragma (name, version) => [(name, TBPragma version)]
-        | S.TBInterface (name, sgn) => raise Impossible "elaborate/TBInterface"
+        | S.TBInterface (name, sgn) => []
 
   fun elab_prog prog = concatMap elab_top_bind prog
                            
