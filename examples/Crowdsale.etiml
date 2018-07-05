@@ -4,6 +4,14 @@ interface token = sig
   fun transfer(receiver : address, amount : uint)
 end
 
+structure Util = struct
+  fun addBy b a = a + b
+  fun subBy b a = a - b
+  fun orBy b a = a || b
+  fun require b = if b then () else throw using _ end
+  val assert = require
+end
+
 contract Crowdsale = struct
 
   open Util
