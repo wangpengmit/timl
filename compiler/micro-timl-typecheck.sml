@@ -632,6 +632,7 @@ fun TAppITs t args =
 fun get_msg_info_type name =
     case name of
         MsgSender () => TInt
+      | MsgValue () => TInt
 
 fun get_expr_const_type c =
   case c of
@@ -668,7 +669,7 @@ fun get_prim_expr_bin_op_arg1_ty opr =
     | EBPIntMinus () => TInt
     | EBPIntDiv () => TInt
     | EBPIntMod () => TInt
-    | EBPIntExp () => raise Impossible "get_prim_expr_bin_op_arg1_ty/EBPIntExp"
+    | EBPIntExp () => TInt
     | EBPIntLt () => TInt
     | EBPIntGt () => TInt
     | EBPIntLe () => TInt
@@ -686,7 +687,7 @@ fun get_prim_expr_bin_op_arg2_ty opr =
     | EBPIntMinus () => TInt
     | EBPIntDiv () => TInt
     | EBPIntMod () => TInt
-    | EBPIntExp () => raise Impossible "get_prim_expr_bin_op_arg2_ty/EBPIntExp"
+    | EBPIntExp () => TInt
     | EBPIntLt () => TInt
     | EBPIntGt () => TInt
     | EBPIntLe () => TInt
@@ -704,7 +705,7 @@ fun get_prim_expr_bin_op_res_ty opr =
     | EBPIntMinus () => TInt
     | EBPIntDiv () => TInt
     | EBPIntMod () => TInt
-    | EBPIntExp () => raise Impossible "get_prim_expr_bin_op_res_ty/EBPIntExp"
+    | EBPIntExp () => TInt
     | EBPIntLt () => TBool
     | EBPIntGt () => TBool
     | EBPIntLe () => TBool

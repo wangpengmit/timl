@@ -8,7 +8,7 @@ structure Util = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
-  fun require b = if b then () else (throw 0x11111111) using _ end
+  fun require b = if b then () else throw using _ end
   val assert = require
 end
 
@@ -43,16 +43,16 @@ contract TokenERC20 = struct
         initialSupply : uint256
         (* tokenName : string, *)
         (* tokenSymbol : string *)
-    ) using 14.0 = 
+    ) using _ = 
     totalSupply := initialSupply * 10 ** (decimals : uint256);  (* Update total supply with the decimal amount *)
-    set balanceOf[msg.sender] totalSupply                (* Give the creator all initial tokens *)
+    set balanceOf[msg.sender] !totalSupply                (* Give the creator all initial tokens *)
     (* name := tokenName;                                   (* Set the name for display purposes *) *)
     (* symbol := tokenSymbol                               (* Set the symbol for display purposes *) *)
 
   (**
    * Internal transfer, only can be called by this contract
    *)
-  internal fun _transfer (_from : address, _to : address, _value : uint) using 13.0 =
+  internal fun _transfer (_from : address, _to : address, _value : uint) using _ =
     (* Prevent transfer to 0x0 address. Use burn() instead *)
     require(_to <> 0x0);
     (* Check if the sender has enough *)
@@ -77,7 +77,7 @@ contract TokenERC20 = struct
    * @param _to The address of the recipient
    * @param _value the amount to send
    *)
-  public fun transfer (_to : address, _value : uint256) using 16.0 =
+  public fun transfer (_to : address, _value : uint256) using _ =
     _transfer(msg.sender, _to, _value)
 
   (**
@@ -89,7 +89,7 @@ contract TokenERC20 = struct
    * @param _to The address of the recipient
    * @param _value the amount to send
    *)
-  public fun transferFrom (_from : address, _to : address, _value : uint256) return bool using 18.0 =
+  public fun transferFrom (_from : address, _to : address, _value : uint256) return bool using _ =
     require(_value <= allowance[_from][msg.sender]);     (* Check allowance *)
     modify allowance[_from][msg.sender] -= _value;
     _transfer(_from, _to, _value);
@@ -103,7 +103,7 @@ contract TokenERC20 = struct
    * @param _spender The address authorized to spend
    * @param _value the max amount they can spend
    *)
-  public fun approve (_spender : address, _value : uint256) return bool using 3.0 =
+  public fun approve (_spender : address, _value : uint256) return bool using _ =
     set allowance[msg.sender][_spender] _value;
     true
 
@@ -116,7 +116,7 @@ contract TokenERC20 = struct
    * @param _value the max amount they can spend
    * @param _extraData some extra information to send to the approved contract
    *)
-  public fun approveAndCall (_spender : address, _value : uint256, _extraData : bytes) using 12.0 =
+  public fun approveAndCall (_spender : address, _value : uint256, _extraData : bytes) using _ =
     let spender = attach _spender tokenRecipient;
     if approve(_spender, _value) then
       call spender receiveApproval(msg.sender, _value, this, _extraData);
@@ -130,7 +130,7 @@ contract TokenERC20 = struct
    *
    * @param _value the amount of money to burn
    *)
-  public fun burn (_value : uint256) return bool using 6.0 =
+  public fun burn (_value : uint256) return bool using _ =
     require(balanceOf[msg.sender] >= _value);   (* Check if the sender has enough *)
     modify balanceOf[msg.sender] -= _value;            (* Subtract from the sender *)
     modify totalSupply -= _value;                      (* Updates totalSupply *)
@@ -145,7 +145,7 @@ contract TokenERC20 = struct
    * @param _from the address of the sender
    * @param _value the amount of money to burn
    *)
-  public fun burnFrom (_from : address, _value : uint256) return bool using 8.0 =
+  public fun burnFrom (_from : address, _value : uint256) return bool using _ =
     require(balanceOf[_from] >= _value);                (* Check if the targeted balance is enough *)
     require(_value <= allowance[_from][msg.sender]);    (* Check allowance *)
     modify balanceOf[_from] -= _value;                         (* Subtract from the targeted balance *)

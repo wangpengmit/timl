@@ -14,6 +14,18 @@ val C_memory = 3
                    
 val C_POP = C_base
 val C_ORIGIN = C_base
+val C_ADDRESS = C_base
+val C_BALANCE = C_base
+val C_CALLER = C_base
+val C_CALLVALUE = C_base
+val C_CALLDATASIZE = C_base
+val C_CODESIZE = C_base
+val C_GASPRICE = C_base
+val C_COINBASE = C_base
+val C_TIMESTAMP = C_base
+val C_NUMBER = C_base
+val C_DIFFICULTY = C_base
+val C_GASLIMIT = C_base
               
 val C_ADD = C_verylow
 val C_SUB = C_verylow
@@ -80,4 +92,8 @@ val C_New_post_loop = C_UNPACKI + 3 * C_POP + C_SWAP + C_MARK_PreArray2ArrayPtr 
 val C_Ifi_branch_prelude = C_set_reg
 val C_Case_branch_prelude = C_PUSH + C_ADD + C_MLOAD + C_set_reg
 
+val C_exp = 10
+val C_expbyte = 50
+val C_EXP = C_exp + C_expbyte * 8
+                                  
 end

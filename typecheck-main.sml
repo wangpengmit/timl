@@ -790,6 +790,7 @@ fun is_value (e : U.expr) : bool =
 fun get_msg_info_type r name =
     case name of
         MsgSender () => TInt r
+      | MsgValue () => TInt r
 
 fun get_expr_const_type (c, r) =
   case c of

@@ -66,6 +66,7 @@ type nat = int
 
 datatype msg_info =
          MsgSender of unit
+         | MsgValue of unit
              
 datatype expr_const =
          ECTT of unit
@@ -118,6 +119,7 @@ datatype expr_un_op =
 fun str_msg_info name =
     case name of
         MsgSender () => "sender"
+      | MsgValue () => "value"
                         
 fun str_expr_const c =
   case c of

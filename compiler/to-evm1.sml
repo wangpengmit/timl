@@ -243,7 +243,7 @@ fun impl_prim_expr_bin_op opr =
      | EBPIntMinus () => [SWAP1, SUB ()]
      | EBPIntDiv () => [SWAP1, SDIV ()]
      | EBPIntMod () => [SWAP1, MOD ()]
-     | EBPIntExp () => raise Impossible "impl_prim_expr_bin_op/EBPIntExp"
+     | EBPIntExp () => [SWAP1, EXP ()]
      | EBPIntLt () => [GT ()]
      | EBPIntGt () => [LT ()]
      | EBPIntLe () => [LT (), ISZERO ()]
@@ -318,7 +318,8 @@ fun compile st_name2int ectx e =
     | EConst c => PUSH_value $ VConst $ cg_c c
     | EMsg name =>
       (case name of
-           MsgSender () => [ORIGIN ()]
+           MsgSender () => [CALLER ()]
+         | MsgValue () => [CALLVALUE ()]
       )
     | EState x => (PUSH_value $ VState $ st_name2int @!! x) @ repeat C_MLOAD (JUMPDEST ())(*to make gas cost the same as get_reg, for debugging purpose*)
     | EAppT (e, t) => compile e @ [VALUE_AppT $ Inner $ cg_t t]

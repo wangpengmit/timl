@@ -32,6 +32,7 @@ datatype ('idx, 'ty) inst =
          | DIV of unit
          | SDIV of unit
          | MOD of unit
+         | EXP of unit
          | LT of unit
          | GT of unit
          | SLT of unit
@@ -43,6 +44,20 @@ datatype ('idx, 'ty) inst =
          | BYTE of unit
          | SHA3 of unit
          | ORIGIN of unit
+                       
+         | ADDRESS of unit
+         | BALANCE of unit
+         | CALLER of unit
+         | CALLVALUE of unit
+         | CALLDATASIZE of unit
+         | CODESIZE of unit
+         | GASPRICE of unit
+         | COINBASE of unit
+         | TIMESTAMP of unit
+         | NUMBER of unit
+         | DIFFICULTY of unit
+         | GASLIMIT of unit
+                         
          | POP of unit
          | MLOAD of unit
          | MSTORE of unit

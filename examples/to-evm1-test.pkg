@@ -1,7 +1,8 @@
 (* test-state.timl *)
 (* unit-test-basic1.timl *)
 (* MiniToken.etiml *)
-Token.etiml
+(* Token.etiml *)
+Crowdsale.etiml
 
 (* pervasive.timl *)
 (* basic.timl *)

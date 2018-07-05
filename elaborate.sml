@@ -488,7 +488,8 @@ local
                       val name = 
                           case name of
                               "sender" => MsgSender ()
-                            | _ => raise Error (r, "unknown field of 'msg'")
+                            | "value" => MsgValue ()
+                            | _ => raise Error (r, sprintf "unknown field '$' for msg" [name])
                     in
                       EMsg (name, r)
                     end
