@@ -136,6 +136,7 @@ fun get_region_e e =
       EVar (x, _) => get_region_var x
     | EConst (_, r) => r
     | EState (_, r) => r
+    | EUnOp (Operators.EUAnno _, e, _) => get_region_e e
     | EUnOp (_, _, r) => r
     | EBinOp (_, e1, e2) => combine_region (get_region_e e1) (get_region_e e2)
     | ETriOp (_, e1, _, e3) => combine_region (get_region_e e1) (get_region_e e3)
@@ -152,7 +153,7 @@ fun get_region_e e =
     | ELet (_, _, r) => r
     | ESetModify (_, _, _, _, r) => r
     | EGet (_, _, r) => r
-    | EMsg (_, r) => r
+    | EEnv (_, r) => r
                                               
 fun get_region_rule (pn, e) = combine_region (get_region_pn pn) (get_region_e e)
 

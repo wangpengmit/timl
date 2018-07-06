@@ -1149,7 +1149,7 @@ fun default_expr_visitor_vtable
                visit_ebind this (#visit_expr vtable this) env e1,
                visit_ebind this (#visit_expr vtable this) env e2)
           | EState x => EState x
-          | EMsg name => EMsg name
+          | EEnv name => EEnv name
       end
     fun visit_EVar this env data =
       let

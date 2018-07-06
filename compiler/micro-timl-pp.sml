@@ -600,7 +600,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
           str $ str_var x;
           close_box ()
         )
-      | EMsg name => str $ "msg." ^ str_msg_info name
+      | EEnv name => str $ "env." ^ str_env_info name
       | EMatchSum (e, branches) =>
         (
 	  open_vbox ();

@@ -719,7 +719,7 @@ fun is_value (e : U.expr) : bool =
     case e of
         EVar _ => true (* todo: is this right? *)
       | EConst _ => true
-      | EMsg _ => true
+      | EEnv _ => true
       | EState _ => true
       | EUnOp (opr, e, _) =>
         (case opr of
@@ -789,8 +789,11 @@ fun is_value (e : U.expr) : bool =
 
 fun get_msg_info_type r name =
     case name of
-        MsgSender () => TInt r
-      | MsgValue () => TInt r
+        EnvSender () => TInt r
+      | EnvValue () => TInt r
+      | EnvNow () => TInt r
+      | EnvThis () => TInt r
+      | EnvBlockNumber () => TInt r
 
 fun get_expr_const_type (c, r) =
   case c of
@@ -1337,7 +1340,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
               end
           end
         | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), TN C_EConst, st)
-        | U.EMsg (name, r) => (EMsg (name, r), get_msg_info_type r name, TN $ C_EMsg name, st)
+        | U.EEnv (name, r) => (EEnv (name, r), get_msg_info_type r name, TN $ C_EEnv name, st)
         | U.EUnOp (opr as EUProj proj, e, r) =>
 	  let 
             (* val r = U.get_region_e e *)
@@ -1426,7 +1429,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             (EUnOp (opr, e, r), t, i, st)
           end
 	| U.EUnOp (opr as EUField name, e, r) =>
-          raise Impossible "get_mtype()/EField"
+          raise Error (r, ["get_mtype()/EField"])
           (* let *)
           (*   val (e, t, i, st) = get_mtype (ctx, st) e *)
           (* in *)
@@ -1604,13 +1607,17 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val st_t = case st_types @! x of
                              SOME t => t
                           | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])
-            val x = U.EState (x, r)
             val e =
                 case st_t of
                     TMap _ =>
-                    U.EStorageGet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, r)
+                    let
+                      val x = U.EState (x, r)
+                    in
+                      U.EStorageGet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, r)
+                    end
                   | TVector _ =>
                     let
+                      val x = U.EState (x, r)
                       val offset = case es of
                                        [a] => a
                                      | _ => raise Error (r, ["for vector there must only be one offset"])
@@ -1619,12 +1626,22 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                     end
                   | TTuplePtr _ =>
                     let
+                      val x = U.EState (x, r)
                       val () = case es of
                                    [] => ()
-                                 | _ => raise Error (r, ["for ref there can't be offsets"])
+                                 | _ => raise Error (r, ["for storage ref, there can't be offsets"])
                     in
                       U.EStorageGet (x, r)
                     end
+                  (* | TArray _ => *)
+                  (*   let *)
+                  (*     val x = U.EVar (ID (x, r), (false, false)) *)
+                  (*   in *)
+                  (*     case es of *)
+                  (*         [] => U.ERead (x, U.ENat 0) *)
+                  (*       | [e1] => U.ERead (x, e1) *)
+                  (*       | _ => raise Error (r, ["for memory ref, there can't be more than one offset"]) *)
+                  (*   end *)
                   | _ => raise Error (r, ["invalid state type"])
           in
             get_mtype ctx_st e
@@ -1647,13 +1664,17 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val st_t = case st_types @! x of
                              SOME t => t
                           | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])
-            val x = U.EState (x, r)
             val e =
                 case st_t of
                     TMap _ =>
-                    U.EStorageSet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, e)
+                    let
+                      val x = U.EState (x, r)
+                    in
+                      U.EStorageSet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, e)
+                    end
                   | TVector _ =>
                     let
+                      val x = U.EState (x, r)
                       val offset = case es of
                                        [a] => a
                                      | _ => raise Error (r, ["for vector there must only be one offset"])
@@ -1662,12 +1683,22 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                     end
                   | TTuplePtr _ =>
                     let
+                      val x = U.EState (x, r)
                       val () = case es of
                                    [] => ()
-                                 | _ => raise Error (r, ["for ref there can't be offsets"])
+                                 | _ => raise Error (r, ["for storage ref, there can't be offsets"])
                     in
                       U.EStorageSet (x, e)
                     end
+                  (* | TArray _ => *)
+                  (*   let *)
+                  (*     val x = U.EVar (ID (x, r), (false, false)) *)
+                  (*   in *)
+                  (*     case es of *)
+                  (*         [] => U.EWrite (x, U.ENat 0, e) *)
+                  (*       | [e1] => U.EWrite (x, e1, e) *)
+                  (*       | _ => raise Error (r, ["for memory ref, there can't be more than one offset"]) *)
+                  (*   end *)
                   | _ => raise Error (r, ["invalid state type"])
           in
             get_mtype ctx_st e

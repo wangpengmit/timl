@@ -118,11 +118,14 @@ fun M_Case_BeforeCPS n_live_vars = 0
 
 val C_EVar = 0 (* each computation is responsible for accounting for reading from variables, so here the cost is zero *)
 val C_EConst = C_Const + C_Let
-fun C_Msg name =
+fun C_Env name =
     case name of
-        MsgSender () => C_CALLER
-      | MsgValue () => C_CALLVALUE
-fun C_EMsg name = C_Msg name + C_Let
+        EnvSender () => C_CALLER
+      | EnvValue () => C_CALLVALUE
+      | EnvNow () => C_TIMESTAMP
+      | EnvThis () => C_ADDRESS
+      | EnvBlockNumber () => C_NUMBER
+fun C_EEnv name = C_Env name + C_Let
 val C_EPrintc = C_Printc + C_Var + C_Let
 fun C_EUPrim opr = C_UPrim opr + C_Var + C_Let
 val C_EArrayLen = C_ArrayLen + C_Var + C_Let

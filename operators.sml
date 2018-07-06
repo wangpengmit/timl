@@ -64,9 +64,12 @@ datatype 'a quan =
 
 type nat = int
 
-datatype msg_info =
-         MsgSender of unit
-         | MsgValue of unit
+datatype env_info =
+         EnvSender of unit
+         | EnvValue of unit
+         | EnvNow of unit
+         | EnvThis of unit
+         | EnvBlockNumber of unit
              
 datatype expr_const =
          ECTT of unit
@@ -116,10 +119,13 @@ datatype expr_un_op =
          | EUAnno of expr_anno
          | EUField of string
 
-fun str_msg_info name =
+fun str_env_info name =
     case name of
-        MsgSender () => "sender"
-      | MsgValue () => "value"
+        EnvSender () => "sender"
+      | EnvValue () => "value"
+      | EnvNow () => "now"
+      | EnvThis () => "this"
+      | EnvBlockNumber () => "block.number"
                         
 fun str_expr_const c =
   case c of

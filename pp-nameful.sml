@@ -860,7 +860,7 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str ")";
             close_box ()
           )
-        | EMsg (name, _) => str $ "msg." ^ str_msg_info name
+        | EEnv (name, _) => str $ "msg." ^ str_env_info name
     end
 
 and pp_d (params as (str_i, str_s, pp_t, pp_pn)) s d =

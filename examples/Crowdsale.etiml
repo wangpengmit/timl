@@ -10,6 +10,8 @@ structure Util = struct
   fun orBy b a = a || b
   fun require b = if b then () else throw using _ end
   val assert = require
+  val ether = 1000000000000000000
+  val minute = 60
 end
 
 contract Crowdsale = struct
@@ -42,9 +44,9 @@ contract Crowdsale = struct
         addressOfTokenUsedAsReward : address
     ) using _ =
     beneficiary := ifSuccessfulSendTo;
-    fundingGoal := fundingGoalInEthers * 1 ether;
-    deadline := now + durationInMinutes * 1 minutes;
-    price := etherCostOfEachToken * 1 ether;
+    fundingGoal := fundingGoalInEthers * ether;
+    deadline := now + durationInMinutes * minute;
+    price := etherCostOfEachToken * ether;
     tokenReward := addressOfTokenUsedAsReward
 
   (**
@@ -53,25 +55,25 @@ contract Crowdsale = struct
    * The function without name is the default function that is called whenever anyone sends funds to a contract
    *)
   fun default () payable using _ =
-    require(not crowdsaleClosed);
+    require(not (!crowdsaleClosed));
     let amount = msg.value;
     modify balanceOf[msg.sender] += amount;
     modify amountRaised += amount;
-    transfer(valOf tokenReward, msg.sender, amount / price);
-    FundTransfer(msg.sender, amount, true)
+    call (attach tokenReward token) transfer(msg.sender, amount / price);
+    fire FundTransfer(msg.sender, amount, true)
 
-  (* fun afterDeadline k = if now >= deadline then k () else throw end *)
+  fun afterDeadline () = if now >= !deadline then () else throw end
 
   (**
    * Check if goal was reached
    *
    * Checks if the goal or time limit has been reached and ends the campaign
    *)
-  fun checkGoalReached () guarded_by afterDeadline using _ =
-    if not (now >= deadline) then throw end;
-    if amountRaised >= fundingGoal then
+  fun checkGoalReached () using _ =
+    afterDeadline ();
+    if !amountRaised >= !fundingGoal then
       fundingGoalReached := true;
-      GoalReached(beneficiary, amountRaised)
+      fire GoalReached(beneficiary, amountRaised)
     else
       crowdsaleClosed := true
     end
@@ -84,21 +86,22 @@ contract Crowdsale = struct
     * sends the entire amount to the beneficiary. If goal was not reached, each contributor can withdraw
     * the amount they contributed.
     *)
-  fun safeWithdrawal () guarded_by afterDeadline using _ =
-    if not fundingGoalReached then
+  fun safeWithdrawal () using _ =
+    afterDeadline ();
+    if not (!fundingGoalReached) then
       let amount = balanceOf[msg.sender];
       set balanceOf[msg.sender] 0;
       if amount > 0 then
-        if send(msg.sender, amount) then
-          FundTransfer(msg.sender, amount, false)
+        if send msg.sender amount then
+          fire FundTransfer(msg.sender, amount, false)
         else 
           set balanceOf[msg.sender] amount
         end
       end
     end;
-    if fundingGoalReached && beneficiary = msg.sender then
+    if !fundingGoalReached && !beneficiary = msg.sender then
       if send(beneficiary, amountRaised) then
-        FundTransfer(beneficiary, amountRaised, false)
+        fire FundTransfer(beneficiary, amountRaised, false)
       else 
         (* If we fail to send the funds to beneficiary, unlock funders balance *)
         fundingGoalReached := false

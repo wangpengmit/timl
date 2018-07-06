@@ -165,7 +165,7 @@ fun default_expr_visitor_vtable
                visit_ibind this (#visit_expr vtable this) env bind2, r)
           | ESetModify (b, x, es, e, r) => T.ESetModify (b, x, visit_list (#visit_expr vtable this) env es, #visit_expr vtable this env e, r)
           | EGet (x, es, r) => T.EGet (x, visit_list (#visit_expr vtable this) env es, r)
-          | EMsg (name, r) => T.EMsg (name, r)
+          | EEnv (name, r) => T.EEnv (name, r)
       end
     fun visit_EVar this env data =
       let

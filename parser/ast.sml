@@ -85,21 +85,27 @@ datatype expr_const =
          | ECString of string
          | ECChar of Char.char
          | ECZero of unit
+         | ECNow of unit
+         | ECThis of unit
 
 datatype ast_expr_unop =
          EUTiML of expr_un_op
-         | EUDeref of unit
+         | EUDeref of bool
          | EUReturn of unit
          | EUThrow of unit
          | EUAsm of unit
          | EUCall of unit
+         | EUSend of unit
          | EUAttach of unit
          | EUFire of unit
+         | EUSHA3 of unit
+         | EUSHA256 of unit
+         | EUECREC of unit
                        
 datatype ast_expr_binop =
          EBTiML of expr_bin_op
          | EBStrConcat of unit
-         | EBSetRef of unit
+         | EBSetRef of bool
          | EBWhile of unit
 
 datatype ast_expr_triop =
@@ -130,6 +136,7 @@ datatype exp =
          | ESetModify of bool(*is modify?*) * (exp * exp list) * exp * region
          | EGet of (exp * exp list) * region
          | ERecord of (id * exp) list * region
+         | ENewArrayValues of exp list * region
          | ESemis of exp list * region
          | ELet2 of storage option * ptrn * exp option * region
          | EIfs of ifelse list * region
@@ -264,12 +271,17 @@ fun EOrBy r =EShortVar ("orBy", r)
 fun EAscTimeSpace (e, (i, j), r) = EAscSpace (EAscTime (e, i, r), j, r)
 fun EIfi (e1, e2, e3, r) = ETriOp (ETIfi (), e1, e2, e3, r)
 fun EStrConcat (e1, e2, r) = EBinOp (EBStrConcat (), e1, e2, r)
-fun ESetRef (e1, e2, r) = EBinOp (EBSetRef (), e1, e2, r)
+fun ESetRef (is_storage, e1, e2, r) = EBinOp (EBSetRef is_storage, e1, e2, r)
+fun ESetMemRef (e1, e2, r) = ESetRef (false, e1, e2, r)
+fun ESetStorageRef (e1, e2, r) = ESetRef (true, e1, e2, r)
 fun EZero r = EConst (ECZero (), r)
+fun ENow r = EConst (ECNow (), r)
+fun EThis r = EConst (ECThis (), r)
 fun EInt (n, r) = EConst (ECInt n, r)
 fun ENat (n, r) = EConst (ECNat n, r)
 fun EReturn (e, r) = EUnOp (EUReturn (), e, r)
 fun EThrow (e, r) = EUnOp (EUThrow (), e, r)
+fun EThrowError r = EThrow (EInt ("0x1234567890", r), r)                          
 fun EAsm (e, r) = EUnOp (EUAsm (), e, r)
 fun EField (e, id, r) = EUnOp' (EUField (fst id), e, r)
 fun EWhile (e1, e2, r) = EBinOp (EBWhile (), e1, e2, r)
@@ -277,6 +289,7 @@ fun ESet (es, e, r) = ESetModify (false, es, e, r)
 fun ETT r = ETuple ([], r)
 fun EPushBack (e1, e2, r) = EApp (EShortVar ("push_back", r), ETuple ([e1, e2], r), r)
 fun ECall (e, r) = EUnOp (EUCall (), e, r)
+fun ESend (e, r) = EUnOp (EUSend (), e, r)
 fun EFire (e, r) = EUnOp (EUFire (), e, r)
 fun EAttach (e, r) = EUnOp (EUAttach (), e, r)
 

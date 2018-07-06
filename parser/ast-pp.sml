@@ -495,23 +495,29 @@ fun str_expr_const c =
       | ECString s => sprintf "\"$\"" [s]
       | ECChar c => sprintf "'$'" [str_char c]
       | ECZero () => "zero"
+      | ECNow () => "now"
+      | ECThis () => "this"
 
 fun str_ast_expr_unop opr =
     case opr of
         EUTiML opr => str_expr_un_op opr
-      | EUDeref () => "deref"
+      | EUDeref b => "deref " ^ str_bool b
       | EUAsm () => "asm"
       | EUReturn () => "return"
       | EUThrow () => "throw"
       | EUCall () => "call"
+      | EUSend () => "send"
       | EUFire () => "fire"
       | EUAttach () => "attach"
+      | EUSHA3 () => "sha3"
+      | EUSHA256 () => "sha256"
+      | EUECREC () => "ecrec"
                             
 fun str_ast_expr_binop opr =
     case opr of
          EBTiML opr => str_expr_bin_op opr
        | EBStrConcat () => "str_concat"
-       | EBSetRef () => "set_ref"
+       | EBSetRef b => "set_ref " ^ str_bool b
        | EBWhile () => "while"
 
 fun str_ast_expr_triop opr =
@@ -827,12 +833,21 @@ fun pp_e s e =
             str ")";
             close_box ()
           )
+        | ENewArrayValues (es, _) =>
+          (
+            open_hbox ();
+            strs "ENewArrayValues";
+            str "(";
+            app (fn e => (pp_e e; comma ())) es;
+            str ")";
+            close_box ()
+          )
         | ERecord (es, _) =>
           (
             open_hbox ();
             strs "ERecord";
             str "(";
-            app (fn (name, e) => (pp_id name; colon (); pp_e e; comma ())) es;
+            app (fn (name, e) => (pp_id name; space (); strs "="; pp_e e; comma ())) es;
             str ")";
             close_box ()
           )

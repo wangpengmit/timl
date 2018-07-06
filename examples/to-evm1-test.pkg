@@ -2,7 +2,8 @@
 (* unit-test-basic1.timl *)
 (* MiniToken.etiml *)
 (* Token.etiml *)
-Crowdsale.etiml
+(* Crowdsale.etiml *)
+EtherDelta.etiml
 
 (* pervasive.timl *)
 (* basic.timl *)

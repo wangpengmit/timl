@@ -116,7 +116,7 @@ contract TokenERC20 = struct
    * @param _value the max amount they can spend
    * @param _extraData some extra information to send to the approved contract
    *)
-  public fun approveAndCall (_spender : address, _value : uint256, _extraData : bytes) using _ =
+  public fun approveAndCall (_spender : address, _value : uint256(* , _extraData : bytes *)) using _ =
     let spender = attach _spender tokenRecipient;
     if approve(_spender, _value) then
       call spender receiveApproval(msg.sender, _value, this, _extraData);

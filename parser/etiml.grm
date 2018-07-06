@@ -62,6 +62,7 @@ open Ast
     | EQ
     | NEQ
     | BANG
+    | BANGBANG
     | BANG_EQ
     | DOUBLE_EQ
     | DOUBLE_POND
@@ -125,6 +126,7 @@ open Ast
     | DOTDOT
     | INTERFACE
     | COLON_EQ
+    | COLONCOLON_EQ
     | GUARD
     | VIEW
     | PURE
@@ -145,8 +147,14 @@ open Ast
     | ZERO
     | NOT
     | CALL
+    | SEND
     | FIRE
     | ATTACH
+    | NOW
+    | THIS
+    | SHA256
+    | SHA3
+    | ECREC
 
 %nonterm start of prog
        | exp of exp
@@ -162,7 +170,7 @@ open Ast
        | prop of prop
        | id of id
        | assign_comma_star_trailing of (id * exp) list
-       | exp_comma_star_trailing of exp list
+       | exp_term_comma_star_trailing of exp list
        | exp_comma_star of exp list
        | comma_exp_star of exp list
        | aexp_comma_star of exp list
@@ -345,7 +353,7 @@ fun_modifier : VIEW (FmView)
              | PURE (FmPure)
              | PAYABLE (FmPayable)
              | CONSTANT (FmConst)
-             | GUARD exp_term_comma_plus (FmGuard exp_term_comma_plus)
+             (* | GUARD exp_term_comma_plus (FmGuard exp_term_comma_plus) *)
              | visi (FmVisi visi)
              | PRE state (FmPre state)
              | POST state (FmPost state)
@@ -408,7 +416,7 @@ optional_init : EQ init (SOME init)
               | (NONE)
 
 init : exp (InitExpr (exp, (expleft, expright)))                  
-     | LCUR exp_comma_star_trailing RCUR (InitVector (exp_comma_star_trailing, (LCURleft, RCURright)))
+     | LCUR exp_term_comma_star_trailing RCUR (InitVector (exp_term_comma_star_trailing, (LCURleft, RCURright)))
                   
 exps : exp_semi_plus (ESemis (exp_semi_plus, (exp_semi_plusleft, exp_semi_plusright)))
          
@@ -434,7 +442,8 @@ exp : exp_term (exp_term)
      | exp DOUBLE_EQ exp (EBinOp' (EBPrim (EBPIntEq ()), exp1, exp2, (exp1left, exp2right)))
      | exp NEQ exp (EBinOp' (EBPrim (EBPIntNEq ()), exp1, exp2, (exp1left, exp2right)))
      | exp BANG_EQ exp (EBinOp' (EBPrim (EBPIntNEq ()), exp1, exp2, (exp1left, exp2right)))
-     | exp COLON_EQ exp (ESetRef (exp1, exp2, (exp1left, exp2right)))
+     | exp COLONCOLON_EQ exp (ESetStorageRef (exp1, exp2, (exp1left, exp2right)))
+     | exp COLON_EQ exp (ESetMemRef (exp1, exp2, (exp1left, exp2right)))
      | exp NAT_PLUS exp (EBinOp' (EBNat (EBNAdd ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_MINUS exp (EBinOp' (EBNat (EBNBoundedMinus ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_MULT exp (EBinOp' (EBNat (EBNMult ()), exp1, exp2, (exp1left, exp2right)))
@@ -458,6 +467,7 @@ exp : exp_term (exp_term)
      | RETURN exp (EReturn (exp, (RETURNleft, expright)))
      (* | THROW exp (EThrow (exp, (THROWleft, expright))) *)
      | CALL exp (ECall (exp, (CALLleft, expright)))
+     | SEND exp (ESend (exp, (SENDleft, expright)))
      | FIRE exp (EFire (exp, (FIREleft, expright)))
      | ATTACH exp (EAttach (exp, (ATTACHleft, expright)))
 
@@ -465,6 +475,9 @@ exp_term : aexp (aexp)
          | exp_term aexp (EApp (exp_term, aexp, (exp_termleft, aexpright)))
          | exp_term LCUR idx RCUR (EAppI (exp_term, idx, (exp_termleft, idxright)))
          | exp_term LCUR RCUR (EAppI (exp_term, IVar (underscore (LCURleft, RCURright)), (exp_termleft, RCURright)))
+         | SHA256 aexp (EUnOp (EUSHA256 (), aexp, (SHA256left, SHA256right)))
+         | SHA3 aexp (EUnOp (EUSHA3 (), aexp, (SHA3left, SHA3right)))
+         | ECREC aexp (EUnOp (EUECREC (), aexp, (ECRECleft, ECRECright)))
 
 aexp : decorated_eid (EVar decorated_eid)
      | LPAREN exp_comma_star RPAREN (ETuple (exp_comma_star, (LPARENleft, RPARENright)))
@@ -484,7 +497,8 @@ aexp : decorated_eid (EVar decorated_eid)
      | NOT aexp (EUnOp' (EUPrim (EUPBoolNeg ()), aexp, (NOTleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
      | aexp square_plus (EGet ((aexp, square_plus), (aexpleft, square_plusright)))
-     | BANG aexp (EUnOp (EUDeref (), aexp, (BANGleft, aexpright)))
+     | BANG aexp (EUnOp (EUDeref false, aexp, (BANGleft, aexpright)))
+     | BANGBANG aexp (EUnOp (EUDeref true, aexp, (BANGBANGleft, aexpright)))
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
      | DDASH (EDec (DDASHleft, DDASHright))
      | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
@@ -492,11 +506,14 @@ aexp : decorated_eid (EVar decorated_eid)
      | BAR_EQ (EOrBy (BAR_EQleft, BAR_EQright))
      | aexp DOT id (EField (aexp, id, (aexpleft, idright)))
      | LCUR assign_comma_star_trailing RCUR (ERecord (assign_comma_star_trailing, (LCURleft, RCURright)))
+     | LCUR exp_term_comma_star_trailing RCUR (ENewArrayValues (exp_term_comma_star_trailing, (LCURleft, RCURright)))
      | FOR LPAREN id optional_colon_ty EQ exp SEMI exp SEMI exp RPAREN exps END (EFor (id, optional_colon_ty, exp1, exp2, exp3, exps, (FORleft, ENDright)))
      | WHILE LPAREN exp RPAREN exps END (EWhile (exp, exps, (WHILEleft, ENDright)))
      | ASSEMBLY LCUR exps RCUR (EAsm (exps, (ASSEMBLYleft, ASSEMBLYright)))
      | ZERO (EZero (ZEROleft, ZEROright))
-     | THROW (EThrow (EInt ("0x1234567890", (THROWleft, THROWright)), (THROWleft, THROWright)))
+     | THROW (EThrowError (THROWleft, THROWright))
+     | NOW (ENow (NOWleft, NOWright))
+     | THIS (EThis (THISleft, THISright))
 
 ifs : IF exp THEN exps elses (If (exp, exps, (IFleft, expsright)) :: elses)
 elses : ELSEIF exp THEN exps elses (Elseif (exp, exps, (ELSEIFleft, expsright)) :: elses)
@@ -653,10 +670,10 @@ bsort : id (BSId id)
 id : ID ((ID, (IDleft, IDright)))
 
 assign_comma_star_trailing : id EQ exp COMMA assign_comma_star_trailing ((id, exp) :: assign_comma_star_trailing)
-	                | ([])
+	                   | ([])
 
-exp_comma_star_trailing : exp COMMA exp_comma_star_trailing (exp :: exp_comma_star_trailing)
-	                | ([])
+exp_term_comma_star_trailing : exp_term COMMA exp_term_comma_star_trailing (exp_term :: exp_term_comma_star_trailing)
+	                   | ([])
 
 exp_comma_star : exp comma_exp_star (exp :: comma_exp_star)
 	       | ([])

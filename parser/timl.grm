@@ -369,7 +369,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | NOT aexp (EUnOp' (EUPrim (EUPBoolNeg ()), aexp, (NOTleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
      | aexp square_plus (EGet ((aexp, square_plus), (aexpleft, square_plusright)))
-     | BANG aexp (EUnOp (EUDeref (), aexp, (BANGleft, aexpright)))
+     | BANG aexp (EUnOp (EUDeref false, aexp, (BANGleft, aexpright)))
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
      | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
 

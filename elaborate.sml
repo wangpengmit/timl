@@ -192,8 +192,10 @@ local
                   TInt r
                 else if x = "address" then
                   TInt r
-                else if x = "bytes" then
+                else if x = "bytes32" then
                   TInt r
+                (* else if x = "bytes" then *)
+                (*   TInt r *)
                 else if x = "bool" then
                   TBool r
                 else if x = "byte" then
@@ -412,6 +414,8 @@ local
                   e
                 end
               | S.ECZero () => raise Impossible "elaborate/ECZero"
+              | S.ECNow () => EEnv (EnvNow (), r)
+              | S.ECThis () => EEnv (EnvThis (), r)
             )
 	| S.EBinOp (EBTiML (EBApp ()), e1, e2, r) =>
 	  let 
@@ -423,6 +427,7 @@ local
                      NONE =>
 		     if x = "__&fst" then EFst (elab e2, r)
 		     else if x = "__&snd" then ESnd (elab e2, r)
+		     else if x = "ref" then ENewArrayValues (TUVar ((), r), [elab e2], r)
 		     else if x = "__&not" then EUnOp (EUPrim (EUPBoolNeg ()), elab e2, r)
 		     (* else if x = "__&int2str" then EUnOp (EUInt2Str, elab e2, r) *)
 		     else if x = "__&nat2int" then EUnOp (EUNat2Int (), elab e2, r)
@@ -472,12 +477,13 @@ local
         | S.EBinOp (EBTiML opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
         | S.EBinOp (EBStrConcat (), e1, e2, r) =>
           EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
-        | S.EBinOp (EBSetRef (), e1, e2, r) =>
+        | S.EBinOp (EBSetRef true, e1, e2, r) =>
           (case e1 of
                S.EVar ((NONE, x), (false, false)) =>
                ESet (fst x, [], elab e2, r)
              | _ => raise Impossible "elaborate/ESetRef/non-EVar"
           )
+        | S.EBinOp (EBSetRef false, e1, e2, r) => EWrite (elab e1, ENat (0, r), elab e2)
         | S.EBinOp (EBWhile (), e1, e2, _) => raise Impossible "elaborate/EWhile"
         | S.EUnOp (opr, e, r) =>
           (case opr of
@@ -487,26 +493,40 @@ local
                     let
                       val name = 
                           case name of
-                              "sender" => MsgSender ()
-                            | "value" => MsgValue ()
+                              "sender" => EnvSender ()
+                            | "value" => EnvValue ()
                             | _ => raise Error (r, sprintf "unknown field '$' for msg" [name])
                     in
-                      EMsg (name, r)
+                      EEnv (name, r)
+                    end
+                  | (S.EUField name, S.EVar ((NONE, ("block", _)), (false, false))) =>
+                    let
+                      val name = 
+                          case name of
+                              "number" => EnvBlockNumber ()
+                            | _ => raise Error (r, sprintf "unknown field '$' for block" [name])
+                    in
+                      EEnv (name, r)
                     end
                   | _ => EUnOp (opr, elab e, r)
                )
              | S.EUThrow () => EHalt (elab e, TUVar ((), r))
-             | S.EUDeref () =>
+             | S.EUDeref true =>
                (case e of
                     S.EVar ((NONE, x), (false, false)) =>
                     EGet (fst x, [], r)
                   | _ => raise Impossible "elaborate/EDeref/non-EVar"
                )
+             | S.EUDeref false => ERead (elab e, ENat (0, r))
              | S.EUAsm _ => raise Impossible "elaborate/EAsm"
              | S.EUReturn _ => raise Impossible "elaborate/EReturn"
-             | S.EUCall () => ETT r
+             | S.EUCall () => elab $ S.EThrowError r
+             | S.EUSend () => ETrue r
              | S.EUFire () => ETT r
              | S.EUAttach () => ETT r
+             | S.EUSHA3 () => EInt ("0", r)
+             | S.EUSHA256 () => EInt ("0", r)
+             | S.EUECREC () => EInt ("0", r)
           )
         | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
           ETriOp (ETIte (), elab e1, elab e2, elab e3)
@@ -521,6 +541,7 @@ local
         | S.ESetModify (is_modify, (S.EVar ((NONE, x), (false, false)), offsets), e, r) =>
           ESetModify (is_modify, fst x, map elab offsets, elab e, r)
         | S.ESetModify _ => raise Impossible "elaborate/ESetModify/non-EVar"
+        | S.ENewArrayValues (es, r) => ENewArrayValues (TUVar ((), r), map elab es, r)
         | S.ERecord (es, r) => raise Impossible "elaborate/ERecord"
         | S.EFor _ => raise Impossible "elaborate/EFor"
         | S.ELet2 (_, pn, e, r) => raise Error (r, "let-binding are not allowed here ")

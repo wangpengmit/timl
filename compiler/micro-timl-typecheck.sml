@@ -631,8 +631,11 @@ fun TAppITs t args =
 
 fun get_msg_info_type name =
     case name of
-        MsgSender () => TInt
-      | MsgValue () => TInt
+        EnvSender () => TInt
+      | EnvValue () => TInt
+      | EnvNow () => TInt
+      | EnvThis () => TInt
+      | EnvBlockNumber () => TInt
 
 fun get_expr_const_type c =
   case c of
@@ -943,7 +946,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
            | NONE => raise MTCError "Unbound term variable"
         )
       | EConst c => (e_input, get_expr_const_type c, TN C_EConst, st)
-      | EMsg name => (EMsg name, get_msg_info_type name, TN $ C_EMsg name, st)
+      | EEnv name => (EEnv name, get_msg_info_type name, TN $ C_EEnv name, st)
       | EUnOp (EUTiML (EUProj proj), e) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e

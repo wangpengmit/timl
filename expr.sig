@@ -43,7 +43,7 @@ signature EXPR = sig
            | EGet of string * expr list * Region.region
        (* these constructs won't show up in source program *)
        (* | EAbsT of (sort, expr) tbind_anno * region *)
-           | EMsg of Operators.msg_info * Region.region
+           | EEnv of Operators.env_info * Region.region
 
        and decl =
            DVal of Binders.ebinder * ((Binders.tbinder * (idx * idx) Unbound.outer) list, expr) Unbound.bind Unbound.outer * Region.region

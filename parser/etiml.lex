@@ -101,6 +101,11 @@ val keywords = [
     ("for", T.FOR),
     ("while", T.WHILE),
     ("as", T.AS),
+    ("sha3", T.SHA3),
+    ("sha256", T.SHA256),
+    ("ecrecover", T.ECREC),
+    ("now", T.NOW),
+    ("this", T.THIS),
     ("constant", T.CONSTANT),
     ("indexed", T.INDEXED),
     ("memory", T.MEMORY),
@@ -109,6 +114,7 @@ val keywords = [
     (* ("super", T.SUPER), *)
     ("not", T.NOT),
     ("call", T.CALL),
+    ("send", T.SEND),
     ("fire", T.FIRE),
     ("attach", T.ATTACH),
     ("assembly", T.ASSEMBLY)
@@ -168,6 +174,7 @@ string = [^\"];
 <INITIAL>"<>" => (T.NEQ (make_region (yypos, size yytext)));
 <INITIAL>"!=" => (T.BANG_EQ (make_region (yypos, size yytext)));
 <INITIAL>"!" => (T.BANG (make_region (yypos, size yytext)));
+<INITIAL>"!!" => (T.BANGBANG (make_region (yypos, size yytext)));
 <INITIAL>"<=" => (T.LE (make_region (yypos, size yytext)));
 <INITIAL>"<" => (T.LT (make_region (yypos, size yytext)));
 <INITIAL>">=" => (T.GE (make_region (yypos, size yytext)));
@@ -209,6 +216,7 @@ string = [^\"];
 <INITIAL>"-=" => (T.MINUS_EQ (make_region (yypos, size yytext)));
 <INITIAL>"|=" => (T.BAR_EQ (make_region (yypos, size yytext)));
 <INITIAL>":=" => (T.COLON_EQ (make_region (yypos, size yytext)));
+<INITIAL>"::=" => (T.COLONCOLON_EQ (make_region (yypos, size yytext)));
 <INITIAL>"%" => (T.PERCENT (make_region (yypos, size yytext)));
 
 <INITIAL>{digit}+\.{digit}+ => ((T.NNREAL o flat)
