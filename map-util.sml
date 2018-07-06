@@ -14,16 +14,31 @@ fun is_sub_domain m m' = List.all (fn k => Option.isSome (M.find (m', k))) (doma
 
 fun is_same_domain m m' = M.numItems m = M.numItems m' andalso is_sub_domain m m'
 
+fun equal eq m m' =
+  if not (is_same_domain m m') then false
+  else
+    let
+      exception NotEqual of unit
+    in
+      (M.appi (fn (k, v) =>
+                          if eq (v, Optiona.valOf (M.find (m', k))) then
+                          else raise NotEqual ()
+              ) m; true)
+      handle NotEqual () => false
+    end
+    
+
 fun addList (m, kvs) = foldl (fn ((k, v), m) => M.insert (m, k, v)) m kvs
 fun fromList kvs = addList (M.empty, kvs)
 
-fun addList_multi (m, kvs) = foldl (fn ((k, v), m) =>
-                                       let
-                                         val vs = Util.default [] (M.find (m, k))
-                                       in
-                                         M.insert (m, k, v :: vs)
-                                       end
-                                   ) m kvs
+fun add_multi ((k, v), m) =
+  let
+    val vs = Util.default [] (M.find (m, k))
+  in
+    M.insert (m, k, v :: vs)
+  end
+
+fun addList_multi (m, kvs) = foldl add_multi m kvs
 fun fromList_multi kvs = addList_multi (M.empty, kvs)
                
 val to_map = fromList

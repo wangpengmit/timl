@@ -117,7 +117,7 @@ datatype expr_un_op =
          | EUVectorClear of unit
          | EUVectorLen of unit
          | EUAnno of expr_anno
-         | EUField of string
+         | EUField of string * int option
 
 fun str_env_info name =
     case name of

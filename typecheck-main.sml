@@ -1428,13 +1428,22 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EUnOp (opr, e, r), t, i, st)
           end
-	| U.EUnOp (opr as EUField name, e, r) =>
+	| U.EUnOp (opr as EUField (name, _), e, r) =>
+          let
+            val (e, t, i, st) = get_mtype (ctx, st) e
+            val t = whnf_mt true gctx kctx t
+            val (name_ts, _) =
+                case t of
+                    TRecord a => a
+                  | _ => raise Error (r, ["can't infer the record type"])
+            val sorted_names = sort_string $ map fst name_ts
+            val offset = case indexOf (curry op= name) sorted_names of
+                             SOME a => a
+                           | NONE => raise Error (r, ["field not found"])
+          in
+            (EUnOp (EUField (name, SOME offset), e, r), t, i, st)
+          end
           raise Error (r, ["get_mtype()/EField"])
-          (* let *)
-          (*   val (e, t, i, st) = get_mtype (ctx, st) e *)
-          (* in *)
-          (*   (EUnOp (opr, e, r), t, i, st) *)
-          (* end *)
 	| U.EBinOp (opr, e1, e2) =>
           (case opr of
 	       EBPair () => 

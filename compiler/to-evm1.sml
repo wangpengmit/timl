@@ -93,6 +93,8 @@ fun assert_EState e =
 
 fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
 
+fun cmp_str_fst (a, b) = String.compare (fst a, fst b)
+                                
 fun cg_ty_visitor_vtable cast () =
   let
     val vtable =
@@ -132,6 +134,12 @@ fun cg_ty_visitor_vtable cast () =
             val cg_t = #visit_ty (cast this) this env
           in
             TMemTuplePtr (map cg_t ts, N 0)
+          end
+        | TRecord name_ts =>
+          let
+            val ts = map snd $ sort cmp_str_fst name_ts
+          in
+            #visit_ty vtable this env $ TTuple ts
           end
         | _ => #visit_ty vtable this env t (* call super *)
     val vtable = override_visit_ty vtable visit_ty
@@ -351,6 +359,12 @@ fun compile st_name2int ectx e =
       in
         concatMap compile es @ tuple_malloc ts @ [PUSH_tuple_offset (len * 32), ADD ()] @ concatRepeat len ([PUSH1nat 32, SWAP1, SUB (), SWAP1] @ tuple_assign) @ [MARK_PreTuple2TuplePtr ()]
       end
+    | ERecord name_es =>
+      let
+        val es = map snd $ sort cmp_str_fst name_es
+      in
+        compile $ ETuple es
+      end
     | EUnOp (EUInj (inj, t_other), e) =>
       let
         val (e, t_e) = assert_EAscType e
@@ -389,6 +403,12 @@ fun compile st_name2int ectx e =
       [MSTORE (), PUSH1 WTT]
     | EUnOp (EUUnfold (), e) =>
       compile e @ [UNFOLD ()]
+    | EUnOp (EUTiML (EUField (name, offset)), e) =>
+      let
+        val offset = assert_SOME offset
+      in
+        compile $ EUnOp (EUTupleProj offset, e)
+      end
     | EUnOp (EUTiML opr, e) =>
       compile e @
       impl_expr_un_op opr
