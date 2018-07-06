@@ -36,10 +36,13 @@ signature TYPE = sig
            | TUVar of (basic_sort, kind, mtype) uvar_mt * region
            | TDatatype of mtype datatype_def * region
            | TSumbool of sort * sort
-           | TMap of mtype
-           | TVector of mtype
+           | TRecord of mtype SMap.map * region
            | TState of string * region
-           | TTuplePtr of mtype list * int * region
+           | TMap of mtype
+           | TVector of mtype (* the purpose of vector is that elements stored in vector are guaranteed to be well-formed and may not be nullable (such as (ex {n | n>5}, nat {n})) (while elements stored in maps must be nullable) *)
+           | TRef of mtype
+           | TNatCell of unit
+           | TPtr of mtype list * int * region
 
   datatype ty = 
 	   PTMono of mtype

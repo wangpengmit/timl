@@ -133,8 +133,8 @@ datatype exp =
          | EBinOp of ast_expr_binop * exp * exp * region
          | ETriOp of ast_expr_triop * exp * exp * exp * region
          | ENever of region
-         | ESetModify of bool(*is modify?*) * (exp * exp list) * exp * region
-         | EGet of (exp * exp list) * region
+         | ESetModify of bool(*is modify?*) * (exp * (exp * proj_path) list) * exp * region
+         | EGet of (exp * (exp * proj_path) list) * region
          | ERecord of (id * exp) list * region
          | ENewArrayValues of exp list * region
          | ESemis of exp list * region

@@ -655,8 +655,14 @@ datatype_def_kind : COLON cur_bsort_plus (cur_bsort_plus)
                     
 optional_eq_idx : EQ idx (SOME idx)
                 | (NONE)
+
+int_or_id : INT (inl (str2int INT))
+          | id (inr id)
+               
+proj_path : DOT int_or_id proj_path (dot_field :: pro_path)
+          | ([])
               
-square : LSQ exp RSQ (exp)
+square : LSQ exp RSQ proj_path ((exp, proj_path))
                     
 square_star : square square_star (square :: square_star)
 	| ([])

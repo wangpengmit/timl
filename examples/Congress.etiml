@@ -34,6 +34,33 @@ interface Token = sig
 end
 
 contract Congress = struct inherit owned, tokenRecipient
+
+  (* type Vote = { *)
+  (*   inSupport : bool, *)
+  (*   voter : address, *)
+  (*   justification : string, *)
+  (* } *)
+
+  type Proposal = {
+    recipient : address,
+    amount : uint,
+    description : string,
+    votingDeadline : uint,
+    executed : ref bool,
+    proposalPassed : ref bool,
+    numberOfVotes : ref uint,
+    currentResult : ref int,
+    proposalHash : bytes32,
+    (* votes : vector Vote, *)
+    voted : map address bool,
+  }
+
+  type Member = {
+    member : address,
+    name : string,
+    memberSince : uint,
+  }
+
   (* Contract Variables and events *)
   public state minimumQuorum : ref uint
   public state debatingPeriodInMinutes : ref uint
@@ -48,32 +75,6 @@ contract Congress = struct inherit owned, tokenRecipient
   event ProposalTallied(proposalID : uint, result : int, quorum : uint, active : bool)
   event MembershipChanged(member : address, isMember : bool)
   event ChangeOfRules(newMinimumQuorum : uint, newDebatingPeriodInMinutes : uint, newMajorityMargin : int)
-
-  type Proposal = {
-    recipient : address,
-    amount : uint,
-    description : string,
-    votingDeadline : uint,
-    executed : ref bool,
-    proposalPassed : ref bool,
-    numberOfVotes : ref uint,
-    currentResult : ref int,
-    proposalHash : bytes32,
-    votes : vector Vote,
-    voted : map address bool,
-  }
-
-  type Member = {
-    member : address,
-    name : string,
-    memberSince : uint,
-  }
-
-  type Vote = {
-    inSupport : bool,
-    voter : address,
-    justification : string,
-  }
 
   (* Modifier that allows only shareholders to vote and create new proposals *)
   fun onlyMembers k =

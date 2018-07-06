@@ -1269,7 +1269,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     (*     () *)
     (*   end *)
     (* val () = print_ctx gctx ctx *)
-    fun get_vector r t1 =
+    fun get_vector r st t1 =
       let
         val x = case t1 of
                     TState (x, _) => x
@@ -1392,36 +1392,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EUnOp (opr, e, r), TVar $ QID $ qid_add_r r SOME_NAT_ID, d %%+ TN C_EInt2Nat, st)
           end
-	| U.EUnOp (opr as EUStorageGet (), e, r) =>
-          let
-            val r = U.get_region_e e_all
-            val (e, t, j, st) = get_mtype ctx_st e
-            val t = whnf_mt true gctx kctx t
-            val t =
-                case t of
-                    TState (x, _) =>
-                    assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) $ st_types @!! x
-                  | _ =>
-                    assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
-          in
-            (EUnOp (opr, e, r), t, j %%+ TN C_EStorageGet, st)
-          end
-	| U.EUnOp (opr as EUVectorLen (), e, r) =>
-          let
-            val (e, t, j, st) = get_mtype (ctx, st) e
-            val t = whnf_mt true gctx kctx t
-            val (_, _, len) = get_vector (fn () => r) t
-          in
-            (EUnOp (opr, e, r), TNat (len, r), j %%+ TN C_EVectorLen, st)
-          end
-	| U.EUnOp (opr as EUVectorClear (), e, r) =>
-          let
-            val (e, t, j, st) = get_mtype (ctx, st) e
-            val t = whnf_mt true gctx kctx t
-            val (x, _, _) = get_vector (fn () => r) t
-          in
-            (EUnOp (opr, e, r), TUnit r, j %%+ TN C_EVectorClear, st @+ (x, N0 r))
-          end
 	| U.EUnOp (opr as EUAnno anno, e, r) =>
           let
             val (e, t, i, st) = get_mtype (ctx, st) e
@@ -1445,172 +1415,233 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           end
           raise Error (r, ["get_mtype()/EField"])
 	| U.EBinOp (opr, e1, e2) =>
-          (case opr of
-	       EBPair () => 
-	       let 
-                 val (e1, t1, d1, st) = get_mtype (ctx, st) e1
-	         val (e2, t2, d2, st) = get_mtype (ctx, st) e2
-               in
-	         (EPair (e1, e2), TProd (t1, t2), d1 %%+ d2 %%+ (to_real C_EPair, N 2), st)
-	       end
-	     | EBApp () =>
-	       let
-                 val r1 = U.get_region_e e1
-                 val (e1, t1, d1, st) = get_mtype (ctx, st) e1
-                 val (is_constr, e1) = is_constr e1
-                 val t1 = whnf_mt true gctx kctx t1
-                 val ((pre_st, t2), d, (post_st, t)) =
-                     case t1 of
-                         TArrow a => a
-                       | t1 =>
-                         case is_TApp_TUVar t1 of
-                             SOME _ =>
-                             let
-                               val t2 = fresh_mt gctx (sctx, kctx) r1
-                               val d = fresh_i gctx sctx BSTime r1
-                               val j = fresh_i gctx sctx BSNat r1
-                               val t = fresh_mt gctx (sctx, kctx) r1
-                               val arrow = ((StMap.empty, t2), (d, j), (StMap.empty, t))
-                               val () = unify_mt r1 gctx (sctx, kctx) (t1, TArrow arrow)
-                             in
-                               arrow
-                             end
-                           | NONE =>
-                             raise Error (r1, "type mismatch:" ::
-                                              indent ["expect: _ -- _ --> _",
-                                                      "got: " ^ str_mt gctxn skctxn t1])
-                 val (e2, t2', d2, st) = get_mtype (ctx, st) e2
-                 (* todo: if I swap (t2, t2'), unify_mt() has a bug that it unifies the index arguments too eagerly *)
-                 val r2 = get_region_e e2
-                 val () = unify_mt r2 gctx (sctx, kctx) (t2, t2')
-                 fun check_submap pre_st st =
-                   let
-                     val pre_st_minus_st = pre_st @-- st
-                   in
-                     if StMap.numItems pre_st_minus_st = 0 then ()
-                     else raise Error (r1, ["these state fields are required by the function by missing in current state:", str_ls str_st_key $ StMapU.domain pre_st_minus_st])
-                   end
-                 val () = check_submap pre_st st
-                 val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
-                 val st = st @++ post_st
-                 val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (r2, ["Should be EAnnoLiveVars"])) e2
-                 val cost = if has_k then
-                              (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
-                               M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
-                            else (0, 0)
-                 val cost = cost ++ (C_App_BeforeCPS, M_App_BeforeCPS)
-               in
-                 (EApp (e1, e2), t, if is_constr then d2 else d1 %%+ d2 %%+ mapPair' to_real N cost %%+ d, st) 
-	       end
-	     | EBNew () =>
-               let
-                 val r = U.get_region_e e_all
-                 val len = fresh_i gctx sctx BSTime r
-                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (len, r))
-                 val (e2, t, d2, st) = get_mtype (ctx, st) e2
-                 val cost = N C_ENew_order0 %+ N C_ENew_order1 %* len
-               in
-                 (EBinOp (opr, e1, e2), TArray (t, len), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %+ N1 dummy), st)
-               end
-	     | EBRead () =>
-               let
-                 val r = U.get_region_e e_all
-                 val t = fresh_mt gctx (sctx, kctx) r
-                 val i1 = fresh_i gctx sctx BSTime r
-                 val i2 = fresh_i gctx sctx BSTime r
-                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (t, i1))
-                 val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
-                 val () = write_lt (i2, i1, r)
-               in
-                 (EBinOp (opr, e1, e2), t, d1 %%+ d2 %%+ TN C_ERead, st)
-               end
-	     | EBNat opr =>
-               let
-                 val r = U.get_region_e e_all
-                 val i1 = fresh_i gctx sctx BSTime r
-                 val i2 = fresh_i gctx sctx BSTime r
-                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (i1, r))
-                 val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
-                 val i2 = Simp.simp_i $ update_i i2
-                 val () = if opr = EBNBoundedMinus () then write_le (i2, i1, r) else ()
-                 val i = interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Error (r, ["Can only divide by a nat whose index is a constant, not: " ^ str_i gctxn sctxn i2]))
-               in
-                 (EBinOp (EBNat opr, e1, e2), TNat (i, r), d1 %%+ d2 %%+ TN (C_ENat opr), st)
-               end
-	     | EBPrim opr =>
-	       let
-                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TBase (get_prim_expr_bin_op_arg1_ty opr, dummy))
-	         val (e2, d2, st) = check_mtype (ctx, st) (e2, TBase (get_prim_expr_bin_op_arg2_ty opr, dummy)) in
-	         (EBinOp (EBPrim opr, e1, e2), TBase (get_prim_expr_bin_op_res_ty opr, dummy), d1 %%+ d2 %%+ TN (C_EBPrim opr), st)
-	       end
-             | EBNatCmp opr =>
-               let
-                 val r = U.get_region_e e_all
-                 val i1 = fresh_i gctx sctx BSTime r
-                 val i2 = fresh_i gctx sctx BSTime r
-                 val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (i1, r))
-                 val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
-               in
-                 (EBinOp (EBNatCmp opr, e1, e2), TiBool (interp_nat_cmp r opr (i1, i2), r), d1 %%+ d2 %%+ TN (C_ENatCmp opr), st)
-               end
-             | EBMapPtr () =>
-               let
-                 val r = U.get_region_e e_all
-                 val (e1, t1, j1, st) = get_mtype (ctx, st) e1
-                 val t1 = whnf_mt true gctx kctx t1
-                 fun err () = raise Error (get_region_e e1, "map_get(e1, e2): type of e1 is wrong:" ::
-                                                            indent ["expect: state_field _",
-                                                                    "got: " ^ str_mt gctxn skctxn t1])
-                 val t = case t1 of
-                             TState (x, _) =>
-                             (case st_types @!! x of
-                                  TMap t => t
-                                | _ => raise Error (r, [sprintf "type of $ should be map" [str_st_key x]]))
-                           | _ => assert_TMap err $ assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
-                 val (e2, j2, st) = check_mtype (ctx, st) (e2, TInt r)
-               in
-                 (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ TN C_EMapPtr, st)
-               end
-             | EBVectorGet () =>
-               let
-                 val r = U.get_region_e e_all
-                 val (e1, t1, j1, st) = get_mtype (ctx, st) e1
-                 val i = fresh_i gctx sctx BSNat r
-                 val (e2, j2, st) = check_mtype (ctx, st) (e2, TNat (i, r))
-                 val t1 = whnf_mt true gctx kctx t1
-                 val (x, t, len) = get_vector (fn () => get_region_e e1) t1
-                 val () = write_lt (i, len, r)
-               in
-                 (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ TN C_EVectorGet, st)
-               end
-             | EBVectorPushBack () =>
-               let
-                 val r = U.get_region_e e_all
-                 val (e1, t1, j1, st) = get_mtype (ctx, st) e1
-                 val (e2, t2, j2, st) = get_mtype (ctx, st) e2
-                 val t1 = whnf_mt true gctx kctx t1
-                 val (x, t, len) = get_vector (fn () => get_region_e e1) t1
-                 val () = unify_mt r gctx (sctx, kctx) (t2, t)
-               in
-                 (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2 %%+ TN C_EVectorPushBack, st @+ (x, len %+ N1 r))
-               end
-             | EBStorageSet () =>
-               let
-                 val r = U.get_region_e e_all
-                 val (e1, t1, j1, st) = get_mtype (ctx, st) e1
-                 val t1 = whnf_mt true gctx kctx t1
-                 val t =
-                     case t1 of
-                         TState (x, _) =>
-                         assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) $ st_types @!! x
-                       | _ =>
-                         assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
-                 val (e2, j2, st) = check_mtype (ctx, st) (e2, t)
-               in
-                 (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2 %%+ TN C_EStorageSet, st)
-               end
-          )
-        | U.EState (x, r) => (EState (x, r), TState (x, r), TN C_EState, st)
+	| U.EBinOp (opr as EBPair (), e1, e2) =>
+	  let 
+            val (e1, t1, d1, st) = get_mtype (ctx, st) e1
+	    val (e2, t2, d2, st) = get_mtype (ctx, st) e2
+          in
+	    (EPair (e1, e2), TProd (t1, t2), d1 %%+ d2 %%+ (to_real C_EPair, N 2), st)
+	  end
+	| U.EBinOp (opr as EBApp (), e1, e2) =>
+	  let
+            val r1 = U.get_region_e e1
+            val (e1, t1, d1, st) = get_mtype (ctx, st) e1
+            val (is_constr, e1) = is_constr e1
+            val t1 = whnf_mt true gctx kctx t1
+            val ((pre_st, t2), d, (post_st, t)) =
+                case t1 of
+                    TArrow a => a
+                  | t1 =>
+                    case is_TApp_TUVar t1 of
+                        SOME _ =>
+                        let
+                          val t2 = fresh_mt gctx (sctx, kctx) r1
+                          val d = fresh_i gctx sctx BSTime r1
+                          val j = fresh_i gctx sctx BSNat r1
+                          val t = fresh_mt gctx (sctx, kctx) r1
+                          val arrow = ((StMap.empty, t2), (d, j), (StMap.empty, t))
+                          val () = unify_mt r1 gctx (sctx, kctx) (t1, TArrow arrow)
+                        in
+                          arrow
+                        end
+                      | NONE =>
+                        raise Error (r1, "type mismatch:" ::
+                                         indent ["expect: _ -- _ --> _",
+                                                 "got: " ^ str_mt gctxn skctxn t1])
+            val (e2, t2', d2, st) = get_mtype (ctx, st) e2
+            (* todo: if I swap (t2, t2'), unify_mt() has a bug that it unifies the index arguments too eagerly *)
+            val r2 = get_region_e e2
+            val () = unify_mt r2 gctx (sctx, kctx) (t2, t2')
+            fun check_submap pre_st st =
+              let
+                val pre_st_minus_st = pre_st @-- st
+              in
+                if StMap.numItems pre_st_minus_st = 0 then ()
+                else raise Error (r1, ["these state fields are required by the function by missing in current state:", str_ls str_st_key $ StMapU.domain pre_st_minus_st])
+              end
+            val () = check_submap pre_st st
+            val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
+            val st = st @++ post_st
+            val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (r2, ["Should be EAnnoLiveVars"])) e2
+            val cost = if has_k then
+                         (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
+                          M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
+                       else (0, 0)
+            val cost = cost ++ (C_App_BeforeCPS, M_App_BeforeCPS)
+          in
+            (EApp (e1, e2), t, if is_constr then d2 else d1 %%+ d2 %%+ mapPair' to_real N cost %%+ d, st) 
+	  end
+	| U.EBinOp (opr as EBNew (), e1, e2) =>
+          let
+            val r = U.get_region_e e_all
+            val len = fresh_i gctx sctx BSTime r
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (len, r))
+            val (e2, t, d2, st) = get_mtype (ctx, st) e2
+            val cost = N C_ENew_order0 %+ N C_ENew_order1 %* len
+          in
+            (EBinOp (opr, e1, e2), TArray (t, len), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %+ N1 dummy), st)
+          end
+	| EBRead () =>
+          let
+            val r = U.get_region_e e_all
+            val t = fresh_mt gctx (sctx, kctx) r
+            val i1 = fresh_i gctx sctx BSTime r
+            val i2 = fresh_i gctx sctx BSTime r
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (t, i1))
+            val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
+            val () = write_lt (i2, i1, r)
+          in
+            (EBinOp (opr, e1, e2), t, d1 %%+ d2 %%+ TN C_ERead, st)
+          end
+	| EBNat opr =>
+          let
+            val r = U.get_region_e e_all
+            val i1 = fresh_i gctx sctx BSTime r
+            val i2 = fresh_i gctx sctx BSTime r
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (i1, r))
+            val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
+            val i2 = Simp.simp_i $ update_i i2
+            val () = if opr = EBNBoundedMinus () then write_le (i2, i1, r) else ()
+            val i = interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Error (r, ["Can only divide by a nat whose index is a constant, not: " ^ str_i gctxn sctxn i2]))
+          in
+            (EBinOp (EBNat opr, e1, e2), TNat (i, r), d1 %%+ d2 %%+ TN (C_ENat opr), st)
+          end
+	| EBPrim opr =>
+	  let
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TBase (get_prim_expr_bin_op_arg1_ty opr, dummy))
+	    val (e2, d2, st) = check_mtype (ctx, st) (e2, TBase (get_prim_expr_bin_op_arg2_ty opr, dummy)) in
+	    (EBinOp (EBPrim opr, e1, e2), TBase (get_prim_expr_bin_op_res_ty opr, dummy), d1 %%+ d2 %%+ TN (C_EBPrim opr), st)
+	  end
+        | EBNatCmp opr =>
+          let
+            val r = U.get_region_e e_all
+            val i1 = fresh_i gctx sctx BSTime r
+            val i2 = fresh_i gctx sctx BSTime r
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (i1, r))
+            val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
+          in
+            (EBinOp (EBNatCmp opr, e1, e2), TiBool (interp_nat_cmp r opr (i1, i2), r), d1 %%+ d2 %%+ TN (C_ENatCmp opr), st)
+          end
+        | EBVectorGet () =>
+          let
+            val r = U.get_region_e e_all
+            val (e1, t1, j1, st) = get_mtype (ctx, st) e1
+            val i = fresh_i gctx sctx BSNat r
+            val (e2, j2, st) = check_mtype (ctx, st) (e2, TNat (i, r))
+            val t1 = whnf_mt true gctx kctx t1
+            val (x, t, len) = get_vector (fn () => get_region_e e1) t1
+            val () = write_lt (i, len, r)
+          in
+            (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ TN C_EVectorGet, st)
+          end
+        | U.ETriOp (ETVectorSet (), e1, e2, e3) =>
+          let
+            val r = U.get_region_e e_all
+            val (e1, t1, j1, st) = get_mtype (ctx, st) e1
+            val i = fresh_i gctx sctx BSNat r
+            val (e2, j2, st) = check_mtype (ctx, st) (e2, TNat (i, r))
+            val (e3, t3, j3, st) = get_mtype (ctx, st) e3
+            val t1 = whnf_mt true gctx kctx t1
+            val (x, t, len) = get_vector (fn () => get_region_e e1) t1
+            val () = unify_mt r gctx (sctx, kctx) (t3, t)
+            val () = write_lt (i, len, r)
+          in
+            (ETriOp (ETVectorSet (), e1, e2, e3), TUnit r, j1 %%+ j2 %%+ j3 %%+ TN C_EVectorSet, st)
+          end
+        | EBVectorPushBack () =>
+          let
+            val r = U.get_region_e e_all
+            val (e1, t1, j1, st) = get_mtype (ctx, st) e1
+            val (e2, t2, j2, st) = get_mtype (ctx, st) e2
+            val t1 = whnf_mt true gctx kctx t1
+            val (x, t, len) = get_vector (fn () => get_region_e e1) t1
+            val () = unify_mt r gctx (sctx, kctx) (t2, t)
+          in
+            (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2 %%+ TN C_EVectorPushBack, st @+ (x, len %+ N1 r))
+          end
+	| U.EUnOp (opr as EUVectorLen (), e, r) =>
+          let
+            val (e, t, j, st) = get_mtype (ctx, st) e
+            val t = whnf_mt true gctx kctx t
+            val (_, _, len) = get_vector (fn () => r) t
+          in
+            (EUnOp (opr, e, r), TNat (len, r), j %%+ TN C_EVectorLen, st)
+          end
+	| U.EUnOp (opr as EUVectorClear (), e, r) =>
+          let
+            val (e, t, j, st) = get_mtype (ctx, st) e
+            val t = whnf_mt true gctx kctx t
+            val (x, _, _) = get_vector (fn () => r) t
+          in
+            (EUnOp (opr, e, r), TUnit r, j %%+ TN C_EVectorClear, st @+ (x, N0 r))
+          end
+	| U.EUnOp (opr as EUNatCellGet (), e, r) =>
+          let
+            val (e, t, j, st) = get_mtype (ctx, st) e
+            val t = whnf_mt true gctx kctx t
+            val (_, i) = get_nat_cell (fn () => r) t
+          in
+            (EUnOp (opr, e, r), TNat (i, r), j %%+ TN C_ENatCellGet, st)
+          end
+        | U.EBinOp (opr as EBNatCellSet (), e1, e2) =>
+          let
+            val r = U.get_region_e e_all
+            val (e1, t1, j1, st) = get_mtype (ctx, st) e1
+            val i = fresh_i gctx sctx BSNat r
+            val (e2, j2, st) = check_mtype (ctx, st) (e2, TNat (i, r))
+            val t1 = whnf_mt true gctx kctx t1
+            val (x, _) = get_nat_cell (fn () => get_region_e e1) t1
+          in
+            (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2 %%+ TN C_ENatCellSet, st @+ (x, i))
+          end
+        | EBMapPtr (path, _) =>
+          let
+            val r = U.get_region_e e_all
+            val (e1, t1, j1, st) = get_mtype (ctx, st) e1
+            val t1 = whnf_mt true gctx kctx t1
+            fun err () = raise Error (get_region_e e1, "map_ptr(e1, e2): type of e1 is wrong:" ::
+                                                       indent ["expect: pointer",
+                                                               "got: " ^ str_mt gctxn skctxn t1])
+            val t = assert_TMap err $ assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
+            val offset = calculate_offset t path
+            val (e2, j2, st) = check_mtype (ctx, st) (e2, TInt r)
+          in
+            (EBinOp (EBMapPtr (path, SOME offset), e1, e2), TPtr (t, path, SOME offset), j1 %%+ j2 %%+ TN C_EMapPtr, st)
+          end
+	| U.EUnOp (opr as EUStorageGet (), e, r) =>
+          let
+            val r = U.get_region_e e_all
+            val (e, t, j, st) = get_mtype ctx_st e
+            val t = whnf_mt true gctx kctx t
+            val t = assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
+            val () = assert_wordsize_ty t
+          in
+            (EUnOp (opr, e, r), t, j %%+ TN C_EStorageGet, st)
+          end
+        | EBStorageSet () =>
+          let
+            val r = U.get_region_e e_all
+            val (e1, t1, j1, st) = get_mtype (ctx, st) e1
+            val t1 = whnf_mt true gctx kctx t1
+            val t = assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
+            val () = assert_wordsize_ty t
+            val (e2, j2, st) = check_mtype (ctx, st) (e2, t)
+          in
+            (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2 %%+ TN C_EStorageSet, st)
+          end
+        | U.EState (x, r) =>
+          let
+            val st_t = case st_types @! x of
+                           SOME t => t
+                         | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])
+            val t =
+                case st_t of
+                    TMap _ => TCell st_t
+                  | TRef t => TCell t
+                  | _ => TState (x, r)
+          in
+            (EState (x, r), t, TN C_EState, st)
+          end
         | U.EGet (x, es, r) =>
           let
             val st_t = case st_types @! x of
@@ -1624,24 +1655,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                     in
                       U.EStorageGet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, r)
                     end
-                  | TVector _ =>
-                    let
-                      val x = U.EState (x, r)
-                      val offset = case es of
-                                       [a] => a
-                                     | _ => raise Error (r, ["for vector there must only be one offset"])
-                    in
-                      U.EVectorGet (x, offset)
-                    end
-                  | TTuplePtr _ =>
-                    let
-                      val x = U.EState (x, r)
-                      val () = case es of
-                                   [] => ()
-                                 | _ => raise Error (r, ["for storage ref, there can't be offsets"])
-                    in
-                      U.EStorageGet (x, r)
-                    end
                   (* | TArray _ => *)
                   (*   let *)
                   (*     val x = U.EVar (ID (x, r), (false, false)) *)
@@ -1651,6 +1664,33 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                   (*       | [e1] => U.ERead (x, e1) *)
                   (*       | _ => raise Error (r, ["for memory ref, there can't be more than one offset"]) *)
                   (*   end *)
+                  | TRef _ =>
+                    let
+                      val x = U.EState (x, r)
+                      val () = case es of
+                                   [] => ()
+                                 | _ => raise Error (r, ["for storage ref, there can't be offsets"])
+                    in
+                      U.EStorageGet (x, r)
+                    end
+                  | TNatCell () =>
+                    let
+                      val x = U.EState (x, r)
+                      val () = case es of
+                                   [] => ()
+                                 | _ => raise Error (r, ["for storage ref, there can't be offsets"])
+                    in
+                      U.ENatCellGet (x, r)
+                    end
+                  | TVector _ =>
+                    let
+                      val x = U.EState (x, r)
+                      val offset = case es of
+                                       [(e, [])] => e
+                                     | _ => raise Error (r, ["for vector there must only be one offset"])
+                    in
+                      U.EVectorGet (x, offset)
+                    end
                   | _ => raise Error (r, ["invalid state type"])
           in
             get_mtype ctx_st e
@@ -1681,24 +1721,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                     in
                       U.EStorageSet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, e)
                     end
-                  | TVector _ =>
-                    let
-                      val x = U.EState (x, r)
-                      val offset = case es of
-                                       [a] => a
-                                     | _ => raise Error (r, ["for vector there must only be one offset"])
-                    in
-                      U.EVectorSet (x, offset, e)
-                    end
-                  | TTuplePtr _ =>
-                    let
-                      val x = U.EState (x, r)
-                      val () = case es of
-                                   [] => ()
-                                 | _ => raise Error (r, ["for storage ref, there can't be offsets"])
-                    in
-                      U.EStorageSet (x, e)
-                    end
                   (* | TArray _ => *)
                   (*   let *)
                   (*     val x = U.EVar (ID (x, r), (false, false)) *)
@@ -1708,23 +1730,36 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                   (*       | [e1] => U.EWrite (x, e1, e) *)
                   (*       | _ => raise Error (r, ["for memory ref, there can't be more than one offset"]) *)
                   (*   end *)
+                  | TRef _ =>
+                    let
+                      val x = U.EState (x, r)
+                      val () = case es of
+                                   [] => ()
+                                 | _ => raise Error (r, ["for storage ref, there can't be offsets"])
+                    in
+                      U.EStorageSet (x, e)
+                    end
+                  | TNatCell _ =>
+                    let
+                      val x = U.EState (x, r)
+                      val () = case es of
+                                   [] => ()
+                                 | _ => raise Error (r, ["for storage ref, there can't be offsets"])
+                    in
+                      U.ENatCellSet (x, e)
+                    end
+                  | TVector _ =>
+                    let
+                      val x = U.EState (x, r)
+                      val offset = case es of
+                                       [a] => a
+                                     | _ => raise Error (r, ["for vector there must only be one offset"])
+                    in
+                      U.EVectorSet (x, offset, e)
+                    end
                   | _ => raise Error (r, ["invalid state type"])
           in
             get_mtype ctx_st e
-          end
-        | U.ETriOp (ETVectorSet (), e1, e2, e3) =>
-          let
-            val r = U.get_region_e e_all
-            val (e1, t1, j1, st) = get_mtype (ctx, st) e1
-            val i = fresh_i gctx sctx BSNat r
-            val (e2, j2, st) = check_mtype (ctx, st) (e2, TNat (i, r))
-            val (e3, t3, j3, st) = get_mtype (ctx, st) e3
-            val t1 = whnf_mt true gctx kctx t1
-            val (x, t, len) = get_vector (fn () => get_region_e e1) t1
-            val () = unify_mt r gctx (sctx, kctx) (t3, t)
-            val () = write_lt (i, len, r)
-          in
-            (ETriOp (ETVectorSet (), e1, e2, e3), TUnit r, j1 %%+ j2 %%+ j3 %%+ TN C_EVectorSet, st)
           end
 	| U.ETriOp (ETWrite (), e1, e2, e3) =>
           let
@@ -2748,35 +2783,45 @@ fun get_sig gctx m =
         (ModTransparentAsc (m, sgn), sg')
       end
 
-fun is_base_storage_ty t =
+fun is_nullable_wordsize_ty t =
     case t of
-        TNat _ => ()
-      | TiBool _ => ()
+        TNat _ => true
+      | TiBool _ => true
       | TBase (t, _) =>
         (case t of
-             BTInt () => ()
-           | BTBool () => ()
-           | BTByte () => ())
-      | TUnit _ => ()
-      | _ => raise Error (get_region_mt t, ["not a base storage type"])
+             BTInt () => true
+           | BTBool () => true
+           | BTByte () => true
+        )
+      | TUnit _ => true
+      | _ => false
+        
+fun is_wordsize_ty t =
+    if is_nullable_wordsize_ty t then true
+    else
+      case t of
+          (* todo: single-constructor datatypes could also be wordsize *)
+          _ => false
         
 fun is_wf_map_val t =
-  case t of
-      TMap t => is_wf_map_val t
-    | _ => is_base_storage_ty t
-      
+    let
+      val loop = is_wf_map_val
+    in
+      case t of
+          TMap t => loop t
+        | TProd (t1, t2) => loop t1 andalso loop t2
+        | TRecord (fields, _) => SMapU.all loop fields
+        | _ => is_nullable_wordsize_ty t
+    end
+
 fun is_wf_state_ty t =
   case t of
       TMap t => is_wf_map_val t
-    | TVector t => is_base_storage_ty t
-    | TTuplePtr (ts, offset, _) => app is_base_storage_ty ts
-    | _ => raise Error (get_region_mt t, ["invalid state type"])
+    | TVector t => is_wordsize_ty t (* vector elements can't be tuples because there is no primitive push_back operation for them on the assembly level *)
+    | TRef t => is_wordsize_ty t
+    | TNatCell () => true
+    | _ => false
 
-fun add_TCell_for_map_values t =
-  case t of
-      TMap t => TMap $ TCell $ add_TCell_for_map_values t
-    | _ => t
-        
 fun check_top_bind gctx (name, bind) =
   let
     val gctxd = 
@@ -2816,8 +2861,8 @@ fun check_top_bind gctx (name, bind) =
           | U.TBState t =>
             let
               val t = check_kind_Type Gctx.empty (([], []), t)
-              val () = is_wf_state_ty t
-              val t = add_TCell_for_map_values t
+              val () = if is_wf_state_ty t then ()
+                       else raise Error (get_region_mt t, ["illegal state type"])
               val () = add_state (name, t)
             in
               (TBState t, [])

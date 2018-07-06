@@ -118,6 +118,7 @@ datatype expr_un_op =
          | EUVectorLen of unit
          | EUAnno of expr_anno
          | EUField of string * int option
+         | EUNatCellGet of unit
 
 fun str_env_info name =
     case name of
@@ -215,6 +216,7 @@ datatype expr_bin_op =
          | EBVectorPushBack of unit
          | EBMapPtr of unit
          | EBStorageSet of unit
+         | EBNatCellSet of unit
          | EBPrim of prim_expr_bin_op
          | EBNat of nat_expr_bin_op
          | EBNatCmp of nat_cmp
@@ -423,4 +425,7 @@ fun str_expr_T opr =
       ETNever () => "ETNever"
     | ETBuiltin name => sprintf "ETBuiltin($)" [name]
                   
+type tuple_record_proj = (int, string) sum
+type proj_path = tuple_record_proj list
+       
 end

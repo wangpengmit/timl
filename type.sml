@@ -42,6 +42,7 @@ datatype mtype =
          | TMap of mtype
          | TVector of mtype
          | TState of string * region
+         | TRecord of mtype SMap.map * region
          | TTuplePtr of mtype list * int * region
 
 datatype ty = 

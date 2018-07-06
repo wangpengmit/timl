@@ -138,8 +138,16 @@ fun cg_ty_visitor_vtable cast () =
         | TRecord name_ts =>
           let
             val ts = map snd $ sort cmp_str_fst name_ts
+            val ts = visit_list (#visit_ty vtable this) env ts
           in
-            #visit_ty vtable this env $ TTuple ts
+            TTuple ts
+          end
+        | TMap t =>
+          let
+            val ts = flatten_map_value_t t
+            val ts = visit_list (#visit_ty vtable this) env ts
+          in
+            TMap $ TTuple ts
           end
         | _ => #visit_ty vtable this env t (* call super *)
     val vtable = override_visit_ty vtable visit_ty
@@ -295,6 +303,7 @@ fun impl_expr_un_op opr =
     | EUStorageGet () => [SLOAD ()]
     | EUVectorClear () => [PUSH1nat 0, SWAP1, SSTORE (), PUSH1 WTT] (* should also zero out the contents, in order to save storage *)
     | EUVectorLen () => [SLOAD ()]
+    | EUNatCellGet () => [SLOAD ()]
     | EUAnno _ => []
     | EUField _ => raise Impossible "impl_expr_un_op/EUField"
                         
@@ -423,11 +432,21 @@ fun compile st_name2int ectx e =
       compile e1 @ 
       compile e2 @
       impl_nat_cmp opr
-    | EBinOp (EBMapPtr (), e1, e2) =>
+    | EBinOp (EBMapPtr (_, offset), e1, e2) =>
+      let
+        val offset = assert_SOME offset
+      in
+        compile e1 @ 
+        compile e2 @
+        [MACRO_map_ptr ()]
+        PUSH1nat $ offset @
+        [ADD]
+      end
+    | EBinOp (EBStorageSet (), e1, e2) =>
       compile e1 @ 
       compile e2 @
-      [MACRO_map_ptr ()]
-    | EBinOp (EBStorageSet (), e1, e2) =>
+      [SWAP1, SSTORE (), PUSH1 WTT]
+    | EBinOp (EBNatCellSet (), e1, e2) =>
       compile e1 @ 
       compile e2 @
       [SWAP1, SSTORE (), PUSH1 WTT]

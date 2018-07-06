@@ -118,6 +118,21 @@
 - [ ] Have sprintf.
 - [ ] Check no-UVar after typechecking.
 - [ ] Write `simp_mt` using visitor.
+- [ ] A full storage interface should support the following containers:
+    * [x] map to nullable primitives
+    * [x] map to map
+    * [ ] map to tuples
+    * [ ] map to tuples of maps
+    * [x] indexed vector of primitives (vectors should guarantee elements are always well-formed and allow value types not inhabited by zero)
+    * [ ] indexed vector of tuples (the problem with a vector of tuples is that there is no atomic push_back operation)
+    * [ ] indexed vector of maps
+    * [ ] indexed vector of tuples of maps
+    * [x] ref of primitives
+    * [ ] ref of tuples
+    * [ ] array of primitives
+    * [ ] array of tuples
+    * [ ] indexed nat
+    * [ ] unindexed vectors as values of the above containers. An access to an element of an unindexed vector should include a length check.
 
 # To-do for MicroTiML
 

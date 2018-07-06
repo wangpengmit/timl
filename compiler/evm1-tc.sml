@@ -82,7 +82,16 @@ fun get_word_const_type (hctx, st_int2name) c =
            SOME t => t
          | NONE => raise Impossible $ "unbound label: " ^ str_int l
       )
-    | WCState n => TState $ IMapU.must_find st_int2name n
+    | WCState n =>
+      let
+        val x = IMapU.must_find st_int2name n
+        val st_t = st_name2ty @!! x
+      in
+        case st_t of
+            TMap _ => TCell st_t
+          | TRef t => TCell t
+          | _ => TState x
+      end
 
 fun tc_w (hctx, st_int2name) (ctx as (itctx as (ictx, tctx))) w =
   case w of
@@ -110,20 +119,20 @@ fun is_tuple_offset num_fields n =
       else NONE
     | NONE => NONE
 
-fun assert_base_storage_ty t =
-    case t of
-        TNat _ => ()
-      | TiBool _ => ()
-      | TConst c =>
-        (case c of
-             TCUnit () => ()
-           | TCEmpty () => ()
-           | TCTiML c =>
-             case c of
-                 BTInt () => ()
-               | BTBool () => ()
-               | BTByte () => ())
-      | _ => raise Impossible "not a base storage type"
+(* fun assert_wordsize_ty t = *)
+(*     case t of *)
+(*         TNat _ => () *)
+(*       | TiBool _ => () *)
+(*       | TConst c => *)
+(*         (case c of *)
+(*              TCUnit () => () *)
+(*            | TCEmpty () => () *)
+(*            | TCTiML c => *)
+(*              case c of *)
+(*                  BTInt () => () *)
+(*                | BTBool () => () *)
+(*                | BTByte () => ()) *)
+(*       | _ => raise Impossible "not a base storage type" *)
 
 fun C_inst b =
   case b of
@@ -652,17 +661,6 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, TSum ts :: sctx, st))
       end
-    | MACRO_map_ptr () =>
-      let
-        val (t0, t1, sctx) = assert_cons2 sctx
-        val t1 = whnf itctx t1
-        val t = case t1 of
-                    TState x => assert_TMap $ st_name2ty @!! x
-                  | _ => assert_TMap $ assert_TCell t1
-        val () = assert_TInt t0
-      in
-        ((itctx, rctx, t :: sctx, st))
-      end
     | MACRO_vector_ptr () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
@@ -681,6 +679,15 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, sctx, st @%+ (vec, len %+ N1)))
       end
+    | MACRO_map_ptr () =>
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t1 = whnf itctx t1
+        val t = assert_TMap $ assert_TCell t1
+        val () = assert_TInt t0
+      in
+        ((itctx, rctx, TCell t :: sctx, st))
+      end
     | SLOAD () => 
       let
         val (t0, sctx) = assert_cons sctx
@@ -695,27 +702,18 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                 in
                   t
                 end
-              | TState vec =>
-                (case st_name2ty @!! vec of
+              | TState x =>
+                (case st_name2ty @!! x of
                      TVector _ =>
-                     let
-                       val len = st @%!! vec
-                     in
-                       TNat len
-                     end
-                   | st_t as TTuplePtr _ => 
-                     let
-                       val t = assert_TCell st_t
-                       val () = assert_base_storage_ty t
-                     in
-                       t
-                     end
+                     TNat $ st @%!! x
+                   | TNatCell () =>
+                     TNat $ st @%!! x
                    | _ => def ()
                 )
               | TTuplePtr _ =>
                 let
                   val t = assert_TCell t0
-                  val () = assert_base_storage_ty t
+                  val () = assert_wordsize_ty t
                 in
                   t
                 end
@@ -738,29 +736,27 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                 in
                   st
                 end
-              | TState vec =>
-                (case st_name2ty @!! vec of
+              | TState x =>
+                (case st_name2ty @!! x of
                      TVector _ =>
                      let
                        val new = assert_TNat t1
                        val () = check_prop (new %= N0)
                      in
-                       st @%+ (vec, N0)
+                       st @%+ (x, N0)
                      end
-                   | st_t as TTuplePtr _ => 
+                   | TNatCell () => 
                      let
-                       val t = assert_TCell st_t
-                       val () = assert_base_storage_ty t
-                       val () = is_eq_ty itctx (t1, t)
+                       val i = assert_TNat t1
                      in
-                       st
+                       st @%+ (x, i)
                      end
                    | _ => def ()
                 )
               | TTuplePtr _ =>
                 let
                   val t = assert_TCell t0
-                  val () = assert_base_storage_ty t
+                  val () = assert_wordsize_ty t
                   val () = is_eq_ty itctx (t1, t)
                 in
                   st

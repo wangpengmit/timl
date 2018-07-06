@@ -56,6 +56,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TArrayPtr of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*offset*)
          | TVectorPtr of string * 'idx(*offset*)
          | TVector of ('var, 'bsort, 'idx, 'sort) ty
+         | TNatCell of unit
 
 type loc = int
              
