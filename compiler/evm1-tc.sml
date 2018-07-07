@@ -106,7 +106,7 @@ fun get_word_const_type (hctx, st_int2name) c =
       in
         case st_t of
             TMap _ => TCell st_t
-          | TRef t => TCell t
+          | TSCell t => TCell t
           | _ => TState x
       end
 
@@ -155,18 +155,18 @@ fun C_inst b =
   case b of
       POP () => C_POP
     | ORIGIN () => C_ORIGIN
-         | ADDRESS () => C_ADDRESS
-         | BALANCE () => C_BALANCE
-         | CALLER () => C_CALLER
-         | CALLVALUE () => C_CALLVALUE
-         | CALLDATASIZE () => C_CALLDATASIZE
-         | CODESIZE () => C_CODESIZE
-         | GASPRICE () => C_GASPRICE
-         | COINBASE () => C_COINBASE
-         | TIMESTAMP () => C_TIMESTAMP
-         | NUMBER () => C_NUMBER
-         | DIFFICULTY () => C_DIFFICULTY
-         | GASLIMIT () => C_GASLIMIT
+    | ADDRESS () => C_ADDRESS
+    | BALANCE () => C_BALANCE
+    | CALLER () => C_CALLER
+    | CALLVALUE () => C_CALLVALUE
+    | CALLDATASIZE () => C_CALLDATASIZE
+    | CODESIZE () => C_CODESIZE
+    | GASPRICE () => C_GASPRICE
+    | COINBASE () => C_COINBASE
+    | TIMESTAMP () => C_TIMESTAMP
+    | NUMBER () => C_NUMBER
+    | DIFFICULTY () => C_DIFFICULTY
+    | GASLIMIT () => C_GASLIMIT
                   
     | ADD () => C_ADD
     | SUB () => C_SUB
@@ -199,7 +199,7 @@ fun C_inst b =
     | SHA3 () => C_SHA3
     | SLOAD () => C_SLOAD
     (* | SSTORE () => C_SSTORE *)
-    | SSTORE () => 0 (* will be determined depending on operands *)
+    | SSTORE () => 0 (* will depend on operands *)
     | JUMPDEST () => C_JUMPDEST
     (* extensions (noops) *)
     | VALUE_AppT _ => C_VALUE_AppT
@@ -339,18 +339,18 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         (itctx, rctx, t :: sctx, st)
       end
     | ORIGIN () => add_stack TInt ctx
-         | ADDRESS () => add_stack TInt ctx
-         | BALANCE () => add_stack TInt ctx
-         | CALLER () => add_stack TInt ctx
-         | CALLVALUE () => add_stack TInt ctx
-         | CALLDATASIZE () => add_stack TInt ctx
-         | CODESIZE () => add_stack TInt ctx
-         | GASPRICE () => add_stack TInt ctx
-         | COINBASE () => add_stack TInt ctx
-         | TIMESTAMP () => add_stack TInt ctx
-         | NUMBER () => add_stack TInt ctx
-         | DIFFICULTY () => add_stack TInt ctx
-         | GASLIMIT () => add_stack TInt ctx
+    | ADDRESS () => add_stack TInt ctx
+    | BALANCE () => add_stack TInt ctx
+    | CALLER () => add_stack TInt ctx
+    | CALLVALUE () => add_stack TInt ctx
+    | CALLDATASIZE () => add_stack TInt ctx
+    | CODESIZE () => add_stack TInt ctx
+    | GASPRICE () => add_stack TInt ctx
+    | COINBASE () => add_stack TInt ctx
+    | TIMESTAMP () => add_stack TInt ctx
+    | NUMBER () => add_stack TInt ctx
+    | DIFFICULTY () => add_stack TInt ctx
+    | GASLIMIT () => add_stack TInt ctx
     | MUL () => mul_div "MUL" op%*
     | DIV () => mul_div "DIV" op%/
     | SDIV () => mul_div "SDIV" op%/
@@ -365,7 +365,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                  TInt)
               | (TNat i0, TNat i1) =>
                 (add_time_idx $ nat_exp_cost i1;
-                 TNat $ i1 %^ i0)
+                 TNat $ i0 %^ i1)
               | (TConst (TCTiML (BTInt ())), TNat i1) =>
                 (add_time_idx $ nat_exp_cost i1;
                  TInt)
@@ -789,8 +789,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                        val old = st @!! x
                        val new = assert_TNat t1
                        (* todo: opportunity to collect reward *)
-                       val award = IIte (old <>? N0 && new =? N0, to_real R_sclear, T0)
-                       val cost = IIte (old =? N0 && new <>? N0, to_real C_sset, to_real C_sreset)
+                       val award = IIte' (old <>? N0 && new =? N0, to_real R_sclear, T0)
+                       val cost = IIte' (old =? N0 && new <>? N0, to_real C_sset, to_real C_sreset)
                        val () = add_time_idx cost
                      in
                        st @%+ (x, new)

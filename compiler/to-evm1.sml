@@ -1046,6 +1046,7 @@ fun test1 dirname =
     val () = write_file (join_dir_file' dirname $ "unit-test-before-code-gen.tmp", e_str)
     val () = println "Started Code Generation ..."
     val (prog, num_regs) = cg_prog (st_name2int, init_st) e
+    val st_name2ty = StMap.map cg_t st_name2ty
     val () = println "Finished Code Generation"
     open EVM1Simp
     val prog = simp_prog prog

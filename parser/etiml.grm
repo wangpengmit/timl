@@ -46,6 +46,7 @@ open Ast
     | NAT_GE
     | NAT_EQ
     | NAT_NEQ
+    | NAT_EXP
     | B_LT
     | B_GT
     | B_LE
@@ -274,6 +275,8 @@ open Ast
        | ifs of ifelse list
        | elses of ifelse list
        | optional_indexed of bool
+       | int_or_id of (int, id) sum
+       | proj_path of proj_path
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
 
@@ -448,6 +451,7 @@ exp : exp_term (exp_term)
      | exp NAT_MINUS exp (EBinOp' (EBNat (EBNBoundedMinus ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_MULT exp (EBinOp' (EBNat (EBNMult ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_DIV exp (EBinOp' (EBNat (EBNDiv ()), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_EXP exp (EBinOp' (EBIntNatExp (), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_LT exp (EBinOp' (EBNatCmp (NCLt ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_GT exp (EBinOp' (EBNatCmp (NCGt ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_LE exp (EBinOp' (EBNatCmp (NCLe ()), exp1, exp2, (exp1left, exp2right)))

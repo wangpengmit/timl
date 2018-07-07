@@ -203,13 +203,18 @@ fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_vi
             let
               val ts = map (#visit_mtype vtable this ctx) ts
               val is = map (#visit_idx vtable this ctx) is
+              fun TRef (t, r) = TArray (t, INat (1, r))
             in
               if SE.eq_var (x, (ID ("map", dummy))) andalso length ts = 2 andalso length is = 0 then
                 TMap (List.nth(ts, 1))
               else if SE.eq_var (x, (ID ("vector", dummy))) andalso length ts = 1 andalso length is = 0 then
                 TVector (hd ts)
+              else if SE.eq_var (x, (ID ("cell", dummy))) andalso length ts = 1 andalso length is = 0 then
+                TSCell (hd ts)
+              else if SE.eq_var (x, (ID ("icell", dummy))) andalso length ts = 1 andalso length is = 0 then
+                TNatCell (hd ts)
               else if SE.eq_var (x, (ID ("ref", dummy))) andalso length ts = 1 andalso length is = 0 then
-                TCell (hd ts)
+                TRef (hd ts, r)
               else
                 default ()
             end

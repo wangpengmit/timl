@@ -59,7 +59,9 @@ fun must_find m k = Util.assert_SOME (M.find (m, k))
                                        
 fun sub m m' = M.filteri (fn (k, _) => Util.isNone (M.find (m', k))) m
 fun union m m' = M.unionWith Util.snd (m, m')
-                        
+
+fun all f m = List.add f (M.listItems m)
+                             
 end
 
 structure IntBinaryMapUtil = MapUtilFn (IntBinaryMap)

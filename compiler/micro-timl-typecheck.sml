@@ -827,7 +827,7 @@ fun assert_TCell t =
             TPtr a => a
           | _ => raise Impossible "assert_TCell"
   in
-    assert_TCell (t, path)
+    assert_TCell' (t, path)
   end
 
 infix 6 %%+
@@ -1522,20 +1522,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (ETuple (map get_e ls), TTuple (map #2 ls), i %%+ (to_real $ C_ETuple len, N len), st)
         end
-      | EBinOp (EBPrim opr, e1, e2) =>
-        let
-          val t1 = get_prim_expr_bin_op_arg1_ty opr
-          val (e1, i1, st) = tc_against_ty (ctx, st) (e1, t1)
-          val st_e1 = st
-          val t2 = get_prim_expr_bin_op_arg2_ty opr
-          val (e2, i2, st) = tc_against_ty (ctx, st) (e2, t2)
-          val (e1, e2) = if !anno_EBPrim then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val (e1, e2) = if !anno_EBPrim_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
-          val e = EBinOpPrim (opr, e1, e2)
-          val t = get_prim_expr_bin_op_res_ty opr
-        in
-          (e, t, i1 %%+ i2 %%+ TN (C_EBPrim opr), st)
-        end
       | EBinOp (EBNew (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
@@ -1581,6 +1567,64 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_ERead_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (ERead (e1, e2), t, j1 %%+ j2 %%+ TN C_ERead, st)
+        end
+      | EBinOp (EBPrim opr, e1, e2) =>
+        let
+          val t1 = get_prim_expr_bin_op_arg1_ty opr
+          val (e1, i1, st) = tc_against_ty (ctx, st) (e1, t1)
+          val st_e1 = st
+          val t2 = get_prim_expr_bin_op_arg2_ty opr
+          val (e2, i2, st) = tc_against_ty (ctx, st) (e2, t2)
+          val (e1, e2) = if !anno_EBPrim then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val (e1, e2) = if !anno_EBPrim_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
+          val e = EBinOpPrim (opr, e1, e2)
+          val t = get_prim_expr_bin_op_res_ty opr
+        in
+          (e, t, i1 %%+ i2 %%+ TN (C_EBPrim opr), st)
+        end
+      | EBinOp (opr as EBIntNatExp (), e1, e2) =>
+          let
+            val (e1, d1, st) = tc_against_ty (ctx, st) (e1, TInt)
+            val (e2, t2, d2, st) = tc (ctx, st) e2
+            val i2 = assert_TNat_m t2 (fn msg => raise MTCError $ "EIntNatExp: " ^ msg)
+          in
+            (EBinOp (opr, e1, e2), TInt r, d1 %%+ d2 %%+ (nat_exp_cost i2, N0 r), st)
+          end
+      | EBinOp (EBNat opr, e1, e2) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val st_e1 = st
+          val t1 = whnf itctx t1
+          val i1 = assert_TNat_m t1 (fn msg => raise MTCError $ "ENatAdd 1: " ^ msg)
+          val (e2, t2, j2, st) = tc (ctx, st) e2
+          val t2 = whnf itctx t2
+          val i2 = assert_TNat_m t2 (fn msg => raise MTCError $ "ENatAdd 2: " ^ msg)
+          val i2 = Simp.simp_i $ update_i i2
+          val () = if opr = EBNBoundedMinus () then check_prop (i2 %<= i1) else ()
+          val (e1, e2) = if !anno_ENat then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val (e1, e2) = if !anno_ENat_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
+          val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
+          val cost =
+              case opr of
+                  EBNExp () => nat_exp_cost i2
+                | _ => to_real $ C_ENat opr
+        in
+          (EBinOp (EBNat opr, e1, e2), t, j1 %%+ j2 %%+ (cost, N0), st)
+        end
+      | EBinOp (EBNatCmp opr, e1, e2) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val st_e1 = st
+          val t1 = whnf itctx t1
+          val i1 = assert_TNat_m t1 (fn msg => raise MTCError $ "ENatCmp 1: " ^ msg)
+          val (e2, t2, j2, st) = tc (ctx, st) e2
+          val t2 = whnf itctx t2
+          val i2 = assert_TNat_m t2 (fn msg => raise MTCError $ "ENatAdd 2: " ^ msg)
+          val (e1, e2) = if !anno_ENatCmp then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val (e1, e2) = if !anno_ENatCmp_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
+          val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
+        in
+          (EBinOp (EBNatCmp opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_ENatCmp opr), st)
         end
       | EBinOp (opr as EBVectorGet (), e1, e2) =>
         let
@@ -1682,7 +1726,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
             val t =
                 case st_t of
                     TMap _ => TCell st_t
-                  | TRef t => TCell t
+                  | TSCell t => TCell t
                   | _ => TState (x, r)
           in
             (EState x, t, TN C_EState, st)
@@ -1692,6 +1736,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e, t_e, j, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
           val t = assert_TCell t_e
+          val () = assert_wordsize_ty t
           val e = if !anno_EStorageGet then e %: t_e else e
           val e = if !anno_EStorageGet_state then e %~ st else e
         in
@@ -1703,51 +1748,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val st_e1 = st
           val t1 = whnf itctx t1
           val t = assert_TCell t1
+          val () = assert_wordsize_ty t
           val (e2, j2, st) = tc_against_ty (ctx, st) (e2, t)
           val (e1, e2) = if !anno_EStorageSet then (e1 %: t1, e2 %: t) else (e1, e2)
           val (e1, e2) = if !anno_EStorageSet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2 %%+ TN C_EStorageSet, st)
-        end
-      | EBinOp (EBNat opr, e1, e2) =>
-        let
-          val (e1, t1, j1, st) = tc (ctx, st) e1
-          val st_e1 = st
-          val t1 = whnf itctx t1
-          val i1 = case t1 of
-                       TNat i => i
-                     | _ => raise MTCError "ENatAdd 1"
-          val (e2, t2, j2, st) = tc (ctx, st) e2
-          val t2 = whnf itctx t2
-          val i2 = case t2 of
-                       TNat i => i
-                     | _ => raise MTCError "ENatAdd 2"
-          val i2 = Simp.simp_i $ update_i i2
-          val () = if opr = EBNBoundedMinus () then check_prop (i2 %<= i1) else ()
-          val (e1, e2) = if !anno_ENat then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val (e1, e2) = if !anno_ENat_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
-          val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
-        in
-          (EBinOp (EBNat opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_ENat opr), st)
-        end
-      | EBinOp (EBNatCmp opr, e1, e2) =>
-        let
-          val (e1, t1, j1, st) = tc (ctx, st) e1
-          val st_e1 = st
-          val t1 = whnf itctx t1
-          val i1 = case t1 of
-                       TNat i => i
-                     | _ => raise MTCError "ENatAdd 1"
-          val (e2, t2, j2, st) = tc (ctx, st) e2
-          val t2 = whnf itctx t2
-          val i2 = case t2 of
-                       TNat i => i
-                     | _ => raise MTCError "ENatAdd 2"
-          val (e1, e2) = if !anno_ENatCmp then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val (e1, e2) = if !anno_ENatCmp_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
-          val t = TiBool $ interp_nat_cmp dummy opr (i1, i2)
-        in
-          (EBinOp (EBNatCmp opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_ENatCmp opr), st)
         end
       | ETriOp (ETWrite (), e1, e2, e3) =>
         let
