@@ -203,9 +203,11 @@ fun interp_nat_expr_bin_op opr (i1, i2) err =
     | EBNBoundedMinus () => IBinOp (IBBoundedMinus (), i1, i2)
     | EBNMult () => i1 %* i2
     | EBNDiv () =>
-      case i2 of
+      (case i2 of
           IConst (ICNat n, r) => IUnOp (IUFloor (), IUnOp (IUDiv n, IUnOp (IUToReal (), i1, r), r), r)
         | _ => err ()
+      )
+    | EBNExp () => i1 %^ i2
          
 fun interp_nat_cmp r opr =
   let

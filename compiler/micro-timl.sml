@@ -50,6 +50,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TArrowTAL of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx
          | TArrowEVM of 'idx(*pre-state*) * ('var, 'bsort, 'idx, 'sort) ty Rctx.map (*register typing*) * ('var, 'bsort, 'idx, 'sort) ty list (*stack typing*) * ('idx * 'idx)
          | TiBool of 'idx
+         (* todo: tuple offsets should be int, to reduce #VCs *)
          | TPreTuple of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * 'idx(*lowest inited pos*)
          | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * bool(*is storage?*)
          | TPreArray of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*lowest inited/uninited pos*) * (bool(*is length inited?*) * bool(*init direction; false: downward; true: upward *))
@@ -57,6 +58,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TVectorPtr of string * 'idx(*offset*)
          | TVector of ('var, 'bsort, 'idx, 'sort) ty
          | TNatCell of unit
+         | TPtr of ('var, 'bsort, 'idx, 'sort) ty * (path * int option)
 
 type loc = int
              

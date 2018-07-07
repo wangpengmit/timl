@@ -797,21 +797,37 @@ fun assert_TVector t =
       TVector a => a
     | _ => raise assert_fail $ "assert_TVector; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 
-(* fun TCell t = TTuplePtr ([t], N0) *)
-fun assert_TCell t =
+fun TCell t = TPtr (t, ([], SOME 0))
+                                    
+fun assert_TCell' (t, path) =
   let
     fun err () = raise Impossible "assert_TCell"
   in
-    case t of
-        TTuplePtr (ts, offset, true) =>
-        (case Simp.simp_i offset of
-             IConst (ICNat n, _) =>
-             (* todo: [ts] may contain embeded structs, so offset calculation may be more involved than this *)
-             (case nth_error ts n of
-                  SOME t => t
-                | NONE => err ())
-           | _ => err ())
-      | _ => err ()
+  case path of
+      [] => t
+    | proj :: path =>
+      let
+        val t =
+            case (t, proj) of
+                (TBinOp (TBProd (), t1, t2), inl n) =>
+                if n = 0 then t1
+                else if n = 1 then t2
+                else err ()
+              | (TRecord fields, inr name) =>
+                assert_SOME $ SMap.find (fields, name)
+              | _ => err ()
+      in
+        assert_TCell' (t, path)
+      end
+  end
+fun assert_TCell t =
+  let
+    val (t, (path, _)) =
+        case t of
+            TPtr a => a
+          | _ => raise Impossible "assert_TCell"
+  in
+    assert_TCell (t, path)
   end
 
 infix 6 %%+
@@ -931,6 +947,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       in
         (x, t, len)
       end
+    fun get_nat_cell st t1 =
+      let
+        val x = assert_TState t1 
+        val () = assert_TNatCel $ st_types @!! x 
+        val i = st @%!! x
+      in
+        (x, i)
+      end
     fun main () =
         case e_input of
         EVar x =>
@@ -1018,21 +1042,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EInt2Nat_state then e %~ st else e
         in
           (EUnOp (EUTiML (EUInt2Nat ()), e), TSomeNat (), j %%+ TN C_EInt2Nat, st)
-        end
-      | EUnOp (opr as EUTiML (EUStorageGet ()), e) =>
-        let
-          val (e, t_e, j, st) = tc (ctx, st) e
-          val t_e = whnf itctx t_e
-          val t =
-              case t_e of
-                  TState x =>
-                  assert_TCell $ st_types @!! x
-                | _ =>
-                  assert_TCell t_e
-          val e = if !anno_EStorageGet then e %: t_e else e
-          val e = if !anno_EStorageGet_state then e %~ st else e
-        in
-          (EUnOp (opr, e), t, j %%+ TN C_EStorageGet, st)
         end
       | EUnOp (EUTiML (EUField name), e) => raise Impossible "tc()/EField"
       | EUnOp (EUInj (inj, t'), e) =>
@@ -1573,20 +1582,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (ERead (e1, e2), t, j1 %%+ j2 %%+ TN C_ERead, st)
         end
-      | EBinOp (EBMapPtr (), e1, e2) =>
-        let
-          val (e1, t1, j1, st) = tc (ctx, st) e1
-          val st_e1 = st
-          val t1 = whnf itctx t1
-          val t = case t1 of
-                      TState x => assert_TMap $ st_types @!! x 
-                    | _ => assert_TMap $ assert_TCell t1
-          val (e2, j2, st) = tc_against_ty (ctx, st) (e2, TInt)
-          val (e1, e2) = if !anno_EMapPtr then (e1 %: t1, e2 %: TInt) else (e1, e2)
-          val (e1, e2) = if !anno_EMapPtr_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
-        in
-          (EBinOp (EBMapPtr (), e1, e2), t, j1 %%+ j2 %%+ TN C_EMapPtr, st)
-        end
       | EBinOp (opr as EBVectorGet (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
@@ -1599,6 +1594,23 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EVectorGet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ TN C_EVectorGet, st)
+        end
+      | ETriOp (opr as ETVectorSet (), e1, e2, e3) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val st_e1 = st
+          val (e2, t2, j2, st) = tc (ctx, st) e2
+          val st_e2 = st
+          val i = assert_TNat_m t2 (fn s => raise MTCError $ "EVectorSet: " ^ s)
+          val (e3, t3, j3, st) = tc (ctx, st) e3
+          val t1 = whnf itctx t1
+          val (x, t, len) = get_vector st t1
+          val () = is_eq_ty itctx (t3, t)
+          val () = check_prop (i %< len)
+          val (e1, e2, e3) = if !anno_EVectorSet then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
+          val (e1, e2, e3) = if !anno_EVectorSet_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
+        in
+          (ETriOp (opr, e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN C_EVectorSet, st)
         end
       | EBinOp (opr as EBVectorPushBack (), e1, e2) =>
         let
@@ -1630,41 +1642,73 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EUnOp (opr, e), TUnit, j %%+ TN C_EVectorClear, st @%+ (x, N0))
         end
-      | ETriOp (opr as ETVectorSet (), e1, e2, e3) =>
+      | EUnOp (opr as EUTiML (EUNatCellGet ()), e) =>
+        let
+          val (e, t, j, st) = tc (ctx, st) e
+          val (_, i) = get_nat_cell st $ whnf itctx t
+          val e = if !anno_ENatCellGet then e %: t else e
+          val e = if !anno_ENatCellGet_state then e %~ st else e
+        in
+          (EUnOp (opr, e), TNat i, j %%+ TN C_ENatCellGet, st)
+        end
+      | EBinOp (opr as EBNatCellSet (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
           val (e2, t2, j2, st) = tc (ctx, st) e2
-          val st_e2 = st
-          val i = assert_TNat_m t2 (fn s => raise MTCError $ "EVectorSet: " ^ s)
-          val (e3, t3, j3, st) = tc (ctx, st) e3
-          val t1 = whnf itctx t1
-          val (x, t, len) = get_vector st t1
-          val () = is_eq_ty itctx (t3, t)
-          val () = check_prop (i %< len)
-          val (e1, e2, e3) = if !anno_EVectorSet then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
-          val (e1, e2, e3) = if !anno_EVectorSet_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
+          val new = assert_TNat_m t2 (fn s => raise MTCError $ "ENetCellSet: " ^ s)
+          val (x, old) = get_nat_cell st $ whnf itctx t1
+          val store_cost = IIte (old =? N0 && new <>? N0, to_real C_sset, to_real C_sreset)
+          val (e1, e2) = if !anno_ENatCellSet then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val (e1, e2) = if !anno_ENatCellSet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (ETriOp (opr, e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN C_EVectorSet, st)
+          (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2 %%+ TN C_ENatCellSet %%+ (store_cost, N0), st @%+ (x, new))
+        end
+      | EBinOp (EBMapPtr path, e1, e2) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val st_e1 = st
+          val t1 = whnf itctx t1
+          val t = assert_TMap $ assert_TCell t1
+          val (e2, j2, st) = tc_against_ty (ctx, st) (e2, TInt)
+          val (e1, e2) = if !anno_EMapPtr then (e1 %: t1, e2 %: TInt) else (e1, e2)
+          val (e1, e2) = if !anno_EMapPtr_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
+        in
+          (EBinOp (EBMapPtr path, e1, e2), TPtr (t, path), j1 %%+ j2 %%+ TN C_EMapPtr, st)
+        end
+      | EState x =>
+          let
+            val st_t = st_types @!! x
+            val t =
+                case st_t of
+                    TMap _ => TCell st_t
+                  | TRef t => TCell t
+                  | _ => TState (x, r)
+          in
+            (EState x, t, TN C_EState, st)
+          end
+      | EUnOp (opr as EUTiML (EUStorageGet ()), e) =>
+        let
+          val (e, t_e, j, st) = tc (ctx, st) e
+          val t_e = whnf itctx t_e
+          val t = assert_TCell t_e
+          val e = if !anno_EStorageGet then e %: t_e else e
+          val e = if !anno_EStorageGet_state then e %~ st else e
+        in
+          (EUnOp (opr, e), t, j %%+ TN C_EStorageGet, st)
         end
       | EBinOp (opr as EBStorageSet (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
           val t1 = whnf itctx t1
-          val t =
-              case t1 of
-                  TState x =>
-                  assert_TCell $ st_types @!! x 
-                | _ =>
-                  assert_TCell t1
+          val t = assert_TCell t1
           val (e2, j2, st) = tc_against_ty (ctx, st) (e2, t)
           val (e1, e2) = if !anno_EStorageSet then (e1 %: t1, e2 %: t) else (e1, e2)
           val (e1, e2) = if !anno_EStorageSet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
           (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2 %%+ TN C_EStorageSet, st)
         end
-      | EState x => (EState x, TState x, TN C_EState, st)
       | EBinOp (EBNat opr, e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1

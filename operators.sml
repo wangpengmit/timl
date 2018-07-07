@@ -198,6 +198,7 @@ datatype nat_expr_bin_op =
          | EBNBoundedMinus of unit
          | EBNMult of unit
          | EBNDiv of unit
+         | EBNExp of unit
 
 datatype nat_cmp =
          NCLt of unit
@@ -220,6 +221,7 @@ datatype expr_bin_op =
          | EBPrim of prim_expr_bin_op
          | EBNat of nat_expr_bin_op
          | EBNatCmp of nat_cmp
+         | EBIntNatExp of unit
 
 fun str_prim_expr_bin_op opr =
   case opr of

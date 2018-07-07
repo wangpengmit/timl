@@ -69,6 +69,23 @@ fun add_kinding_full new ((ictx, tctx), rctx, sctx, st) = ((ictx, new :: tctx), 
 fun add_r p (itctx, rctx, sctx, st) = (itctx, rctx @+ p, sctx, st)
 fun add_stack t (itctx, rctx, sctx, st) = (itctx, rctx, t :: sctx, st)
 
+fun TCell t = TStorageTuplePtr ([t], INat 0)
+                        
+fun assert_TCell t =
+  let
+    fun err () = raise Impossible "assert_TCell"
+  in
+    case t of
+        TTuplePtr (ts, offset, true) =>
+        (case Simp.simp_i offset of
+             IConst (ICNat n, _) =>
+             (case nth_error ts n of
+                  SOME t => t
+                | NONE => err ())
+           | _ => err ())
+      | _ => err ()
+  end
+
 fun get_word_const_type (hctx, st_int2name) c =
   case c of
       WCTT () => TUnit
@@ -174,13 +191,15 @@ fun C_inst b =
     | SDIV () => C_SDIV
     | MOD () => C_MOD
                   
-    | EXP () => C_EXP
+    (* | EXP () => C_EXP *)
+    | EXP () => 0 (* will depend on operands *)
                   
     | JUMPI () => C_JUMPI
                     
     | SHA3 () => C_SHA3
     | SLOAD () => C_SLOAD
-    | SSTORE () => C_SSTORE
+    (* | SSTORE () => C_SSTORE *)
+    | SSTORE () => 0 (* will be determined depending on operands *)
     | JUMPDEST () => C_JUMPDEST
     (* extensions (noops) *)
     | VALUE_AppT _ => C_VALUE_AppT
@@ -278,7 +297,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     val space_ref = ref N0
     val ishift_ref = ref 0
     (* val () = println $ "before time_ref = " ^ (ExportPP.str_i $ ExportPP.export_i [] $ !time_ref) *)
-    fun add_time n = unop_ref (fn i => ((* println $ "add_time: " ^ str_int n;  *)i %+ to_real n)) time_ref
+    fun add_time_idx n = unop_ref (fn i => ((* println $ "add_time: " ^ str_int n;  *)i %+ n)) time_ref
+    fun add_time n =  add_time_idx $ to_real n
     fun add_space j = unop_ref (fn i => i %+ j) space_ref
     fun add_ishift n = unop_ref (fn m => m + n) ishift_ref
     fun open_with pair = (add_ishift 1; open_sorting pair)
@@ -335,7 +355,24 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | DIV () => mul_div "DIV" op%/
     | SDIV () => mul_div "SDIV" op%/
     | MOD () => mul_div "MOD" IMod
-    | EXP () => mul_div "EXP" (fn _ => raise Impossible "EXP can't operate on TNat")
+    | EXP () =>
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t =
+            case (t0, t1) of
+                (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) =>
+                (add_time C_EXP_max;
+                 TInt)
+              | (TNat i0, TNat i1) =>
+                (add_time_idx $ nat_exp_cost i1;
+                 TNat $ i1 %^ i0)
+              | (TConst (TCTiML (BTInt ())), TNat i1) =>
+                (add_time_idx $ nat_exp_cost i1;
+                 TInt)
+              | _ => raise Impossible $ sprintf "EXP: can't exponent operands of types ($) and ($)" [str_t t0, str_t t1]
+      in
+        ((itctx, rctx, t :: sctx, st))
+      end
     | LT () => cmp "LT" op%<?
     | GT () => cmp "GT" op%>?
     | SLT () => cmp "LT" op%<=?
@@ -683,10 +720,10 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val t1 = whnf itctx t1
-        val t = assert_TMap $ assert_TCell t1
+        val ts = assert_TTuple $ assert_TMap $ assert_TCell t1
         val () = assert_TInt t0
       in
-        ((itctx, rctx, TCell t :: sctx, st))
+        ((itctx, rctx, TStorageTuplePtr (ts, INat 0) :: sctx, st))
       end
     | SLOAD () => 
       let
@@ -733,6 +770,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                   val t = assert_TVector $ st_name2ty @!! vec
                   val () = check_prop (offset %< len)
                   val () = is_eq_ty itctx (t1, t)
+                  val () = add_time C_sset
                 in
                   st
                 end
@@ -742,14 +780,20 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                      let
                        val new = assert_TNat t1
                        val () = check_prop (new %= N0)
+                       val () = add_time C_sreset
                      in
                        st @%+ (x, N0)
                      end
                    | TNatCell () => 
                      let
-                       val i = assert_TNat t1
+                       val old = st @!! x
+                       val new = assert_TNat t1
+                       (* todo: opportunity to collect reward *)
+                       val award = IIte (old <>? N0 && new =? N0, to_real R_sclear, T0)
+                       val cost = IIte (old =? N0 && new <>? N0, to_real C_sset, to_real C_sreset)
+                       val () = add_time_idx cost
                      in
-                       st @%+ (x, i)
+                       st @%+ (x, new)
                      end
                    | _ => def ()
                 )
@@ -758,6 +802,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                   val t = assert_TCell t0
                   val () = assert_wordsize_ty t
                   val () = is_eq_ty itctx (t1, t)
+                  val () = add_time C_sset
                 in
                   st
                 end

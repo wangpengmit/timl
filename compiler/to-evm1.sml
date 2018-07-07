@@ -135,15 +135,23 @@ fun cg_ty_visitor_vtable cast () =
           in
             TMemTuplePtr (map cg_t ts, N 0)
           end
-        | TRecord name_ts =>
+        | TRecord fields =>
           let
-            val ts = map snd $ sort cmp_str_fst name_ts
-            val ts = visit_list (#visit_ty vtable this) env ts
+            val ts = map snd $ sort cmp_str_fst $ listItemsi fields
           in
-            TTuple ts
+            #visit_ty vtable this env $ TTuple ts
           end
         | TMap t =>
           let
+            fun flatten_map_value_t t =
+              let
+                val loop = flatten_map_value_t
+              in
+                case t of
+                    TTuple ts => concatMap loop ts
+                  | TRecord fields => concatMap loop $ map snd $ sort cmp_str_fst $ listItemsi fields
+                  | _ => [t]
+              end
             val ts = flatten_map_value_t t
             val ts = visit_list (#visit_ty vtable this) env ts
           in
@@ -439,7 +447,7 @@ fun compile st_name2int ectx e =
         compile e1 @ 
         compile e2 @
         [MACRO_map_ptr ()]
-        PUSH1nat $ offset @
+        PUSH1nat offset @
         [ADD]
       end
     | EBinOp (EBStorageSet (), e1, e2) =>

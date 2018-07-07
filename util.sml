@@ -438,20 +438,16 @@ fun map_inl_inr f1 f2 s =
         inl e => inl $ f1 e
       | inr e => inr $ f2 e
 
-fun app_inl_inr f1 f2 s =
-    case s of
-        inl e => f1 e
-      | inr e => f2 e
-
-fun filter_inl ls = List.mapPartial is_inl ls
-fun filter_inr ls = List.mapPartial is_inr ls
-                    
 fun unify_sum f1 f2 s =
   case s of
       inl e => f1 e
     | inr e => f2 e
+val app_inl_inr = unify_sum
 val str_sum = unify_sum
 
+fun filter_inl ls = List.mapPartial is_inl ls
+fun filter_inr ls = List.mapPartial is_inr ls
+                    
 fun find_by_snd p ls =
     Option.map fst (List.find (fn (_, y) => p y) ls)
 fun find_by_snd_eq eq x ls = find_by_snd (curry eq x) ls

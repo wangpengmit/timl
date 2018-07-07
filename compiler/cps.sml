@@ -787,7 +787,6 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         foldr f (ek, (to_real $ C_ENewArrayValues len, N $ len + 1) %%+ j_k) xs_names_es
       end
-    | S.EUnOp (EUTiML (EUAnno _), e) => cps (e, t_e) (k, j_k)
     | S.EHalt (e, _) =>
       (* [[ halt e [_] ]](k) = [[e]](\x. halt x [unit]) *)
       let
@@ -800,6 +799,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         cps (e, t_e) (c, TN C_EHalt (* %%+ j_k *))
       end
+    | S.EUnOp (EUTiML (EUAnno _), e) => cps (e, t_e) (k, j_k)
     | S.EUnOp (opr, e) =>
       (* [[ opr e ]](k) = [[e]](\x. k (opr x)) *)
       let

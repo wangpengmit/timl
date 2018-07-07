@@ -42,7 +42,7 @@ signature TYPE = sig
            | TVector of mtype (* the purpose of vector is that elements stored in vector are guaranteed to be well-formed and may not be nullable (such as (ex {n | n>5}, nat {n})) (while elements stored in maps must be nullable) *)
            | TRef of mtype
            | TNatCell of unit
-           | TPtr of mtype list * int * region
+           | TPtr of mtype list * int
 
   datatype ty = 
 	   PTMono of mtype
