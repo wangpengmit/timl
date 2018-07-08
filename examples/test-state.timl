@@ -1,7 +1,7 @@
 val TestState_m : map int int
 val TestState_mm : map int (map int int)
 val TestState_v : vector int
-val TestState_r : ref int
+val TestState_r : cell int
 
 structure TestState = struct
 
@@ -12,38 +12,44 @@ fun foo (a : int, b : int) return using _ =
     (* TestState_m[[a]] *)
     (* set TestState_m[[a]] b *)
     (* set TestState_m[[a]] ((((addBy b) using _, _) a) using _, _) (* TestState_m[[a]] *) *)
-    modify TestState_m[[a]] += b
+  (modify TestState_m[[a]] += b);
+  TestState_m[[a]]
 
 val a = foo (10, 20)
-        
+
+(* val () = __&halt a *)
+            
 fun foo {len : Nat} () pre {TestState_v : len} post {TestState_v : len+1} =
   let
-    val () = push_back (TestState_v, 1)
+    val a = 0
+    val len = vector_len TestState_v
+    val () = push_back (TestState_v, 2)
+    val a = a + TestState_v[[len]]
     val () = set TestState_v[[#0]] 10
     val () = modify TestState_v[[#0]] inc (* == let val x = TestState_v[[0]] in set TestState_v[[0]] (inc x) end == set TestState_v[[0]] (inc TestState_v[[0]]) *)
-    val () = modify TestState_v[[#0]] addBy 10
-    val a = TestState_v[[#0]]
+    val () = modify TestState_v[[#0]] addBy 20
+    val a = a + TestState_v[[#0]]
     val () = set TestState_m[[1]] 100
     val () = modify TestState_m[[1]] inc
-    val b = TestState_m[[1]]
+    val a = a + TestState_m[[1]]
     val () = set TestState_mm[[1]][[2]] 200
     val () = modify TestState_mm[[1]][[2]] ++
-    val () = modify TestState_mm[[1]][[2]] += 2
-    val c = TestState_mm[[1]][[2]]
-    val () = set TestState_r 33
-    val () = modify TestState_r += 4
-    val d = !TestState_r
+    val () = modify TestState_mm[[1]][[2]] += 3
+    val a = a + TestState_mm[[1]][[2]]
+    val () = set TestState_r 44
+    val () = modify TestState_r += 5
+    val a = a + !TestState_r
   in
-    a + b + c + d
+    a
   end
 
 val a = %foo ()
 
-val a = vector_len TestState_v
-
-val () = vector_clear TestState_v
-val a = vector_len TestState_v
-                   
-(* val () = __&halt a *)
+val () = __&halt a
             
+(* val a = vector_len TestState_v *)
+
+(* val () = vector_clear TestState_v *)
+(* val a = vector_len TestState_v *)
+                   
 end

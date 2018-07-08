@@ -1038,6 +1038,14 @@ val cps_tc_flags =
       open MicroTiMLTypecheck
     in
       [Anno_EApp, Anno_EAppT, Anno_EAppI, Anno_EFold, Anno_EUnfold, Anno_EPack, Anno_EPackI, Anno_EUnpack, Anno_EUnpackI, Anno_EBPrim, Anno_ENew, Anno_ERead, Anno_ENat, Anno_ENatCmp, Anno_EProj, Anno_ECase, Anno_ELet, Anno_EWrite, Anno_EHalt,
+       
+Anno_ENatCellGet,
+Anno_ENatCellGet_state,
+Anno_ENatCellSet,
+Anno_ENatCellSet_state,
+Anno_EPtrProj,
+Anno_EPtrProj_state,
+                                 
        Anno_EIfi,
        Anno_EVectorSet,
        Anno_EMapPtr,

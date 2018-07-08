@@ -370,7 +370,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | NOT aexp (EUnOp' (EUPrim (EUPBoolNeg ()), aexp, (NOTleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
      | id square_plus (EGet (id, square_plus, (idleft, square_plusright)))
-     | BANG aexp (EUnOp (EUDeref false, aexp, (BANGleft, aexpright)))
+     | BANG id (EGet (id, [], (BANGleft, idright)))
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
      | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
 
@@ -380,7 +380,7 @@ int_or_id : INT (inl (str2int INT))
 proj_path : DOT int_or_id proj_path ((int_or_id, (DOTleft, int_or_idright)) :: proj_path)
           | ([])
               
-square : LSQ exp RSQ proj_path ((exp, proj_path))
+square : LSQSQ exp RSQSQ proj_path ((exp, proj_path))
                     
 square_star : square square_star (square :: square_star)
 	| ([])

@@ -2135,7 +2135,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EHalt then e %: t_e else e
           val e = if !anno_EHalt_state then e %~ st else e
         in
-          (EHalt (e, t), t, i_e %%+ TN C_EHalt, IEmptyState)
+          (EHalt (e, t), t, i_e %%+ TN C_EHalt, IEmptyState (* st *))
         end
       | EAbsConstr _ => err ()
       | EAppConstr _ => err ()
@@ -2332,6 +2332,15 @@ datatype tc_flag =
        | Anno_EVectorLen_state
        | Anno_EVectorClear_state
 
+       | Anno_ENatCellGet
+       | Anno_ENatCellGet_state
+       | Anno_ENatCellSet
+       | Anno_ENatCellSet_state
+       | Anno_EPtrProj
+       | Anno_EPtrProj_state
+                                 
+           
+
 fun typecheck (flags, st_types) ctx e =
   let
     val mem = fn (a : tc_flag) => mem op= a
@@ -2412,6 +2421,14 @@ val () = anno_EVectorLen := mem Anno_EVectorLen flags
 val () = anno_EVectorClear := mem Anno_EVectorClear flags
 val () = anno_EVectorLen_state := mem Anno_EVectorLen_state flags
 val () = anno_EVectorClear_state := mem Anno_EVectorClear_state flags
+                                        
+val () = anno_ENatCellGet := mem Anno_ENatCellGet flags
+val () = anno_ENatCellGet_state := mem Anno_ENatCellGet_state flags
+val () = anno_ENatCellSet := mem Anno_ENatCellSet flags
+val () = anno_ENatCellSet_state := mem Anno_ENatCellSet_state flags
+val () = anno_EPtrProj := mem Anno_EPtrProj flags
+val () = anno_EPtrProj_state := mem Anno_EPtrProj_state flags
+                                 
     val ret = runWriter (fn () => tc st_types ctx e) ()
   in
     ret

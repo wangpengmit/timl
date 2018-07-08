@@ -145,6 +145,10 @@ fun cg_ty_visitor_vtable cast () =
         | _ => #visit_TBinOp vtable this env data (* call super *)
     val vtable = override_visit_TBinOp vtable visit_TBinOp
     fun visit_ty this env t =
+      let
+        val super = vtable
+        val vtable = cast this
+      in
       case t of
           TTuple ts =>
           let
@@ -172,7 +176,8 @@ fun cg_ty_visitor_vtable cast () =
           in
             TMap $ TTuple ts
           end
-        | _ => #visit_ty vtable this env t (* call super *)
+        | _ => #visit_ty super this env t (* call super *)
+      end
     val vtable = override_visit_ty vtable visit_ty
     fun visit_TArr this env (data as (t, i)) =
       let
@@ -988,7 +993,11 @@ fun test1 dirname =
                      
     open MicroTiMLTypecheck
     open TestUtil
-    val init_st = IState $ StMap.map (fn _ => INat 0) $ StMap.filter (fn t => case t of TVector _ => true | _ => false) st_name2ty
+    val init_st = IState $ StMap.map (fn _ => INat 0) $ StMap.filter
+                         (fn t => case t of
+                                      TVector _ => true
+                                    | TNatCell _ => true
+                                    | _ => false) st_name2ty
     val () = println "Started MicroTiML typechecking #_1 ..."
     val (e, _) = MicroTiMLLiveVars.live_vars e
     val e = set_is_rec false e
@@ -1081,6 +1090,8 @@ fun test1 dirname =
     val () = println "Started Code Generation ..."
     val (prog, num_regs) = cg_prog (st_name2int, init_st) e
     val st_name2ty = StMap.map cg_t st_name2ty
+    val () = println "st_name2ty:"
+    val () = println $ StMapU.str_map (id, prefix "" o pp_t_to_string NONE o export_t NONE ([], [])) st_name2ty
     val () = println "Finished Code Generation"
     open EVM1Simp
     val prog = simp_prog prog

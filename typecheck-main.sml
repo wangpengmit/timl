@@ -2032,7 +2032,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                  val t = check_kind_Type gctx (skctx, t)
 	         val (e, _, d, st) = get_mtype (ctx, st) e
                in
-	         (EET (opr, e, t), t, d %%+ TN C_EHalt, st)
+	         (EET (opr, e, t), t, d %%+ TN C_EHalt, StMap.empty(* st *))
 	       end
           )
 	| U.ET (opr, t, r) =>
