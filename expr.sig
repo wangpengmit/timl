@@ -21,6 +21,8 @@ signature EXPR = sig
 
   type scoping_ctx = Binders.ibinder list * Binders.tbinder list * Binders.cbinder list * Binders.ebinder list
 
+  type proj_path = (Operators.tuple_record_proj * Region.region) list
+                                                
   datatype expr =
 	   EVar of var * (bool(*explicit index arguments (EIA)*) * bool(*will have implicit index/type arguments *))
            | EConst of Operators.expr_const * Region.region
@@ -31,7 +33,7 @@ signature EXPR = sig
            | EEI of Operators.expr_EI * expr * idx
            | EET of Operators.expr_ET * expr * mtype
            | ET of Operators.expr_T * mtype * Region.region
-           | ERecord of expr SMap.map * region
+           | ERecord of expr SMap.map * Region.region
            | ENewArrayValues of mtype * expr list * Region.region
 	   | EAbs of idx StMap.map * (ptrn, expr) Unbound.bind * (idx * idx) option
 	   | EAbsI of (sort, expr) Binders.ibind_anno * Region.region
@@ -41,7 +43,7 @@ signature EXPR = sig
            | EIfi of expr * expr Binders.ibind * expr Binders.ibind * Region.region
 	   | ELet of return * (decl Unbound.tele, expr) Unbound.bind * Region.region
            | EGet of string * (expr * proj_path) list * Region.region
-           | ESet of string * (expr * roj_path) list * expr * Region.region
+           | ESet of string * (expr * proj_path) list * expr * Region.region
            | EEnv of Operators.env_info * Region.region
            (* these constructs won't show up in source program *)
            (* | EAbsT of (sort, expr) tbind_anno * region *)

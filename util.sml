@@ -69,7 +69,8 @@ fun substr start len s = substring (s, start, min (len, size s - start))
                                                       
 fun str_ls f ls = (surround "[" "]" o join ", " o map f) ls
 fun str_pair (f, g) (a, b) = sprintf "($, $)" [f a, g b]
-fun str_opt f opt = (default "" o Option.map f) opt
+fun str_opt_default def f opt = default def $ Option.map f opt
+fun str_opt a = str_opt_default "" a
 (* val str_int = Int.toString *)
 fun str_int i =
   let
@@ -607,7 +608,8 @@ fun imply a b = not a orelse b
 
 fun sort f = ListMergeSort.sort (fn (a, b) => f (a, b) = GREATER)
 val uniqueSort = ListMergeSort.uniqueSort
-                   
+
+fun sort_string a = sort String.compare a
 fun cmp_str_fst (a, b) = String.compare (fst a, fst b)
              
 end

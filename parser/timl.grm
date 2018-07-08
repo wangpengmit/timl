@@ -189,16 +189,17 @@ open Ast
        | id_or_bsort_bind_plus of id_or_bsort_bind list
        | id_or_bsort_bind_star of id_or_bsort_bind list
        | set_modify of bool
-       | id_square_plus of id * exp list
-       | square_plus of exp list
-       | square_star of exp list
-       | square of exp
+       | square_plus of (exp * proj_path) list
+       | square_star of (exp * proj_path) list
+       | square of exp * proj_path
        | pre of state
        | post of state option
        | state of state
        | state_field_star of state
        | state_field_plus of state
        | state_field of id * idx
+       | int_or_id of (int, string) sum
+       | proj_path of proj_path
 
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
@@ -350,7 +351,7 @@ exp : aexp (aexp)
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
      | exp LCUR idx RCUR (EAppI (exp, idx, (expleft, idxright)))
      | exp LCUR RCUR (EAppI (exp, IVar (underscore (LCURleft, RCURright)), (expleft, RCURright)))
-     | set_modify aexp square_star exp (ESetModify (set_modify, (aexp, square_star), exp, (set_modifyleft, expright)))
+     | set_modify id square_star exp (ESetModify (set_modify, id, square_star, exp, (set_modifyleft, expright)))
      | exp aexp (EApp (exp, aexp, (expleft, aexpright)))
 
 aexp : decorated_eid (EVar decorated_eid)
@@ -368,14 +369,18 @@ aexp : decorated_eid (EVar decorated_eid)
      | TILDE aexp (EUnOp' (EUPrim (EUPIntNeg ()), aexp, (TILDEleft, aexpright)))
      | NOT aexp (EUnOp' (EUPrim (EUPBoolNeg ()), aexp, (NOTleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
-     | aexp square_plus (EGet ((aexp, square_plus), (aexpleft, square_plusright)))
+     | id square_plus (EGet (id, square_plus, (idleft, square_plusright)))
      | BANG aexp (EUnOp (EUDeref false, aexp, (BANGleft, aexpright)))
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
      | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
 
-id_square_plus : id square_plus ((id, square_plus))
-
-square : LSQSQ exp RSQSQ (exp)
+int_or_id : INT (inl (str2int INT))
+          | id (inr (fst id))
+               
+proj_path : DOT int_or_id proj_path ((int_or_id, (DOTleft, int_or_idright)) :: proj_path)
+          | ([])
+              
+square : LSQ exp RSQ proj_path ((exp, proj_path))
                     
 square_star : square square_star (square :: square_star)
 	| ([])

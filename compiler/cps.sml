@@ -964,9 +964,9 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
     | S.EMatchSum _ => err ()
     | S.EMatchPair _ => err ()
     | S.EMatchUnfold _ => err ()
-    | S.EMallocPair _ => err ()
-    | S.EPairAssign _ => err ()
-    | S.EProjProtected _ => err ()
+    (* | S.EMallocPair _ => err () *)
+    (* | S.EPairAssign _ => err () *)
+    (* | S.EProjProtected _ => err () *)
     fun extra_msg () = "\nwhen cps-ing:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 5) ([], [], [], []) e)
     val ret = main ()
               handle Impossible m => raise Impossible (m ^ extra_msg ())
@@ -1043,10 +1043,10 @@ val cps_tc_flags =
        Anno_EUnpackI_state,
        Anno_ELet_state,
        Anno_ENewArrayValues_state,
-Anno_EVectorLen,
-Anno_EVectorClear,
-Anno_EVectorLen_state,
-Anno_EVectorClear_state,
+       Anno_EVectorLen,
+       Anno_EVectorClear,
+       Anno_EVectorLen_state,
+       Anno_EVectorClear_state,
        Anno_EHalt_state
       ]
     end
@@ -1234,9 +1234,9 @@ fun check_CPSed_expr e =
     | EMatchSum _ => err ()
     | EMatchPair _ => err ()
     | EMatchUnfold _ => err ()
-    | EMallocPair _ => err ()
-    | EPairAssign _ => err ()
-    | EProjProtected _ => err ()
+    (* | EMallocPair _ => err () *)
+    (* | EPairAssign _ => err () *)
+    (* | EProjProtected _ => err () *)
   end
 
 and check_decl e =
@@ -1251,11 +1251,11 @@ and check_decl e =
          check_value e2;
          check_value e3)
       | ENewArrayValues (t, es) => app check_value es
-      | EMallocPair _ => ()
-      | EPairAssign (e1, _, e2) =>
-        (check_value e1;
-         check_value e2)
-      | EProjProtected (_, e) => check_value e
+      (* | EMallocPair _ => () *)
+      (* | EPairAssign (e1, _, e2) => *)
+      (*   (check_value e1; *)
+      (*    check_value e2) *)
+      (* | EProjProtected (_, e) => check_value e *)
       | _ => check_value e
              handle Impossible msg =>
                     raise Impossible $ "check_decl():\n" ^ msg
@@ -1352,9 +1352,9 @@ and check_value e =
     | EMatchUnfold _ => err ()
     | EIfi _ => err ()
     | EHalt _ => err ()
-    | EMallocPair _ => err ()
-    | EPairAssign _ => err ()
-    | EProjProtected _ => err ()
+    (* | EMallocPair _ => err () *)
+    (* | EPairAssign _ => err () *)
+    (* | EProjProtected _ => err () *)
     end
 
 val check_CPSed_expr = fn e => (check_CPSed_type_e e; check_CPSed_expr e)

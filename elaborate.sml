@@ -192,6 +192,8 @@ local
                 NONE =>
                 if x = "unit" then
                   TUnit r
+                else if x = "icell" then
+                  TNatCell ()
                 else if x = "int" then
                   TInt r
                 else if x = "uint" then
@@ -489,18 +491,13 @@ local
         | S.EBinOp (EBStrConcat (), e1, e2, r) =>
           EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
         | S.EBinOp (EBSetRef true, e1, e2, r) =>
-          (case e1 of
-               S.EVar ((NONE, x), (false, false)) =>
-               ESet (fst x, [], elab e2, r)
-             | _ => raise Impossible "elaborate/ESetRef/non-EVar"
-          )
+          EStorageSet (elab e1, elab e2)
         | S.EBinOp (EBSetRef false, e1, e2, r) => EWrite (elab e1, ENat (0, r), elab e2)
-        | S.EBinOp (EBWhile (), e1, e2, _) => raise Impossible "elaborate/EWhile"
         | S.EUnOp (opr, e, r) =>
           (case opr of
                S.EUTiML opr =>
                (case (opr, e) of
-                    (S.EUField name, S.EVar ((NONE, ("msg", _)), (false, false))) =>
+                    (S.EUField (name, _), S.EVar ((NONE, ("msg", _)), (false, false))) =>
                     let
                       val name = 
                           case name of
@@ -510,7 +507,7 @@ local
                     in
                       EEnv (name, r)
                     end
-                  | (S.EUField name, S.EVar ((NONE, ("block", _)), (false, false))) =>
+                  | (S.EUField (name, _), S.EVar ((NONE, ("block", _)), (false, false))) =>
                     let
                       val name = 
                           case name of
@@ -536,17 +533,17 @@ local
           )
         | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
           ETriOp (ETIte (), elab e1, elab e2, elab e3)
-        | S.ETriOp (S.ETIfDec (), e, e1, e2, r) =>
-          ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
+        (* | S.ETriOp (S.ETIfDec (), e, e1, e2, r) => *)
+        (*   ECaseSumbool (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r) *)
         | S.ETriOp (ETIfi (), e, e1, e2, r) =>
           EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.TVar (NONE, ("_", r))), r)
-        | S.EGet ((x, offsets), r) =>
-          EGet (fst x, map elab offsets, r)
+        | S.EGet (x, offsets, r) =>
+          EGet (fst x, map (mapFst elab) offsets, r)
         | S.ESetModify (is_modify, x, offsets, e, r) =>
           let
             val x = fst x
-            val offsets = map elab offsets
+            val offsets = map (mapFst elab) offsets
             val e = elab e
           in
             if is_modify then
@@ -558,6 +555,7 @@ local
         | S.ERecord (fields, r) =>
           ERecord (list2map r $ map (mapSnd elab) fields, r)
         | S.EFor _ => raise Impossible "elaborate/EFor"
+        | S.EBinOp (EBWhile (), e1, e2, _) => raise Impossible "elaborate/EWhile"
         | S.ELet2 (_, pn, e, r) => raise Error (r, "let-binding are not allowed here ")
         | S.ESemis (es, r) =>
           let
@@ -602,10 +600,10 @@ local
           in
             elab e
           end
-        | EOffsetProjs (e, projs) => foldl (fn (p, acc) => case p of
-                                                               inl e => EMapPtr (acc, e)
-                                                             | inr p => EPtrProj (acc, p)
-                                           ) e projs
+        | S.EOffsetProjs (e, projs) => foldl (fn (p, acc) => case p of
+                                                               inl e => EMapPtr (acc, elab e)
+                                                             | inr (p, r) => EPtrProj (acc, (p, NONE), r)
+                                           ) (elab e) projs
 
   and elab_decl decl =
       case decl of
@@ -710,7 +708,7 @@ local
                   NONE => []
                 | SOME init =>
                   case init of
-                      InitExpr (e, r) => [S.ESet ((x, []), e, r)]
+                      InitExpr (e, r) => [S.ESet (name, [], e, r)]
                     | InitVector (es, r) => map (fn e => S.EPushBack (x, e, r)) es
             end
         val es = concatMap f decls

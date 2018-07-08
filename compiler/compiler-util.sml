@@ -49,18 +49,18 @@ fun assert_TByte t =
   case t of
       TConst (TCTiML (BTByte ())) => ()
     | _ => raise assert_fail "assert_TByte"
-fun assert_TProdEx t =
-  case t of
-      TProdEx a => a
-    | _ => raise assert_fail $ "assert_TProdEx; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TPreTuple t =
   case t of
       TPreTuple a => a
     | _ => raise assert_fail $ "assert_TPreTuple; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-fun assert_TArrowTAL t =
-  case t of
-      TArrowTAL a => a
-    | _ => raise assert_fail "assert_TArrowTAL"
+(* fun assert_TProdEx t = *)
+(*   case t of *)
+(*       TProdEx a => a *)
+(*     | _ => raise assert_fail $ "assert_TProdEx; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t) *)
+(* fun assert_TArrowTAL t = *)
+(*   case t of *)
+(*       TArrowTAL a => a *)
+(*     | _ => raise assert_fail "assert_TArrowTAL" *)
 fun assert_TArrowEVM t =
   case t of
       TArrowEVM a => a

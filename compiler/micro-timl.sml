@@ -263,9 +263,9 @@ fun is_value e =
     | EMatchUnfold _ => false
     | EIfi _ => false
     | EHalt _ => false
-    | EMallocPair _ => false
-    | EPairAssign _ => false
-    | EProjProtected _ => false
+    (* | EMallocPair _ => false *)
+    (* | EPairAssign _ => false *)
+    (* | EProjProtected _ => false *)
     (* | _ => *)
     (*   case fst $ collect_EAscTypeTime $ fst $ collect_EAppIT e of *)
     (*       ERec data => *)

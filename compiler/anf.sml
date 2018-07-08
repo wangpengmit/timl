@@ -86,9 +86,9 @@ fun anf_decls_expr_visitor_vtable cast output =
                 | EMatchSum _ => true
                 | EMatchPair _ => true
                 | EMatchUnfold _ => true
-                | EMallocPair _ => true
-                | EPairAssign _ => true
-                | EProjProtected _ => true
+                (* | EMallocPair _ => true *)
+                (* | EPairAssign _ => true *)
+                (* | EProjProtected _ => true *)
             val add_decl = is_add_decl e
             val e = #visit_expr vtable this env e (* call super *)
           in

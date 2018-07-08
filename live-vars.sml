@@ -215,7 +215,7 @@ fun live_vars_expr_visitor_vtable cast () =
 	  | EAppConstr data => #visit_EAppConstr vtable this env data
 	  | ECase data => #visit_ECase vtable this env data
 	  | ELet data => #visit_ELet vtable this env data
-	  | ECaseSumbool data => #visit_ECaseSumbool vtable this env data
+	  (* | ECaseSumbool data => #visit_ECaseSumbool vtable this env data *)
 	  | EIfi (e, bind1, bind2, r) =>
             let
               val lvars = #1 env
@@ -232,7 +232,14 @@ fun live_vars_expr_visitor_vtable cast () =
             in
               EIfi (e, bind1, add_AnnoLiveVars (bind2, n_lvars, r), r)
             end
-          | EGet (x, es, r) => EGet (x, visit_es this env es, r)
+          | EGet (x, es, r) =>
+            let
+              val (es, paths) = unzip es
+              val es = visit_es this env es
+              val es = zip (es, paths)
+            in
+              EGet (x, es, r)
+            end
           | ESet (x, es, e, r) =>
           (* | ESetModify (b, x, es, e, r) => *)
             (* if b then *)
@@ -251,9 +258,11 @@ fun live_vars_expr_visitor_vtable cast () =
             (*   end *)
             (* else *)
               let
+                val (es, paths) = unzip es
                 val (_, es) = assert_cons $ visit_es_left this env $ [EState (x, r)] @ es @ [e]
                 val (e, es) = assert_cons $ rev es
                 val es = rev es
+                val es = zip (es, paths)
               in
                 ESet (x, es, e, r)
               end
@@ -556,16 +565,16 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         ELet (return, bind, r)
       end
-    fun visit_ECaseSumbool this env (e, bind1, bind2, r) =
-      let
-        val vtable = cast this
-        val bind1 = visit_ibind this (#visit_expr vtable this) env bind1
-        val bind2 = visit_ibind this (#visit_expr vtable this) env bind2
-        val env = set_has_k env
-        val e = #visit_expr vtable this env e
-      in
-        ECaseSumbool (e, bind1, bind2, r)
-      end
+    (* fun visit_ECaseSumbool this env (e, bind1, bind2, r) = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val bind1 = visit_ibind this (#visit_expr vtable this) env bind1 *)
+    (*     val bind2 = visit_ibind this (#visit_expr vtable this) env bind2 *)
+    (*     val env = set_has_k env *)
+    (*     val e = #visit_expr vtable this env e *)
+    (*   in *)
+    (*     ECaseSumbool (e, bind1, bind2, r) *)
+    (*   end *)
     fun visit_decl this env data =
       let
         val vtable = cast this
@@ -873,7 +882,7 @@ fun live_vars_expr_visitor_vtable cast () =
       visit_EAppConstr = visit_EAppConstr,
       visit_ECase = visit_ECase,
       visit_ELet = visit_ELet,
-      visit_ECaseSumbool = visit_ECaseSumbool,
+      (* visit_ECaseSumbool = visit_ECaseSumbool, *)
       visit_decl = visit_decl,
       visit_DVal = visit_DVal,
       visit_DValPtrn = visit_DValPtrn,

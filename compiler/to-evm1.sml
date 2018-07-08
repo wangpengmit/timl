@@ -16,18 +16,26 @@ infix 9 %@
 infix 8 %^
 infix 7 %*
 infix 6 %+ 
-infix 6 %-
-infix 4 %<=
 infix 4 %<
-infix 4 %>=
 infix 4 %>
+infix 4 %<=
+infix 4 %>=
 infix 4 %=
-infix 4 %=?
+infix 4 <?
+infix 4 >?
+infix 4 <=?
+infix 4 >=?
+infix 4 =?
+infix 4 <>?
 infixr 3 /\
+infixr 3 /\?
 infixr 2 \/
+infixr 2 \/?
 infixr 1 -->
 infix 1 <->
 
+infix 6 %-
+        
 fun collect_ELetRec e =
   case e of
       ELet (e1, bind) =>
@@ -99,7 +107,8 @@ fun flatten_tuple_record t =
   in
     case t of
         TTuple ts => concatMap loop ts
-      | TRecord fields => concatMap loop $ map snd $ sort cmp_str_fst $ listItemsi fields
+      | TBinOp (TBProd (), t1, t2) => loop t1 @ loop t2
+      | TRecord fields => concatMap loop $ map snd $ sort cmp_str_fst $ SMap.listItemsi fields
       | _ => [t]
   end
     
@@ -145,7 +154,7 @@ fun cg_ty_visitor_vtable cast () =
           end
         | TRecord fields =>
           let
-            val ts = map snd $ sort cmp_str_fst $ listItemsi fields
+            val ts = map snd $ sort cmp_str_fst $ SMap.listItemsi fields
           in
             #visit_ty vtable this env $ TTuple ts
           end
@@ -382,9 +391,9 @@ fun compile st_name2int ectx e =
       in
         concatMap compile es @ tuple_malloc ts @ [PUSH_tuple_offset (len * 32), ADD ()] @ concatRepeat len ([PUSH1nat 32, SWAP1, SUB (), SWAP1] @ tuple_assign) @ [MARK_PreTuple2TuplePtr ()]
       end
-    | ERecord name_es =>
+    | ERecord fields =>
       let
-        val es = map snd $ sort cmp_str_fst name_es
+        val es = map snd $ sort cmp_str_fst $ SMap.listItemsi fields
       in
         compile $ ETuple es
       end
@@ -460,13 +469,12 @@ fun compile st_name2int ectx e =
       compile e1 @ 
       compile e2 @
       [MACRO_map_ptr ()]
-    | EUnOp (EUPtrProj (_, offset), e, _) =>
+    | EUnOp (EUTiML (EUPtrProj (_, offset)), e) =>
       let
         val (offset, len) = assert_SOME offset
       in
         compile e @ 
-        PUSH1nat offset @
-        [ADD, InstRestrictPtr len]
+        [PUSH1nat offset, ADD (), InstRestrictPtr len]
       end
     | EBinOp (EBStorageSet (), e1, e2) =>
       compile e1 @ 
@@ -522,9 +530,9 @@ fun compile st_name2int ectx e =
     | EMatchUnfold _ => err ()
     | EIfi _ => err ()
     | EHalt _ => err ()
-    | EMallocPair _ => err ()
-    | EPairAssign _ => err ()
-    | EProjProtected _ => err ()
+    (* | EMallocPair _ => err () *)
+    (* | EPairAssign _ => err () *)
+    (* | EProjProtected _ => err () *)
     | EVar (QID _) => err ()
   end
 
@@ -632,7 +640,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         [POP (), POP (), SWAP1, POP (), MARK_PreArray2ArrayPtr ()] @@
                         set_reg r @@
                         cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len)), st) e)
-                    val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N32 %=? N0) %= Itrue
+                    val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N32 =? N0) %= Itrue
                     val block = ((st, rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], (to_real C_New_post_loop %+ i_e, space_e)), post_loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
@@ -823,9 +831,9 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | EMatchSum _ => err ()
     | EMatchPair _ => err ()
     | EMatchUnfold _ => err ()
-    | EMallocPair _ => err ()
-    | EPairAssign _ => err ()
-    | EProjProtected _ => err ()
+    (* | EMallocPair _ => err () *)
+    (* | EPairAssign _ => err () *)
+    (* | EProjProtected _ => err () *)
     fun extra_msg () = "\nwhen code-gen-ing:\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 1, SOME 5) (ictxn, tctxn, [], ectxn) e)
     val ret = main ()
               handle Impossible m => raise Impossible (m ^ extra_msg ())

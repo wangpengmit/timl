@@ -35,7 +35,7 @@ type ('this, 'env) type_visitor_vtable =
        visit_TAppI : 'this -> 'env -> mtype * idx -> T.mtype,
        visit_TUVar : 'this -> 'env -> (basic_sort, kind, mtype) uvar_mt * region -> T.mtype,
        visit_TDatatype : 'this -> 'env -> mtype datatype_def * region -> T.mtype,
-       visit_TSumbool : 'this -> 'env -> sort * sort -> T.mtype,
+       (* visit_TSumbool : 'this -> 'env -> sort * sort -> T.mtype, *)
        visit_ty : 'this -> 'env -> ty -> T.ty,
        visit_PTMono : 'this -> 'env -> mtype -> T.ty,
        visit_PTUni : 'this -> 'env -> (idx * idx) * (name * ty) Bind.tbind * region -> T.ty,
@@ -110,11 +110,11 @@ fun default_type_visitor_vtable
           | TAppI data => #visit_TAppI vtable this env data
           | TUVar data => #visit_TUVar vtable this env data
           | TDatatype data => #visit_TDatatype vtable this env data
-          | TSumbool data => #visit_TSumbool vtable this env data
+          (* | TSumbool data => #visit_TSumbool vtable this env data *)
           | TMap t => T.TMap $ #visit_mtype vtable this env t
           | TVector t => T.TVector $ #visit_mtype vtable this env t
           | TState data => T.TState data
-          | TTuplePtr (ts, n, r) => T.TTuplePtr (visit_list (#visit_mtype vtable this) env ts, n, r)
+          | TPtr t => T.TPtr (#visit_mtype vtable this env t)
       end
     fun visit_TArrow this env data =
       let
@@ -318,14 +318,14 @@ fun default_type_visitor_vtable
       in
         T.TDatatype (dt, r)
       end
-    fun visit_TSumbool this env (s1, s2) =
-      let
-        val vtable = cast this
-        val s1 = #visit_sort vtable this env s1
-        val s2 = #visit_sort vtable this env s2
-      in
-        T.TSumbool (s1, s2)
-      end
+    (* fun visit_TSumbool this env (s1, s2) = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val s1 = #visit_sort vtable this env s1 *)
+    (*     val s2 = #visit_sort vtable this env s2 *)
+    (*   in *)
+    (*     T.TSumbool (s1, s2) *)
+    (*   end *)
   in
     {
       visit_mtype = visit_mtype,
@@ -343,7 +343,7 @@ fun default_type_visitor_vtable
       visit_TAppI = visit_TAppI,
       visit_TUVar = visit_TUVar,
       visit_TDatatype = visit_TDatatype,
-      visit_TSumbool = visit_TSumbool,
+      (* visit_TSumbool = visit_TSumbool, *)
       visit_ty = visit_ty,
       visit_PTMono = visit_PTMono,
       visit_PTUni = visit_PTUni,
@@ -379,7 +379,7 @@ fun override_visit_mtype (record : ('this, 'env) type_visitor_vtable) new =
     visit_TAppI = #visit_TAppI record,
     visit_TUVar = #visit_TUVar record,
     visit_TDatatype = #visit_TDatatype record,
-    visit_TSumbool = #visit_TSumbool record,
+    (* visit_TSumbool = #visit_TSumbool record, *)
     visit_ty = #visit_ty record,
     visit_PTMono = #visit_PTMono record,
     visit_PTUni = #visit_PTUni record,
@@ -414,7 +414,7 @@ fun override_visit_TVar (record : ('this, 'env) type_visitor_vtable) new =
     visit_TAppI = #visit_TAppI record,
     visit_TUVar = #visit_TUVar record,
     visit_TDatatype = #visit_TDatatype record,
-    visit_TSumbool = #visit_TSumbool record,
+    (* visit_TSumbool = #visit_TSumbool record, *)
     visit_ty = #visit_ty record,
     visit_PTMono = #visit_PTMono record,
     visit_PTUni = #visit_PTUni record,
@@ -449,7 +449,7 @@ fun override_visit_TAppI (record : ('this, 'env) type_visitor_vtable) new =
     visit_TAppI = new,
     visit_TUVar = #visit_TUVar record,
     visit_TDatatype = #visit_TDatatype record,
-    visit_TSumbool = #visit_TSumbool record,
+    (* visit_TSumbool = #visit_TSumbool record, *)
     visit_ty = #visit_ty record,
     visit_PTMono = #visit_PTMono record,
     visit_PTUni = #visit_PTUni record,
@@ -484,7 +484,7 @@ fun override_visit_TApp (record : ('this, 'env) type_visitor_vtable) new =
     visit_TAppI = #visit_TAppI record,
     visit_TUVar = #visit_TUVar record,
     visit_TDatatype = #visit_TDatatype record,
-    visit_TSumbool = #visit_TSumbool record,
+    (* visit_TSumbool = #visit_TSumbool record, *)
     visit_ty = #visit_ty record,
     visit_PTMono = #visit_PTMono record,
     visit_PTUni = #visit_PTUni record,
@@ -519,7 +519,7 @@ fun override_visit_TUVar (record : ('this, 'env) type_visitor_vtable) new =
     visit_TAppI = #visit_TAppI record,
     visit_TUVar = new,
     visit_TDatatype = #visit_TDatatype record,
-    visit_TSumbool = #visit_TSumbool record,
+    (* visit_TSumbool = #visit_TSumbool record, *)
     visit_ty = #visit_ty record,
     visit_PTMono = #visit_PTMono record,
     visit_PTUni = #visit_PTUni record,
@@ -554,7 +554,7 @@ fun override_extend_t_anno (record : ('this, 'env) type_visitor_vtable) new =
     visit_TAppI = #visit_TAppI record,
     visit_TUVar = #visit_TUVar record,
     visit_TDatatype = #visit_TDatatype record,
-    visit_TSumbool = #visit_TSumbool record,
+    (* visit_TSumbool = #visit_TSumbool record, *)
     visit_ty = #visit_ty record,
     visit_PTMono = #visit_PTMono record,
     visit_PTUni = #visit_PTUni record,

@@ -29,7 +29,9 @@ datatype stbind =
          | TypingST of ptrn
 
 type scoping_ctx = ibinder list * tbinder list * cbinder list * ebinder list
-     
+
+type proj_path = (tuple_record_proj * region) list
+                                                                        
 datatype expr =
 	 EVar of var * (bool(*explicit index arguments (EIA)*) * bool)
          | EConst of expr_const * region
@@ -46,11 +48,11 @@ datatype expr =
 	 | EAbsI of (sort, expr) ibind_anno * region
 	 | EAppConstr of (cvar * (bool * bool)) * mtype list * idx list * expr * (int * mtype) option
 	 | ECase of expr * return * (ptrn, expr) bind list * region
-         | ECaseSumbool of expr * expr ibind * expr ibind * region
+         (* | ECaseSumbool of expr * expr ibind * expr ibind * region *)
          | EIfi of expr * expr ibind * expr ibind * region
 	 | ELet of return * (decl tele, expr) bind * region
-         | ESetModify of bool(*is modify?*) * string * expr list * expr * region
-         | EGet of string * expr list * region
+         | EGet of string * (expr * proj_path) list * Region.region
+         | ESet of string * (expr * proj_path) list * expr * Region.region
          | EEnv of env_info * region
 
      and decl =

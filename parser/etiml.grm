@@ -67,6 +67,7 @@ open Ast
     | BANG_EQ
     | DOUBLE_EQ
     | DOUBLE_POND
+    | POND
     | DOUBLE_BAR
     | VAL
     | DATATYPE
@@ -156,6 +157,7 @@ open Ast
     | SHA256
     | SHA3
     | ECREC
+    | DEREF
 
 %nonterm start of prog
        | exp of exp
@@ -244,9 +246,9 @@ open Ast
        | id_or_bsort_bind_plus of id_or_bsort_bind list
        | id_or_bsort_bind_star of id_or_bsort_bind list
        | set_modify of bool
-       | square_plus of exp list
-       | square_star of exp list
-       | square of exp
+       | square_plus of (exp * proj_path) list
+       | square_star of (exp * proj_path) list
+       | square of exp * proj_path
        | pre of state
        | post of state option
        | state of state
@@ -275,8 +277,10 @@ open Ast
        | ifs of ifelse list
        | elses of ifelse list
        | optional_indexed of bool
-       | int_or_id of (int, id) sum
+       | int_or_id of (int, string) sum
        | proj_path of proj_path
+       | index_or_proj of index_proj
+       | index_or_proj_star of index_proj_path
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
 
@@ -445,8 +449,8 @@ exp : exp_term (exp_term)
      | exp DOUBLE_EQ exp (EBinOp' (EBPrim (EBPIntEq ()), exp1, exp2, (exp1left, exp2right)))
      | exp NEQ exp (EBinOp' (EBPrim (EBPIntNEq ()), exp1, exp2, (exp1left, exp2right)))
      | exp BANG_EQ exp (EBinOp' (EBPrim (EBPIntNEq ()), exp1, exp2, (exp1left, exp2right)))
-     | exp COLONCOLON_EQ exp (ESetStorageRef (exp1, exp2, (exp1left, exp2right)))
      | exp COLON_EQ exp (ESetMemRef (exp1, exp2, (exp1left, exp2right)))
+     | exp COLONCOLON_EQ exp (ESetStorageRef (exp1, exp2, (exp1left, exp2right)))
      | exp NAT_PLUS exp (EBinOp' (EBNat (EBNAdd ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_MINUS exp (EBinOp' (EBNat (EBNBoundedMinus ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_MULT exp (EBinOp' (EBNat (EBNMult ()), exp1, exp2, (exp1left, exp2right)))
@@ -467,7 +471,7 @@ exp : exp_term (exp_term)
      | exp COLON ty (EAsc (exp, ty, (expleft, tyright)))
      | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
-     | set_modify id square_star exp (ESetModify (set_modify, (id, square_star), exp, (set_modifyleft, expright)))
+     | set_modify id square_star exp (ESetModify (set_modify, id, square_star, exp, (set_modifyleft, expright)))
      | RETURN exp (EReturn (exp, (RETURNleft, expright)))
      (* | THROW exp (EThrow (exp, (THROWleft, expright))) *)
      | CALL exp (ECall (exp, (CALLleft, expright)))
@@ -500,11 +504,11 @@ aexp : decorated_eid (EVar decorated_eid)
      | LSQSQ exp_comma_star RSQSQ (EList (exp_comma_star, (LSQSQleft, RSQSQright)))
      | NOT aexp (EUnOp' (EUPrim (EUPBoolNeg ()), aexp, (NOTleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
-     | id square_plus (EGet ((id, square_plus), (idleft, square_plusright)))
-     | BANG id (EGet ((id, []), (BANGleft, idright)))
-     | BANGBANG aexp (EMemDeref (aexp, (BANGBANGleft, aexpright)))
-     | DEREF aexp offset_or_proj_star (EStorageDeref (EOffsetProjs (aexp, offset_or_proj_star), (DEREFleft, offset_or_proj_starright)))
-     | POND aexp offset_or_proj_star (EOffsetProjs (aexp, offset_or_proj_star))
+     | id square_plus (EGet (id, square_plus, (idleft, square_plusright)))
+     | BANG aexp (EMemDeref (aexp, (BANGleft, aexpright)))
+     | BANGBANG id (EGet (id, [], (BANGBANGleft, idright)))
+     | DEREF aexp index_or_proj_star (EStorageDeref (EOffsetProjs (aexp, index_or_proj_star), (DEREFleft, index_or_proj_starright)))
+     | POND aexp index_or_proj_star (EOffsetProjs (aexp, index_or_proj_star))
      | STATE id (EState id)
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
      | DDASH (EDec (DDASHleft, DDASHright))
@@ -526,7 +530,7 @@ ifs : IF exp THEN exps elses (If (exp, exps, (IFleft, expsright)) :: elses)
 elses : ELSEIF exp THEN exps elses (Elseif (exp, exps, (ELSEIFleft, expsright)) :: elses)
       | ELSE exps END ([Else (exps, (ELSEleft, ENDright))])
       | END ([])
-         
+
 optional_colon_ty : COLON ty (SOME ty)
                   | (NONE)
 
@@ -665,11 +669,17 @@ optional_eq_idx : EQ idx (SOME idx)
                 | (NONE)
 
 int_or_id : INT (inl (str2int INT))
-          | id (inr id)
+          | id (inr (fst id))
                
-proj_path : DOT int_or_id proj_path (dot_field :: pro_path)
+proj_path : DOT int_or_id proj_path ((int_or_id, (DOTleft, int_or_idright)) :: proj_path)
           | ([])
               
+index_or_proj : LSQ exp RSQ (inl exp)
+               | DOT int_or_id (inr (int_or_id, (DOTleft, int_or_idright)))
+
+index_or_proj_star : index_or_proj index_or_proj_star (index_or_proj :: index_or_proj_star)
+	            | ([])
+            
 square : LSQ exp RSQ proj_path ((exp, proj_path))
                     
 square_star : square square_star (square :: square_star)

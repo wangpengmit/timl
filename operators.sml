@@ -105,6 +105,8 @@ datatype prim_expr_un_op =
          (* | EUPInt2Str of unit *)
 (* | EUPStrLen of unit *)
 
+type tuple_record_proj = (int, string) sum
+       
 datatype expr_un_op =
          EUProj of projector
          | EUPrim of prim_expr_un_op
@@ -119,6 +121,7 @@ datatype expr_un_op =
          | EUAnno of expr_anno
          | EUField of string * int option
          | EUNatCellGet of unit
+         | EUPtrProj of tuple_record_proj * (int * int) option
 
 fun str_env_info name =
     case name of
@@ -172,7 +175,7 @@ fun str_expr_un_op opr =
     | EUVectorClear () => "vector_clear"
     | EUVectorLen () => "vector_len"
     | EUAnno a => str_expr_anno a
-    | EUField name => "field " ^ name
+    | EUField (name, offset) => sprintf "field ($, $)" [name, str_opt str_int offset]
 
 (* primitive binary term operators *)
 datatype prim_expr_bin_op =
@@ -427,7 +430,4 @@ fun str_expr_T opr =
       ETNever () => "ETNever"
     | ETBuiltin name => sprintf "ETBuiltin($)" [name]
                   
-type tuple_record_proj = (int, string) sum
-type proj_path = tuple_record_proj list
-       
 end

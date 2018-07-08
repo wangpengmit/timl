@@ -34,7 +34,7 @@ type ('this, 'env) expr_visitor_vtable =
        visit_EAppConstr : 'this -> 'env -> (cvar * (bool * bool)) * mtype list * idx list * expr * (int * mtype) option -> T.expr,
        visit_ECase : 'this -> 'env -> expr * return * (ptrn, expr) bind list * region -> T.expr,
        visit_ELet : 'this -> 'env -> return * (decl tele, expr) bind * region -> T.expr,
-       visit_ECaseSumbool : 'this -> 'env -> expr * expr ibind * expr ibind * region -> T.expr,
+       (* visit_ECaseSumbool : 'this -> 'env -> expr * expr ibind * expr ibind * region -> T.expr, *)
        
        (* visit_decl : 'this -> 'env ctx -> decl -> T.decl, *)
        (* visit_DVal : 'this -> 'env ctx -> ebinder * (tbinder list, expr) bind outer * region -> T.decl, *)
@@ -157,14 +157,14 @@ fun default_expr_visitor_vtable
 	  | EAppConstr data => #visit_EAppConstr vtable this env data
 	  | ECase data => #visit_ECase vtable this env data
 	  | ELet data => #visit_ELet vtable this env data
-	  | ECaseSumbool data => #visit_ECaseSumbool vtable this env data
+	  (* | ECaseSumbool data => #visit_ECaseSumbool vtable this env data *)
 	  | EIfi (e, bind1, bind2, r) =>
             T.EIfi
               (#visit_expr vtable this env e,
                visit_ibind this (#visit_expr vtable this) env bind1,
                visit_ibind this (#visit_expr vtable this) env bind2, r)
-          | ESetModify (b, x, es, e, r) => T.ESetModify (b, x, visit_list (#visit_expr vtable this) env es, #visit_expr vtable this env e, r)
-          | EGet (x, es, r) => T.EGet (x, visit_list (#visit_expr vtable this) env es, r)
+          | ESet (x, es, e, r) => T.ESet (x, visit_list (visit_pair (#visit_expr vtable this) return2) env es, #visit_expr vtable this env e, r)
+          | EGet (x, es, r) => T.EGet (x, visit_list (visit_pair (#visit_expr vtable this) return2) env es, r)
           | EEnv (name, r) => T.EEnv (name, r)
       end
     fun visit_EVar this env data =
@@ -392,15 +392,15 @@ fun default_expr_visitor_vtable
       in
         T.ELet (return, bind, r)
       end
-    fun visit_ECaseSumbool this env (e, bind1, bind2, r) =
-      let
-        val vtable = cast this
-        val e = #visit_expr vtable this env e
-        val bind1 = visit_ibind this (#visit_expr vtable this) env bind1
-        val bind2 = visit_ibind this (#visit_expr vtable this) env bind2
-      in
-        T.ECaseSumbool (e, bind1, bind2, r)
-      end
+    (* fun visit_ECaseSumbool this env (e, bind1, bind2, r) = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val e = #visit_expr vtable this env e *)
+    (*     val bind1 = visit_ibind this (#visit_expr vtable this) env bind1 *)
+    (*     val bind2 = visit_ibind this (#visit_expr vtable this) env bind2 *)
+    (*   in *)
+    (*     T.ECaseSumbool (e, bind1, bind2, r) *)
+    (*   end *)
     fun visit_decl this env data =
       let
         val vtable = cast this
@@ -877,7 +877,7 @@ fun default_expr_visitor_vtable
       visit_EAppConstr = visit_EAppConstr,
       visit_ECase = visit_ECase,
       visit_ELet = visit_ELet,
-      visit_ECaseSumbool = visit_ECaseSumbool,
+      (* visit_ECaseSumbool = visit_ECaseSumbool, *)
       visit_decl = visit_decl,
       visit_DVal = visit_DVal,
       visit_DValPtrn = visit_DValPtrn,
@@ -1019,7 +1019,7 @@ fun override_visit_PnConstr (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1088,7 +1088,7 @@ fun override_visit_PnVar (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1157,7 +1157,7 @@ fun override_visit_EVar (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1226,7 +1226,7 @@ fun override_visit_EBinOp (record : ('this, 'env) expr_visitor_vtable) new : ('t
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1295,7 +1295,7 @@ fun override_visit_EApp (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1364,7 +1364,7 @@ fun override_visit_EEI (record : ('this, 'env) expr_visitor_vtable) new : ('this
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1433,7 +1433,7 @@ fun override_visit_EAppI (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1502,7 +1502,7 @@ fun override_visit_EAscTime (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1571,7 +1571,7 @@ fun override_visit_EAsc (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = new,
     visit_decl = #visit_decl record,
@@ -1640,7 +1640,7 @@ fun override_visit_ECase (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = new,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1709,7 +1709,7 @@ fun override_visit_DRec (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1778,7 +1778,7 @@ fun override_visit_DTypeDef (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1847,7 +1847,7 @@ fun override_visit_DOpen (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,
@@ -1916,7 +1916,7 @@ fun override_visit_SpecTypeDef (record : ('this, 'env) expr_visitor_vtable) new 
     visit_EAppConstr = #visit_EAppConstr record,
     visit_ECase = #visit_ECase record,
     visit_ELet = #visit_ELet record,
-    visit_ECaseSumbool = #visit_ECaseSumbool record,
+    (* visit_ECaseSumbool = #visit_ECaseSumbool record, *)
     visit_EAppT = #visit_EAppT record,
     visit_EAsc = #visit_EAsc record,
     visit_decl = #visit_decl record,

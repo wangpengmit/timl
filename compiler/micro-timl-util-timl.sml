@@ -111,6 +111,14 @@ fun assert_TState t =
   case t of
       TState a => a
     | _ => raise assert_fail $ "assert_TState; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TPtr t =
+  case t of
+      TPtr a => a
+    | _ => raise assert_fail $ "assert_TPtr; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TNatCell t =
+  case t of
+      TNatCell a => a
+    | _ => raise assert_fail $ "assert_TNatCell; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TNat t =
   case t of
       TNat a => a
@@ -250,4 +258,19 @@ fun is_rec_body e =
       EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
     | _ => (false, e)
              
+fun assert_wordsize_ty t =
+  case t of
+      TNat _ => ()
+    | TiBool _ => ()
+    | TConst c =>
+      (case c of
+           TCUnit () => ()
+         | TCEmpty () => ()
+         | TCTiML c =>
+           case c of
+               BTInt () => ()
+             | BTBool () => ()
+             | BTByte () => ())
+    | _ => raise Impossible "not a base storage type"
+
 end

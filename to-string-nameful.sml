@@ -252,7 +252,7 @@ fun strn_mt t =
       | TAbsI _ =>
         (* sprintf "(fn {$ : $} => $)" [name, strn_s gctx sctx s, strn_mt (name :: sctx, kctx) t] *)
         strn_abs t
-      | TSumbool (s1, s2) => sprintf "(sumbool s1 s2)" [strn_s s1, strn_s s2]
+      (* | TSumbool (s1, s2) => sprintf "(sumbool s1 s2)" [strn_s s1, strn_s s2] *)
       | TBase (bt, _) => str_bt bt
       | TUVar (u, r) =>
         let
@@ -284,7 +284,8 @@ fun strn_mt t =
       | TMap t => sprintf "(map $)" [strn_mt t]
       | TVector t => sprintf "(vector $)" [strn_mt t]
       | TState (x, _) => "typeof " ^ x
-      | TTuplePtr (ts, n, _) => sprintf "(tuple_ptr $ $)" [str_ls strn_mt ts, str_int n]
+      (* | TTuplePtr (ts, n, _) => sprintf "(tuple_ptr $ $)" [str_ls strn_mt ts, str_int n] *)
+      | TPtr t => sprintf "(ptr $)" [strn_mt t]
   end
 
 and strn_uni (binds, t) =
@@ -326,7 +327,7 @@ fun strn_return return =
 
 structure ExprUtil = ExprUtilFn (Expr)
 open ExprUtil
-       
+
 fun strn_e e =
   case e of
       EVar (x, b) => decorate_evar b x
@@ -397,13 +398,13 @@ fun strn_e e =
         (join "" o map (prefix " ") o map (fn i => sprintf "{$}" [strn_i i])) is,
         strn_e e]
     | ECase (e, return, rules, _) => sprintf "(case $ $of $)" [strn_e e, strn_return return, join " | " (map strn_rule rules)]
-    | ECaseSumbool (e, bind1, bind2, _) =>
-      let
-        val (name1, e1) = unBindSimpName bind1
-        val (name2, e2) = unBindSimpName bind2
-      in
-        sprintf "(case_sumbool $ (left $ => $) (right $ => $))" [strn_e e, fst name1, strn_e e1, fst name2, strn_e e2]
-      end
+    (* | ECaseSumbool (e, bind1, bind2, _) => *)
+    (*   let *)
+    (*     val (name1, e1) = unBindSimpName bind1 *)
+    (*     val (name2, e2) = unBindSimpName bind2 *)
+    (*   in *)
+    (*     sprintf "(case_sumbool $ (left $ => $) (right $ => $))" [strn_e e, fst name1, strn_e e1, fst name2, strn_e e2] *)
+    (*   end *)
     | EIfi (e, bind1, bind2, _) =>
       let
         val (name1, e1) = unBindSimpName bind1
@@ -411,10 +412,12 @@ fun strn_e e =
       in
         sprintf "(ifi $ (itrue $ => $) (ifalse $ => $))" [strn_e e, fst name1, strn_e e1, fst name2, strn_e e2]
       end
-    | ESetModify (is_modify, x, es, e, _) => sprintf "($ $$ $)" [if is_modify then "modify" else "set", x, join "" $ map (surround "[" "]" o strn_e) es, strn_e e]
-    | EGet (x, es, _) => sprintf "$$" [x, join "" $ map (surround "[" "]" o strn_e) es]
+    | ESet (x, es, e, _) => sprintf "(set $$ $)" [x, join "" $ map (surround "[" "]" o strn_offset) es, strn_e e]
+    | EGet (x, es, _) => sprintf "$$" [x, join "" $ map (surround "[" "]" o strn_offset) es]
     | EEnv (name, _) => "msg." ^ str_env_info name
 
+and strn_offset (e, path) = strn_e e ^ (join_prefix "." $ map (str_sum str_int id o fst) path)
+  
 and strn_decl decl =
     case decl of
         DVal (name, Outer bind, _) =>

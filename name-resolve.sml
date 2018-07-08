@@ -211,10 +211,8 @@ fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_vi
                 TVector (hd ts)
               else if SE.eq_var (x, (ID ("cell", dummy))) andalso length ts = 1 andalso length is = 0 then
                 TSCell (hd ts)
-              else if SE.eq_var (x, (ID ("icell", dummy))) andalso length ts = 1 andalso length is = 0 then
-                TNatCell (hd ts)
               else if SE.eq_var (x, (ID ("ref", dummy))) andalso length ts = 1 andalso length is = 0 then
-                TRef (hd ts, r)
+                TRef (hd ts, S.get_region_long_id x)
               else
                 default ()
             end

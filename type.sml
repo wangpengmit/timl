@@ -38,12 +38,14 @@ datatype mtype =
          | TAppI of mtype * idx
          | TUVar of (basic_sort, kind, mtype) uvar_mt * region
          | TDatatype of mtype datatype_def * region
-         | TSumbool of sort * sort
+         (* | TSumbool of sort * sort *)
+         | TRecord of mtype SMap.map * region
+         | TState of string * region
          | TMap of mtype
          | TVector of mtype
-         | TState of string * region
-         | TRecord of mtype SMap.map * region
-         | TTuplePtr of mtype list * int * region
+         | TSCell of mtype
+         | TNatCell of unit
+         | TPtr of mtype
 
 datatype ty = 
 	 PTMono of mtype

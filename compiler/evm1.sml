@@ -85,6 +85,7 @@ datatype ('idx, 'ty) inst =
          | BYTE2INT of unit
          (* | PRINTC of unit *)
          (* | PACK_SUM of injector * 'ty inner *)
+         | InstRestrictPtr of int
          | ASCTIME of 'idx inner
          | ASCSPACE of 'idx inner
          | MARK_PreArray2ArrayPtr of unit

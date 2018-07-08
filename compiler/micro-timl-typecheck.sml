@@ -25,15 +25,24 @@ infix 9 %@
 infix 8 %^
 infix 7 %*
 infix 6 %+ 
-infix 4 %<=
 infix 4 %<
+infix 4 %>
+infix 4 %<=
 infix 4 %>=
 infix 4 %=
+infix 4 <?
+infix 4 >?
+infix 4 <=?
+infix 4 >=?
+infix 4 =?
+infix 4 <>?
 infixr 3 /\
+infixr 3 /\?
 infixr 2 \/
+infixr 2 \/?
 infixr 1 -->
 infix 1 <->
-        
+
 infix  9 @!
 fun m @! k = StMap.find (m, k)
 infix  6 @+
@@ -535,20 +544,20 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TPreTuple (ts, i, i2), KType ())
       end
-    | TProdEx ((t1, b1), (t2, b2)) =>
-      let
-        val t1 = kc_against_kind ctx (t1, KType ())
-        val t2 = kc_against_kind ctx (t2, KType ())
-      in
-        (TProdEx ((t1, b1), (t2, b2)), KType ())
-      end
-    | TArrowTAL (ts, i) =>
-      let
-        val ts = Rctx.map (fn t => kc_against_kind ctx (t, KType ())) ts
-        val i = sc_against_sort ictx (i, STime)
-      in
-        (TArrowTAL (ts, i), KType ())
-      end
+    (* | TProdEx ((t1, b1), (t2, b2)) => *)
+    (*   let *)
+    (*     val t1 = kc_against_kind ctx (t1, KType ()) *)
+    (*     val t2 = kc_against_kind ctx (t2, KType ()) *)
+    (*   in *)
+    (*     (TProdEx ((t1, b1), (t2, b2)), KType ()) *)
+    (*   end *)
+    (* | TArrowTAL (ts, i) => *)
+    (*   let *)
+    (*     val ts = Rctx.map (fn t => kc_against_kind ctx (t, KType ())) ts *)
+    (*     val i = sc_against_sort ictx (i, STime) *)
+    (*   in *)
+    (*     (TArrowTAL (ts, i), KType ()) *)
+    (*   end *)
     | TArrowEVM (st, rctx, ts, i) =>
       let
         val st = sc_against_sort ictx (st, SState)
@@ -927,6 +936,13 @@ val anno_EAbs_state = ref false
 val anno_EVectorLen_state = ref false
 val anno_EVectorClear_state = ref false
 
+val anno_ENatCellGet = ref false
+val anno_ENatCellGet_state = ref false
+val anno_ENatCellSet = ref false
+val anno_ENatCellSet_state = ref false
+val anno_EPtrProj = ref false
+val anno_EPtrProj_state = ref false
+                                 
 val allow_substate_call = ref false
 
 datatype phase =
@@ -960,7 +976,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     fun get_nat_cell st t1 =
       let
         val x = assert_TState t1 
-        val () = assert_TNatCel $ st_types @!! x 
+        val () = assert_TNatCell $ st_types @!! x 
         val i = st @%!! x
       in
         (x, i)
@@ -1598,7 +1614,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
             val (e2, t2, d2, st) = tc (ctx, st) e2
             val i2 = assert_TNat_m t2 (fn msg => raise MTCError $ "EIntNatExp: " ^ msg)
           in
-            (EBinOp (opr, e1, e2), TInt r, d1 %%+ d2 %%+ (nat_exp_cost i2, N0 r), st)
+            (EBinOp (opr, e1, e2), TInt, d1 %%+ d2 %%+ (nat_exp_cost i2, N0), st)
           end
       | EBinOp (EBNat opr, e1, e2) =>
         let
@@ -1712,7 +1728,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val new = assert_TNat_m t2 (fn s => raise MTCError $ "ENetCellSet: " ^ s)
           val (x, old) = get_nat_cell st $ whnf itctx t1
-          val store_cost = IIte (old =? N0 && new <>? N0, to_real C_sset, to_real C_sreset)
+          val store_cost = IIte' (old =? N0 /\? new <>? N0, to_real C_sset, to_real C_sreset)
           val (e1, e2) = if !anno_ENatCellSet then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ENatCellSet_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
@@ -1740,15 +1756,15 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2) = if !anno_EMapPtr then (e1 %: t1, e2 %: TInt) else (e1, e2)
           val (e1, e2) = if !anno_EMapPtr_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (EBMapPtr path, e1, e2), TPtr t, j1 %%+ j2 %%+ TN C_EMapPtr, st)
+          (EBinOp (EBMapPtr (), e1, e2), TPtr t, j1 %%+ j2 %%+ TN C_EMapPtr, st)
         end
-      | EUnOp (opr as EUPtrProj (proj, offset), e) =>
+      | EUnOp (opr as EUTiML (EUPtrProj (proj, _)), e) =>
         let
-          val (e, t, j, st) = tc (ctx, st) e
-          val t = whnf itctx t
-          val t = assert_SOME $ ptr_proj t proj
-          val e = if !anno_EStorageGet then e %: t_e else e
-          val e = if !anno_EStorageGet_state then e %~ st else e
+          val (e, t_e, j, st) = tc (ctx, st) e
+          val t_e = whnf itctx t_e
+          val t = assert_SOME $ proj_ptr t_e proj
+          val e = if !anno_EPtrProj then e %: t_e else e
+          val e = if !anno_EPtrProj_state then e %~ st else e
         in
           (EUnOp (opr, e), TPtr t, j %%+ TN C_EPtrProj, st)
         end
@@ -1759,7 +1775,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 case st_t of
                     TMap _ => TPtr st_t
                   | TSCell t => TPtr t
-                  | _ => TState (x, r)
+                  | _ => TState x
           in
             (EState x, t, TN C_EState, st)
           end
@@ -2033,46 +2049,46 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           tc (ctx, st) e
         end
-      | EMallocPair (a, b) =>
-        let
-          val () = assert_b "EMallocPair: is_value a" (is_value a)
-          val () = assert_b "EMallocPair: is_value b" (is_value b)
-          val (a, t1, i1, st) = tc (ctx, st) a
-          val (b, t2, i2, st) = tc (ctx, st) b
-          val e = EMallocPair (a, b)
-          val t = TProdEx ((t1, false), (t2, false))
-        in
-          (e, t, i1 %%+ i2, st)
-        end
-      | EPairAssign (e1, proj, e2) =>
-        let
-          val (e1, t_e1, i_e1, st) = tc (ctx, st) e1
-          val ((t1, b1), (t2, b2)) =
-              case t_e1 of
-                  TProdEx a => a
-                | _ => raise MTCError "EPairAssign/assert-TProdEx"
-          val t_e2 = choose (t1, t2) proj
-          val (e2, i_e2, st) = tc_against_ty (ctx, st) (e2, t_e2)
-          val (b1, b2) = choose_update (b1, b2) proj
-          val e = EPairAssign (e1, proj, e2)
-          val t = TProdEx ((t1, b1), (t2, b2))
-        in
-          (e, t, i_e1 %%+ i_e2, st)
-        end
-      | EProjProtected (proj, e) =>
-        let
-          val (e, t_e, i_e, st) = tc (ctx, st) e
-          val ts =
-              case t_e of
-                  TProdEx a => a
-                | _ => raise MTCError "EProjProtected/assert-TProdEx"
-          val (t, b) = choose ts proj
-          val () = if b then ()
-                   else raise MTCError "EProjProtected/check-permission"
-          val e = EProjProtected (proj, e)
-        in
-          (e, t, i_e, st)
-        end
+      (* | EMallocPair (a, b) => *)
+      (*   let *)
+      (*     val () = assert_b "EMallocPair: is_value a" (is_value a) *)
+      (*     val () = assert_b "EMallocPair: is_value b" (is_value b) *)
+      (*     val (a, t1, i1, st) = tc (ctx, st) a *)
+      (*     val (b, t2, i2, st) = tc (ctx, st) b *)
+      (*     val e = EMallocPair (a, b) *)
+      (*     val t = TProdEx ((t1, false), (t2, false)) *)
+      (*   in *)
+      (*     (e, t, i1 %%+ i2, st) *)
+      (*   end *)
+      (* | EPairAssign (e1, proj, e2) => *)
+      (*   let *)
+      (*     val (e1, t_e1, i_e1, st) = tc (ctx, st) e1 *)
+      (*     val ((t1, b1), (t2, b2)) = *)
+      (*         case t_e1 of *)
+      (*             TProdEx a => a *)
+      (*           | _ => raise MTCError "EPairAssign/assert-TProdEx" *)
+      (*     val t_e2 = choose (t1, t2) proj *)
+      (*     val (e2, i_e2, st) = tc_against_ty (ctx, st) (e2, t_e2) *)
+      (*     val (b1, b2) = choose_update (b1, b2) proj *)
+      (*     val e = EPairAssign (e1, proj, e2) *)
+      (*     val t = TProdEx ((t1, b1), (t2, b2)) *)
+      (*   in *)
+      (*     (e, t, i_e1 %%+ i_e2, st) *)
+      (*   end *)
+      (* | EProjProtected (proj, e) => *)
+      (*   let *)
+      (*     val (e, t_e, i_e, st) = tc (ctx, st) e *)
+      (*     val ts = *)
+      (*         case t_e of *)
+      (*             TProdEx a => a *)
+      (*           | _ => raise MTCError "EProjProtected/assert-TProdEx" *)
+      (*     val (t, b) = choose ts proj *)
+      (*     val () = if b then () *)
+      (*              else raise MTCError "EProjProtected/check-permission" *)
+      (*     val e = EProjProtected (proj, e) *)
+      (*   in *)
+      (*     (e, t, i_e, st) *)
+      (*   end *)
       | EHalt (e, t) =>
         let
           val t = kc_against_kind itctx (t, KType ())

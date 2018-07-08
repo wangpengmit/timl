@@ -86,11 +86,11 @@ fun get_region_mt t =
     | TBase (_, r) => r
     | TUVar (_, r) => r
     | TDatatype (_, r) => r
-    | TSumbool (s1, s2) => combine_region (get_region_s s1) (get_region_s s2)
+    (* | TSumbool (s1, s2) => combine_region (get_region_s s1) (get_region_s s2) *)
     | TMap t => get_region_mt t
     | TVector t => get_region_mt t
     | TState (_, r) => r
-    | TTuplePtr (_, _, r) => r
+    | TPtr t => get_region_mt t
 
 fun get_region_t t = 
   case t of
@@ -149,9 +149,9 @@ fun get_region_e e =
     | EAppConstr ((x, _), _, _, e, _) => combine_region (get_region_cvar x) (get_region_e e)
     | ECase (_, _, _, r) => r
     | EIfi (_, _, _, r) => r
-    | ECaseSumbool (_, _, _, r) => r
+    (* | ECaseSumbool (_, _, _, r) => r *)
     | ELet (_, _, r) => r
-    | ESetModify (_, _, _, _, r) => r
+    | ESet (_, _, _, r) => r
     | EGet (_, _, r) => r
     | EEnv (_, r) => r
                                               

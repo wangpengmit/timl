@@ -37,6 +37,11 @@ fun PFalse r = PTrueFalse (false, r)
 fun PEq (a, b) = PBinPred (BPEq (), a, b)             
 fun IMax (i1, i2) = IBinOp (IBMax (), i1, i2)
 fun IToReal (i, r) = IUnOp (IUToReal (), i, r)                           
+fun IFloor (i, r) = IUnOp (IUFloor (), i, r)
+fun ILog (base, i, r) = IUnOp (IULog base, i, r)
+fun INeg (i, r) = IUnOp (IUNeg (), i, r)
+fun IEq (a, b) = IBinOp (IBEq (), a, b)
+fun INeq (a, b) = INeg (IEq (a, b), dummy)
 
 (* notations *)
          
@@ -49,14 +54,15 @@ infix 4 %>
 infix 4 %<=
 infix 4 %>=
 infix 4 %=
-infix 4 %<?
-infix 4 %>?
-infix 4 %<=?
-infix 4 %>=?
-infix 4 %=?
+infix 4 <?
+infix 4 >?
+infix 4 <=?
+infix 4 >=?
+infix 4 =?
+infix 4 <>?
 infixr 3 /\
-infixr 2 \/
 infixr 3 /\?
+infixr 2 \/
 infixr 2 \/?
 infixr 1 -->
 infix 1 <->
@@ -70,11 +76,12 @@ fun a %> b = PBinPred (BPGt (), a, b)
 fun a %<= b = PBinPred (BPLe (), a, b)
 fun a %>= b = PBinPred (BPGe (), a, b)
 fun a %= b = PEq (a, b)
-fun a %<? b = IBinOp (IBLt (), a, b)
-fun a %>? b = IBinOp (IBGt (), a, b)
-fun a %<=? b = IBinOp (IBLe (), a, b)
-fun a %>=? b = IBinOp (IBGe (), a, b)
-fun a %=? b = IBinOp (IBEq (), a, b)
+fun a <? b = IBinOp (IBLt (), a, b)
+fun a >? b = IBinOp (IBGt (), a, b)
+fun a <=? b = IBinOp (IBLe (), a, b)
+fun a >=? b = IBinOp (IBGe (), a, b)
+fun a =? b = IBinOp (IBEq (), a, b)
+fun a <>? b = INeq (a, b)
 fun a /\ b = PBinConn (BCAnd (), a, b)
 fun a \/ b = PBinConn (BCOr (), a, b)
 fun a /\? b = IBinOp (IBAnd (), a, b)
@@ -211,14 +218,14 @@ fun interp_nat_expr_bin_op opr (i1, i2) err =
          
 fun interp_nat_cmp r opr =
   let
-    fun neq (a, b) = IUnOp (IUNeg (), a %=? b, r)
+    fun neq (a, b) = IUnOp (IUNeg (), a =? b, r)
   in
   case opr of
-      NCLt () => op%<?
-    | NCGt () => op%>?
-    | NCLe () => op%<=?
-    | NCGe () => op%>=?
-    | NCEq () => op%=?
+      NCLt () => op<?
+    | NCGt () => op>?
+    | NCLe () => op<=?
+    | NCGe () => op>=?
+    | NCEq () => op=?
     | NCNEq () => neq
   end
     

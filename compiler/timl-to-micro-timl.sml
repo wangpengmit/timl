@@ -69,7 +69,7 @@ fun on_mt (t : S.mtype) =
     | S.TUVar (x, _) =>
       (* exfalso x *)
       raise Impossible "to-micro-timl/on_mt/UVar"
-    | S.TSumbool (s1, s2) => TSumbool (s1, s2)
+    (* | S.TSumbool (s1, s2) => TSumbool (s1, s2) *)
     | S.TDatatype (Bind.Bind (dt_name, tbinds), _) =>
       let
         val (tname_kinds, (bsorts, constrs)) = unfold_binds tbinds
@@ -106,7 +106,7 @@ fun on_mt (t : S.mtype) =
     | S.TMap t => TMap $ on_mt t
     | S.TVector t => TVector $ on_mt t
     | S.TState (x, _) => TState x
-    | S.TTuplePtr (ts, n, _) => TStorageTuplePtr (map on_mt ts, INat n)
+    | S.TPtr t => TPtr (on_mt t)
 
 val trans_mt = on_mt
                  
@@ -157,19 +157,19 @@ fun on_e (e : S.expr) : mtiml_expr =
          | Op.ETBuiltin name => EBuiltin (name, on_mt t)
       )
     | S.ENewArrayValues (t, es, r) => ENewArrayValues (on_mt t, map on_e es)
-    | S.ECaseSumbool (e, bind1, bind2, r) =>
-      let
-        fun on_bind bind =
-          let
-            val (iname, e) = unBindSimpName bind
-            val e = on_e e
-            val e = EUnpackI (EV 0, IBind (iname, EBind (("__u", r), shift_e_e 0 2 e)))
-          in
-            EBind (("__ex", r), e)
-          end
-      in
-        ECase (on_e e, on_bind bind1, on_bind bind2)
-      end
+    (* | S.ECaseSumbool (e, bind1, bind2, r) => *)
+    (*   let *)
+    (*     fun on_bind bind = *)
+    (*       let *)
+    (*         val (iname, e) = unBindSimpName bind *)
+    (*         val e = on_e e *)
+    (*         val e = EUnpackI (EV 0, IBind (iname, EBind (("__u", r), shift_e_e 0 2 e))) *)
+    (*       in *)
+    (*         EBind (("__ex", r), e) *)
+    (*       end *)
+    (*   in *)
+    (*     ECase (on_e e, on_bind bind1, on_bind bind2) *)
+    (*   end *)
     | S.EIfi (e, bind1, bind2, r) =>
       let
         fun on_bind bind =
@@ -285,7 +285,7 @@ fun on_e (e : S.expr) : mtiml_expr =
       in
 	on_decls (decls, e)
       end
-    | S.ESetModify _ => err ()
+    | S.ESet _ => err ()
     | S.EGet _ => err ()
     fun extra_msg () = "\nwhen translating\n" ^ ToString.str_e Gctx.empty ToStringUtil.empty_ctx e
     val ret = main ()

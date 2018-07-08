@@ -101,6 +101,7 @@ val keywords = [
     ("for", T.FOR),
     ("while", T.WHILE),
     ("as", T.AS),
+    ("deref", T.DEREF),
     ("sha3", T.SHA3),
     ("sha256", T.SHA256),
     ("ecrecover", T.ECREC),

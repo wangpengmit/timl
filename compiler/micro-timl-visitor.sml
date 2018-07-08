@@ -30,8 +30,8 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_
        visit_TArr : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
        visit_TAbsT : 'this -> 'env -> ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
        visit_TAppT : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
-       visit_TProdEx : 'this -> 'env -> (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool) -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
-       visit_TArrowTAL : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty,
+       (* visit_TProdEx : 'this -> 'env -> (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool) -> ('var2, 'bsort2, 'idx2, 'sort2) ty, *)
+       (* visit_TArrowTAL : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty, *)
        visit_var : 'this -> 'env -> 'var -> 'var2,
        visit_bsort : 'this -> 'env -> 'bsort -> 'bsort2,
        visit_idx : 'this -> 'env -> 'idx -> 'idx2,
@@ -127,14 +127,14 @@ fun default_ty_visitor_vtable
           | TArr data => #visit_TArr vtable this env data
           | TAbsT data => #visit_TAbsT vtable this env data
           | TAppT data => #visit_TAppT vtable this env data
-          | TProdEx data => #visit_TProdEx vtable this env data
-          | TArrowTAL data => #visit_TArrowTAL vtable this env data
+          | TiBool idx => TiBool $ #visit_idx vtable this env idx
+          (* | TProdEx data => #visit_TProdEx vtable this env data *)
+          (* | TArrowTAL data => #visit_TArrowTAL vtable this env data *)
           | TArrowEVM (i1, rctx, ts, i2) =>
             TArrowEVM (#visit_idx vtable this env i1,
                        Rctx.map (#visit_ty vtable this env) rctx,
                        visit_list (#visit_ty vtable this) env ts,
                        visit_pair (#visit_idx vtable this) (#visit_idx vtable this) env i2)
-          | TiBool idx => TiBool $ #visit_idx vtable this env idx
           | TPreArray (t, i1, i2, b) => TPreArray (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2, b)
           | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
           | TPreTuple (ts, i, i2) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, #visit_idx vtable this env i2)
@@ -249,24 +249,24 @@ fun default_ty_visitor_vtable
       in
         TAppT (t1, t2)
       end
-    fun visit_TProdEx this env data = 
-      let
-        val vtable = cast this
-        val ((t1, b1), (t2, b2)) = data
-        val t1 = #visit_ty vtable this env t1
-        val t2 = #visit_ty vtable this env t2
-      in
-        TProdEx ((t1, b1), (t2, b2))
-      end
-    fun visit_TArrowTAL this env data = 
-      let
-        val vtable = cast this
-        val (ts, i) = data
-        val ts = Rctx.map (#visit_ty vtable this env) ts
-        val i = #visit_idx vtable this env i
-      in
-        TArrowTAL (ts, i)
-      end
+    (* fun visit_TProdEx this env data =  *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val ((t1, b1), (t2, b2)) = data *)
+    (*     val t1 = #visit_ty vtable this env t1 *)
+    (*     val t2 = #visit_ty vtable this env t2 *)
+    (*   in *)
+    (*     TProdEx ((t1, b1), (t2, b2)) *)
+    (*   end *)
+    (* fun visit_TArrowTAL this env data =  *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val (ts, i) = data *)
+    (*     val ts = Rctx.map (#visit_ty vtable this env) ts *)
+    (*     val i = #visit_idx vtable this env i *)
+    (*   in *)
+    (*     TArrowTAL (ts, i) *)
+    (*   end *)
     fun default_visit_bind_anno extend this = visit_bind_anno (extend this)
   in
     {visit_kind = visit_kind,
@@ -287,8 +287,8 @@ fun default_ty_visitor_vtable
      visit_TArr = visit_TArr,
      visit_TAbsT = visit_TAbsT,
      visit_TAppT = visit_TAppT,
-     visit_TProdEx = visit_TProdEx,
-     visit_TArrowTAL = visit_TArrowTAL,
+     (* visit_TProdEx = visit_TProdEx, *)
+     (* visit_TArrowTAL = visit_TArrowTAL, *)
      visit_var = visit_var,
      visit_bsort = visit_bsort,
      visit_idx = visit_idx,
@@ -326,8 +326,8 @@ fun override_visit_TVar (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2
        visit_TArr = #visit_TArr record,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -362,8 +362,8 @@ fun override_visit_TAppT (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TArr = #visit_TArr record,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = new,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -398,8 +398,8 @@ fun override_visit_TAppI (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TArr = #visit_TArr record,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -434,8 +434,8 @@ fun override_visit_TBinOp (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        visit_TArr = #visit_TArr record,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -450,41 +450,41 @@ fun override_visit_TBinOp (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        extend_t = #extend_t record
   }
 
-fun override_visit_TProdEx (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable) new : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable =
-  {
-       visit_kind = #visit_kind record,
-       visit_KType = #visit_KType record,
-       visit_KArrow = #visit_KArrow record,
-       visit_KArrowT = #visit_KArrowT record,
-       visit_ty = #visit_ty record,
-       visit_TVar = #visit_TVar record,
-       visit_TConst = #visit_TConst record,
-       visit_TBinOp = #visit_TBinOp record,
-       visit_TArrow = #visit_TArrow record,
-       visit_TAbsI = #visit_TAbsI record,
-       visit_TAppI = #visit_TAppI record,
-       visit_TQuan = #visit_TQuan record,
-       visit_TQuanI = #visit_TQuanI record,
-       visit_TRec = #visit_TRec record,
-       visit_TNat = #visit_TNat record,
-       visit_TArr = #visit_TArr record,
-       visit_TAbsT = #visit_TAbsT record,
-       visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = new,
-       visit_TArrowTAL = #visit_TArrowTAL record,
-       visit_var = #visit_var record,
-       visit_bsort = #visit_bsort record,
-       visit_idx = #visit_idx record,
-       visit_sort = #visit_sort record,
-       visit_ty_const = #visit_ty_const record,
-       visit_ty_bin_op = #visit_ty_bin_op record,
-       visit_quan = #visit_quan record,
-       visit_ibind_anno_bsort = #visit_ibind_anno_bsort record,
-       visit_ibind_anno_sort = #visit_ibind_anno_sort record,
-       visit_tbind_anno = #visit_tbind_anno record,
-       extend_i = #extend_i record,
-       extend_t = #extend_t record
-  }
+(* fun override_visit_TProdEx (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable) new : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable = *)
+(*   { *)
+(*        visit_kind = #visit_kind record, *)
+(*        visit_KType = #visit_KType record, *)
+(*        visit_KArrow = #visit_KArrow record, *)
+(*        visit_KArrowT = #visit_KArrowT record, *)
+(*        visit_ty = #visit_ty record, *)
+(*        visit_TVar = #visit_TVar record, *)
+(*        visit_TConst = #visit_TConst record, *)
+(*        visit_TBinOp = #visit_TBinOp record, *)
+(*        visit_TArrow = #visit_TArrow record, *)
+(*        visit_TAbsI = #visit_TAbsI record, *)
+(*        visit_TAppI = #visit_TAppI record, *)
+(*        visit_TQuan = #visit_TQuan record, *)
+(*        visit_TQuanI = #visit_TQuanI record, *)
+(*        visit_TRec = #visit_TRec record, *)
+(*        visit_TNat = #visit_TNat record, *)
+(*        visit_TArr = #visit_TArr record, *)
+(*        visit_TAbsT = #visit_TAbsT record, *)
+(*        visit_TAppT = #visit_TAppT record, *)
+(*        visit_TProdEx = new, *)
+(*        (* visit_TArrowTAL = #visit_TArrowTAL record, *) *)
+(*        visit_var = #visit_var record, *)
+(*        visit_bsort = #visit_bsort record, *)
+(*        visit_idx = #visit_idx record, *)
+(*        visit_sort = #visit_sort record, *)
+(*        visit_ty_const = #visit_ty_const record, *)
+(*        visit_ty_bin_op = #visit_ty_bin_op record, *)
+(*        visit_quan = #visit_quan record, *)
+(*        visit_ibind_anno_bsort = #visit_ibind_anno_bsort record, *)
+(*        visit_ibind_anno_sort = #visit_ibind_anno_sort record, *)
+(*        visit_tbind_anno = #visit_tbind_anno record, *)
+(*        extend_i = #extend_i record, *)
+(*        extend_t = #extend_t record *)
+(*   } *)
 
 fun override_visit_ty (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable) new : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2) ty_visitor_vtable =
   {
@@ -506,8 +506,8 @@ fun override_visit_ty (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 
        visit_TArr = #visit_TArr record,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -542,8 +542,8 @@ fun override_visit_TAbsI (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TArr = #visit_TArr record,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -578,8 +578,8 @@ fun override_visit_TAbsT (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TArr = #visit_TArr record,
        visit_TAbsT = new,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -614,8 +614,8 @@ fun override_visit_TArrow (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        visit_TArr = #visit_TArr record,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -650,8 +650,8 @@ fun override_visit_TQuanI (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        visit_TArr = #visit_TArr record,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -686,8 +686,8 @@ fun override_visit_TQuan (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit_TArr = #visit_TArr record,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -722,8 +722,8 @@ fun override_visit_TArr (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2
        visit_TArr = new,
        visit_TAbsT = #visit_TAbsT record,
        visit_TAppT = #visit_TAppT record,
-       visit_TProdEx = #visit_TProdEx record,
-       visit_TArrowTAL = #visit_TArrowTAL record,
+       (* visit_TProdEx = #visit_TProdEx record, *)
+       (* visit_TArrowTAL = #visit_TArrowTAL record, *)
        visit_var = #visit_var record,
        visit_bsort = #visit_bsort record,
        visit_idx = #visit_idx record,
@@ -1052,9 +1052,9 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        visit_EMatchSum : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind list -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EMatchPair : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ebind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_EMatchUnfold : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
-       visit_EMallocPair : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
-       visit_EPairAssign : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
-       visit_EProjProtected : 'this -> 'env -> projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       (* visit_EMallocPair : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr, *)
+       (* visit_EPairAssign : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr, *)
+       (* visit_EProjProtected : 'this -> 'env -> projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr, *)
        visit_EHalt : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_var : 'this -> 'env -> 'var -> 'var2,
        visit_cvar : 'this -> 'env -> 'var -> 'var2,
@@ -1137,9 +1137,9 @@ fun default_expr_visitor_vtable
           | EMatchSum data => #visit_EMatchSum vtable this env data
           | EMatchPair data => #visit_EMatchPair vtable this env data
           | EMatchUnfold data => #visit_EMatchUnfold vtable this env data
-          | EMallocPair data => #visit_EMallocPair vtable this env data
-          | EPairAssign data => #visit_EPairAssign vtable this env data
-          | EProjProtected data => #visit_EProjProtected vtable this env data
+          (* | EMallocPair data => #visit_EMallocPair vtable this env data *)
+          (* | EPairAssign data => #visit_EPairAssign vtable this env data *)
+          (* | EProjProtected data => #visit_EProjProtected vtable this env data *)
           | EHalt data => #visit_EHalt vtable this env data
           | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_list (#visit_expr vtable this) env es)
           | ETuple es => ETuple (map (#visit_expr vtable this env) es)
@@ -1424,29 +1424,29 @@ fun default_expr_visitor_vtable
       in
         EMatchUnfold (e, branch)
       end
-    fun visit_EMallocPair this env (a, b) =
-      let
-        val vtable = cast this
-        val a = #visit_expr vtable this env a
-        val b = #visit_expr vtable this env b
-      in
-        EMallocPair (a, b)
-      end
-    fun visit_EPairAssign this env (e1, proj, e2) =
-      let
-        val vtable = cast this
-        val e1 = #visit_expr vtable this env e1
-        val e2 = #visit_expr vtable this env e2
-      in
-        EPairAssign (e1, proj, e2)
-      end
-    fun visit_EProjProtected this env (proj, e) =
-      let
-        val vtable = cast this
-        val e = #visit_expr vtable this env e
-      in
-        EProjProtected (proj, e)
-      end
+    (* fun visit_EMallocPair this env (a, b) = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val a = #visit_expr vtable this env a *)
+    (*     val b = #visit_expr vtable this env b *)
+    (*   in *)
+    (*     EMallocPair (a, b) *)
+    (*   end *)
+    (* fun visit_EPairAssign this env (e1, proj, e2) = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val e1 = #visit_expr vtable this env e1 *)
+    (*     val e2 = #visit_expr vtable this env e2 *)
+    (*   in *)
+    (*     EPairAssign (e1, proj, e2) *)
+    (*   end *)
+    (* fun visit_EProjProtected this env (proj, e) = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val e = #visit_expr vtable this env e *)
+    (*   in *)
+    (*     EProjProtected (proj, e) *)
+    (*   end *)
     fun visit_EHalt this env (e, t) =
       let
         val vtable = cast this
@@ -1490,9 +1490,9 @@ fun default_expr_visitor_vtable
       visit_EMatchSum = visit_EMatchSum,
       visit_EMatchPair = visit_EMatchPair,
       visit_EMatchUnfold = visit_EMatchUnfold,
-      visit_EMallocPair = visit_EMallocPair,
-      visit_EPairAssign = visit_EPairAssign,
-      visit_EProjProtected = visit_EProjProtected,
+      (* visit_EMallocPair = visit_EMallocPair, *)
+      (* visit_EPairAssign = visit_EPairAssign, *)
+      (* visit_EProjProtected = visit_EProjProtected, *)
       visit_EHalt = visit_EHalt,
       visit_var = visit_var,
       visit_cvar = visit_cvar,
@@ -1562,9 +1562,9 @@ fun override_visit_EVar (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -1613,9 +1613,9 @@ fun override_visit_ELet (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -1664,9 +1664,9 @@ fun override_visit_EMatchUnfold (record : ('this, 'env, 'var, 'idx, 'sort, 'kind
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = new,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -1715,9 +1715,9 @@ fun override_visit_EMatchPair (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = new,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -1766,9 +1766,9 @@ fun override_visit_EMatchSum (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, '
     visit_EMatchSum = new,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -1817,9 +1817,9 @@ fun override_visit_EVarConstr (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -1868,9 +1868,9 @@ fun override_visit_EAppConstr (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -1919,9 +1919,9 @@ fun override_visit_EAscType (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 't
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -1970,9 +1970,9 @@ fun override_visit_ERec (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2021,9 +2021,9 @@ fun override_visit_EAbs (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2072,9 +2072,9 @@ fun override_visit_EUnOp (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2123,9 +2123,9 @@ fun override_visit_EBinOp (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty,
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2174,9 +2174,9 @@ fun override_visit_EUnpack (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2225,9 +2225,9 @@ fun override_visit_EUnpackI (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 't
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2276,9 +2276,9 @@ fun override_visit_expr (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, '
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2327,9 +2327,9 @@ fun override_visit_ECase (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2378,9 +2378,9 @@ fun override_visit_EAscTime (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 't
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2429,9 +2429,9 @@ fun override_visit_EAppI (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,
@@ -2479,9 +2479,9 @@ fun override_visit_ETriOp (record : ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty,
     visit_EMatchSum = #visit_EMatchSum record,
     visit_EMatchPair = #visit_EMatchPair record,
     visit_EMatchUnfold = #visit_EMatchUnfold record,
-    visit_EMallocPair = #visit_EMallocPair record,
-    visit_EPairAssign = #visit_EPairAssign record,
-    visit_EProjProtected = #visit_EProjProtected record,
+    (* visit_EMallocPair = #visit_EMallocPair record, *)
+    (* visit_EPairAssign = #visit_EPairAssign record, *)
+    (* visit_EProjProtected = #visit_EProjProtected record, *)
     visit_EHalt = #visit_EHalt record,
     visit_var = #visit_var record,
     visit_cvar = #visit_cvar record,

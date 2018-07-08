@@ -202,7 +202,7 @@ fun forget_i_mt x n b =
           | TUnit r => TUnit r
 	  | TProd (t1, t2) => TProd (f x n t1, f x n t2)
 	  | TUniI (s, bind, r) => TUniI (on_i_s x n s, on_i_ibind (on_pair (on_pair on_i_i on_i_i) f) x n bind, r)
-          | TSumbool (s1, s2) => TSumbool (on_i_s x n s1, on_i_s x n s2)
+          (* | TSumbool (s1, s2) => TSumbool (on_i_s x n s1, on_i_s x n s2) *)
           | TVar y => TVar y
           | TApp (t1, t2) => TApp (f x n t1, f x n t2)
           | TAbs (k, bind, r) => TAbs (k, on_i_tbind f x n bind, r)
@@ -214,7 +214,8 @@ fun forget_i_mt x n b =
           | TMap t => TMap $ f x n t
           | TVector t => TVector $ f x n t
           | TState _ => b
-          | TTuplePtr (ts, n, r) => TTuplePtr (map (f x n) ts, n, r)
+          (* | TTuplePtr (ts, n, r) => TTuplePtr (map (f x n) ts, n, r) *)
+          | TPtr t => TPtr (f x n t)
       end
     val ret =
         on_App_UVar ()

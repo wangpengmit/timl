@@ -388,38 +388,38 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str ")";
           close_box ()
         )
-      | TProdEx ((t1, b1), (t2, b2)) =>
-        (
-          open_hbox ();
-          str "TProdEx";
-          space ();
-          str "(";
-          str $ str_bool b1;
-          comma ();
-          pp_t t1;
-          comma ();
-          str $ str_bool b2;
-          comma ();
-          pp_t t2;
-          str ")";
-          close_box ()
-        )
-      | TArrowTAL (ts, i) =>
-        (
-          open_hbox ();
-          str "TArrowTAL";
-          space ();
-          str "(";
-          Rctx.appi
-            (fn (r, t) =>
-                (str ("r" ^ str_int r);
-                 str ":"; space ();
-                 pp_t t;
-                 comma ())) ts;
-          str $ str_i i;
-          str ")";
-          close_box ()
-        )
+      (* | TProdEx ((t1, b1), (t2, b2)) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "TProdEx"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     str $ str_bool b1; *)
+      (*     comma (); *)
+      (*     pp_t t1; *)
+      (*     comma (); *)
+      (*     str $ str_bool b2; *)
+      (*     comma (); *)
+      (*     pp_t t2; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
+      (* | TArrowTAL (ts, i) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "TArrowTAL"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     Rctx.appi *)
+      (*       (fn (r, t) => *)
+      (*           (str ("r" ^ str_int r); *)
+      (*            str ":"; space (); *)
+      (*            pp_t t; *)
+      (*            comma ())) ts; *)
+      (*     str $ str_i i; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | TArrowEVM (st, rctx, ts, (i, j)) =>
         (
           open_hbox ();
@@ -1330,44 +1330,44 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         end
-      | EMallocPair (a, b) =>
-        (
-          open_hbox ();
-          str "EMallocPair";
-          space ();
-          str "(";
-          pp_e a;
-          comma ();
-          pp_e b;
-          str ")";
-          close_box ()
-        )
-      | EPairAssign (e1, proj, e2) =>
-        (
-          open_hbox ();
-          str "EPairAssign";
-          space ();
-          str "(";
-          pp_e e1;
-          comma ();
-          str $ str_proj proj;
-          comma ();
-          pp_e e2;
-          str ")";
-          close_box ()
-        )
-      | EProjProtected (proj, e) =>
-        (
-          open_hbox ();
-          str "EProjProtected";
-          space ();
-          str "(";
-          str $ str_proj proj;
-          comma ();
-          pp_e e;
-          str ")";
-          close_box ()
-        )
+      (* | EMallocPair (a, b) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EMallocPair"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e a; *)
+      (*     comma (); *)
+      (*     pp_e b; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
+      (* | EPairAssign (e1, proj, e2) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EPairAssign"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e1; *)
+      (*     comma (); *)
+      (*     str $ str_proj proj; *)
+      (*     comma (); *)
+      (*     pp_e e2; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
+      (* | EProjProtected (proj, e) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EProjProtected"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     str $ str_proj proj; *)
+      (*     comma (); *)
+      (*     pp_e e; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | EHalt (e, t) =>
         (
           open_hbox ();

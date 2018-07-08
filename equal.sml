@@ -175,11 +175,11 @@ fun eq_mt t t' =
              TUniI (s', Bind (_, (i', t')), _) => eq_s s s' andalso eq_2i i i' andalso eq_mt t t'
            | _ => false
         )
-      | TSumbool (s1, s2) =>
-        (case t' of
-             TSumbool (s1', s2') => eq_s s1 s1' andalso eq_s s2 s2'
-           | _ => false
-        )
+      (* | TSumbool (s1, s2) => *)
+      (*   (case t' of *)
+      (*        TSumbool (s1', s2') => eq_s s1 s1' andalso eq_s s2 s2' *)
+      (*      | _ => false *)
+      (*   ) *)
       | TVar x =>
         (case t' of
              TVar x' => eq_var (x, x')
@@ -271,9 +271,14 @@ fun eq_mt t t' =
              TState (x', _) => x = x'
            | _ => false
         )
-      | TTuplePtr (ts, n, _) =>
+      (* | TTuplePtr (ts, n, _) => *)
+      (*   (case t' of *)
+      (*        TTuplePtr (ts', n', _) => eq_ls (uncurry eq_mt) (ts, ts') andalso n = n' *)
+      (*      | _ => false *)
+      (*   ) *)
+      | TPtr t =>
         (case t' of
-             TTuplePtr (ts', n', _) => eq_ls (uncurry eq_mt) (ts, ts') andalso n = n'
+             TPtr t' => eq_mt t t'
            | _ => false
         )
 

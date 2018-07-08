@@ -29,12 +29,21 @@ infix 9 %@
 infix 8 %^
 infix 7 %*
 infix 6 %+ 
-infix 4 %<=
 infix 4 %<
+infix 4 %>
+infix 4 %<=
 infix 4 %>=
 infix 4 %=
+infix 4 <?
+infix 4 >?
+infix 4 <=?
+infix 4 >=?
+infix 4 =?
+infix 4 <>?
 infixr 3 /\
+infixr 3 /\?
 infixr 2 \/
+infixr 2 \/?
 infixr 1 -->
 infix 1 <->
 
@@ -230,14 +239,17 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
           in
 	    (TState (x, r), HType)
           end
-        | U.TTuplePtr (ts, offset, r) =>
-          let
-            val () = if offset < length ts then ()
-                     else raise Error (r, ["tuple_ptr offset out of bound"]) 
-          in
-	    (TTuplePtr (map (fn t => check_higher_kind_Type (ctx, t)) ts, offset, r),
-             HType)
-          end
+        (* | U.TTuplePtr (ts, offset, r) => *)
+        (*   let *)
+        (*     val () = if offset < length ts then () *)
+        (*              else raise Error (r, ["tuple_ptr offset out of bound"])  *)
+        (*   in *)
+	(*     (TTuplePtr (map (fn t => check_higher_kind_Type (ctx, t)) ts, offset, r), *)
+        (*      HType) *)
+        (*   end *)
+        | U.TPtr t =>
+	  (TPtr $ check_higher_kind_Type (ctx, t),
+           HType)
         | U.TNat (i, r) =>
 	  (TNat (check_basic_sort gctx (sctx, i, BSNat), r),
            HType)
@@ -268,8 +280,8 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
           in
             (TAbsI (b, Bind ((name, r1), t), r), k)
           end
-        | U.TSumbool (s1, s2) =>
-          (TSumbool (is_wf_sort gctx (sctx, s1), is_wf_sort gctx (sctx, s2)), HType)
+        (* | U.TSumbool (s1, s2) => *)
+        (*   (TSumbool (is_wf_sort gctx (sctx, s1), is_wf_sort gctx (sctx, s2)), HType) *)
 	| U.TBase a => (TBase a, HType)
         | U.TUVar ((), r) =>
           (* type underscore will always mean a type of kind Type *)
@@ -781,9 +793,9 @@ fun is_value (e : U.expr) : bool =
       | ELet _ => false
       | EAppConstr (_, _, _, e, _) => is_value e
       | ECase _ => false
-      | ECaseSumbool _ => false
+      (* | ECaseSumbool _ => false *)
       | EIfi _ => false
-      | ESetModify _ => false
+      | ESet _ => false
       | EGet _ => false
   end
 
@@ -942,7 +954,12 @@ fun is_constr e =
 fun N n = INat (n, dummy)
 fun TN n = (to_real n, N 0)
 
-fun nat_exp_cost i2 = IToReal $ N C_exp %+ N C_expbyte %* (N1' %+ IFloor' (ILog256 $ IToReal' i2))
+fun IFloor' i = IFloor (i, dummy)
+fun IToReal' i = IToReal (i, dummy)
+fun ILog256 i = ILog ("256", i, dummy)
+fun IIte' (i1, i2, i3) = IIte (i1, i2, i3, dummy)
+                       
+fun nat_exp_cost i2 = IToReal' $ N C_exp %+ N C_expbyte %* (N 1 %+ IFloor' (ILog256 $ IToReal' i2))
              
 fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext), (* pcovers, *) pn : U.ptrn, t : mtype) : ptrn * cover * context * int =
   let
@@ -1265,12 +1282,33 @@ fun get_rules_cost_adjustments (get_inj : 'cvar -> int * int) (rules : (('cvar, 
       ds
     end
       
+fun is_nullable_wordsize_ty t =
+    case t of
+        TNat _ => true
+      | TiBool _ => true
+      | TBase (t, _) =>
+        (case t of
+             BTInt () => true
+           | BTBool () => true
+           | BTByte () => true
+        )
+      | TUnit _ => true
+      | _ => false
+        
+fun is_wordsize_ty t =
+    if is_nullable_wordsize_ty t then true
+    else
+      case t of
+          (* todo: single-constructor datatypes could also be wordsize *)
+          _ => false
+        
 fun flatten_tuple_record t =
   let
     val loop = flatten_tuple_record
   in
     case t of
-        TTuple (ts, _) => concatMap loop ts
+        (* TTuple (ts, _) => concatMap loop ts *)
+        TProd (t1, t2) => loop t1 @ loop t2
       | TRecord (fields, _) => concatMap loop $ map snd $ sort cmp_str_fst $ listItemsi fields
       | _ => [t]
   end
@@ -1336,6 +1374,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
       in
         (x, i)
       end
+    fun assert_wordsize_ty r t = if is_wordsize_ty t then ()
+                                 else raise Error (r, ["must be word-sized type"])
     fun main () =
       case e_all of
 	  U.EVar (x, eia) => raise Impossible "EVar should be surrounded by EAnnoLiveVars"
@@ -1638,7 +1678,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e2, j2, st) = check_mtype (ctx, st) (e2, TNat (new, r))
             val t1 = whnf_mt true gctx kctx t1
             val (x, old) = get_nat_cell (fn () => get_region_e e1) st t1
-            val store_cost = IIte' (old =? N0 && new <>? N0, to_real C_sset, to_real C_sreset)
+            val store_cost = IIte' (old =? N 0 /\? new <>? N 0, to_real C_sset, to_real C_sreset)
           in
             (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2 %%+ TN C_ENatCellSet %%+ (store_cost, N0 r), st @+ (x, new))
           end
@@ -1646,11 +1686,11 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           let
             val (e, t, i, st) = get_mtype (ctx, st) e
             val t = whnf_mt true gctx kctx t
-            val (name_ts, _) =
+            val (fields, _) =
                 case t of
                     TRecord a => a
                   | _ => raise Error (r, ["can't infer the record type"])
-            val sorted_names = sort_string $ map fst name_ts
+            val sorted_names = sort_string $ SMapU.domain fields
             val offset = case indexOf (curry op= name) sorted_names of
                              SOME a => a
                            | NONE => raise Error (r, ["field not found"])
@@ -1720,7 +1760,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val t = assert_TPtr (fn () => str_mt gctxn skctxn t) (fn () => get_region_e e) t
             fun calculate_offset t proj =
               let
-                val (ts, proj) =
+                val (ts, n) =
                     case (t, proj) of
                         (TProd (t1, t2), inl n) => ([t1, t2], n)
                       | (TRecord (fields, _), inr name) =>
@@ -1763,7 +1803,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e, t, j, st) = get_mtype ctx_st e
             val t = whnf_mt true gctx kctx t
             val t = assert_TPtr (fn () => str_mt gctxn skctxn t) (fn () => r) t
-            val () = assert_wordsize_ty t
+            val () = assert_wordsize_ty r t
           in
             (EUnOp (opr, e, r), t, j %%+ TN C_EStorageGet, st)
           end
@@ -1773,7 +1813,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e1, t1, j1, st) = get_mtype (ctx, st) e1
             val t1 = whnf_mt true gctx kctx t1
             val t = assert_TPtr (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
-            val () = assert_wordsize_ty t
+            val () = assert_wordsize_ty r t
             val (e2, j2, st) = check_mtype (ctx, st) (e2, t)
           in
             (EBinOp (opr, e1, e2), TUnit r, j1 %%+ j2 %%+ TN C_EStorageSet, st)
@@ -2073,28 +2113,28 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
 	    (ELet ((SOME t, SOME $ fst d, SOME $ snd d), Unbound.Bind (Teles decls, e), r), t, d, st)
 	  end
-        | U.ECaseSumbool (e, bind1, bind2, r) =>
-          let
-            val s1 = fresh_sort gctx sctx r
-            val s2 = fresh_sort gctx sctx r
-            val (e, j_e, st) = check_mtype (ctx, st) (e, TSumbool (s1, s2))
-            val (iname1, e1) = unBindSimpName bind1
-            val (iname2, e2) = unBindSimpName bind2
-            val (e1, t1, j1, st1) = open_close add_sorting_skcts (fst iname1, s1) (ctx, st) (fn ctx_st => get_mtype ctx_st e1)
-            val ctxd = ctx_from_sorting (fst iname1, s1)
-            val skctx' = add_sorting_sk (fst iname1, s1) (#1 ctx, #2 ctx)
-            val (t1, j1) = forget_or_check_return r gctx skctx' ctxd (t1, j1) (NONE, NONE, NONE)
-            val st1 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st1
-            val (e2, t2, j2, st2) = open_close add_sorting_skcts (fst iname2, s2) (ctx, st) (fn ctx_st => get_mtype ctx_st e2)
-            val ctxd = ctx_from_sorting (fst iname2, s2)
-            val skctx' = add_sorting_sk (fst iname2, s2) (#1 ctx, #2 ctx)
-            val (t2, j2) = forget_or_check_return r gctx skctx' ctxd (t2, j2) (NONE, NONE, NONE)
-            val st2 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st2
-            val () = unify_mt r gctx (sctx, kctx) (t2, t1)
-            val () = unify_state r gctxn sctxn (st2, st1)
-          in
-            (ECaseSumbool (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %%+ smart_max_pair j1 j2, st1)
-          end
+        (* | U.ECaseSumbool (e, bind1, bind2, r) => *)
+        (*   let *)
+        (*     val s1 = fresh_sort gctx sctx r *)
+        (*     val s2 = fresh_sort gctx sctx r *)
+        (*     val (e, j_e, st) = check_mtype (ctx, st) (e, TSumbool (s1, s2)) *)
+        (*     val (iname1, e1) = unBindSimpName bind1 *)
+        (*     val (iname2, e2) = unBindSimpName bind2 *)
+        (*     val (e1, t1, j1, st1) = open_close add_sorting_skcts (fst iname1, s1) (ctx, st) (fn ctx_st => get_mtype ctx_st e1) *)
+        (*     val ctxd = ctx_from_sorting (fst iname1, s1) *)
+        (*     val skctx' = add_sorting_sk (fst iname1, s1) (#1 ctx, #2 ctx) *)
+        (*     val (t1, j1) = forget_or_check_return r gctx skctx' ctxd (t1, j1) (NONE, NONE, NONE) *)
+        (*     val st1 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st1 *)
+        (*     val (e2, t2, j2, st2) = open_close add_sorting_skcts (fst iname2, s2) (ctx, st) (fn ctx_st => get_mtype ctx_st e2) *)
+        (*     val ctxd = ctx_from_sorting (fst iname2, s2) *)
+        (*     val skctx' = add_sorting_sk (fst iname2, s2) (#1 ctx, #2 ctx) *)
+        (*     val (t2, j2) = forget_or_check_return r gctx skctx' ctxd (t2, j2) (NONE, NONE, NONE) *)
+        (*     val st2 = StMap.map (forget_ctx_d r gctx (#1 skctx') (#1 ctxd)) st2 *)
+        (*     val () = unify_mt r gctx (sctx, kctx) (t2, t1) *)
+        (*     val () = unify_state r gctxn sctxn (st2, st1) *)
+        (*   in *)
+        (*     (ECaseSumbool (e, IBind (iname1, e1), IBind (iname2, e2), r), t1, j_e %%+ smart_max_pair j1 j2, st1) *)
+        (*   end *)
 	| U.EAppConstr ((x, (eia, _)), ts, is, e, ot) => 
 	  let
             val () = assert (fn () => null ts) "get_mtype()/EAppConstr: null ts"
@@ -2924,26 +2964,6 @@ fun get_sig gctx m =
         (ModTransparentAsc (m, sgn), sg')
       end
 
-fun is_nullable_wordsize_ty t =
-    case t of
-        TNat _ => true
-      | TiBool _ => true
-      | TBase (t, _) =>
-        (case t of
-             BTInt () => true
-           | BTBool () => true
-           | BTByte () => true
-        )
-      | TUnit _ => true
-      | _ => false
-        
-fun is_wordsize_ty t =
-    if is_nullable_wordsize_ty t then true
-    else
-      case t of
-          (* todo: single-constructor datatypes could also be wordsize *)
-          _ => false
-        
 fun is_wf_map_val t =
     let
       val loop = is_wf_map_val

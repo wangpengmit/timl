@@ -185,9 +185,9 @@ fun live_vars_expr_visitor_vtable cast () =
           | EMatchSum data => #visit_EMatchSum vtable this env data
           | EMatchPair data => #visit_EMatchPair vtable this env data
           | EMatchUnfold data => #visit_EMatchUnfold vtable this env data
-          | EMallocPair data => #visit_EMallocPair vtable this env data
-          | EPairAssign data => #visit_EPairAssign vtable this env data
-          | EProjProtected data => #visit_EProjProtected vtable this env data
+          (* | EMallocPair data => #visit_EMallocPair vtable this env data *)
+          (* | EPairAssign data => #visit_EPairAssign vtable this env data *)
+          (* | EProjProtected data => #visit_EProjProtected vtable this env data *)
           | EHalt data => #visit_EHalt vtable this env data
           | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_es this env es)
           | ETuple es => ETuple (visit_es this env es)
@@ -492,28 +492,28 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EHalt (e, t)
       end
-    fun visit_EMallocPair this env (e1, e2) =
-      let
-        val vtable = cast this
-        val (e1, e2) = visit_e2 this env (e1, e2)
-      in
-        EMallocPair (e1, e2)
-      end
-    fun visit_EPairAssign this env (e1, proj, e2) =
-      let
-        val vtable = cast this
-        val (e1, e2) = visit_e2 this env (e1, e2)
-      in
-        EPairAssign (e1, proj, e2)
-      end
-    fun visit_EProjProtected this env (proj, e) =
-      let
-        val vtable = cast this
-        val env = set_has_k env
-        val e = #visit_expr vtable this env e
-      in
-        EProjProtected (proj, e)
-      end
+    (* fun visit_EMallocPair this env (e1, e2) = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val (e1, e2) = visit_e2 this env (e1, e2) *)
+    (*   in *)
+    (*     EMallocPair (e1, e2) *)
+    (*   end *)
+    (* fun visit_EPairAssign this env (e1, proj, e2) = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val (e1, e2) = visit_e2 this env (e1, e2) *)
+    (*   in *)
+    (*     EPairAssign (e1, proj, e2) *)
+    (*   end *)
+    (* fun visit_EProjProtected this env (proj, e) = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val env = set_has_k env *)
+    (*     val e = #visit_expr vtable this env e *)
+    (*   in *)
+    (*     EProjProtected (proj, e) *)
+    (*   end *)
     fun err name = raise Impossible $ "live_vars/" ^ name
     fun visit_EMatchSum this env data = err "EMatchSum"
     fun visit_EMatchPair this env data = err "EMatchPair"
@@ -555,9 +555,9 @@ fun live_vars_expr_visitor_vtable cast () =
       visit_EMatchSum = visit_EMatchSum,
       visit_EMatchPair = visit_EMatchPair,
       visit_EMatchUnfold = visit_EMatchUnfold,
-      visit_EMallocPair = visit_EMallocPair,
-      visit_EPairAssign = visit_EPairAssign,
-      visit_EProjProtected = visit_EProjProtected,
+      (* visit_EMallocPair = visit_EMallocPair, *)
+      (* visit_EPairAssign = visit_EPairAssign, *)
+      (* visit_EProjProtected = visit_EProjProtected, *)
       visit_EHalt = visit_EHalt,
       visit_var = visit_var,
       visit_cvar = visit_cvar,

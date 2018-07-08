@@ -65,6 +65,7 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
       fun space () = PP.space s 1
       fun add_space a = (space (); a)
       fun str v = PP.string s v
+      fun strs s = (str s; space ())
       fun comma () = (str ","; space ())
       fun colon () = (str ":"; space ())
       fun open_hbox () = PP.openHBox s
@@ -209,18 +210,18 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
             str ")";
             close_box ()
           )
-        | TSumbool (s1, s2) =>
-          (
-            open_hbox ();
-            str "TSumbool";
-            space ();
-            str "(";
-            str $ str_s s1;
-            comma ();
-            str $ str_s s2;
-            str ")";
-            close_box ()
-          )
+        (* | TSumbool (s1, s2) => *)
+        (*   ( *)
+        (*     open_hbox (); *)
+        (*     str "TSumbool"; *)
+        (*     space (); *)
+        (*     str "("; *)
+        (*     str $ str_s s1; *)
+        (*     comma (); *)
+        (*     str $ str_s s2; *)
+        (*     str ")"; *)
+        (*     close_box () *)
+        (*   ) *)
         | TBase (bt, _) =>
           (
             open_hbox ();
@@ -305,15 +306,12 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
             str ")";
             close_box ()
           )
-        | TTuplePtr (ts, n, _) =>
+        | TPtr t =>
           (
             open_hbox ();
-            str "TTuplePtr";
-            space ();
+            strs "TPtr";
             str "(";
-            str $ str_int n;
-            comma ();
-            app (fn t => (pp_t t; comma ())) ts;
+            pp_t t;
             str ")";
             close_box ()
           )
@@ -471,6 +469,13 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           (Option.app pp_t; comma ();
            Option.app (str o str_i) i; comma ();
            Option.app (str o str_i) j)
+      fun pp_offset (e, path) =
+        (
+          open_hbox ();
+          pp_e e;
+          app (fn (proj, _) => (space (); str "."; str $ str_sum str_int id proj)) path;
+          close_box ()
+        )
     in
       case e of
           EVar (x, (b1, b2)) =>
@@ -811,17 +816,17 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
                   end) rules;
             close_box ()
           )
-        | ECaseSumbool (e, bind1, bind2, _) =>
-          let
-            val (name1, e1) = get_bind bind1
-            val (name2, e2) = get_bind bind2
-          in
-            open_vbox_noindent (); open_hbox (); str "ECaseSumbool"; space (); str "("; pp_e e; close_box (); comma ();
-	    open_vbox (); str name1; str ":"; space ();
-            pp_e e1; close_box (); comma ();
-	    open_vbox (); str name2; str ":"; space ();
-            pp_e e2; close_box (); str ")"; close_box ()
-          end
+        (* | ECaseSumbool (e, bind1, bind2, _) => *)
+        (*   let *)
+        (*     val (name1, e1) = get_bind bind1 *)
+        (*     val (name2, e2) = get_bind bind2 *)
+        (*   in *)
+        (*     open_vbox_noindent (); open_hbox (); str "ECaseSumbool"; space (); str "("; pp_e e; close_box (); comma (); *)
+	(*     open_vbox (); str name1; str ":"; space (); *)
+        (*     pp_e e1; close_box (); comma (); *)
+	(*     open_vbox (); str name2; str ":"; space (); *)
+        (*     pp_e e2; close_box (); str ")"; close_box () *)
+        (*   end *)
         | EIfi (e, bind1, bind2, _) =>
           let
             val (name1, e1) = get_bind bind1
@@ -833,17 +838,15 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
 	    open_vbox (); str name2; str ":"; space ();
             pp_e e2; close_box (); str ")"; close_box ()
           end
-        | ESetModify (is_modify, x, es, e, _) =>
+        | ESet (x, es, e, _) =>
           (
             open_hbox ();
-            str "ESetModify";
+            str "ESet";
             space ();
             str "(";
-            str $ str_bool is_modify;
-            comma ();
             str x;
             comma ();
-            app (fn e => (pp_e e; comma ())) es;
+            app (fn e => (pp_offset e; comma ())) es;
             pp_e e;
             str ")";
             close_box ()
@@ -856,7 +859,7 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
             str "(";
             str x;
             comma ();
-            app (fn e => (pp_e e; comma ())) es;
+            app (fn e => (pp_offset e; comma ())) es;
             str ")";
             close_box ()
           )

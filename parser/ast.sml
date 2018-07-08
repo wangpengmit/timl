@@ -56,6 +56,7 @@ datatype ty =
 	 | TAppI of ty * idx * region
 	 | TAbs of id_or_bsort_bind list * ty * region
          | TRecord of (id * ty) list * region
+         | TPtr of ty
 
 datatype ptrn =
 	 PnConstr of (long_id * bool) * string list * ptrn option * region
@@ -90,7 +91,7 @@ datatype expr_const =
 
 datatype ast_expr_unop =
          EUTiML of expr_un_op
-         | EUDeref of bool
+         | EUDeref of bool(*is storage?*)
          | EUReturn of unit
          | EUThrow of unit
          | EUAsm of unit
@@ -110,14 +111,16 @@ datatype ast_expr_binop =
 
 datatype ast_expr_triop =
          ETIte of unit
-         | ETIfDec of unit
+         (* | ETIfDec of unit *)
          | ETIfi of unit
 
-(* datatype storage = *)
-(*          StMemory *)
-(*          | StStorage *)
-(*          (* | StIndexed *) *)
+datatype storage =
+         StMemory
+         | StStorage
+         (* | StIndexed *)
                       
+type proj_path = (tuple_record_proj * region) list
+                                                
 datatype exp = 
 	 EVar of long_id * (bool * bool)
          | ETuple of exp list * region
@@ -133,8 +136,8 @@ datatype exp =
          | EBinOp of ast_expr_binop * exp * exp * region
          | ETriOp of ast_expr_triop * exp * exp * exp * region
          | ENever of region
-         | ESetModify of bool(*is modify?*) * (id * (exp * proj_path) list) * exp * region
-         | EGet of (id * (exp * proj_path) list) * region
+         | ESetModify of bool(*is modify?*) * id * (exp * proj_path) list * exp * region
+         | EGet of id * (exp * proj_path) list * region
          | ERecord of (id * exp) list * region
          | ENewArrayValues of exp list * region
          | ESemis of exp list * region
@@ -142,7 +145,7 @@ datatype exp =
          | EIfs of ifelse list * region
          | EFor of id * ty option * exp * exp * exp * exp * region
          | EState of id
-         | EOffsetProjs of exp * (exp, tuple_record_proj) sum list
+         | EOffsetProjs of exp * (exp, tuple_record_proj * region) sum list
 
      and decl =
          DVal of id list * ptrn * exp * region
@@ -175,6 +178,9 @@ datatype exp =
          InitExpr of exp * region
          | InitVector of exp list * region
 
+type index_proj = (exp, tuple_record_proj * region) sum
+type index_proj_path = index_proj list
+                                      
 datatype spec =
          SpecVal of id * id list * ty * region
          | SpecDatatype of datatype_def
@@ -285,15 +291,18 @@ fun EReturn (e, r) = EUnOp (EUReturn (), e, r)
 fun EThrow (e, r) = EUnOp (EUThrow (), e, r)
 fun EThrowError r = EThrow (EInt ("0x1234567890", r), r)                          
 fun EAsm (e, r) = EUnOp (EUAsm (), e, r)
-fun EField (e, id, r) = EUnOp' (EUField (fst id), e, r)
+fun EField (e, id, r) = EUnOp' (EUField (fst id, NONE), e, r)
 fun EWhile (e1, e2, r) = EBinOp (EBWhile (), e1, e2, r)
-fun ESet (es, e, r) = ESetModify (false, es, e, r)
+fun ESet (x, es, e, r) = ESetModify (false, x, es, e, r)
 fun ETT r = ETuple ([], r)
 fun EPushBack (e1, e2, r) = EApp (EShortVar ("push_back", r), ETuple ([e1, e2], r), r)
 fun ECall (e, r) = EUnOp (EUCall (), e, r)
 fun ESend (e, r) = EUnOp (EUSend (), e, r)
 fun EFire (e, r) = EUnOp (EUFire (), e, r)
 fun EAttach (e, r) = EUnOp (EUAttach (), e, r)
+fun EDeref (b, e, r) = EUnOp (EUDeref b, e, r)
+fun EMemDeref (e, r) = EDeref (false, e, r)
+fun EStorageDeref (e, r) = EDeref (true, e, r)
 
 type typing = id * ty
 type indexed_typing = id * (ty * bool)

@@ -88,11 +88,12 @@ fun str_raw_mt (t : mtype) : string =
       in
         sprintf "(datatype $$$ = $)" [str_raw_name name, tnames, basic_sorts, constr_decls]
       end
-    | TSumbool (s1, s2) => sprintf "TSumbool ($, $)" [str_raw_s s1, str_raw_s s2]
+    (* | TSumbool (s1, s2) => sprintf "TSumbool ($, $)" [str_raw_s s1, str_raw_s s2] *)
     | TMap t => sprintf "TMap ($)" [str_raw_mt t]
     | TVector t => sprintf "TVector ($)" [str_raw_mt t]
     | TState (x, _) => sprintf "TState $" [x]
-    | TTuplePtr (ts, n, _) => sprintf "TTuplePtr ($, $)" [str_ls str_raw_mt ts, str_int n]
+    (* | TTuplePtr (ts, n, _) => sprintf "TTuplePtr ($, $)" [str_ls str_raw_mt ts, str_int n] *)
+    | TPtr t => sprintf "TPtr ($)" [str_raw_mt t]
 
 fun str_raw_t (t : ty) : string =
   case t of

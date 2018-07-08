@@ -14,27 +14,28 @@ infixr 0 $
 infix 9 %@
 infix 8 %^
 infix 7 %*
-infix 7 %/
 infix 6 %+ 
-infix 6 %-
 infix 4 %<
 infix 4 %>
 infix 4 %<=
 infix 4 %>=
 infix 4 %=
-infix 4 %<?
-infix 4 %>?
-infix 4 %<=?
-infix 4 %>=?
-infix 4 %=?
-infix 4 %<>?
+infix 4 <?
+infix 4 >?
+infix 4 <=?
+infix 4 >=?
+infix 4 =?
+infix 4 <>?
 infixr 3 /\
-infixr 2 \/
 infixr 3 /\?
+infixr 2 \/
 infixr 2 \/?
 infixr 1 -->
 infix 1 <->
 
+infix 7 %/
+infix 6 %-
+        
 infix 6 %%-
 
 fun a %/ b =
@@ -42,9 +43,6 @@ fun a %/ b =
       IConst (ICNat b, r) => IDiv (a, (b, r))
     | _ => raise Impossible "a %/ b: b must be IConst"
 
-fun INeg i = IUnOp (IUNeg (), i, dummy)
-fun a %<>? b = INeg $ a %=? b
-                     
 infixr 5 @::
 infixr 5 @@
 infix  6 @+
@@ -84,7 +82,7 @@ fun assert_TCell t =
       | _ => err ()
   end
 
-fun get_word_const_type (hctx, st_int2name) c =
+fun get_word_const_type (hctx, st_int2name, st_name2ty) c =
   case c of
       WCTT () => TUnit
     | WCNat n => TNat $ INat n
@@ -108,9 +106,9 @@ fun get_word_const_type (hctx, st_int2name) c =
           | _ => TState x
       end
 
-fun tc_w (hctx, st_int2name) (ctx as (itctx as (ictx, tctx))) w =
+fun tc_w (hctx, st_int2name, st_name2ty) (ctx as (itctx as (ictx, tctx))) w =
   case w of
-      WConst c => get_word_const_type (hctx, st_int2name) c
+      WConst c => get_word_const_type (hctx, st_int2name, st_name2ty) c
     | WUninit t => kc_against_kind itctx (t, KType ())
     | WBuiltin (name, t) => kc_against_kind itctx (t, KType ())
     | WNever t => kc_against_kind itctx (t, KType ())
@@ -133,21 +131,6 @@ fun is_tuple_offset num_fields n =
       if 0 <= n andalso n < num_fields then SOME n
       else NONE
     | NONE => NONE
-
-(* fun assert_wordsize_ty t = *)
-(*     case t of *)
-(*         TNat _ => () *)
-(*       | TiBool _ => () *)
-(*       | TConst c => *)
-(*         (case c of *)
-(*              TCUnit () => () *)
-(*            | TCEmpty () => () *)
-(*            | TCTiML c => *)
-(*              case c of *)
-(*                  BTInt () => () *)
-(*                | BTBool () => () *)
-(*                | BTByte () => ()) *)
-(*       | _ => raise Impossible "not a base storage type" *)
 
 fun C_inst b =
   case b of
@@ -371,11 +354,11 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st))
       end
-    | LT () => cmp "LT" op%<?
-    | GT () => cmp "GT" op%>?
-    | SLT () => cmp "LT" op%<=?
-    | SGT () => cmp "GT" op%>=?
-    | EQ () => cmp "EQ" op%=?
+    | LT () => cmp "LT" op<?
+    | GT () => cmp "GT" op>?
+    | SLT () => cmp "LT" op<=?
+    | SGT () => cmp "GT" op>=?
+    | EQ () => cmp "EQ" op=?
     | ISZERO () =>
       let
         val (t0, sctx) = assert_cons sctx
@@ -383,8 +366,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
             case t0 of
                 TConst (TCTiML (BTBool ())) => TBool
               | TConst (TCTiML (BTInt ())) => TBool
-              | TiBool i => TiBool $ INeg i
-              | TNat i => TiBool $ i %=? N0
+              | TiBool i => TiBool $ INeg (i, dummy)
+              | TNat i => TiBool $ i =? N0
               | _ => raise Impossible $ sprintf "ISZERO: can't operate on operand of type ($)" [str_t t0]
       in
         ((itctx, rctx, t :: sctx, st))
@@ -458,7 +441,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | JUMPDEST () => ctx
     | PUSH (n, w) =>
-      (assert_b "tc/PUSH/n" (1 <= n andalso n <= 32); ((itctx, rctx, tc_w (hctx, st_int2name) itctx (unInner w) :: sctx, st)))
+      (assert_b "tc/PUSH/n" (1 <= n andalso n <= 32); ((itctx, rctx, tc_w (hctx, st_int2name, st_name2ty) itctx (unInner w) :: sctx, st)))
     | DUP n => 
       let
         val () = assert_b "tc/DUP/n" (1 <= n andalso n <= 16)
@@ -725,11 +708,11 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | InstRestrictPtr len =>
       let
-        val (t0, sctx) = assert_cons2 sctx
+        val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
         val (ts, offset) = assert_TStorageTuplePtr t0
         val offset = assert_INat $ simp_i offset
-        val () = assert $ offset + len <= length ts
+        val () = assert_b "InstRestrictPtr/assert()" $ offset + len <= length ts
         val ts = take len $ drop offset ts
       in
         ((itctx, rctx, TStorageTuplePtr (ts, INat 0) :: sctx, st))
@@ -795,11 +778,11 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                      end
                    | TNatCell () => 
                      let
-                       val old = st @!! x
+                       val old = st @%!! x
                        val new = assert_TNat t1
                        (* todo: opportunity to collect reward *)
-                       val award = IIte' (old <>? N0 && new =? N0, to_real R_sclear, T0)
-                       val cost = IIte' (old =? N0 && new <>? N0, to_real C_sset, to_real C_sreset)
+                       val award = IIte' (old <>? N0 /\? new =? N0, to_real R_sclear, T0)
+                       val cost = IIte' (old =? N0 /\? new <>? N0, to_real C_sset, to_real C_sreset)
                        val () = add_time_idx cost
                      in
                        st @%+ (x, new)

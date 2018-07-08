@@ -56,7 +56,11 @@ fun EAnnoLiveVars (e, n, r) = EAnno (e, EALiveVars n, r)
 fun EAnnoBodyOfRecur (e, r) = EAnno (e, EABodyOfRecur (), r)
 fun EAnnoConstr (e, r) = EAnno (e, EAConstr (), r)
 fun EHalt (e, t) = EET (EETHalt (), e, t)
-fun ESet (x, es, e, r) = ESetModify (false, x, es, e, r)
+fun EPtrProj (e, proj, r) = EUnOp (EUPtrProj proj, e, r)
+fun EMapPtrProj (e1, (e2, path)) =
+  foldl (fn ((proj, r), acc) => EPtrProj (acc, (proj, NONE), r)) (EMapPtr (e1, e2)) path
+fun ENatCellGet (e, r) = EUnOp (EUNatCellGet (), e, r)
+fun ENatCellSet (e1, e2) = EBinOp (EBNatCellSet (), e1, e2)
 
 infix 0 %:
 infix 0 |>
@@ -147,7 +151,7 @@ fun is_tail_call e =
           is_tail_call $ snd $ Unbound.unBind $ hd binds
         else true
       end        
-    | ECaseSumbool _ => true
+    (* | ECaseSumbool _ => true *)
     | EIfi _ => true
     | ETriOp (ETIte (), _, _, _) => true
     | EUnOp (EUAnno _, e, _) => is_tail_call e
@@ -155,9 +159,6 @@ fun is_tail_call e =
     | EEI (EEIAscSpace (), e, _) => is_tail_call e
     | EET (EETAsc (), e, _) => is_tail_call e
     | ELet (_, bind, _) => is_tail_call $ snd $ Unbound.unBind bind
-    | _ => false
+    (* | _ => false *)
 
-fun EMapPtrProj (e1, (e2, (path, r))) =
-  foldl (fn (proj, acc) => EPtrProj (acc, proj, r)) (EMapPtr (e1, e2)) path
-        
 end
