@@ -103,6 +103,6 @@ fun MakeTUniI (s, name, t, r) = TUniI (s, Bind.Bind (name, t), r)
 
 fun TPureArrow (t1, i, t2) = TArrow ((StMap.empty, t1), i, (StMap.empty, t2))
 
-fun TCell t = TPtr (t, ([], SOME 0))
+(* fun TCell t = TPtr (t, ([], SOME 0)) *)
                                     
 end

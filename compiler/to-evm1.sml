@@ -93,8 +93,16 @@ fun assert_EState e =
 
 fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
 
-fun cmp_str_fst (a, b) = String.compare (fst a, fst b)
-                                
+fun flatten_tuple_record t =
+  let
+    val loop = flatten_tuple_record
+  in
+    case t of
+        TTuple ts => concatMap loop ts
+      | TRecord fields => concatMap loop $ map snd $ sort cmp_str_fst $ listItemsi fields
+      | _ => [t]
+  end
+    
 fun cg_ty_visitor_vtable cast () =
   let
     val vtable =
@@ -141,18 +149,16 @@ fun cg_ty_visitor_vtable cast () =
           in
             #visit_ty vtable this env $ TTuple ts
           end
+        | TPtr t =>
+          let
+            val ts = flatten_tuple_record t
+            val ts = visit_list (#visit_ty vtable this) env ts
+          in
+            TStorageTuplePtr (ts, N0)
+          end
         | TMap t =>
           let
-            fun flatten_map_value_t t =
-              let
-                val loop = flatten_map_value_t
-              in
-                case t of
-                    TTuple ts => concatMap loop ts
-                  | TRecord fields => concatMap loop $ map snd $ sort cmp_str_fst $ listItemsi fields
-                  | _ => [t]
-              end
-            val ts = flatten_map_value_t t
+            val ts = flatten_tuple_record t
             val ts = visit_list (#visit_ty vtable this) env ts
           in
             TMap $ TTuple ts
@@ -440,15 +446,27 @@ fun compile st_name2int ectx e =
       compile e1 @ 
       compile e2 @
       impl_nat_cmp opr
-    | EBinOp (EBMapPtr (_, offset), e1, e2) =>
+    (* | EBinOp (EBMapPtr (_, offset), e1, e2) => *)
+    (*   let *)
+    (*     val offset = assert_SOME offset *)
+    (*   in *)
+    (*     compile e1 @  *)
+    (*     compile e2 @ *)
+    (*     [MACRO_map_ptr ()] *)
+    (*     PUSH1nat offset @ *)
+    (*     [ADD] *)
+    (*   end *)
+    | EBinOp (EBMapPtr (), e1, e2) =>
+      compile e1 @ 
+      compile e2 @
+      [MACRO_map_ptr ()]
+    | EUnOp (EUPtrProj (_, offset), e, _) =>
       let
-        val offset = assert_SOME offset
+        val (offset, len) = assert_SOME offset
       in
-        compile e1 @ 
-        compile e2 @
-        [MACRO_map_ptr ()]
+        compile e @ 
         PUSH1nat offset @
-        [ADD]
+        [ADD, InstRestrictPtr len]
       end
     | EBinOp (EBStorageSet (), e1, e2) =>
       compile e1 @ 

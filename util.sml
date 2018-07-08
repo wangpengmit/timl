@@ -604,6 +604,11 @@ datatype my_bool =
          | False of unit
 
 fun imply a b = not a orelse b
-                               
+
+fun sort f = ListMergeSort.sort (fn (a, b) => f (a, b) = GREATER)
+val uniqueSort = ListMergeSort.uniqueSort
+                   
+fun cmp_str_fst (a, b) = String.compare (fst a, fst b)
+             
 end
 

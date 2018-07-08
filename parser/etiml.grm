@@ -163,7 +163,7 @@ open Ast
        | exp_term of exp
        | ty of ty
        | ty_term of ty
-       | ty_atom of ty
+       | aty of ty
        | idx of idx
        | aidx of idx
        | sort of sort
@@ -467,7 +467,7 @@ exp : exp_term (exp_term)
      | exp COLON ty (EAsc (exp, ty, (expleft, tyright)))
      | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
-     | set_modify aexp square_star exp (ESetModify (set_modify, (aexp, square_star), exp, (set_modifyleft, expright)))
+     | set_modify id square_star exp (ESetModify (set_modify, (id, square_star), exp, (set_modifyleft, expright)))
      | RETURN exp (EReturn (exp, (RETURNleft, expright)))
      (* | THROW exp (EThrow (exp, (THROWleft, expright))) *)
      | CALL exp (ECall (exp, (CALLleft, expright)))
@@ -500,9 +500,12 @@ aexp : decorated_eid (EVar decorated_eid)
      | LSQSQ exp_comma_star RSQSQ (EList (exp_comma_star, (LSQSQleft, RSQSQright)))
      | NOT aexp (EUnOp' (EUPrim (EUPBoolNeg ()), aexp, (NOTleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
-     | aexp square_plus (EGet ((aexp, square_plus), (aexpleft, square_plusright)))
-     | BANG aexp (EUnOp (EUDeref false, aexp, (BANGleft, aexpright)))
-     | BANGBANG aexp (EUnOp (EUDeref true, aexp, (BANGBANGleft, aexpright)))
+     | id square_plus (EGet ((id, square_plus), (idleft, square_plusright)))
+     | BANG id (EGet ((id, []), (BANGleft, idright)))
+     | BANGBANG aexp (EMemDeref (aexp, (BANGBANGleft, aexpright)))
+     | DEREF aexp offset_or_proj_star (EStorageDeref (EOffsetProjs (aexp, offset_or_proj_star), (DEREFleft, offset_or_proj_starright)))
+     | POND aexp offset_or_proj_star (EOffsetProjs (aexp, offset_or_proj_star))
+     | STATE id (EState id)
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
      | DDASH (EDec (DDASHleft, DDASHright))
      | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
@@ -537,16 +540,17 @@ ty : ty_term (ty_term)
    | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), INat (0, (ty1left, ty2right))), ty2, (ty1left, ty2right)))
    | ty MULT ty (TProd (ty1, ty2, (ty1left, ty2right)))
 
-ty_term : ty_atom (ty_atom)
-        | ty_term ty_atom (TAppT (ty_term, ty_atom, (ty_termleft, ty_atomright)))
+ty_term : aty (aty)
+        | ty_term aty (TAppT (ty_term, aty, (ty_termleft, atyright)))
         | ty_term LCUR idx RCUR (TAppI (ty_term, idx, (ty_termleft, RCURright)))
         | ty_term LCUR RCUR (TAppI (ty_term, IVar (underscore (LCURleft, RCURright)), (ty_termleft, RCURright)))
                   
-ty_atom : long_id (TVar long_id)
+aty : long_id (TVar long_id)
         | LPAREN ty RPAREN (ty)
         | quan sort_bind_plus COMMA ty (TQuan (quan, sort_bind_plus, ty, (quanleft, tyright)))
         | FN id_or_bsort_bind_plus DARROW ty (TAbs (id_or_bsort_bind_plus, ty, (FNleft, tyright)))
         | LCUR typing_comma_star_trailing RCUR (TRecord (typing_comma_star_trailing, (LCURleft, RCURright)))
+        | STORAGE aty (TPtr aty)
 
 idx : aidx (aidx)
     | idx PLUS idx (IBinOp (IBAdd (), idx1, idx2, (idx1left, idx2right)))
@@ -598,7 +602,7 @@ ptrn : decorated_id idx_ids ptrn_opt (PnConstr (decorated_id, map fst idx_ids, p
      | ptrn COLON ty (PnAnno (ptrn, ty, (ptrnleft, tyright)))
      | ptrn DCOLON ptrn (PnCons (ptrn1, ptrn2, (ptrn1left, ptrn2right)))
      | aptrn (aptrn)
-     | optional_storage ptrn (ptrn)
+     (* | optional_storage ptrn (ptrn) *)
 
 aptrn : LPAREN ptrn_comma_star RPAREN (PnTuple (ptrn_comma_star, (LPARENleft, RPARENright)))
       | decorated_id (PnConstr (decorated_id, [], NONE, (decorated_idleft, decorated_idright)))

@@ -172,6 +172,16 @@ local
       foldl (fn (((k, _), v), m) => (check_new_key m k; m @+ (k, elab_i v))) StMap.empty ls
     end
       
+  fun list2map r fields =
+    let
+      val fields = map (mapFst fst) fields
+      val m = SMapU.fromList fields
+      val () = if length fields = SMap.numItems m then ()
+               else raise Error (r, "duplicate field names")
+    in
+      m
+    end
+      
   fun elab_mt t =
       case t of
 	  S.TVar (id as (m, (x, r))) =>
@@ -238,7 +248,8 @@ local
 	  in
 	    foldr f (elab_mt t) binds
 	  end
-        | S.TRecord (ts, r) => raise Impossible "elaborate/TRecord"
+        | S.TRecord (fields, r) =>
+          TRecord (list2map r $ map (mapSnd elab_mt) fields, r)
 
   fun elab_return (t, i, j) = (Option.map elab_mt t, Option.map elab_i i, Option.map elab_i j)
                                    
@@ -511,12 +522,7 @@ local
                   | _ => EUnOp (opr, elab e, r)
                )
              | S.EUThrow () => EHalt (elab e, TUVar ((), r))
-             | S.EUDeref true =>
-               (case e of
-                    S.EVar ((NONE, x), (false, false)) =>
-                    EGet (fst x, [], r)
-                  | _ => raise Impossible "elaborate/EDeref/non-EVar"
-               )
+             | S.EUDeref true => EStorageGet (elab e, r)
              | S.EUDeref false => ERead (elab e, ENat (0, r))
              | S.EUAsm _ => raise Impossible "elaborate/EAsm"
              | S.EUReturn _ => raise Impossible "elaborate/EReturn"
@@ -535,14 +541,22 @@ local
         | S.ETriOp (ETIfi (), e, e1, e2, r) =>
           EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
         | S.ENever r => ENever (elab_mt (S.TVar (NONE, ("_", r))), r)
-        | S.EGet ((S.EVar ((NONE, x), (false, false)), offsets), r) =>
+        | S.EGet ((x, offsets), r) =>
           EGet (fst x, map elab offsets, r)
-        | S.EGet _ => raise Impossible "elaborate/EGet/non-EVar"
-        | S.ESetModify (is_modify, (S.EVar ((NONE, x), (false, false)), offsets), e, r) =>
-          ESetModify (is_modify, fst x, map elab offsets, elab e, r)
-        | S.ESetModify _ => raise Impossible "elaborate/ESetModify/non-EVar"
+        | S.ESetModify (is_modify, x, offsets, e, r) =>
+          let
+            val x = fst x
+            val offsets = map elab offsets
+            val e = elab e
+          in
+            if is_modify then
+              ESet (x, offsets, EApp (e, EGet (x, offsets, r)), r)
+            else
+              ESet (x, offsets, e, r)
+          end
         | S.ENewArrayValues (es, r) => ENewArrayValues (TUVar ((), r), map elab es, r)
-        | S.ERecord (es, r) => raise Impossible "elaborate/ERecord"
+        | S.ERecord (fields, r) =>
+          ERecord (list2map r $ map (mapSnd elab) fields, r)
         | S.EFor _ => raise Impossible "elaborate/EFor"
         | S.ELet2 (_, pn, e, r) => raise Error (r, "let-binding are not allowed here ")
         | S.ESemis (es, r) =>
@@ -588,6 +602,10 @@ local
           in
             elab e
           end
+        | EOffsetProjs (e, projs) => foldl (fn (p, acc) => case p of
+                                                               inl e => EMapPtr (acc, e)
+                                                             | inr p => EPtrProj (acc, p)
+                                           ) e projs
 
   and elab_decl decl =
       case decl of

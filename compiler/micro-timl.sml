@@ -41,24 +41,26 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TArr of ('var, 'bsort, 'idx, 'sort) ty * 'idx
          | TAbsT of ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
          | TAppT of ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
-         | TMap of ('var, 'bsort, 'idx, 'sort) ty
-         | TState of string
-         | TTuple of ('var, 'bsort, 'idx, 'sort) ty list
-         (* used by compiler/pair-alloc *)
-         | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool)
-         (* used by compiler/code-gen *)
-         | TArrowTAL of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx
-         | TArrowEVM of 'idx(*pre-state*) * ('var, 'bsort, 'idx, 'sort) ty Rctx.map (*register typing*) * ('var, 'bsort, 'idx, 'sort) ty list (*stack typing*) * ('idx * 'idx)
          | TiBool of 'idx
+         | TTuple of ('var, 'bsort, 'idx, 'sort) ty list
+         | TRecord of ('var, 'bsort, 'idx, 'sort) ty SMap.map
+         | TState of string
+         | TMap of ('var, 'bsort, 'idx, 'sort) ty
+         | TVector of ('var, 'bsort, 'idx, 'sort) ty
+         | TSCell of ('var, 'bsort, 'idx, 'sort) ty
+         | TNatCell of unit
+         | TPtr of ('var, 'bsort, 'idx, 'sort) ty
+         (* used by compiler/pair-alloc *)
+         (* | TProdEx of (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool) *)
+         (* used by compiler/code-gen *)
+         (* | TArrowTAL of ('var, 'bsort, 'idx, 'sort) ty Rctx.map * 'idx *)
+         | TArrowEVM of 'idx(*pre-state*) * ('var, 'bsort, 'idx, 'sort) ty Rctx.map (*register typing*) * ('var, 'bsort, 'idx, 'sort) ty list (*stack typing*) * ('idx * 'idx)
          (* todo: tuple offsets should be int, to reduce #VCs *)
          | TPreTuple of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * 'idx(*lowest inited pos*)
          | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * 'idx(*offset*) * bool(*is storage?*)
          | TPreArray of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*lowest inited/uninited pos*) * (bool(*is length inited?*) * bool(*init direction; false: downward; true: upward *))
          | TArrayPtr of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*offset*)
          | TVectorPtr of string * 'idx(*offset*)
-         | TVector of ('var, 'bsort, 'idx, 'sort) ty
-         | TNatCell of unit
-         | TPtr of ('var, 'bsort, 'idx, 'sort) ty * (path * int option)
 
 type loc = int
              
@@ -104,6 +106,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | ELet of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          | ENewArrayValues of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr list
          | ETuple of ('var, 'idx, 'sort, 'kind, 'ty) expr list
+         | ERecord of ('var, 'idx, 'sort, 'kind, 'ty) expr SMap.map
          (* extensions from MicroTiML *)
          | ELetIdx of 'idx * ('var, 'idx, 'sort, 'kind, 'ty) expr ibind
          | ELetType of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr tbind
@@ -118,11 +121,11 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EIfi of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          (* introduced by compiler/CPS *)
          | EHalt of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty
-         (* introduced by compiler/pair-alloc *)
-         | EMallocPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr (* These two expressions are only here to determine the types. They have no runtime behavior and should always be values. They are used to avoid type annotations here which could be large. *)
-         | EPairAssign of ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
-         | EProjProtected of projector * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | EEnv of env_info
+         (* introduced by compiler/pair-alloc *)
+         (* | EMallocPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr (* These two expressions are only here to determine the types. They have no runtime behavior and should always be values. They are used to avoid type annotations here which could be large. *) *)
+         (* | EPairAssign of ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr *)
+         (* | EProjProtected of projector * ('var, 'idx, 'sort, 'kind, 'ty) expr *)
 
 (*********** utilities ***************)    
 

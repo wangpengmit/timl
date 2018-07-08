@@ -37,14 +37,14 @@ signature EXPR = sig
 	   | EAbsI of (sort, expr) Binders.ibind_anno * Region.region
 	   | EAppConstr of (cvar * (bool * bool)) * mtype list * idx list * expr * (int * mtype) option
 	   | ECase of expr * return * (ptrn, expr) Unbound.bind list * Region.region
-           | ECaseSumbool of expr * expr Binders.ibind * expr Binders.ibind * Region.region
+           (* | ECaseSumbool of expr * expr Binders.ibind * expr Binders.ibind * Region.region *)
            | EIfi of expr * expr Binders.ibind * expr Binders.ibind * Region.region
 	   | ELet of return * (decl Unbound.tele, expr) Unbound.bind * Region.region
-           | ESetModify of bool(*is modify?*) * string * (expr * roj_path) list * expr * Region.region
            | EGet of string * (expr * proj_path) list * Region.region
-       (* these constructs won't show up in source program *)
-       (* | EAbsT of (sort, expr) tbind_anno * region *)
+           | ESet of string * (expr * roj_path) list * expr * Region.region
            | EEnv of Operators.env_info * Region.region
+           (* these constructs won't show up in source program *)
+           (* | EAbsT of (sort, expr) tbind_anno * region *)
 
        and decl =
            DVal of Binders.ebinder * ((Binders.tbinder * (idx * idx) Unbound.outer) list, expr) Unbound.bind Unbound.outer * Region.region

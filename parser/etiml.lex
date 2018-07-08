@@ -187,6 +187,7 @@ string = [^\"];
 <INITIAL>">?" => (T.B_GT (make_region (yypos, size yytext)));
 <INITIAL>"==" => (T.DOUBLE_EQ (make_region (yypos, size yytext)));
 <INITIAL>"&&" => (T.DOUBLE_POND (make_region (yypos, size yytext)));
+<INITIAL>"&" => (T.POND (make_region (yypos, size yytext)));
 <INITIAL>"||" => (T.DOUBLE_BAR (make_region (yypos, size yytext)));
 <INITIAL>"+" => (T.PLUS (make_region (yypos, size yytext)));
 <INITIAL>"-" => (T.MINUS (make_region (yypos, size yytext)));

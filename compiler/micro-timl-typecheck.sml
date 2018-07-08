@@ -797,38 +797,48 @@ fun assert_TVector t =
       TVector a => a
     | _ => raise assert_fail $ "assert_TVector; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 
-fun TCell t = TPtr (t, ([], SOME 0))
+fun proj_ptr t proj =
+  case (t, proj) of
+      (TBinOp (TBProd (), t1, t2), inl n) =>
+      if n = 0 then SOME t1
+      else if n = 1 then SOME t2
+      else NONE
+    | (TRecord fields, inr name) =>
+      SMap.find (fields, name)
+    | _ => NONE
+                                                           
+(* fun TCell t = TPtr (t, ([], SOME 0)) *)
                                     
-fun assert_TCell' (t, path) =
-  let
-    fun err () = raise Impossible "assert_TCell"
-  in
-  case path of
-      [] => t
-    | proj :: path =>
-      let
-        val t =
-            case (t, proj) of
-                (TBinOp (TBProd (), t1, t2), inl n) =>
-                if n = 0 then t1
-                else if n = 1 then t2
-                else err ()
-              | (TRecord fields, inr name) =>
-                assert_SOME $ SMap.find (fields, name)
-              | _ => err ()
-      in
-        assert_TCell' (t, path)
-      end
-  end
-fun assert_TCell t =
-  let
-    val (t, (path, _)) =
-        case t of
-            TPtr a => a
-          | _ => raise Impossible "assert_TCell"
-  in
-    assert_TCell' (t, path)
-  end
+(* fun assert_TCell' (t, path) = *)
+(*   let *)
+(*     fun err () = raise Impossible "assert_TCell" *)
+(*   in *)
+(*   case path of *)
+(*       [] => t *)
+(*     | proj :: path => *)
+(*       let *)
+(*         val t = *)
+(*             case (t, proj) of *)
+(*                 (TBinOp (TBProd (), t1, t2), inl n) => *)
+(*                 if n = 0 then t1 *)
+(*                 else if n = 1 then t2 *)
+(*                 else err () *)
+(*               | (TRecord fields, inr name) => *)
+(*                 assert_SOME $ SMap.find (fields, name) *)
+(*               | _ => err () *)
+(*       in *)
+(*         assert_TCell' (t, path) *)
+(*       end *)
+(*   end *)
+(* fun assert_TCell t = *)
+(*   let *)
+(*     val (t, (path, _)) = *)
+(*         case t of *)
+(*             TPtr a => a *)
+(*           | _ => raise Impossible "assert_TCell" *)
+(*   in *)
+(*     assert_TCell' (t, path) *)
+(*   end *)
 
 infix 6 %%+
 infix 6 ++
@@ -1708,25 +1718,47 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EBinOp (opr, e1, e2), TUnit, j1 %%+ j2 %%+ TN C_ENatCellSet %%+ (store_cost, N0), st @%+ (x, new))
         end
-      | EBinOp (EBMapPtr path, e1, e2) =>
+      (* | EBinOp (EBMapPtr path, e1, e2) => *)
+      (*   let *)
+      (*     val (e1, t1, j1, st) = tc (ctx, st) e1 *)
+      (*     val st_e1 = st *)
+      (*     val t1 = whnf itctx t1 *)
+      (*     val t = assert_TMap $ assert_TCell t1 *)
+      (*     val (e2, j2, st) = tc_against_ty (ctx, st) (e2, TInt) *)
+      (*     val (e1, e2) = if !anno_EMapPtr then (e1 %: t1, e2 %: TInt) else (e1, e2) *)
+      (*     val (e1, e2) = if !anno_EMapPtr_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2) *)
+      (*   in *)
+      (*     (EBinOp (EBMapPtr path, e1, e2), TPtr (t, path), j1 %%+ j2 %%+ TN C_EMapPtr, st) *)
+      (*   end *)
+      | EBinOp (EBMapPtr (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
           val t1 = whnf itctx t1
-          val t = assert_TMap $ assert_TCell t1
+          val t = assert_TMap $ assert_TPtr t1
           val (e2, j2, st) = tc_against_ty (ctx, st) (e2, TInt)
           val (e1, e2) = if !anno_EMapPtr then (e1 %: t1, e2 %: TInt) else (e1, e2)
           val (e1, e2) = if !anno_EMapPtr_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
         in
-          (EBinOp (EBMapPtr path, e1, e2), TPtr (t, path), j1 %%+ j2 %%+ TN C_EMapPtr, st)
+          (EBinOp (EBMapPtr path, e1, e2), TPtr t, j1 %%+ j2 %%+ TN C_EMapPtr, st)
+        end
+      | EUnOp (opr as EUPtrProj (proj, offset), e) =>
+        let
+          val (e, t, j, st) = tc (ctx, st) e
+          val t = whnf itctx t
+          val t = assert_SOME $ ptr_proj t proj
+          val e = if !anno_EStorageGet then e %: t_e else e
+          val e = if !anno_EStorageGet_state then e %~ st else e
+        in
+          (EUnOp (opr, e), TPtr t, j %%+ TN C_EPtrProj, st)
         end
       | EState x =>
           let
             val st_t = st_types @!! x
             val t =
                 case st_t of
-                    TMap _ => TCell st_t
-                  | TSCell t => TCell t
+                    TMap _ => TPtr st_t
+                  | TSCell t => TPtr t
                   | _ => TState (x, r)
           in
             (EState x, t, TN C_EState, st)
@@ -1735,7 +1767,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (e, t_e, j, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
-          val t = assert_TCell t_e
+          val t = assert_TPtr t_e
           val () = assert_wordsize_ty t
           val e = if !anno_EStorageGet then e %: t_e else e
           val e = if !anno_EStorageGet_state then e %~ st else e
@@ -1747,7 +1779,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
           val t1 = whnf itctx t1
-          val t = assert_TCell t1
+          val t = assert_TPtr t1
           val () = assert_wordsize_ty t
           val (e2, j2, st) = tc_against_ty (ctx, st) (e2, t)
           val (e1, e2) = if !anno_EStorageSet then (e1 %: t1, e2 %: t) else (e1, e2)

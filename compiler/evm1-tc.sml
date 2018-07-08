@@ -69,8 +69,6 @@ fun add_kinding_full new ((ictx, tctx), rctx, sctx, st) = ((ictx, new :: tctx), 
 fun add_r p (itctx, rctx, sctx, st) = (itctx, rctx @+ p, sctx, st)
 fun add_stack t (itctx, rctx, sctx, st) = (itctx, rctx, t :: sctx, st)
 
-fun TCell t = TStorageTuplePtr ([t], INat 0)
-                        
 fun assert_TCell t =
   let
     fun err () = raise Impossible "assert_TCell"
@@ -722,6 +720,17 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val t1 = whnf itctx t1
         val ts = assert_TTuple $ assert_TMap $ assert_TCell t1
         val () = assert_TInt t0
+      in
+        ((itctx, rctx, TStorageTuplePtr (ts, INat 0) :: sctx, st))
+      end
+    | InstRestrictPtr len =>
+      let
+        val (t0, sctx) = assert_cons2 sctx
+        val t0 = whnf itctx t0
+        val (ts, offset) = assert_TStorageTuplePtr t0
+        val offset = assert_INat $ simp_i offset
+        val () = assert $ offset + len <= length ts
+        val ts = take len $ drop offset ts
       in
         ((itctx, rctx, TStorageTuplePtr (ts, INat 0) :: sctx, st))
       end

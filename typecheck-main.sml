@@ -886,38 +886,45 @@ fun get_prim_expr_bin_op_res_ty opr =
     | EBPBoolOr () => BTBool ()
     (* | EBPStrConcat () => String *)
 
-fun assert_TCell' got r (t, path) =
-  case path of
-      [] => t
-    | proj :: path =>
-      let
-        val t =
-            case (t, proj) of
-                (TProd (t1, t2), inl n) =>
-                if n = 0 then t1
-                else if n = 1 then t2
-                else raise Error (r (), [sprintf "tuple offset $ out of bound in type $" [str_int n, got ()]])
-              | (TRecord (fields, _), inr name) =>
-                (case SMap.find (fields, name) of
-                     SOME a => a
-                   | _ => raise Error (r (), [sprintf "field name $ not found in type $" [name, got ()]])
-                )
-              | _ => raise Error (r (), [sprintf "wrong projector $ for type $" [str_sum str_int id proj, got ()]])
-      in
-        assert_TCell' got r (t, path)
-      end
-fun assert_TCell got r t =
-  let
-    val (t, (path, _)) =
-        case t of
-            TPtr a => a
-          | _ => raise Error (r (), "type mismatch:" ::
-                                    indent ["expect: pointer",
-                                            "got: " ^ got ()])
-  in
-    assert_TCell' got r (t, path)
-  end
+(* fun assert_TCell' got r (t, path) = *)
+(*   case path of *)
+(*       [] => t *)
+(*     | proj :: path => *)
+(*       let *)
+(*         val t = *)
+(*             case (t, proj) of *)
+(*                 (TProd (t1, t2), inl n) => *)
+(*                 if n = 0 then t1 *)
+(*                 else if n = 1 then t2 *)
+(*                 else raise Error (r (), [sprintf "tuple offset $ out of bound in type $" [str_int n, got ()]]) *)
+(*               | (TRecord (fields, _), inr name) => *)
+(*                 (case SMap.find (fields, name) of *)
+(*                      SOME a => a *)
+(*                    | _ => raise Error (r (), [sprintf "field name $ not found in type $" [name, got ()]]) *)
+(*                 ) *)
+(*               | _ => raise Error (r (), [sprintf "wrong projector $ for type $" [str_sum str_int id proj, got ()]]) *)
+(*       in *)
+(*         assert_TCell' got r (t, path) *)
+(*       end *)
+(* fun assert_TCell got r t = *)
+(*   let *)
+(*     val (t, (path, _)) = *)
+(*         case t of *)
+(*             TPtr a => a *)
+(*           | _ => raise Error (r (), "type mismatch:" :: *)
+(*                                     indent ["expect: pointer", *)
+(*                                             "got: " ^ got ()]) *)
+(*   in *)
+(*     assert_TCell' got r (t, path) *)
+(*   end *)
     
+fun assert_TPtr got r t =
+  case t of
+      TPtr a => a
+    | _ => raise Error (r (), "type mismatch:" ::
+                              indent ["expect: pointer",
+                                      "got: " ^ got ()])
+                 
 fun assert_TMap err t =
   case t of
       TMap a => a
@@ -1258,6 +1265,16 @@ fun get_rules_cost_adjustments (get_inj : 'cvar -> int * int) (rules : (('cvar, 
       ds
     end
       
+fun flatten_tuple_record t =
+  let
+    val loop = flatten_tuple_record
+  in
+    case t of
+        TTuple (ts, _) => concatMap loop ts
+      | TRecord (fields, _) => concatMap loop $ map snd $ sort cmp_str_fst $ listItemsi fields
+      | _ => [t]
+  end
+    
 fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (idx * idx) * idx StMap.map =
   let
     val (ctx, st) = ctx_st
@@ -1640,53 +1657,93 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EUnOp (EUField (name, SOME offset), e, r), t, i, st)
           end
-	| U.EBinOp (opr as EBMapPtr (path, _), e1, e2) =>
+	(* | U.EBinOp (opr as EBMapPtr (path, _), e1, e2) => *)
+        (*   let *)
+        (*     val r = U.get_region_e e_all *)
+        (*     val (e1, t1, j1, st) = get_mtype (ctx, st) e1 *)
+        (*     val t1 = whnf_mt true gctx kctx t1 *)
+        (*     fun err () = raise Error (get_region_e e1, "map_ptr(e1, e2): type of e1 is wrong:" :: *)
+        (*                                                indent ["expect: pointer", *)
+        (*                                                        "got: " ^ str_mt gctxn skctxn t1]) *)
+        (*     val t = assert_TMap err $ assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1 *)
+        (*     val (e2, j2, st) = check_mtype (ctx, st) (e2, TInt r) *)
+        (*     fun calculate_offset t path = *)
+        (*       case path of *)
+        (*           [] => 0 *)
+        (*         | proj :: path => *)
+        (*           let *)
+        (*             val (ts, proj) = *)
+        (*                 case (t, proj) of *)
+        (*                     (TProd (t1, t2), inl n) => ([t1, t2], n) *)
+        (*                   | (TRecord (fields, _), inr name) => *)
+        (*                     let *)
+        (*                       val sorted = sort cmp_str_fst $ listItemsi fields *)
+        (*                       val n = case indexOf (fn (name', _) => name = name') sorted of *)
+        (*                                   SOME a => a *)
+        (*                                 | NONE => raise Error (r, [sprintf "field $ not found" [name]]) *)
+        (*                     in *)
+        (*                       (map snd sorted, n) *)
+        (*                     end *)
+        (*                   | _ => raise Error (r, ["type and projector doesn't match"]) *)
+        (*             val former = take n ts *)
+        (*             val t = hd $ drop n ts *)
+        (*             val former = concatMap flatten_tuple_record former *)
+        (*           in *)
+        (*             length former + calculate_offset t path *)
+        (*           end *)
+        (*     val offset = calculate_offset t path *)
+        (*     val path = (path, SOME offset) *)
+        (*   in *)
+        (*     (EBinOp (EBMapPtr path, e1, e2), TPtr (t, path), j1 %%+ j2 %%+ TN C_EMapPtr, st) *)
+        (*   end *)
+	| U.EBinOp (opr as EBMapPtr (), e1, e2) =>
           let
             val r = U.get_region_e e_all
             val (e1, t1, j1, st) = get_mtype (ctx, st) e1
             val t1 = whnf_mt true gctx kctx t1
             fun err () = raise Error (get_region_e e1, "map_ptr(e1, e2): type of e1 is wrong:" ::
-                                                       indent ["expect: pointer",
+                                                       indent ["expect: pointer of map",
                                                                "got: " ^ str_mt gctxn skctxn t1])
-            val t = assert_TMap err $ assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
+            val t = assert_TMap err $ assert_TPtr (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
             val (e2, j2, st) = check_mtype (ctx, st) (e2, TInt r)
-            fun flatten_map_value_t t =
-              let
-                val loop = flatten_map_value_t
-              in
-                case t of
-                    TTuple (ts, _) => concatMap loop ts
-                  | TRecord (fields, _) => concatMap loop $ map snd $ sort cmp_str_fst $ listItemsi fields
-                  | _ => [t]
-              end
-            fun calculate_offset t path =
-              case path of
-                  [] => 0
-                | proj :: path =>
-                  let
-                    val (ts, proj) =
-                        case (t, proj) of
-                            (TProd (t1, t2), inl n) => ([t1, t2], n)
-                          | (TRecord (fields, _), inr name) =>
-                            let
-                              val sorted = sort cmp_str_fst $ listItemsi fields
-                              val n = case indexOf (fn (name', _) => name = name') sorted of
-                                          SOME a => a
-                                        | NONE => raise Error (r, [sprintf "field $ not found" [name]])
-                            in
-                              (map snd sorted, n)
-                            end
-                          | _ => raise Error (r, ["type and projector doesn't match"])
-                    val former = take n ts
-                    val t = hd $ drop n ts
-                    val former = concatMap flatten_map_value_t former
-                  in
-                    length former + calculate_offset t path
-                  end
-            val offset = calculate_offset t path
-            val path = (path, SOME offset)
           in
-            (EBinOp (EBMapPtr path, e1, e2), TPtr (t, path), j1 %%+ j2 %%+ TN C_EMapPtr, st)
+            (EBinOp (EBMapPtr (), e1, e2), TPtr t, j1 %%+ j2 %%+ TN C_EMapPtr, st)
+          end
+	| U.EUnOp (opr as EUPtrProj (proj, _), e, r) =>
+          let
+            val r = U.get_region_e e_all
+            val (e, t, j, st) = get_mtype (ctx, st) e
+            val t = whnf_mt true gctx kctx t
+            fun err () = raise Error (get_region_e e, "pointer_proj e: type of e is wrong:" ::
+                                                       indent ["expect: pointer",
+                                                               "got: " ^ str_mt gctxn skctxn t])
+            val t = assert_TPtr (fn () => str_mt gctxn skctxn t) (fn () => get_region_e e) t
+            fun calculate_offset t proj =
+              let
+                val (ts, proj) =
+                    case (t, proj) of
+                        (TProd (t1, t2), inl n) => ([t1, t2], n)
+                      | (TRecord (fields, _), inr name) =>
+                        let
+                          val sorted = sort cmp_str_fst $ listItemsi fields
+                          val n = case indexOf (fn (name', _) => name = name') sorted of
+                                      SOME a => a
+                                    | NONE => raise Error (r, [sprintf "field $ not found" [name]])
+                        in
+                          (map snd sorted, n)
+                        end
+                      | _ => raise Error (r, ["type and projector doesn't match"])
+                val former = take n ts
+                val t = hd $ drop n ts
+                val former = concatMap flatten_tuple_record former
+              in
+                (t, length former)
+              end
+            val (t, offset) = calculate_offset t proj
+            val len = length $ flatten_tuple_record t
+            val proj = (proj, SOME (offset, len))
+          in
+            (EUnOp (EUPtrProj proj, e, r), TPtr t, j %%+ TN C_EPtrProj, st)
           end
         | U.EState (x, r) =>
           let
@@ -1695,8 +1752,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                          | _ => raise Error (r, [sprintf "unknown state field $" [str_st_key x]])
             val t =
                 case st_t of
-                    TMap _ => TCell st_t
-                  | TSCell t => TCell t
+                    TMap _ => TPtr st_t
+                  | TSCell t => TPtr t
                   | _ => TState (x, r)
           in
             (EState (x, r), t, TN C_EState, st)
@@ -1705,7 +1762,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           let
             val (e, t, j, st) = get_mtype ctx_st e
             val t = whnf_mt true gctx kctx t
-            val t = assert_TCell (fn () => str_mt gctxn skctxn t) (fn () => r) t
+            val t = assert_TPtr (fn () => str_mt gctxn skctxn t) (fn () => r) t
             val () = assert_wordsize_ty t
           in
             (EUnOp (opr, e, r), t, j %%+ TN C_EStorageGet, st)
@@ -1715,7 +1772,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val r = U.get_region_e e_all
             val (e1, t1, j1, st) = get_mtype (ctx, st) e1
             val t1 = whnf_mt true gctx kctx t1
-            val t = assert_TCell (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
+            val t = assert_TPtr (fn () => str_mt gctxn skctxn t1) (fn () => get_region_e e1) t1
             val () = assert_wordsize_ty t
             val (e2, j2, st) = check_mtype (ctx, st) (e2, t)
           in
@@ -1729,10 +1786,15 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val x = U.EState (x, r)
             val e =
                 case st_t of
+                    (* TMap _ => *)
+                    (* let *)
+                    (* in *)
+                    (*   U.EStorageGet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, r) *)
+                    (* end *)
                     TMap _ =>
                     let
                     in
-                      U.EStorageGet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, r)
+                      U.EStorageGet (foldl (fn (offset, acc) => U.EMapPtrProj (acc, offset)) x es, r)
                     end
                   (* | TArray _ => *)
                   (*   let *)
@@ -1771,20 +1833,21 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             get_mtype ctx_st e
           end
-        | U.ESetModify (is_modify, x, es, e, r) =>
-          if is_modify then
-            let
-              fun check_value e =
-                if is_value e then ()
-                else raise Error (r, ["must be value"])
-              val () = app check_value es
-              val (e, n_live_vars) = U.assert_EAnnoLiveVars (fn () => raise Error (r, ["Should be EAnnoLiveVars"])) e
-              (* fun asc_time e = U.EAscTime (e, U.IUVar ((), r)) *)
-              val e = U.ESetModify (false, x, es, (* asc_time $  *)U.EApp (e, U.EAnnoLiveVars ((* asc_time $  *)U.EGet (x, es, r), n_live_vars, r)), r)
-            in
-              get_mtype ctx_st e
-            end
-          else
+        | U.ESet (x, es, e, r) =>
+        (* | U.ESetModify (is_modify, x, es, e, r) => *)
+          (* if is_modify then *)
+          (*   let *)
+          (*     fun check_value e = *)
+          (*       if is_value e then () *)
+          (*       else raise Error (r, ["must be value"]) *)
+          (*     val () = app check_value es *)
+          (*     val (e, n_live_vars) = U.assert_EAnnoLiveVars (fn () => raise Error (r, ["Should be EAnnoLiveVars"])) e *)
+          (*     (* fun asc_time e = U.EAscTime (e, U.IUVar ((), r)) *) *)
+          (*     val e = U.ESetModify (false, x, es, (* asc_time $  *)U.EApp (e, U.EAnnoLiveVars ((* asc_time $  *)U.EGet (x, es, r), n_live_vars, r)), r) *)
+          (*   in *)
+          (*     get_mtype ctx_st e *)
+          (*   end *)
+          (* else *)
           let
             val st_t = case st_types @! x of
                              SOME t => t
@@ -1792,10 +1855,15 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val x = U.EState (x, r)
             val e =
                 case st_t of
+                    (* TMap _ => *)
+                    (* let *)
+                    (* in *)
+                    (*   U.EStorageSet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, e) *)
+                    (* end *)
                     TMap _ =>
                     let
                     in
-                      U.EStorageSet (foldl (fn (offset, acc) => U.EMapPtr (acc, offset)) x es, e)
+                      U.EStorageSet (foldl (fn (offset, acc) => U.EMapPtrProj (acc, offset)) x es, e)
                     end
                   (* | TArray _ => *)
                   (*   let *)

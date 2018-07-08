@@ -157,4 +157,7 @@ fun is_tail_call e =
     | ELet (_, bind, _) => is_tail_call $ snd $ Unbound.unBind bind
     | _ => false
 
+fun EMapPtrProj (e1, (e2, (path, r))) =
+  foldl (fn (proj, acc) => EPtrProj (acc, proj, r)) (EMapPtr (e1, e2)) path
+        
 end

@@ -52,4 +52,6 @@ fun N a = INat (a, dummy)
 fun T a = ITime (a, dummy)
 val N32 = N 32
 
+fun TCell t = TStorageTuplePtr ([t], INat 0)
+                        
 end

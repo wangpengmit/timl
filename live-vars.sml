@@ -232,30 +232,31 @@ fun live_vars_expr_visitor_vtable cast () =
             in
               EIfi (e, bind1, add_AnnoLiveVars (bind2, n_lvars, r), r)
             end
-          | ESetModify (b, x, es, e, r) =>
-            if b then
-              let
-                val e = ESetModify (false, x, es, (EApp (e, EGet (x, es, r))), r)
-                val e = #visit_expr vtable this env e
-                val (es, e, e2) = case e of
-                                      ESetModify (false, x, es, (EBinOp (EBApp (), e, e2)), r) =>
-                                      (es, e, e2)
-                                    | _ => raise Impossible "live-vars/ESetModify/1"
-                val n_lvars = case e2 of
-                                  EUnOp (EUAnno (EALiveVars n_lvars), _, _) => n_lvars
-                                | _ => raise Impossible "live-vars/ESetModify/2"
-              in
-                ESetModify (b, x, es, EAnnoLiveVars (e, n_lvars, r), r)
-              end
-            else
+          | EGet (x, es, r) => EGet (x, visit_es this env es, r)
+          | ESet (x, es, e, r) =>
+          (* | ESetModify (b, x, es, e, r) => *)
+            (* if b then *)
+            (*   let *)
+            (*     val e = ESetModify (false, x, es, (EApp (e, EGet (x, es, r))), r) *)
+            (*     val e = #visit_expr vtable this env e *)
+            (*     val (es, e, e2) = case e of *)
+            (*                           ESetModify (false, x, es, (EBinOp (EBApp (), e, e2)), r) => *)
+            (*                           (es, e, e2) *)
+            (*                         | _ => raise Impossible "live-vars/ESetModify/1" *)
+            (*     val n_lvars = case e2 of *)
+            (*                       EUnOp (EUAnno (EALiveVars n_lvars), _, _) => n_lvars *)
+            (*                     | _ => raise Impossible "live-vars/ESetModify/2" *)
+            (*   in *)
+            (*     ESetModify (b, x, es, EAnnoLiveVars (e, n_lvars, r), r) *)
+            (*   end *)
+            (* else *)
               let
                 val (_, es) = assert_cons $ visit_es_left this env $ [EState (x, r)] @ es @ [e]
                 val (e, es) = assert_cons $ rev es
                 val es = rev es
               in
-                ESetModify (b, x, es, e, r)
+                ESet (x, es, e, r)
               end
-          | EGet (x, es, r) => EGet (x, visit_es this env es, r)
       in
         ret
       end

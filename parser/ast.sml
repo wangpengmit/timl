@@ -113,10 +113,10 @@ datatype ast_expr_triop =
          | ETIfDec of unit
          | ETIfi of unit
 
-datatype storage =
-         StMemory
-         | StStorage
-         (* | StIndexed *)
+(* datatype storage = *)
+(*          StMemory *)
+(*          | StStorage *)
+(*          (* | StIndexed *) *)
                       
 datatype exp = 
 	 EVar of long_id * (bool * bool)
@@ -133,14 +133,16 @@ datatype exp =
          | EBinOp of ast_expr_binop * exp * exp * region
          | ETriOp of ast_expr_triop * exp * exp * exp * region
          | ENever of region
-         | ESetModify of bool(*is modify?*) * (exp * (exp * proj_path) list) * exp * region
-         | EGet of (exp * (exp * proj_path) list) * region
+         | ESetModify of bool(*is modify?*) * (id * (exp * proj_path) list) * exp * region
+         | EGet of (id * (exp * proj_path) list) * region
          | ERecord of (id * exp) list * region
          | ENewArrayValues of exp list * region
          | ESemis of exp list * region
          | ELet2 of storage option * ptrn * exp option * region
          | EIfs of ifelse list * region
          | EFor of id * ty option * exp * exp * exp * exp * region
+         | EState of id
+         | EOffsetProjs of exp * (exp, tuple_record_proj) sum list
 
      and decl =
          DVal of id list * ptrn * exp * region
