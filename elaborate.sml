@@ -193,7 +193,7 @@ local
                 if x = "unit" then
                   TUnit r
                 else if x = "icell" then
-                  TNatCell ()
+                  TNatCell r
                 else if x = "int" then
                   TInt r
                 else if x = "uint" then
@@ -252,6 +252,7 @@ local
 	  end
         | S.TRecord (fields, r) =>
           TRecord (list2map r $ map (mapSnd elab_mt) fields, r)
+        | S.TPtr t => TPtr $ elab_mt t
 
   fun elab_return (t, i, j) = (Option.map elab_mt t, Option.map elab_i i, Option.map elab_i j)
                                    
@@ -429,6 +430,7 @@ local
               | S.ECZero () => raise Impossible "elaborate/ECZero"
               | S.ECNow () => EEnv (EnvNow (), r)
               | S.ECThis () => EEnv (EnvThis (), r)
+              | S.ECState x => EState (x, r)
             )
 	| S.EBinOp (EBTiML (EBApp ()), e1, e2, r) =>
 	  let 

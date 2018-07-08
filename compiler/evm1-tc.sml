@@ -201,6 +201,7 @@ fun C_inst b =
     | ASCSPACE _ => C_ASCSPACE
     | MARK_PreArray2ArrayPtr _ => C_MARK_PreArray2ArrayPtr
     | MARK_PreTuple2TuplePtr _ => C_MARK_PreTuple2TuplePtr
+    | InstRestrictPtr _ => 0
     (* | MARK_inj _ => C_MARK_inj *)
                                     
     | LOG n => C_LOG n

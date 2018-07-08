@@ -1,6 +1,7 @@
 structure TypeCheckMain = struct
 structure U = UnderscoredExpr
 open CollectUVar
+open CostUtil
 open MicroTiMLCosts
 open RedundantExhaust
 open Region
@@ -226,30 +227,6 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
 	  (TArray (check_higher_kind_Type (ctx, t),
 	            check_basic_sort gctx (sctx, i, BSNat)),
            HType)
-        | U.TMap t =>
-	  (TMap (check_higher_kind_Type (ctx, t)),
-           HType)
-        | U.TVector t =>
-	  (TVector (check_higher_kind_Type (ctx, t)),
-           HType)
-        | U.TState (x, r) =>
-          let
-            val () = if Option.isSome $ !(#1 st_types_ref) @! x then ()
-                     else raise Error (r, [sprintf "state field $ not found" [x]])
-          in
-	    (TState (x, r), HType)
-          end
-        (* | U.TTuplePtr (ts, offset, r) => *)
-        (*   let *)
-        (*     val () = if offset < length ts then () *)
-        (*              else raise Error (r, ["tuple_ptr offset out of bound"])  *)
-        (*   in *)
-	(*     (TTuplePtr (map (fn t => check_higher_kind_Type (ctx, t)) ts, offset, r), *)
-        (*      HType) *)
-        (*   end *)
-        | U.TPtr t =>
-	  (TPtr $ check_higher_kind_Type (ctx, t),
-           HType)
         | U.TNat (i, r) =>
 	  (TNat (check_basic_sort gctx (sctx, i, BSNat), r),
            HType)
@@ -323,7 +300,30 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
                 end
               | _ => error (get_region_mt t, str_mt gctxn ctxn t, "<sort> => <kind>", str_hk, k)
           end
-        | U.TDatatype _ => raise Unimpl "get_higher_kind()/TDatatype"
+        | U.TDatatype _ => raise Impossible "get_higher_kind()/TDatatype"
+        | U.TRecord (fields, r) =>
+	  (TRecord (SMap.map (curry check_higher_kind_Type ctx) fields, r),
+           HType)
+        | U.TState (x, r) =>
+          let
+            val () = if Option.isSome $ !(#1 st_types_ref) @! x then ()
+                     else raise Error (r, [sprintf "state field $ not found" [x]])
+          in
+	    (TState (x, r), HType)
+          end
+        | U.TMap t =>
+	  (TMap (check_higher_kind_Type (ctx, t)),
+           HType)
+        | U.TVector t =>
+	  (TVector (check_higher_kind_Type (ctx, t)),
+           HType)
+        | U.TSCell t =>
+	  (TSCell (check_higher_kind_Type (ctx, t)),
+           HType)
+        | U.TNatCell r => (TNatCell r, HType)
+        | U.TPtr t =>
+	  (TPtr $ check_higher_kind_Type (ctx, t),
+           HType)
     val ret =
         main ()
         handle
@@ -736,6 +736,7 @@ fun is_value (e : U.expr) : bool =
       | EUnOp (opr, e, _) =>
         (case opr of
              EUProj _ => false
+           | EUPtrProj _ => false
            | EUArrayLen () => false
            | EUPrim _ => false
            | EUNat2Int () => false
@@ -743,6 +744,7 @@ fun is_value (e : U.expr) : bool =
            | EUPrintc () => false
         (* | EUPrint () => false *)
            | EUStorageGet () => false
+           | EUNatCellGet () => false
            | EUVectorClear () => false
            | EUVectorLen () => false
            | EUAnno _ => is_value e
@@ -757,11 +759,14 @@ fun is_value (e : U.expr) : bool =
            | EBPrim _ => false
            | EBNat _ => false
            | EBNatCmp _ => false
+           | EBIntNatExp () => false
            | EBVectorGet () => false
            | EBVectorPushBack () => false
            | EBMapPtr () => false
            | EBStorageSet () => false
+           | EBNatCellSet () => false
         )
+      | ERecord (fields, _) => SMapU.all is_value fields
       | ENewArrayValues _ => false
       | ETriOp (opr, _, _, _) =>
         (case opr of
@@ -954,13 +959,6 @@ fun is_constr e =
 fun N n = INat (n, dummy)
 fun TN n = (to_real n, N 0)
 
-fun IFloor' i = IFloor (i, dummy)
-fun IToReal' i = IToReal (i, dummy)
-fun ILog256 i = ILog ("256", i, dummy)
-fun IIte' (i1, i2, i3) = IIte (i1, i2, i3, dummy)
-                       
-fun nat_exp_cost i2 = IToReal' $ N C_exp %+ N C_expbyte %* (N 1 %+ IFloor' (ILog256 $ IToReal' i2))
-             
 fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext), (* pcovers, *) pn : U.ptrn, t : mtype) : ptrn * cover * context * int =
   let
     val match_ptrn = match_ptrn gctx
@@ -1366,7 +1364,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                                                         indent ["expect: state_field _",
                                                                 "got: " ^ str_mt gctxn skctxn t1])
         val () = case st_types @!! x of
-                    TNatCell () => ()
+                    TNatCell _ => ()
                   | _ => raise Error (r (), [sprintf "type of $ should be nat cell" [str_st_key x]])
         val i = case st @! x of
                       SOME a => a
@@ -1853,7 +1851,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                     in
                       U.EStorageGet (x, r)
                     end
-                  | TNatCell () =>
+                  | TNatCell _ =>
                     let
                       val () = case es of
                                    [] => ()
@@ -2067,6 +2065,19 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (ENewArrayValues (t, es, r), TArray (t, INat (length es, r)), d %%+ (to_real $ C_ENewArrayValues len, N $ len + 1), st)
           end
+	| U.ERecord (fields, r) =>
+	  let
+            val fields = sort cmp_str_fst $ SMap.listItemsi fields
+            val (names, es) = unzip fields
+            val (es, ts, ds, st) = foldl (fn (e, (es, ts, ds, st)) => let val (e, t, d, st) = get_mtype (ctx, st) e in (e :: es, t :: ts, d :: ds, st) end) ([], [], [], st) es
+            val es = rev es
+            val ts = rev ts
+            val ds = rev ds
+            val d = combine_IBAdd_Time_Nat ds
+            val len = length es
+          in
+	    (ERecord (SMapU.fromList $ zip (names, es), r), TRecord (SMapU.fromList $ zip (names, ts), r), d %%+ (to_real $ C_ETuple len, N len), st)
+	  end
 	| U.EAbsI (bind, r_all) => 
 	  let 
             val ((iname, s), e) = unBindAnno bind
@@ -2980,7 +2991,7 @@ fun is_wf_state_ty t =
       TMap t => is_wf_map_val t
     | TVector t => is_wordsize_ty t (* vector elements can't be tuples because there is no primitive push_back operation for them on the assembly level *)
     | TSCell t => is_wordsize_ty t
-    | TNatCell () => true
+    | TNatCell _ => true
     | _ => false
 
 fun check_top_bind gctx (name, bind) =

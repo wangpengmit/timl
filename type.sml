@@ -44,7 +44,7 @@ datatype mtype =
          | TMap of mtype
          | TVector of mtype
          | TSCell of mtype
-         | TNatCell of unit
+         | TNatCell of region
          | TPtr of mtype
 
 datatype ty = 

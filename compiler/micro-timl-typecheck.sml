@@ -1,5 +1,6 @@
 structure MicroTiMLTypecheck = struct
 
+open CostUtil
 open MicroTiMLCosts
 open MicroTiMLFreeEVars
 open MicroTiMLVisitor2
@@ -507,42 +508,17 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TArr (t, i), KType ())
       end
-    | TPreArray (t, len, i, b) =>
-      let
-        val t = kc_against_kind ctx (t, KType ())
-        val len = sc_against_sort ictx (len, SNat)
-        val i = sc_against_sort ictx (i, SNat)
-      in
-        (TPreArray (t, len, i, b), KType ())
-      end
-    | TArrayPtr (t, len, i) =>
-      let
-        val t = kc_against_kind ctx (t, KType ())
-        val len = sc_against_sort ictx (len, SNat)
-        val i = sc_against_sort ictx (i, SNat)
-      in
-        (TArrayPtr (t, len, i), KType ())
-      end
-    | TTuplePtr (ts, i, b) =>
-      let
-        val ts = map (kc_against_KType ctx) ts
-        val i = sc_against_sort ictx (i, SNat)
-      in
-        (TTuplePtr (ts, i, b), KType ())
-      end
     | TTuple ts =>
       let
         val ts = map (kc_against_KType ctx) ts
       in
         (TTuple ts, KType ())
       end
-    | TPreTuple (ts, i, i2) =>
+    | TRecord fields =>
       let
-        val ts = map (kc_against_KType ctx) ts
-        val i = sc_against_sort ictx (i, SNat)
-        val i2 = sc_against_sort ictx (i2, SNat)
+        val fields = SMap.map (kc_against_KType ctx) fields
       in
-        (TPreTuple (ts, i, i2), KType ())
+        (TRecord fields, KType ())
       end
     (* | TProdEx ((t1, b1), (t2, b2)) => *)
     (*   let *)
@@ -567,13 +543,36 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TArrowEVM (st, rctx, ts, i), KType ())
       end
-    | TMap t => (TMap $ kc_against_KType ctx t, KType ())
-    | TVector t => (TVector $ kc_against_KType ctx t, KType ())
-    | TState x => 
+    | TPreArray (t, len, i, b) =>
       let
-        (* val () = check_state_field x *)
+        val t = kc_against_kind ctx (t, KType ())
+        val len = sc_against_sort ictx (len, SNat)
+        val i = sc_against_sort ictx (i, SNat)
       in
-	(TState x, KType ())
+        (TPreArray (t, len, i, b), KType ())
+      end
+    | TArrayPtr (t, len, i) =>
+      let
+        val t = kc_against_kind ctx (t, KType ())
+        val len = sc_against_sort ictx (len, SNat)
+        val i = sc_against_sort ictx (i, SNat)
+      in
+        (TArrayPtr (t, len, i), KType ())
+      end
+    | TTuplePtr (ts, i, b) =>
+      let
+        val ts = map (kc_against_KType ctx) ts
+        val i = sc_against_sort ictx (i, SNat)
+      in
+        (TTuplePtr (ts, i, b), KType ())
+      end
+    | TPreTuple (ts, i, i2) =>
+      let
+        val ts = map (kc_against_KType ctx) ts
+        val i = sc_against_sort ictx (i, SNat)
+        val i2 = sc_against_sort ictx (i2, SNat)
+      in
+        (TPreTuple (ts, i, i2), KType ())
       end
     | TVectorPtr (x, i) => 
       let
@@ -582,6 +581,17 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
 	(TVectorPtr (x, i), KType ())
       end
+    | TState x => 
+      let
+        (* val () = check_state_field x *)
+      in
+	(TState x, KType ())
+      end
+    | TMap t => (TMap $ kc_against_KType ctx t, KType ())
+    | TVector t => (TVector $ kc_against_KType ctx t, KType ())
+    | TSCell t => (TSCell $ kc_against_KType ctx t, KType ())
+    | TNatCell () => (TNatCell (), KType ())
+    | TPtr t => (TPtr $ kc_against_KType ctx t, KType ())
     fun extra_msg () = "\nwhen kindchecking: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names ctx) t_input)
     val ret = main ()
               handle
@@ -997,7 +1007,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         )
       | EConst c => (e_input, get_expr_const_type c, TN C_EConst, st)
       | EEnv name => (EEnv name, get_msg_info_type name, TN $ C_EEnv name, st)
-      | EUnOp (EUTiML (EUProj proj), e) =>
+      | EUnOp (opr as EUTiML (EUProj proj), e) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
@@ -1007,9 +1017,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EProj then e %: t_e else e
           val e = if !anno_EProj_state then e %~ st else e
         in
-          (EProj (proj, e), choose (t1, t2) proj, i %%+ TN C_EProj, st)
+          (EUnOp (opr, e), choose (t1, t2) proj, i %%+ TN C_EProj, st)
         end
-      | EUnOp (EUTupleProj n, e) =>
+      | EUnOp (opr as EUTupleProj n, e) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
@@ -1018,7 +1028,18 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val e = if !anno_EProj then e %: t_e else e
           val e = if !anno_EProj_state then e %~ st else e
         in
-          (EUnOp (EUTupleProj n, e), t, i %%+ TN C_ETupleProj, st)
+          (EUnOp (opr, e), t, i %%+ TN C_EProj, st)
+        end
+      | EUnOp (opr as EUTiML (EUField (name, _)), e) =>
+        let
+          val (e, t_e, i, st) = tc (ctx, st) e
+          val t_e = whnf itctx t_e
+          val t_fields = assert_TRecord t_e
+          val t = t_fields @!! name 
+          val e = if !anno_EProj then e %: t_e else e
+          val e = if !anno_EProj_state then e %~ st else e
+        in
+          (EUnOp (opr, e), t, i %%+ TN C_EProj, st)
         end
       | EUnOp (EUTiML (EUPrintc ()), e) =>
         let
@@ -1069,7 +1090,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EUnOp (EUTiML (EUInt2Nat ()), e), TSomeNat (), j %%+ TN C_EInt2Nat, st)
         end
-      | EUnOp (EUTiML (EUField name), e) => raise Impossible "tc()/EField"
       | EUnOp (EUInj (inj, t'), e) =>
         let
           val t' = kc_against_kind itctx (t', KType ())
@@ -1547,6 +1567,25 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i = combine_IBAdd_Time_Nat $ map #3 ls
         in
           (ETuple (map get_e ls), TTuple (map #2 ls), i %%+ (to_real $ C_ETuple len, N len), st)
+        end
+      | ERecord fields =>
+        let
+          val fields = sort cmp_str_fst $ SMap.listItemsi fields
+          val (names, es) = unzip fields
+          val (etis, st) =
+              foldl (fn (e, (etis, st)) =>
+                        let
+                          val (e, t, i, st) = tc (ctx, st) e
+                          val e = if !anno_EPair then e %: t else e
+                          val e = if !anno_EPair_state then e %~ st else e
+                        in
+                          ((e, t, i) :: etis, st)
+                        end) ([], st) es
+          val (es, ts, is) = unzip3 $ rev etis
+          val i = combine_IBAdd_Time_Nat is
+          val len = length es
+        in
+          (ERecord $ SMapU.fromList $ zip (names, es), TRecord $ SMapU.fromList $ zip (names, ts), i %%+ (to_real $ C_ETuple len, N len), st)
         end
       | EBinOp (EBNew (), e1, e2) =>
         let

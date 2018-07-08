@@ -139,6 +139,10 @@ fun assert_TTuple t =
   case t of
       TTuple a => a
     | _ => raise assert_fail $ "assert_TTuple failed; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TRecord t =
+  case t of
+      TRecord a => a
+    | _ => raise assert_fail $ "assert_TRecord failed; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TBool t =
   case t of
       TConst (TCTiML (BTBool ())) => ()

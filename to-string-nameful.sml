@@ -281,10 +281,12 @@ fun strn_mt t =
         in
           sprintf "(datatype $$$ = $)" [fst name, tnames, basic_sorts, constr_decls]
         end
+      | TRecord (fields, _) => sprintf "(record $)" [SMapU.str_map (id, strn_mt) fields]
+      | TState (x, _) => "typeof " ^ x
       | TMap t => sprintf "(map $)" [strn_mt t]
       | TVector t => sprintf "(vector $)" [strn_mt t]
-      | TState (x, _) => "typeof " ^ x
-      (* | TTuplePtr (ts, n, _) => sprintf "(tuple_ptr $ $)" [str_ls strn_mt ts, str_int n] *)
+      | TSCell t => sprintf "(cell $)" [strn_mt t]
+      | TNatCell r => "icell"
       | TPtr t => sprintf "(ptr $)" [strn_mt t]
   end
 
@@ -415,6 +417,7 @@ fun strn_e e =
     | ESet (x, es, e, _) => sprintf "(set $$ $)" [x, join "" $ map (surround "[" "]" o strn_offset) es, strn_e e]
     | EGet (x, es, _) => sprintf "$$" [x, join "" $ map (surround "[" "]" o strn_offset) es]
     | EEnv (name, _) => "msg." ^ str_env_info name
+    | ERecord (fields, _) => sprintf "(record $)" [SMapU.str_map (id, strn_e) fields]
 
 and strn_offset (e, path) = strn_e e ^ (join_prefix "." $ map (str_sum str_int id o fst) path)
   

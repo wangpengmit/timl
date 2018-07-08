@@ -313,14 +313,15 @@ fun impl_prim_expr_un_opr opr =
     | EUPByte2Int () => byte2int
     (* | EUPStrLen () => [PUSH1nat 32, SWAP1, SUB, MLOAD] *)
     (* | _ => raise Impossible $ "impl_prim_expr_up_op() on " ^ str_prim_expr_un_op opr *)
-      
+
+fun impl_tuple_proj n = [PUSH_tuple_offset $ 32 * n, ADD (), MLOAD ()]
+                          
 fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
     | EUNat2Int () => [NAT2INT ()]
     | EUInt2Nat () => [INT2NAT ()]
     | EUArrayLen () => [PUSH1nat 32, SWAP1, SUB (), MLOAD ()]
-    | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD (), MLOAD ()]
     | EUPrintc () => printc
     (* | EUPrint () => [PRINT] *)
     | EUStorageGet () => [SLOAD ()]
@@ -328,7 +329,19 @@ fun impl_expr_un_op opr =
     | EUVectorLen () => [SLOAD ()]
     | EUNatCellGet () => [SLOAD ()]
     | EUAnno _ => []
-    | EUField _ => raise Impossible "impl_expr_un_op/EUField"
+    | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD (), MLOAD ()]
+    | EUField (_, offset) =>
+      let
+        val offset = assert_SOME offset
+      in
+        impl_tuple_proj offset
+      end
+    | EUPtrProj (_, offset) =>
+      let
+        val (offset, len) = assert_SOME offset
+      in
+        [PUSH1nat offset, ADD (), InstRestrictPtr len]
+      end
                         
 fun impl_nat_expr_bin_op opr =
   case opr of
@@ -336,6 +349,7 @@ fun impl_nat_expr_bin_op opr =
     | EBNMult () => [MUL ()]
     | EBNDiv () => [SWAP1, DIV ()]
     | EBNBoundedMinus () => [SWAP1, SUB ()]
+    | EBNExp () => [SWAP1, EXP ()]
 
 val st_ref = ref IEmptyState
                  
@@ -435,22 +449,20 @@ fun compile st_name2int ectx e =
       [MSTORE (), PUSH1 WTT]
     | EUnOp (EUUnfold (), e) =>
       compile e @ [UNFOLD ()]
-    | EUnOp (EUTiML (EUField (name, offset)), e) =>
-      let
-        val offset = assert_SOME offset
-      in
-        compile $ EUnOp (EUTupleProj offset, e)
-      end
     | EUnOp (EUTiML opr, e) =>
       compile e @
       impl_expr_un_op opr
     | EUnOp (EUTupleProj n, e) =>
       compile e @
-      [PUSH_tuple_offset $ 32 * n, ADD (), MLOAD ()]
+      impl_tuple_proj n
     | EBinOp (EBNat opr, e1, e2) =>
       compile e1 @ 
       compile e2 @
       impl_nat_expr_bin_op opr
+    | EBinOp (EBIntNatExp (), e1, e2) =>
+      compile e1 @ 
+      compile e2 @
+      impl_nat_expr_bin_op (EBNExp ())
     | EBinOp (EBNatCmp opr, e1, e2) =>
       compile e1 @ 
       compile e2 @
@@ -469,13 +481,6 @@ fun compile st_name2int ectx e =
       compile e1 @ 
       compile e2 @
       [MACRO_map_ptr ()]
-    | EUnOp (EUTiML (EUPtrProj (_, offset)), e) =>
-      let
-        val (offset, len) = assert_SOME offset
-      in
-        compile e @ 
-        [PUSH1nat offset, ADD (), InstRestrictPtr len]
-      end
     | EBinOp (EBStorageSet (), e1, e2) =>
       compile e1 @ 
       compile e2 @

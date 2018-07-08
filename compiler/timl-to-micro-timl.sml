@@ -103,9 +103,12 @@ fun on_mt (t : S.mtype) =
       in
         TRec $ BindAnno ((TName dt_name, k), t)
       end
+    | S.TRecord (fields, _) => TRecord $ SMap.map on_mt fields
+    | S.TState (x, _) => TState x
     | S.TMap t => TMap $ on_mt t
     | S.TVector t => TVector $ on_mt t
-    | S.TState (x, _) => TState x
+    | S.TSCell t => TSCell $ on_mt t
+    | S.TNatCell _ => TNatCell ()
     | S.TPtr t => TPtr (on_mt t)
 
 val trans_mt = on_mt
@@ -287,6 +290,7 @@ fun on_e (e : S.expr) : mtiml_expr =
       end
     | S.ESet _ => err ()
     | S.EGet _ => err ()
+    | S.ERecord (fields, _) => ERecord $ SMap.map on_e fields
     fun extra_msg () = "\nwhen translating\n" ^ ToString.str_e Gctx.empty ToStringUtil.empty_ctx e
     val ret = main ()
               handle

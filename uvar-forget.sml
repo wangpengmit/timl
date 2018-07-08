@@ -211,10 +211,12 @@ fun forget_i_mt x n b =
 	  | TBase a => TBase a
           | TUVar a => b
           | TDatatype _ => raise Unimpl "uvar_forget/forget_i_mt()/TDatatype"
+          | TRecord (fields, r) => TRecord (SMap.map (f x n) fields, r)
+          | TState _ => b
           | TMap t => TMap $ f x n t
           | TVector t => TVector $ f x n t
-          | TState _ => b
-          (* | TTuplePtr (ts, n, r) => TTuplePtr (map (f x n) ts, n, r) *)
+          | TSCell t => TSCell $ f x n t
+          | TNatCell r => TNatCell r
           | TPtr t => TPtr (f x n t)
       end
     val ret =

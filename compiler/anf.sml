@@ -76,6 +76,7 @@ fun anf_decls_expr_visitor_vtable cast output =
                 | EBuiltin _ => true
                 | ENewArrayValues _ => true
                 | ETuple _ => true
+                | ERecord _ => true
                 | ELetIdx _ => true
                 | ELetType _ => true
                 | ELetConstr _ => true

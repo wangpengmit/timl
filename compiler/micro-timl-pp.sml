@@ -292,6 +292,26 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str ")";
           close_box ()
         )
+      | TTuple ts =>
+        (
+          open_hbox ();
+          str "TTuple";
+          space ();
+          str "(";
+          app (fn t => (pp_t t; comma ())) ts;
+          str ")";
+          close_box ()
+        )
+      | TRecord fields =>
+        (
+          open_hbox ();
+          str "TRecord";
+          space ();
+          str "(";
+          SMap.appi (fn (name, t) => (str name; colon (); pp_t t; comma ())) fields;
+          str ")";
+          close_box ()
+        )
       | TPreArray (t, i1, i2, (b, b2)) =>
         (
           open_hbox ();
@@ -334,16 +354,6 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str $ str_i i;
           comma ();
           str $ str_bool b;
-          str ")";
-          close_box ()
-        )
-      | TTuple ts =>
-        (
-          open_hbox ();
-          str "TTuple";
-          space ();
-          str "(";
-          app (fn t => (pp_t t; comma ())) ts;
           str ")";
           close_box ()
         )
@@ -447,6 +457,19 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str ")";
           close_box ()
         )
+      | TVectorPtr (x, i) =>
+        (
+          open_hbox ();
+          str "TVectorPtr";
+          space ();
+          str "(";
+          str x;
+          comma ();
+          str $ str_i i;
+          str ")";
+          close_box ()
+        )
+      | TState x => str $ "TState " ^ x
       | TMap t =>
         (
           open_hbox ();
@@ -467,16 +490,24 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str ")";
           close_box ()
         )
-      | TState x => str $ "TState " ^ x
-      | TVectorPtr (x, i) =>
+      | TSCell t =>
         (
           open_hbox ();
-          str "TVectorPtr";
+          str "TSCell";
           space ();
           str "(";
-          str x;
-          comma ();
-          str $ str_i i;
+          pp_t t;
+          str ")";
+          close_box ()
+        )
+      | TNatCell _ => str "TNatCell"
+      | TPtr t =>
+        (
+          open_hbox ();
+          str "TPtr";
+          space ();
+          str "(";
+          pp_t t;
           str ")";
           close_box ()
         )
@@ -543,6 +574,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
     fun space () = PP.space s 1
     fun add_space a = (space (); a)
     fun str v = PP.string s v
+    fun strs s = (str s; space ())
     fun comma () = (str ","; space ())
     fun colon () = (str ":"; space ())
     fun open_hbox () = PP.openHBox s
@@ -1381,6 +1413,15 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
           close_box ()
         )
       | EState x => str $ "EState " ^ x
+      | ERecord fields =>
+        (
+          open_hbox ();
+          strs "ERecord";
+          str "(";
+          SMap.appi (fn (name, e) => (strs name; strs "="; pp_e e; comma ())) fields;
+          str ")";
+          close_box ()
+        )
   end
 
 open WithPP

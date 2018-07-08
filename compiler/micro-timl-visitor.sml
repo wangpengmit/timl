@@ -139,11 +139,15 @@ fun default_ty_visitor_vtable
           | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
           | TPreTuple (ts, i, i2) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, #visit_idx vtable this env i2)
           | TTuplePtr (ts, i, b) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, b)
+          | TVectorPtr (x, i) => TVectorPtr (x, #visit_idx vtable this env i)
           | TTuple ts => TTuple (visit_list (#visit_ty vtable this) env ts)
+          | TRecord fields => TRecord $ SMap.map (#visit_ty vtable this env) fields
+          | TState x =>  TState x
           | TMap t => TMap $ #visit_ty vtable this env t
           | TVector t => TVector $ #visit_ty vtable this env t
-          | TState x =>  TState x
-          | TVectorPtr (x, i) => TVectorPtr (x, #visit_idx vtable this env i)
+          | TSCell t => TSCell $ #visit_ty vtable this env t
+          | TNatCell r => TNatCell r
+          | TPtr t => TPtr $ #visit_ty vtable this env t
       end
     fun visit_TVar this env data =
       let
@@ -1150,6 +1154,7 @@ fun default_expr_visitor_vtable
                visit_ebind this (#visit_expr vtable this) env e2)
           | EState x => EState x
           | EEnv name => EEnv name
+          | ERecord fields => ERecord $ SMap.map (#visit_expr vtable this env) fields
       end
     fun visit_EVar this env data =
       let

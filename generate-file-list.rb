@@ -179,6 +179,7 @@ sortcheck.sml
 topo-sort-fn.sml
 compiler/evm-costs.sml
 compiler/micro-timl-costs.sml
+cost-util.sml
 free-evars.sml
 live-vars.sml
 compiler/pattern-ex.sml

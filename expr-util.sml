@@ -159,6 +159,22 @@ fun is_tail_call e =
     | EEI (EEIAscSpace (), e, _) => is_tail_call e
     | EET (EETAsc (), e, _) => is_tail_call e
     | ELet (_, bind, _) => is_tail_call $ snd $ Unbound.unBind bind
-    (* | _ => false *)
+    (* todo: how about EHalt? *)
+    | EVar _ => false
+    | EConst _ => false
+    | EState _ => false
+    | EUnOp _ => false
+    | EBinOp _ => false
+    | ETriOp _ => false
+    | EET _ => false
+    | ET _ => false
+    | ERecord _ => false
+    | ENewArrayValues _ => false
+    | EAbs _ => false
+    | EAbsI _ => false
+    | EAppConstr _ => false
+    | EGet _ => false
+    | ESet _ => false
+    | EEnv _ => false
 
 end

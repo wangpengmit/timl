@@ -53,8 +53,15 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'va
 
 open VisitorUtil
        
+exception Visitor2Error of string
+                             
 fun visit2_pair visit2_fst visit2_snd env (a, b) (a', b') = (visit2_fst env a a', visit2_snd env b b')
-fun visit2_list visit env = map2 (visit env)
+fun visit2_list visit env ls ls' = map2 (visit env) ls ls'
+                                   handle ListPair.UnequalLengths => raise Visitor2Error "unequal lengths"
+fun visit2_SMap visit env m m' =
+  if not (SMapU.is_same_domain m m') then raise Visitor2Error "not same domain"
+  else
+    SMap.intersectWith (fn (v, v') => visit env v v') (m, m')
                                                   
 fun visit2_abs visit2_'p env (Abs p1) (Abs p1') =
   Abs $ visit2_'p (env2ctx env) p1 p1'
@@ -76,8 +83,6 @@ fun visit2_bind visit2_'p = visit2_abs o visit2_pair visit2_'p o visit2_inner
 fun visit2_bind_simp extend = visit2_bind (visit2_binder extend)
 fun visit2_bind_anno extend visit2_'anno = visit2_bind (visit2_pair (visit2_binder extend) (visit2_outer visit2_'anno))
                                                        
-exception Visitor2Error of string
-                             
 fun error _ _ = raise Visitor2Error ""
 fun error_k _ _ = raise Visitor2Error ""
     
@@ -197,21 +202,36 @@ fun default_ty_visitor2_vtable
                  TArrayPtr (t', i1', i2') =>
                  TArrayPtr (#visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2')
                | _ => error (TArrayPtr (t, i1, i2)) other)
-          | TTuplePtr (data as (ts, i, b)) =>
-            (case other of
-                 TTuplePtr (ts', i', b') =>
-                 TTuplePtr (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i', visit2_eq op= this env b b')
-               | _ => error (TTuplePtr data) other)
-          | TTuple (data as ts) =>
-            (case other of
-                 TTuple ts' =>
-                 TTuple (visit2_list (#visit2_ty vtable this) env ts ts')
-               | _ => error (TTuple data) other)
           | TPreTuple (ts, i, i2) =>
             (case other of
                  TPreTuple (ts', i', i2') =>
                  TPreTuple (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i', #visit2_idx vtable this env i2 i2')
                | _ => error (TPreTuple (ts, i, i2)) other)
+          | TTuplePtr (data as (ts, i, b)) =>
+            (case other of
+                 TTuplePtr (ts', i', b') =>
+                 TTuplePtr (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i', visit2_eq op= this env b b')
+               | _ => error (TTuplePtr data) other)
+          | TVectorPtr (data as (x, i)) =>
+            (case other of
+                 TVectorPtr (x', i') =>
+                 TVectorPtr (visit2_eq op= this env x x', #visit2_idx vtable this env i i')
+               | _ => error (TVectorPtr data) other)
+          | TTuple (data as ts) =>
+            (case other of
+                 TTuple ts' =>
+                 TTuple $ visit2_list (#visit2_ty vtable this) env ts ts'
+               | _ => error (TTuple data) other)
+          | TRecord (data as fields) =>
+            (case other of
+                 TRecord fields' =>
+                 TRecord $ visit2_SMap (#visit2_ty vtable this) env fields fields'
+               | _ => error (TRecord data) other)
+          | TState x =>
+            (case other of
+                 TState x' =>
+                 TState (visit2_eq op= this env x x')
+               | _ => error (TState x) other)
           | TMap t =>
             (case other of
                  TMap t' =>
@@ -222,16 +242,21 @@ fun default_ty_visitor2_vtable
                  TVector t' =>
                  TVector (#visit2_ty vtable this env t t')
                | _ => error (TVector t) other)
-          | TState x =>
+          | TSCell t =>
             (case other of
-                 TState x' =>
-                 TState (visit2_eq op= this env x x')
-               | _ => error (TState x) other)
-          | TVectorPtr (data as (x, i)) =>
+                 TSCell t' =>
+                 TSCell (#visit2_ty vtable this env t t')
+               | _ => error (TSCell t) other)
+          | TNatCell r =>
             (case other of
-                 TVectorPtr (x', i') =>
-                 TVectorPtr (visit2_eq op= this env x x', #visit2_idx vtable this env i i')
-               | _ => error (TVectorPtr data) other)
+                 TNatCell _ =>
+                 TNatCell r
+               | _ => error (TNatCell r) other)
+          | TPtr t =>
+            (case other of
+                 TPtr t' =>
+                 TPtr (#visit2_ty vtable this env t t')
+               | _ => error (TPtr t) other)
       end
     fun visit2_TVar this env data other =
       let

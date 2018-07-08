@@ -154,6 +154,7 @@ fun default_evm1_visitor_vtable
           | INT2NAT () => INT2NAT ()
           | BYTE2INT () => BYTE2INT ()
           (* | PRINTC () => PRINTC () *)
+         | InstRestrictPtr len => InstRestrictPtr len
           | MACRO_init_free_ptr n => MACRO_init_free_ptr n
           | MARK_PreArray2ArrayPtr () => MARK_PreArray2ArrayPtr ()
           | MARK_PreTuple2TuplePtr () => MARK_PreTuple2TuplePtr ()

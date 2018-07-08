@@ -88,7 +88,7 @@ fun eq_i i i' =
     loop i i'
   end
 
-and eq_state st st' = StMapU.is_same_domain st st' andalso List.all (fn (k, v) => eq_i v $ st' @!! k) $ StMap.listItemsi st
+and eq_state st st' = StMapU.equal eq_i st st'
     
 fun eq_quan q q' =
   case q of
@@ -256,6 +256,16 @@ fun eq_mt t t' =
              end
            | _ => false
         )
+      | TRecord (fields, _) =>
+        (case t' of
+             TRecord (fields', _) => SMapU.equal eq_mt fields fields'
+           | _ => false
+        )
+      | TState (x, _) =>
+        (case t' of
+             TState (x', _) => x = x'
+           | _ => false
+        )
       | TMap t =>
         (case t' of
              TMap t' => eq_mt t t'
@@ -266,16 +276,16 @@ fun eq_mt t t' =
              TVector t' => eq_mt t t'
            | _ => false
         )
-      | TState (x, _) =>
+      | TSCell t =>
         (case t' of
-             TState (x', _) => x = x'
+             TSCell t' => eq_mt t t'
            | _ => false
         )
-      (* | TTuplePtr (ts, n, _) => *)
-      (*   (case t' of *)
-      (*        TTuplePtr (ts', n', _) => eq_ls (uncurry eq_mt) (ts, ts') andalso n = n' *)
-      (*      | _ => false *)
-      (*   ) *)
+      | TNatCell _ =>
+        (case t' of
+             TNatCell _ => true
+           | _ => false
+        )
       | TPtr t =>
         (case t' of
              TPtr t' => eq_mt t t'

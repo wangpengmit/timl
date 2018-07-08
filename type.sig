@@ -41,7 +41,7 @@ signature TYPE = sig
            | TMap of mtype
            | TVector of mtype (* the purpose of vector is that elements stored in vector are guaranteed to be well-formed and may not be nullable (such as (ex {n | n>5}, nat {n})) (while elements stored in maps must be nullable) *)
            | TSCell of mtype
-           | TNatCell of unit
+           | TNatCell of region
            | TPtr of mtype
 
   datatype ty = 

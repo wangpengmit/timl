@@ -89,10 +89,12 @@ fun str_raw_mt (t : mtype) : string =
         sprintf "(datatype $$$ = $)" [str_raw_name name, tnames, basic_sorts, constr_decls]
       end
     (* | TSumbool (s1, s2) => sprintf "TSumbool ($, $)" [str_raw_s s1, str_raw_s s2] *)
+    | TRecord (fields, _) => sprintf "(TRecord $)" [SMapU.str_map (id, str_raw_mt) fields]
+    | TState (x, _) => sprintf "TState $" [x]
     | TMap t => sprintf "TMap ($)" [str_raw_mt t]
     | TVector t => sprintf "TVector ($)" [str_raw_mt t]
-    | TState (x, _) => sprintf "TState $" [x]
-    (* | TTuplePtr (ts, n, _) => sprintf "TTuplePtr ($, $)" [str_ls str_raw_mt ts, str_int n] *)
+    | TSCell t => sprintf "(TSCell $)" [str_raw_mt t]
+    | TNatCell r => "TNatCell"
     | TPtr t => sprintf "TPtr ($)" [str_raw_mt t]
 
 fun str_raw_t (t : ty) : string =

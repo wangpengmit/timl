@@ -141,7 +141,7 @@ fun live_vars_expr_visitor_vtable cast () =
                 (e1, e2)
               end
         end
-    fun visit_es this env es =
+    fun visit_es_right this env es =
         case es of
             [] => []
           | _ => 
@@ -180,7 +180,7 @@ fun live_vars_expr_visitor_vtable cast () =
           rev $ from_adds len e
         end
     fun visit_e3 this env (e1, e2, e3) =
-      case visit_es this env [e1, e2, e3] of
+      case visit_es_right this env [e1, e2, e3] of
           [e1, e2, e3] => (e1, e2, e3)
         | _ => raise Impossible "live-vars/visit_e3()"
     (* fun visit_e3 this env (e1, e2, e3) = *)
@@ -209,7 +209,7 @@ fun live_vars_expr_visitor_vtable cast () =
           | EEI data => #visit_EEI vtable this env data
           | EET data => #visit_EET vtable this env data
           | ET data => #visit_ET vtable this env data
-          | ENewArrayValues (t, es, r) => ENewArrayValues (#visit_mtype vtable this env t, visit_es this env es, r)
+          | ENewArrayValues (t, es, r) => ENewArrayValues (#visit_mtype vtable this env t, visit_es_right this env es, r)
 	  | EAbs data => #visit_EAbs vtable this env data
 	  | EAbsI data => #visit_EAbsI vtable this env data
 	  | EAppConstr data => #visit_EAppConstr vtable this env data
@@ -235,7 +235,7 @@ fun live_vars_expr_visitor_vtable cast () =
           | EGet (x, es, r) =>
             let
               val (es, paths) = unzip es
-              val es = visit_es this env es
+              val es = visit_es_left this env es
               val es = zip (es, paths)
             in
               EGet (x, es, r)
@@ -266,6 +266,17 @@ fun live_vars_expr_visitor_vtable cast () =
               in
                 ESet (x, es, e, r)
               end
+          | ERecord (fields, r) =>
+            let
+              val fields = sort cmp_str_fst $ SMap.listItemsi fields
+              val (names, es) = unzip fields
+              (* ERecord will be translated into ETuple which is processed together in CPS, so we should use visit_es_right here *)
+              val es = visit_es_right this env es
+              val fields = zip (names, es)
+              val fields = SMapU.fromList fields
+            in
+              ERecord (fields, r)
+            end
       in
         ret
       end

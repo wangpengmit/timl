@@ -82,7 +82,7 @@ fun live_vars_expr_visitor_vtable cast () =
                 (e1, e2)
               end
         end
-    fun visit_es this env es =
+    fun visit_es_right this env es =
         case es of
             [] => []
           | _ => 
@@ -102,7 +102,7 @@ fun live_vars_expr_visitor_vtable cast () =
           from_adds len e
         end
     fun visit_e3 this env (e1, e2, e3) =
-      case visit_es this env [e1, e2, e3] of
+      case visit_es_right this env [e1, e2, e3] of
           [e1, e2, e3] => (e1, e2, e3)
         | _ => raise Impossible "micro-timl-live-vars/visit_e3()"
     (* fun visit_e3 this env (e1, e2, e3) = *)
@@ -189,8 +189,19 @@ fun live_vars_expr_visitor_vtable cast () =
           (* | EPairAssign data => #visit_EPairAssign vtable this env data *)
           (* | EProjProtected data => #visit_EProjProtected vtable this env data *)
           | EHalt data => #visit_EHalt vtable this env data
-          | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_es this env es)
-          | ETuple es => ETuple (visit_es this env es)
+          | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_es_right this env es)
+          | ETuple es => ETuple (visit_es_right this env es)
+          | ERecord fields =>
+            let
+              val fields = sort cmp_str_fst $ SMap.listItemsi fields
+              val (names, es) = unzip fields
+              (* ERecord will be translated into ETuple which is processed together in CPS, so we should use visit_es_right here *)
+              val es = visit_es_right this env es
+              val fields = zip (names, es)
+              val fields = SMapU.fromList fields
+            in
+              ERecord fields
+            end
           | EIfi (e, bind1, bind2) =>
             let
               val lvars = #1 env

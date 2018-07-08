@@ -277,6 +277,7 @@ fun pp_t s t =
     fun space () = PP.space s 1
     fun add_space a = (space (); a)
     fun str v = PP.string s v
+    fun strs s = (str s; space ())
     fun pp_id x = str $ fst x
     fun pp_long_id x = str $ str_long_id x
     fun comma () = (str ","; space ())
@@ -376,6 +377,15 @@ fun pp_t s t =
           space ();
           str "(";
           app (fn (name, t) => (pp_id name; colon (); pp_t t; comma ())) ts;
+          str ")";
+          close_box ()
+        )
+      | TPtr t =>
+        (
+          open_hbox ();
+          strs "TPtr";
+          str "(";
+          pp_t t;
           str ")";
           close_box ()
         )
@@ -497,6 +507,7 @@ fun str_expr_const c =
     | ECZero () => "zero"
     | ECNow () => "now"
     | ECThis () => "this"
+    | ECState x => "state " ^ x
 
 fun str_ast_expr_unop opr =
   case opr of
@@ -797,20 +808,20 @@ fun pp_e s e =
           space ();
           pp_e e2; close_box (); str ")"; close_box ()
         )
-      | ETriOp (opr, e1, e2, e3, _) =>
-        (
-          open_hbox ();
-          str $ str_ast_expr_triop opr;
-          space ();
-          str "(";
-          pp_e e1;
-          comma ();
-          pp_e e2;
-          comma ();
-          pp_e e3;
-          str ")";
-          close_box ()
-        )
+      (* | ETriOp (opr, e1, e2, e3, _) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str $ str_ast_expr_triop opr; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e1; *)
+      (*     comma (); *)
+      (*     pp_e e2; *)
+      (*     comma (); *)
+      (*     pp_e e3; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | ENever r => str "ENever"
       | ESetModify (b, x, es, e, _) =>
         (
@@ -949,6 +960,19 @@ fun pp_e s e =
             close_box ()
           )
         end
+      | EOffsetProjs (e, path) =>
+        (
+          open_hbox ();
+          str "EOffsetProjs";
+          space ();
+          str "(";
+          pp_e e;
+          comma ();
+          app (app_inl_inr (fn e => (str "["; pp_e e; str "]"))
+                           (fn (proj, _) => str $ "." ^ str_sum str_int id proj)) path;
+          str ")";
+          close_box ()
+        )
   end
 
 and pp_d s d =

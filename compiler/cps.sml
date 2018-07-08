@@ -3,6 +3,7 @@
 structure CPS = struct
 
 open Expr
+open CostUtil
 open MicroTiMLCosts
 open MicroTiMLFreeEVars
 open CompilerUtil
@@ -725,6 +726,29 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         foldr f (ek, (to_real $ C_ETuple len, N len) %%+ j_k) xs_names_es
       end
+    | S.ERecord fields =>
+      let
+        val t_fields = assert_TRecord t_e
+        val () = assert_b "cps/ERecord/is_same_domain()" $ SMapU.is_same_domain fields t_fields
+        val fields = sort cmp_str_fst $ SMap.listItemsi fields
+        val (names, es) = unzip fields
+        val t_fields = sort cmp_str_fst $ SMap.listItemsi t_fields
+        val (_, ts) = unzip t_fields
+        val ets = zip (es, ts)
+        val xs_names_es = map (fn (name, (e, t)) => (fresh_evar (), name, assert_EAscState e, t)) $ zip (names, ets)
+        val xs = map #1 xs_names_es
+        val ek = k $$ ERecord (SMapU.fromList $ zip (names, map EV xs))
+        fun f ((x, name, (e, st_e), t), (ek, i_ek)) =
+            let
+              val t_x = cps_t t
+              val ek = EAbs (st_e %++ F, close0_e_e_anno ((x, name, t_x), ek), NONE)
+            in
+              cps (e, t) (ek, i_ek)
+            end
+        val len = length es
+      in
+        foldr f (ek, (to_real $ C_ETuple len, N len) %%+ j_k) xs_names_es
+      end
     | S.EBinOp (opr, e1, e2) =>
       (* [[ e1 o e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. k (x1 o x2))) *)
       let
@@ -753,6 +777,12 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                 EBPair () => (N C_EPair, N 2)
               | EBPrim opr => (N $ C_EBPrim opr, N 0)
               | EBNatCmp opr => (N $ C_ENatCmp opr, N 0)
+              | EBNat (EBNExp ()) =>
+                let
+                  val i2 = assert_TNat t_e2
+                in
+                  (nat_exp_cost i2, N 0)
+                end
               | EBNat opr => (N $ C_ENat opr, N 0)
               | EBApp () => raise Impossible "cps/BinOp/App"
               | EBNew () =>
@@ -761,11 +791,18 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                 in
                   (N C_ENew_order0 %+ N C_ENew_order1 %* len, len %+ N1)
                 end
+              | EBIntNatExp () =>
+                let
+                  val i2 = assert_TNat t_e2
+                in
+                  (nat_exp_cost i2, N 0)
+                end
               | EBRead () => (N C_ERead, N 0)
               | EBVectorGet () => (N C_EVectorGet, N 0)
               | EBVectorPushBack () => (N C_EVectorPushBack, N 0)
               | EBMapPtr () => (N C_EMapPtr, N 0)
               | EBStorageSet () => (N C_EStorageSet, N 0)
+              | EBNatCellSet () => (N C_ENatCellSet, N 0)
         val (e, i_e) = cps (e2, t_e2) (e, mapFst IToReal' cost %%+ j_k) 
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e), NONE)
       in
@@ -818,18 +855,20 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                   | EUTiML opr =>
                     (case opr of
                          EUProj _ => (C_EProj, 0)
+                       | EUField _ => (C_EProj, 0)
+                       | EUPtrProj _ => (C_EPtrProj, 0)
                        | EUPrim opr => (C_EUPrim opr, 0)
                        | EUArrayLen _ => (C_EArrayLen, 0)
                        | EUNat2Int _ => (C_ENat2Int, 0)
                        | EUInt2Nat _ => (C_EInt2Nat, 0)
                        | EUPrintc _ => (C_EPrintc, 0)
                        | EUStorageGet _ => (C_EStorageGet, 0)
+                       | EUNatCellGet _ => (C_ENatCellGet, 0)
                        | EUVectorClear _ => (C_EVectorClear, 0)
                        | EUVectorLen _ => (C_EVectorLen, 0)
                        | EUAnno _ => raise Impossible "cps()/EUnOp/EUAnno"
-                       | EUField _ => raise Impossible "cps()/EUnOp/EUField"
                     )
-                  | EUTupleProj _ => (C_ETupleProj, 0)
+                  | EUTupleProj _ => (C_EProj, 0)
           in
             cps (e, t_e) (c, mapPair' to_real N cost %%+ j_k)
           end
@@ -1195,15 +1234,18 @@ fun check_CPSed_expr e =
     | EAscSpace (e, _) => loop e
     | EBinOp (EBPair (), _, _) => err ()
     | ETuple _ => err ()
+    | ERecord _ => err ()
     | EBinOp (EBNew (), _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBNat _, _, _) => err ()
     | EBinOp (EBNatCmp _, _, _) => err ()
+    | EBinOp (EBIntNatExp _, _, _) => err ()
     | EBinOp (EBVectorGet (), _, _) => err ()
     | EBinOp (EBVectorPushBack (), _, _) => err ()
     | EBinOp (EBMapPtr (), _, _) => err ()
     | EBinOp (EBStorageSet (), _, _) => err ()
+    | EBinOp (EBNatCellSet (), _, _) => err ()
     | ETriOp (ETWrite (), _, _, _) => err ()
     | ETriOp (ETVectorSet (), _, _, _) => err ()
     | EVar _ => err ()
@@ -1271,20 +1313,23 @@ and check_value e =
     | EEnv _ => ()
     | EBinOp (EBPair (), e1, e2) => (check_value e1; check_value e2)
     | ETuple es => app check_value es
+    | ERecord fields => SMap.app check_value fields
     | EUnOp (EUInj _, e) => check_value e
     | EUnOp (EUTiML opr, _) =>
       (case opr of
            EUProj _ => err ()
+         | EUField _ => err ()
+         | EUPtrProj _ => err ()
          | EUArrayLen () => err ()
          | EUPrim _ => err ()
          | EUNat2Int () => err ()
          | EUInt2Nat () => err ()
          | EUPrintc () => err ()
          | EUStorageGet () => err ()
+         | EUNatCellGet () => err ()
          | EUVectorClear () => err ()
          | EUVectorLen () => err ()
          | EUAnno _ => check_value e
-         | EUField _ => err ()
       )
     | EAbs (_, bind, _) =>
       let
@@ -1329,10 +1374,12 @@ and check_value e =
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBNat _, _, _) => err ()
     | EBinOp (EBNatCmp _, _, _) => err ()
+    | EBinOp (EBIntNatExp _, _, _) => err ()
     | EBinOp (EBVectorGet (), _, _) => err ()
     | EBinOp (EBVectorPushBack (), _, _) => err ()
     | EBinOp (EBMapPtr (), _, _) => err ()
     | EBinOp (EBStorageSet (), _, _) => err ()
+    | EBinOp (EBNatCellSet (), _, _) => err ()
     | ETriOp _ => err ()
     | ECase _ => err ()
     | EUnpack _ => err ()

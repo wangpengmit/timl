@@ -88,6 +88,7 @@ datatype expr_const =
          | ECZero of unit
          | ECNow of unit
          | ECThis of unit
+         | ECState of string
 
 datatype ast_expr_unop =
          EUTiML of expr_un_op
@@ -144,7 +145,6 @@ datatype exp =
          | ELet2 of storage option * ptrn * exp option * region
          | EIfs of ifelse list * region
          | EFor of id * ty option * exp * exp * exp * exp * region
-         | EState of id
          | EOffsetProjs of exp * (exp, tuple_record_proj * region) sum list
 
      and decl =
@@ -204,7 +204,7 @@ datatype top_bind =
          | TBFunctorApp of id * id * id
          | TBState of id * ty
          | TBPragma of id * string
-       | TBInterface of id * sgn
+         | TBInterface of id * sgn
 
 type prog = top_bind list
 
@@ -237,6 +237,7 @@ fun get_region_t t =
       | TAppI (_, _, r) => r
       | TAbs (_, _, r) => r
       | TRecord (_, r) => r
+      | TPtr t => get_region_t t
 
 fun get_region_pn pn =
     case pn of
@@ -303,6 +304,7 @@ fun EAttach (e, r) = EUnOp (EUAttach (), e, r)
 fun EDeref (b, e, r) = EUnOp (EUDeref b, e, r)
 fun EMemDeref (e, r) = EDeref (false, e, r)
 fun EStorageDeref (e, r) = EDeref (true, e, r)
+fun EState (x, r) = EConst (ECState x, r)
 
 type typing = id * ty
 type indexed_typing = id * (ty * bool)

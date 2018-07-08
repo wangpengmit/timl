@@ -111,9 +111,12 @@ fun default_type_visitor_vtable
           | TUVar data => #visit_TUVar vtable this env data
           | TDatatype data => #visit_TDatatype vtable this env data
           (* | TSumbool data => #visit_TSumbool vtable this env data *)
+          | TRecord (fields, r) => T.TRecord (SMap.map (#visit_mtype vtable this env) fields, r)
+          | TState data => T.TState data
           | TMap t => T.TMap $ #visit_mtype vtable this env t
           | TVector t => T.TVector $ #visit_mtype vtable this env t
-          | TState data => T.TState data
+          | TSCell t => T.TSCell $ #visit_mtype vtable this env t
+          | TNatCell r => T.TNatCell r
           | TPtr t => T.TPtr (#visit_mtype vtable this env t)
       end
     fun visit_TArrow this env data =

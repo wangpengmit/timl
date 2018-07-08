@@ -14,19 +14,11 @@ fun is_sub_domain m m' = List.all (fn k => Option.isSome (M.find (m', k))) (doma
 
 fun is_same_domain m m' = M.numItems m = M.numItems m' andalso is_sub_domain m m'
 
+fun all f m = List.all f (M.listItems m)
+fun alli f m = List.all f (M.listItemsi m)
+                             
 fun equal eq m m' =
-  if not (is_same_domain m m') then false
-  else
-    let
-      exception NotEqual of unit
-    in
-      (M.appi (fn (k, v) =>
-                  if eq (v, Option.valOf (M.find (m', k))) then ()
-                  else raise NotEqual ()
-              ) m; true)
-      handle NotEqual () => false
-    end
-    
+  is_same_domain m m' andalso alli (fn (k, v) => eq v (Option.valOf (M.find (m', k)))) m
 
 fun addList (m, kvs) = foldl (fn ((k, v), m) => M.insert (m, k, v)) m kvs
 fun fromList kvs = addList (M.empty, kvs)
@@ -60,8 +52,6 @@ fun must_find m k = Util.assert_SOME (M.find (m, k))
 fun sub m m' = M.filteri (fn (k, _) => Util.isNone (M.find (m', k))) m
 fun union m m' = M.unionWith Util.snd (m, m')
 
-fun all f m = List.all f (M.listItems m)
-                             
 end
 
 structure IntBinaryMapUtil = MapUtilFn (IntBinaryMap)
