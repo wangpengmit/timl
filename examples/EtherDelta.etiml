@@ -71,8 +71,8 @@ interface Token = sig
   event Transfer(indexed _from : address, indexed _to : address, _value : uint256)
   event Approval(indexed _owner : address, indexed _spender : address, _value : uint256)
 
-  (* public state decimals : ref uint  *)
-  (* public state name : ref string *)
+  (* public state decimals : cell uint  *)
+  (* public state name : cell string *)
 
 end
 
@@ -80,6 +80,12 @@ contract StandardToken = struct
 
   open Pervasive
        
+  state balances : map address uint256
+
+  state allowed : map address (map address uint256)
+
+  public state totalSupply : cell uint256
+
   fun transfer (_to : address, _value : uint256) return bool =
     (*
     //Default assumes totalSupply can't be over max (2^256 - 1).
@@ -120,12 +126,6 @@ contract StandardToken = struct
   fun allowance (_owner : address, _spender : address) constant return uint256 =
     allowed[_owner][_spender]
 
-  state balances : map address uint256
-
-  state allowed : map address (map address uint256)
-
-  public state totalSupply : ref uint256
-
 end    
 
 contract ReserveToken = struct 
@@ -133,7 +133,7 @@ contract ReserveToken = struct
   open SafeMath
   open StandardToken
          
-  public state minter : ref address
+  public state minter : cell address
 
   fun init () =
     minter ::= msg.sender
@@ -174,12 +174,12 @@ end
 
 contract EtherDelta = struct
   open SafeMath
-  public  state admin : ref address (* the admin address *)
-  public  state feeAccount : ref address  (* the account that will receive fees *)
-  public  state accountLevelsAddr : ref address (* the address of the AccountLevels contract *)
-  public  state feeMake : ref uint  (* percentage times (1 ether) *)
-  public  state feeTake : ref uint  (* percentage times (1 ether) *)
-  public  state feeRebate : ref uint  (* percentage times (1 ether) *)
+  public  state admin : cell address (* the admin address *)
+  public  state feeAccount : cell address  (* the account that will receive fees *)
+  public  state accountLevelsAddr : cell address (* the address of the AccountLevels contract *)
+  public  state feeMake : cell uint  (* percentage times (1 ether) *)
+  public  state feeTake : cell uint  (* percentage times (1 ether) *)
+  public  state feeRebate : cell uint  (* percentage times (1 ether) *)
   public  state tokens : map address (map address uint)  (* mapping of token addresses to mapping of account balances (token=0 means Ether) *)
   public  state orders : map address (map bytes32 bool)  (* mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature) *)
   public  state orderFills : map address (map bytes32 uint)  (* mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled) *)

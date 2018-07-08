@@ -1648,12 +1648,17 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           (e, t, i1 %%+ i2 %%+ TN (C_EBPrim opr), st)
         end
       | EBinOp (opr as EBIntNatExp (), e1, e2) =>
-          let
-            val (e1, d1, st) = tc_against_ty (ctx, st) (e1, TInt)
-            val (e2, t2, d2, st) = tc (ctx, st) e2
-            val i2 = assert_TNat_m t2 (fn msg => raise MTCError $ "EIntNatExp: " ^ msg)
+        let
+          val t1 = TInt
+          val (e1, d1, st) = tc_against_ty (ctx, st) (e1, t1)
+          val st_e1 = st
+          val (e2, t2, d2, st) = tc (ctx, st) e2
+          val t2 = whnf itctx t2
+          val i2 = assert_TNat_m t2 (fn msg => raise MTCError $ "EIntNatExp: " ^ msg)
+          val (e1, e2) = if !anno_ENat then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val (e1, e2) = if !anno_ENat_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
           in
-            (EBinOp (opr, e1, e2), TInt, d1 %%+ d2 %%+ (nat_exp_cost i2, N0), st)
+            (EBinOp (opr, e1, e2), TInt, d1 %%+ d2 %%+ (E_nat_exp_cost i2, N0), st)
           end
       | EBinOp (EBNat opr, e1, e2) =>
         let
@@ -1671,7 +1676,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val t = TNat $ interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Impossible "Can only divide by a nat whose index is a constant")
           val cost =
               case opr of
-                  EBNExp () => nat_exp_cost i2
+                  EBNExp () => E_nat_exp_cost i2
                 | _ => to_real $ C_ENat opr
         in
           (EBinOp (EBNat opr, e1, e2), t, j1 %%+ j2 %%+ (cost, N0), st)

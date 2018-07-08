@@ -455,6 +455,7 @@ local
 		     (* else if x = "__&print" then EUnOp (EUPrint, elab e2, r) *)
 		     else if x = "__&printc" then EUnOp (EUPrintc (), elab e2, r)
 		     else if x = "__&halt" then EET (EETHalt (), elab e2, elab_mt (S.TVar (NONE, ("_", r))))
+		     else if x = "halt" then EET (EETHalt (), elab e2, elab_mt (S.TVar (NONE, ("_", r))))
                      else if x = "__&builtin" then
                        (case e2 of
                             S.EConst (S.ECString s, _) =>

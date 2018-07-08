@@ -781,7 +781,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                 let
                   val i2 = assert_TNat t_e2
                 in
-                  (nat_exp_cost i2, N 0)
+                  (E_nat_exp_cost i2, N 0)
                 end
               | EBNat opr => (N $ C_ENat opr, N 0)
               | EBApp () => raise Impossible "cps/BinOp/App"
@@ -795,7 +795,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                 let
                   val i2 = assert_TNat t_e2
                 in
-                  (nat_exp_cost i2, N 0)
+                  (E_nat_exp_cost i2, N 0)
                 end
               | EBRead () => (N C_ERead, N 0)
               | EBVectorGet () => (N C_EVectorGet, N 0)

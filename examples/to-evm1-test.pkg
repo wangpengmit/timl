@@ -1,9 +1,9 @@
-test-state.timl
+(* test-state.timl *)
 (* unit-test-basic1.timl *)
 (* MiniToken.etiml *)
 (* Token.etiml *)
 (* Crowdsale.etiml *)
-(* EtherDelta.etiml *)
+EtherDelta.etiml
 
 (* pervasive.timl *)
 (* basic.timl *)

@@ -67,8 +67,10 @@ fun on_mt (t : S.mtype) =
     | S.TAbsI (b, Bind.Bind (name, t), _) => TAbsI $ IBindAnno ((name, b), on_mt t)
     | S.TBase (t, r) => TConst (TCTiML t)
     | S.TUVar (x, _) =>
+      (println "warning: remaining UVar";
+       TUnit)
       (* exfalso x *)
-      raise Impossible "to-micro-timl/on_mt/UVar"
+      (* raise Impossible "to-micro-timl/on_mt/UVar" *)
     (* | S.TSumbool (s1, s2) => TSumbool (s1, s2) *)
     | S.TDatatype (Bind.Bind (dt_name, tbinds), _) =>
       let

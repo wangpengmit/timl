@@ -4,7 +4,8 @@ structure Util = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
-  fun require b = if b then () else (throw 0x11111111) using _ end
+  fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+  fun require b = if b then waste_time (); () else (throw using _) end
 end
 
 contract MyToken = struct
@@ -33,8 +34,8 @@ contract MyToken = struct
   (* val () = throw (balanceOf[msg.sender] >= 0x20) *)
   (* val () = throw (2 >= 1) *)
   val () = transfer (0x123, 0x20)
-  (* val () = throw balanceOf[msg.sender] *)
-  (* val () = throw balanceOf[0x123] *)
+  (* val () = halt balanceOf[msg.sender] *)
+  (* val () = halt balanceOf[0x123] *)
   (* val () = throw msg.sender *)
                           
 end

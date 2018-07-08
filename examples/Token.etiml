@@ -8,21 +8,22 @@ structure Util = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
-  fun require b = if b then () else throw using _ end
+  fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+  fun require b = if b then waste_time (); () else (throw using _) end
   val assert = require
 end
 
 contract TokenERC20 = struct
 
-  open Util                        
+  open Util
                         
   (* Public variables of the token *)
   (* public state name : ref string *)
-
   (* public state symbol : ref string *)
-  public val decimals : cell = #18
+         
+  public val decimals = #18
   (* 18 decimals is the strongly suggested default, avoid changing it *)
-  public state totalSupply : ref uint256
+  public state totalSupply : cell uint256
 
   (* This creates an array with all balances *)
   public state balanceOf : map address uint256
@@ -44,14 +45,14 @@ contract TokenERC20 = struct
         (* tokenName : string, *)
         (* tokenSymbol : string *)
     ) using _ = 
-    totalSupply := initialSupply * 10 #** !decimals;  (* Update total supply with the decimal amount *)
-    set balanceOf[msg.sender] !totalSupply                (* Give the creator all initial tokens *)
+           totalSupply ::= initialSupply * ((10 #** decimals) using _);  (* Update total supply with the decimal amount *)
+    set balanceOf[msg.sender] !!totalSupply                (* Give the creator all initial tokens *)
     (* name := tokenName;                                   (* Set the name for display purposes *) *)
     (* symbol := tokenSymbol                               (* Set the symbol for display purposes *) *)
 
-  (**
-   * Internal transfer, only can be called by this contract
-   *)
+  (** *)
+  (*  * Internal transfer, only can be called by this contract *)
+  (*  *)
   internal fun _transfer (_from : address, _to : address, _value : uint) using _ =
     (* Prevent transfer to 0x0 address. Use burn() instead *)
     require(_to <> 0x0);
@@ -69,53 +70,53 @@ contract TokenERC20 = struct
     (* Asserts are used to use static analysis to find bugs in your code. They should never fail *)
     assert(balanceOf[_from] + balanceOf[_to] = previousBalances)
 
-  (**
-   * Transfer tokens
-   *
-   * Send `_value` tokens to `_to` from your account
-   *
-   * @param _to The address of the recipient
-   * @param _value the amount to send
-   *)
+  (** *)
+  (*  * Transfer tokens *)
+  (*  * *)
+  (*  * Send `_value` tokens to `_to` from your account *)
+  (*  * *)
+  (*  * @param _to The address of the recipient *)
+  (*  * @param _value the amount to send *)
+  (*  *)
   public fun transfer (_to : address, _value : uint256) using _ =
     _transfer(msg.sender, _to, _value)
 
-  (**
-   * Transfer tokens from other address
-   *
-   * Send `_value` tokens to `_to` on behalf of `_from`
-   *
-   * @param _from The address of the sender
-   * @param _to The address of the recipient
-   * @param _value the amount to send
-   *)
+  (** *)
+  (*  * Transfer tokens from other address *)
+  (*  * *)
+  (*  * Send `_value` tokens to `_to` on behalf of `_from` *)
+  (*  * *)
+  (*  * @param _from The address of the sender *)
+  (*  * @param _to The address of the recipient *)
+  (*  * @param _value the amount to send *)
+  (*  *)
   public fun transferFrom (_from : address, _to : address, _value : uint256) return bool using _ =
     require(_value <= allowance[_from][msg.sender]);     (* Check allowance *)
     modify allowance[_from][msg.sender] -= _value;
     _transfer(_from, _to, _value);
     true
 
-  (**
-   * Set allowance for other address
-   *
-   * Allows `_spender` to spend no more than `_value` tokens on your behalf
-   *
-   * @param _spender The address authorized to spend
-   * @param _value the max amount they can spend
-   *)
+  (** *)
+  (*  * Set allowance for other address *)
+  (*  * *)
+  (*  * Allows `_spender` to spend no more than `_value` tokens on your behalf *)
+  (*  * *)
+  (*  * @param _spender The address authorized to spend *)
+  (*  * @param _value the max amount they can spend *)
+  (*  *)
   public fun approve (_spender : address, _value : uint256) return bool using _ =
     set allowance[msg.sender][_spender] _value;
     true
 
-  (**
-   * Set allowance for other address and notify
-   *
-   * Allows `_spender` to spend no more than `_value` tokens on your behalf, and then ping the contract about it
-   *
-   * @param _spender The address authorized to spend
-   * @param _value the max amount they can spend
-   * @param _extraData some extra information to send to the approved contract
-   *)
+  (** *)
+  (*  * Set allowance for other address and notify *)
+  (*  * *)
+  (*  * Allows `_spender` to spend no more than `_value` tokens on your behalf, and then ping the contract about it *)
+  (*  * *)
+  (*  * @param _spender The address authorized to spend *)
+  (*  * @param _value the max amount they can spend *)
+  (*  * @param _extraData some extra information to send to the approved contract *)
+  (*  *)
   public fun approveAndCall (_spender : address, _value : uint256(* , _extraData : bytes *)) using _ =
     let spender = attach _spender tokenRecipient;
     if approve(_spender, _value) then
@@ -123,13 +124,13 @@ contract TokenERC20 = struct
       true
     else false end
 
-  (**
-   * Destroy tokens
-   *
-   * Remove `_value` tokens from the system irreversibly
-   *
-   * @param _value the amount of money to burn
-   *)
+  (** *)
+  (*  * Destroy tokens *)
+  (*  * *)
+  (*  * Remove `_value` tokens from the system irreversibly *)
+  (*  * *)
+  (*  * @param _value the amount of money to burn *)
+  (*  *)
   public fun burn (_value : uint256) return bool using _ =
     require(balanceOf[msg.sender] >= _value);   (* Check if the sender has enough *)
     modify balanceOf[msg.sender] -= _value;            (* Subtract from the sender *)
@@ -137,14 +138,14 @@ contract TokenERC20 = struct
     fire Burn(msg.sender, _value);
     true
 
-  (**
-   * Destroy tokens from other account
-   *
-   * Remove `_value` tokens from the system irreversibly on behalf of `_from`.
-   *
-   * @param _from the address of the sender
-   * @param _value the amount of money to burn
-   *)
+  (** *)
+  (*  * Destroy tokens from other account *)
+  (*  * *)
+  (*  * Remove `_value` tokens from the system irreversibly on behalf of `_from`. *)
+  (*  * *)
+  (*  * @param _from the address of the sender *)
+  (*  * @param _value the amount of money to burn *)
+  (*  *)
   public fun burnFrom (_from : address, _value : uint256) return bool using _ =
     require(balanceOf[_from] >= _value);                (* Check if the targeted balance is enough *)
     require(_value <= allowance[_from][msg.sender]);    (* Check allowance *)

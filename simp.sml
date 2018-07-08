@@ -274,6 +274,15 @@ local
         | IUnOp (opr, i, r) =>
           let
             fun default () = IUnOp (opr, passi i, r)
+            fun floor c = SOME (TimeType.floor c) handle _ => NONE
+            fun log base c =
+              let
+                open TimeType
+                val base = fromInt $ str2int base
+              in
+                SOME $ Math.ln c / Math.ln base
+              end
+              handle _ => NONE
           in
             case opr of
                 IUDiv n =>
@@ -300,6 +309,24 @@ local
               | IUB2n () =>
                 (case i of
                      IConst (ICBool b, r) => mark $ IConst (ICNat (b2i b), r)
+                   | _ => default ()
+                )
+              | IUFloor n =>
+                (case i of
+                     IConst (ICTime c, r) =>
+                     (case floor c of
+                          SOME c => mark $ IConst (ICNat c, r)
+                        | NONE => default ()
+                     )
+                   | _ => default ()
+                )
+              | IULog base =>
+                (case i of
+                     IConst (ICTime c, r) =>
+                     (case log base c of
+                          SOME c => mark $ IConst (ICTime c, r)
+                        | NONE => default ()
+                     )
                    | _ => default ()
                 )
               | _ => default ()

@@ -1578,7 +1578,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e1, d1, st) = check_mtype (ctx, st) (e1, TInt r)
             val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
           in
-            (EBinOp (opr, e1, e2), TInt r, d1 %%+ d2 %%+ (nat_exp_cost i2, N0 r), st)
+            (EBinOp (opr, e1, e2), TInt r, d1 %%+ d2 %%+ (E_nat_exp_cost i2, N0 r), st)
           end
 	| U.EBinOp (EBNat opr, e1, e2) =>
           let
@@ -1592,7 +1592,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val i = interp_nat_expr_bin_op opr (i1, i2) (fn () => raise Error (r, ["Can only divide by a nat whose index is a constant, not: " ^ str_i gctxn sctxn i2]))
             val cost =
                 case opr of
-                    EBNExp () => nat_exp_cost i2
+                    EBNExp () => E_nat_exp_cost i2
                   | _ => to_real $ C_ENat opr
           in
             (EBinOp (EBNat opr, e1, e2), TNat (i, r), d1 %%+ d2 %%+ (cost, N0 r), st)
