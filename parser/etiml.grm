@@ -149,6 +149,7 @@ open Ast
     | ZERO
     | NOT
     | CALL
+    | CALLVALUE
     | SEND
     | FIRE
     | ATTACH
@@ -265,9 +266,10 @@ open Ast
        | indexed_typing_comma_star of indexed_typing list
        | comma_indexed_typing_star of indexed_typing list
        | indexed_typing of id * (ty * bool)
-       | fun_modifier of fun_modifier
+       | fun_modifier of fun_modifier list
        | fun_modifiers of fun_modifier list
        | named_ty of ty
+       | idx_1or2 of idx * idx option
        | optional_init of init option
        | optional_inherit of id list
        | init of init
@@ -353,34 +355,56 @@ spec : VAL id tnames COLON ty (SpecVal (id, tnames, ty, (VALleft, tyright)))
      | TYPE id EQ ty (SpecTypeDef (id, ty))
      | TYPE id_plus cur_bsort_star (SpecType (id_plus, cur_bsort_star, (TYPEleft, cur_bsort_starright)))
      | TYPE id (SpecType ([id], [], (TYPEleft, idright))) (* need this rule. don't know why *)
-     | optional_visi FUN id LPAREN typing_comma_star RPAREN fun_modifiers return (SpecFun (id, map snd typing_comma_star, return))
+     | optional_visi FUN id LPAREN typing_comma_star RPAREN fun_modifiers (SpecFun (id, map snd typing_comma_star, fun_modifiers))
      | EVENT id LPAREN indexed_typing_comma_star RPAREN (SpecEvent (id, map snd indexed_typing_comma_star))
 
-fun_modifier : VIEW (FmView)
-             | PURE (FmPure)
-             | PAYABLE (FmPayable)
-             | CONSTANT (FmConst)
-             (* | GUARD exp_term_comma_plus (FmGuard exp_term_comma_plus) *)
-             | visi (FmVisi visi)
-             | PRE state (FmPre state)
-             | POST state (FmPost state)
-                    
-fun_modifiers : fun_modifier fun_modifiers (fun_modifier :: fun_modifiers)
+fun_modifiers : fun_modifier fun_modifiers (fun_modifier @ fun_modifiers)
               | ([])
                      
-visi : PUBLIC (ViPublic)
-     | PRIVATE (ViPrivate)
-     | EXTERNAL (ViExternal)
-     | INTERNAL (ViInternal)
+fun_modifier : VIEW ([FmView ()])
+             | PURE ([FmPure ()])
+             | PAYABLE ([FmPayable ()])
+             | CONSTANT ([FmConst ()])
+             | GUARD exp_term_comma_plus ([FmGuards exp_term_comma_plus])
+             | visi ([FmVisi visi])
+             | PRE state ([FmPre state])
+             | POST state ([FmPost state])
+             | RETURN named_ty ([FmReturn named_ty])
+             | RTRI idx_1or2 (FmUsing idx_1or2)
+
+named_ty : ty (ty)
+         | LPAREN typing_comma_plus RPAREN (TTuple (map snd typing_comma_plus, (LPARENleft, RPARENright)))
+           
+idx_1or2 : idx ((idx, NONE))
+         | idx COMMA idx ((idx1, SOME idx2))
+                    
+(* return : RETURN named_ty RTRI idx ((SOME named_ty, SOME idx, NONE)) *)
+(*        | RETURN named_ty RTRI idx COMMA idx ((SOME named_ty, SOME idx1, SOME idx2)) *)
+(*        | RETURN named_ty ((SOME named_ty, NONE, NONE)) *)
+(*        | RETURN RTRI idx ((NONE, SOME idx, NONE)) *)
+(*        | RETURN RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2)) *)
+(*        | RTRI idx ((NONE, SOME idx, NONE)) *)
+(*        | RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2)) *)
+(*        | ((NONE, NONE, NONE)) *)
+
+(* rec_return : COLON ty RTRI idx ((SOME ty, SOME idx)) *)
+(*        | COLON ty ((SOME ty, NONE)) *)
+(*        | RTRI idx ((NONE, SOME idx)) *)
+(*        | ((NONE, NONE)) *)
+
+(* pre : PRE state (state) *)
+(*     | (empty_state) *)
+
+(* post : POST state (SOME state) *)
+(*      | (NONE) *)
+
+visi : PUBLIC (ViPublic ())
+     | PRIVATE (ViPrivate ())
+     | EXTERNAL (ViExternal ())
+     | INTERNAL (ViInternal ())
 
 optional_visi : visi (SOME visi)
               | (NONE)
-
-pre : PRE state (state)
-    | (empty_state)
-
-post : POST state (SOME state)
-     | (NONE)
 
 typing_comma_star_trailing : typing COMMA typing_comma_star_trailing (typing :: typing_comma_star_trailing)
 	                   | ([])
@@ -407,7 +431,7 @@ optional_indexed : INDEXED (true)
                  | (false)
 
 decl : optional_visi VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, expright)))
-     | optional_visi FUN id tnames bind_star fun_modifiers return EQ exps (DRec (tnames, id, bind_star, empty_state, NONE, return, exps, (FUNleft, expsright)))
+     | optional_visi FUN id tnames bind_star fun_modifiers EQ exps (DRec (tnames, id, bind_star, fun_modifiers, exps, (FUNleft, expsright)))
      | DATATYPE datatype_def (DDatatype datatype_def)
      | IDX id optional_colon_sort EQ idx (DIdxDef (id, optional_colon_sort, idx))
      | ABSIDX id optional_colon_sort EQ idx (DAbsIdx2 (id, optional_colon_sort, idx))
@@ -472,9 +496,11 @@ exp : exp_term (exp_term)
      | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
      | set_modify id square_star exp (ESetModify (set_modify, id, square_star, exp, (set_modifyleft, expright)))
+     | MODIFY POND aexp index_or_proj_star exp (EPtrModify (EOffsetProjs (aexp, index_or_proj_star), exp, (MODIFYleft, expright)))
      | RETURN exp (EReturn (exp, (RETURNleft, expright)))
      (* | THROW exp (EThrow (exp, (THROWleft, expright))) *)
      | CALL exp (ECall (exp, (CALLleft, expright)))
+     | CALLVALUE exp (EUnOp (EUCallValue (), exp, (CALLVALUEleft, expright)))
      | SEND exp (ESend (exp, (SENDleft, expright)))
      | FIRE exp (EFire (exp, (FIREleft, expright)))
      | ATTACH exp (EAttach (exp, (ATTACHleft, expright)))
@@ -612,30 +638,13 @@ aptrn : LPAREN ptrn_comma_star RPAREN (PnTuple (ptrn_comma_star, (LPARENleft, RP
       | decorated_id (PnConstr (decorated_id, [], NONE, (decorated_idleft, decorated_idright)))
       | LSQ ptrn_comma_star RSQ (PnList (ptrn_comma_star, (LSQleft, RSQright)))
 
-return : RETURN named_ty RTRI idx ((SOME named_ty, SOME idx, NONE))
-       | RETURN named_ty RTRI idx COMMA idx ((SOME named_ty, SOME idx1, SOME idx2))
-       | RETURN named_ty ((SOME named_ty, NONE, NONE))
-       | RETURN RTRI idx ((NONE, SOME idx, NONE))
-       | RETURN RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2))
-       | RTRI idx ((NONE, SOME idx, NONE))
-       | RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2))
-       | ((NONE, NONE, NONE))
-
-(* rec_return : COLON ty RTRI idx ((SOME ty, SOME idx)) *)
-(*        | COLON ty ((SOME ty, NONE)) *)
-(*        | RTRI idx ((NONE, SOME idx)) *)
-(*        | ((NONE, NONE)) *)
-
-storage : MEMORY (StMemory)
-        | STORAGE (StStorage)
+storage : MEMORY (StMemory ())
+        | STORAGE (StStorage ())
         (* | INDEXED (StIndexed) *)
                    
 optional_storage : storage (SOME storage)
                  | (NONE)
                    
-named_ty : ty (ty)
-         | LPAREN typing_comma_plus RPAREN (TTuple (map snd typing_comma_plus, (LPARENleft, RPARENright)))
-           
 long_id : id ((NONE, id))
         | id DOTDOT id (SOME id1, id2)
            
@@ -674,7 +683,7 @@ int_or_id : INT (inl (str2int INT))
 proj_path : DOT int_or_id proj_path ((int_or_id, (DOTleft, int_or_idright)) :: proj_path)
           | ([])
               
-index_or_proj : LSQ exp RSQ (inl exp)
+index_or_proj : ARROW LSQ exp RSQ (inl exp)
                | ARROW int_or_id (inr (int_or_id, (ARROWleft, int_or_idright)))
 
 index_or_proj_star : index_or_proj index_or_proj_star (index_or_proj :: index_or_proj_star)

@@ -200,6 +200,9 @@ open Ast
        | state_field of id * idx
        | int_or_id of (int, string) sum
        | proj_path of proj_path
+       | fun_modifier of fun_modifier list
+       | fun_modifiers of fun_modifier list
+       | idx_1or2 of idx * idx option
 
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
@@ -272,7 +275,7 @@ spec : VAL id tnames COLON ty (SpecVal (id, tnames, ty, (VALleft, tyright)))
   | TYPE id (SpecType ([id], [], (TYPEleft, idright))) (* need this rule. don't know why *)
 
 decl : VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, expright)))
-     | FUN id tnames bind_star pre post return EQ exp (DRec (tnames, id, bind_star, pre, post, return, exp, (FUNleft, expright)))
+     | FUN id tnames bind_star fun_modifiers EQ exp (DRec (tnames, id, bind_star, fun_modifiers, exp, (FUNleft, expright)))
      | DATATYPE datatype_def (DDatatype datatype_def)
      | IDX id optional_colon_sort EQ idx (DIdxDef (id, optional_colon_sort, idx))
      | ABSIDX id optional_colon_sort EQ idx (DAbsIdx2 (id, optional_colon_sort, idx))
@@ -282,11 +285,34 @@ decl : VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, expright)))
      | TYPE id EQ ty (DTypeDef (id, ty))
      | OPEN id (DOpen id)
 
-pre : PRE state (state)
-    | (empty_state)
+fun_modifiers : fun_modifier fun_modifiers (fun_modifier @ fun_modifiers)
+              | ([])
+                     
+fun_modifier : PRE state ([FmPre state])
+             | POST state ([FmPost state])
+             | RETURN ty ([FmReturn ty])
+             | RTRI idx_1or2 (FmUsing idx_1or2)
 
-post : POST state (SOME state)
-     | (NONE)
+idx_1or2 : idx ((idx, NONE))
+         | idx COMMA idx ((idx1, SOME idx2))
+                    
+(* return : RETURN ty RTRI idx ((SOME ty, SOME idx, NONE)) *)
+(*        | RETURN ty RTRI idx COMMA idx ((SOME ty, SOME idx1, SOME idx2)) *)
+(*        | RETURN ty ((SOME ty, NONE, NONE)) *)
+(*        | RETURN RTRI idx ((NONE, SOME idx, NONE)) *)
+(*        | RETURN RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2)) *)
+(*        | ((NONE, NONE, NONE)) *)
+
+(* rec_return : COLON ty RTRI idx ((SOME ty, SOME idx)) *)
+(*        | COLON ty ((SOME ty, NONE)) *)
+(*        | RTRI idx ((NONE, SOME idx)) *)
+(*        | ((NONE, NONE)) *)
+
+(* pre : PRE state (state) *)
+(*     | (empty_state) *)
+
+(* post : POST state (SOME state) *)
+(*      | (NONE) *)
 
 state : LCUR state_field_star RCUR (state_field_star)
 
@@ -472,18 +498,6 @@ sort_bind_plus : sort_bind sort_bind_star (sort_bind @ sort_bind_star)
 
 sort_bind : sorting (sorting)
       | LPAREN sort_bind RPAREN (sort_bind)
-
-return : RETURN ty RTRI idx ((SOME ty, SOME idx, NONE))
-       | RETURN ty RTRI idx COMMA idx ((SOME ty, SOME idx1, SOME idx2))
-       | RETURN ty ((SOME ty, NONE, NONE))
-       | RETURN RTRI idx ((NONE, SOME idx, NONE))
-       | RETURN RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2))
-       | ((NONE, NONE, NONE))
-
-(* rec_return : COLON ty RTRI idx ((SOME ty, SOME idx)) *)
-(*        | COLON ty ((SOME ty, NONE)) *)
-(*        | RTRI idx ((NONE, SOME idx)) *)
-(*        | ((NONE, NONE)) *)
 
 rule_bar_star : rule bar_rule_star (rule :: bar_rule_star)
 	      | ([])

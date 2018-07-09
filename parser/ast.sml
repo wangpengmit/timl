@@ -75,10 +75,10 @@ type constr_decl = id * sort_bind list * constr_core option * region
 type datatype_def = string * string list * bsort_bind list * bsort list * constr_decl list * region
 
 datatype visi =
-         ViPublic
-         | ViPrivate
-         | ViExternal
-         | ViInternal
+         ViPublic of unit
+         | ViPrivate of unit
+         | ViExternal of unit
+         | ViInternal of unit
 
 datatype expr_const =
          ECInt of string
@@ -97,6 +97,7 @@ datatype ast_expr_unop =
          | EUThrow of unit
          | EUAsm of unit
          | EUCall of unit
+         | EUCallValue of unit
          | EUSend of unit
          | EUAttach of unit
          | EUFire of unit
@@ -116,8 +117,8 @@ datatype ast_expr_triop =
          | ETIfi of unit
 
 datatype storage =
-         StMemory
-         | StStorage
+         StMemory of unit
+         | StStorage of unit
          (* | StIndexed *)
                       
 type proj_path = (tuple_record_proj * region) list
@@ -149,7 +150,7 @@ datatype exp =
 
      and decl =
          DVal of id list * ptrn * exp * region
-         | DRec of id list * id * bind list * state * state option * return * exp * region
+         | DRec of id list * id * bind list * fun_modifier list * exp * region
          | DDatatype of datatype_def
          | DIdxDef of id * sort option * idx
          | DAbsIdx2 of id * sort option * idx
@@ -165,14 +166,17 @@ datatype exp =
          | Else of exp * region
 
      and fun_modifier =
-         FmView
-         | FmPure
-         | FmPayable
-         | FmConst
-         | FmGuard of exp list
+         FmView of unit
+         | FmPure of unit
+         | FmPayable of unit
+         | FmConst of unit
+         | FmGuards of exp list
          | FmVisi of visi
          | FmPre of state
          | FmPost of state
+         | FmReturn of ty
+         | FmTime of idx
+         | FmSpace of idx
              
      and init =
          InitExpr of exp * region
@@ -187,7 +191,7 @@ datatype spec =
          | SpecIdx of id * sort
          | SpecType of id list * bsort list * region
          | SpecTypeDef of id * ty
-         | SpecFun of id * ty list * return
+         | SpecFun of id * ty list * fun_modifier list
          | SpecEvent of id * (ty * bool) list
                                    
 datatype sgn =
@@ -305,6 +309,8 @@ fun EDeref (b, e, r) = EUnOp (EUDeref b, e, r)
 fun EMemDeref (e, r) = EDeref (false, e, r)
 fun EStorageDeref (e, r) = EDeref (true, e, r)
 fun EState (x, r) = EConst (ECState x, r)
+fun EPtrModify (e1, e2, r) = ESetStorageRef (e1, EApp (e2, EStorageDeref (e1, r), r), r)
+fun FmUsing (i, j) = [FmTime i] @ option2list (Option.map FmSpace j)
 
 type typing = id * ty
 type indexed_typing = id * (ty * bool)

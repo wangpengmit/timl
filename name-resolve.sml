@@ -186,6 +186,10 @@ fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_vi
                 TiBool (hd is, S.get_region_mt t)
               else if SE.eq_var (x, (ID ("array", dummy))) andalso length ts = 1 andalso length is = 1 then
                 TArray (hd ts, hd is)
+              else if SE.eq_var (x, (ID ("string", dummy))) andalso length ts = 0 andalso length is = 1 then
+                TString (hd is, S.get_region_mt t)
+              else if SE.eq_var (x, (ID ("bytes", dummy))) andalso length ts = 0 andalso length is = 1 then
+                TBytes (hd is, S.get_region_mt t)
               else
                 default ()
             end

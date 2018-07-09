@@ -494,8 +494,7 @@ local
         | S.EBinOp (EBTiML opr, e1, e2, _) => EBinOp (opr, elab e1, elab e2)
         | S.EBinOp (EBStrConcat (), e1, e2, r) =>
           EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
-        | S.EBinOp (EBSetRef true, e1, e2, r) =>
-          EStorageSet (elab e1, elab e2)
+        | S.EBinOp (EBSetRef true, e1, e2, r) => EStorageSet (elab e1, elab e2)
         | S.EBinOp (EBSetRef false, e1, e2, r) => EWrite (elab e1, ENat (0, r), elab e2)
         | S.EUnOp (opr, e, r) =>
           (case opr of
@@ -528,6 +527,7 @@ local
              | S.EUAsm _ => raise Impossible "elaborate/EAsm"
              | S.EUReturn _ => raise Impossible "elaborate/EReturn"
              | S.EUCall () => elab $ S.EThrowError r
+             | S.EUCallValue () => elab $ S.EThrowError r
              | S.EUSend () => ETrue r
              | S.EUFire () => ETT r
              | S.EUAttach () => ETT r
@@ -624,8 +624,32 @@ local
                 else
                   raise Error (r, "compound pattern can't be generalized, so can't have explicit type variables")
           end
-	| S.DRec (tnames, name, binds, pre, post, (t, d, j), e, r) =>
+	| S.DRec (tnames, name, binds, mods, e, r) =>
           let
+            fun process_mods ls =
+              let
+                val (pre, post, return, time, space) =
+                    (ref $ NONE, ref $ NONE, ref $ NONE, ref $ NONE, ref $ NONE)
+                val guards = ref []
+                fun f m =
+                  case m of
+                      FmPre v => pre := SOME v
+                    | FmPost v => post := SOME v
+                    | FmReturn v => return := SOME v
+                    | FmTime v => time := SOME v
+                    | FmSpace v => space := SOME v
+                    | FmGuards es => unop_ref (fn acc => rev es @ acc) guards
+                    | FmView () => ()
+                    | FmPure () => ()
+                    | FmPayable () => ()
+                    | FmConst () => ()
+                    | FmVisi _ => ()
+                val () = app f ls
+              in
+                (!pre, !post, !return, !time, !space, rev (!guards))
+              end
+            val (pre, post, t, d, j, guards) = process_mods mods
+            val pre = default empty_state pre
             val post = default pre post
             fun f bind =
                 case bind of
@@ -637,6 +661,8 @@ local
             val t = default (TUVar ((), r)) (Option.map elab_mt t)
             val d = default (IUVar ((), r)) (Option.map elab_i d)
             val j = default (IUVar ((), r)) (Option.map elab_i j)
+            val guards = map (fn e => S.EApp (e, S.ETT r, r)) guards
+            val e = S.ESemis (guards @ [e], r)
             val e = elab e
           in
 	    [DRec (Binder $ EName name, Inner $ Unbound.Bind ((map (fn nm => (Binder $ TName nm, Outer $ IUnderscore2 r)) tnames, Rebind $ Teles binds), ((elab_state r pre, elab_state r post), (t, (d, j)), e)), r)]
@@ -695,7 +721,7 @@ local
           in
             SpecTypeDef (fst $ unBind dt, TDatatype (dt, r))
           end
-        | S.SpecFun (name, ts, return) => raise Impossible "elaborate/SpecFun"
+        | S.SpecFun (name, ts, mods) => raise Impossible "elaborate/SpecFun"
         | S.SpecEvent (name, ts) => raise Impossible "elaborate/SpecEvent"
 
   fun elab_sig sg =

@@ -103,6 +103,7 @@ val keywords = [
     ("as", T.AS),
     ("deref", T.DEREF),
     ("sha3", T.SHA3),
+    ("keccak256", T.SHA3), (* keccak256 is synonym to sha3 *)
     ("sha256", T.SHA256),
     ("ecrecover", T.ECREC),
     ("now", T.NOW),
@@ -115,6 +116,7 @@ val keywords = [
     (* ("super", T.SUPER), *)
     ("not", T.NOT),
     ("call", T.CALL),
+    ("call_with_value", T.CALLVALUE),
     ("send", T.SEND),
     ("fire", T.FIRE),
     ("attach", T.ATTACH),

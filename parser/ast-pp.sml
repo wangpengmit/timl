@@ -10,7 +10,14 @@ open Ast
 infixr 0 $
 
 fun str_long_id (m, (x, _)) = default "" (Option.map (fn (m, _) => m ^ "..") m) ^ x
-                                                                                    
+
+fun str_visi v =
+  case v of
+      ViPublic () => "Public"
+    | ViPrivate () => "Private"
+    | ViExternal () => "External"
+    | ViInternal () => "Internal"
+                                                                         
 fun pp_i s i =
   let
     val pp_i = pp_i s
@@ -517,6 +524,7 @@ fun str_ast_expr_unop opr =
     | EUReturn () => "return"
     | EUThrow () => "throw"
     | EUCall () => "call"
+    | EUCallValue () => "call_with_value"
     | EUSend () => "send"
     | EUFire () => "fire"
     | EUAttach () => "attach"
@@ -552,8 +560,8 @@ fun pp_return s (t, i, j) =
 
 fun str_storage st =
   case st of
-      StMemory => "memory"
-    | StStorage => "storage"
+      StMemory () => "memory"
+    | StStorage () => "storage"
 (* | StIndexed => "indexed" *)
                      
 fun pp_e s e =
@@ -1012,21 +1020,31 @@ and pp_d s d =
             pp_e e;
             close_box ()
           )
-        | DRec (tnames, name, binds, pre_st, post_st, return, e, _) =>
+        | DRec (tnames, name, binds, mods, e, _) =>
+          let
+            fun pp_fun_mod m =
+              case m of
+                  FmView () => str "View"
+                | FmPure () => str "Pure"
+                | FmPayable () => str "Payable"
+                | FmConst () => str "Const"
+                | FmGuards es => (strs "Guard"; app (fn e => (pp_e e; comma ())) es)
+                | FmVisi v => str $ str_visi v
+                | FmPre st => (strs "Pre"; pp_st st)
+                | FmPost st => (strs "Post"; pp_st st)
+                | FmReturn t => (strs "Return"; pp_t t)
+                | FmTime i => (strs "Time"; pp_i i)
+                | FmSpace i => (strs "Space"; pp_i i)
+          in
           (
             open_vbox ();
             open_hbox ();
             strs "DRec";
             pp_id name;
             space ();
-            app (fn name => (str "["; pp_id name; str "]"; space ())) tnames;
-            app (fn bind => (pp_bind bind; space ())) binds;
-            comma ();
-            pp_st pre_st;
-            comma ();
-            Option.app pp_st post_st;
-            comma ();
-            pp_return return;
+            app (fn name => (str "["; pp_id name; strs "]")) tnames;
+            app (fn bind => (str "("; pp_bind bind; strs ")")) binds;
+            app (fn m => (str "["; pp_fun_mod m; strs "]")) mods;
             space ();
             equal ();
             close_box ();
@@ -1034,6 +1052,7 @@ and pp_d s d =
             pp_e e;
             close_box ()
           )
+          end
         | DDatatype dt =>
           (
             open_hbox ();
@@ -1221,15 +1240,13 @@ fun pp_spec s spec =
           str ")";
           close_box ()
         )
-      | SpecFun (name, ts, return) =>
+      | SpecFun (name, ts, mods) =>
         (
           open_hbox ();
           strs "SpecFun";
           str "(";
           pp_id name;
           app (fn t => (comma (); pp_t t)) ts;
-          comma ();
-          pp_return return;
           str ")";
           close_box ()
         )
