@@ -101,6 +101,8 @@ val keywords = [
     ("for", T.FOR),
     ("while", T.WHILE),
     ("as", T.AS),
+    ("bit_and", T.BIT_AND),
+    ("bit_or", T.BIT_OR),
     ("deref", T.DEREF),
     ("sha3", T.SHA3),
     ("keccak256", T.SHA3), (* keccak256 is synonym to sha3 *)

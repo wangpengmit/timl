@@ -237,6 +237,8 @@ datatype prim_expr_bin_op =
          | EBPIntDiv of unit
          | EBPIntMod of unit
          | EBPIntExp of unit
+         | EBPIntAnd of unit
+         | EBPIntOr of unit
          | EBPIntLt of unit
          | EBPIntGt of unit
          | EBPIntLe of unit
@@ -255,6 +257,8 @@ fun str_prim_expr_bin_op opr =
     | EBPIntDiv () => "div"
     | EBPIntMod () => "mod"
     | EBPIntExp () => "exp"
+    | EBPIntAnd () => "bit_and"
+    | EBPIntOr () => "bit_or"
     | EBPIntLt () => "lt"
     | EBPIntGt () => "gt"
     | EBPIntLe () => "le"
@@ -273,13 +277,15 @@ fun pretty_str_prim_expr_bin_op opr =
     | EBPIntDiv () => "/"
     | EBPIntMod () => "mod"
     | EBPIntExp () => "exp"
+    | EBPIntAnd () => "&"
+    | EBPIntOr () => "|"
     | EBPIntLt () => "<"
     | EBPIntGt () => ">"
     | EBPIntLe () => "<="
     | EBPIntGe () => ">="
     | EBPIntEq () => "="
     | EBPIntNEq () => "<>"
-    | EBPBoolAnd () => "$$"
+    | EBPBoolAnd () => "&&"
     | EBPBoolOr () => "||"
 (* | EBPStrConcat () => "^" *)
 

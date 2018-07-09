@@ -159,6 +159,8 @@ open Ast
     | SHA3
     | ECREC
     | DEREF
+    | BIT_AND
+    | BIT_OR
 
 %nonterm start of prog
        | exp of exp
@@ -305,7 +307,7 @@ open Ast
 %left DOUBLE_EQ
 %nonassoc TILDE
 %nonassoc EQ NEQ LE LT GE GT NAT_EQ NAT_NEQ NAT_LT NAT_GT NAT_LE NAT_GE B_EQ B_NEQ B_LT B_GT B_LE B_GE
-%left PLUS MINUS NAT_PLUS NAT_MINUS
+%left PLUS MINUS NAT_PLUS NAT_MINUS BIT_AND BIT_OR
 %left MULT DIV MOD MAX MIN NAT_MULT NAT_DIV
 %left EXP
 (* %left APP *)
@@ -465,6 +467,8 @@ exp : exp_term (exp_term)
      | exp DIV exp (EBinOp' (EBPrim (EBPIntDiv ()), exp1, exp2, (exp1left, exp2right)))
      | exp MOD exp (EBinOp' (EBPrim (EBPIntMod ()), exp1, exp2, (exp1left, exp2right)))
      | exp EXP exp (EBinOp' (EBPrim (EBPIntExp ()), exp1, exp2, (exp1left, exp2right)))
+     | exp BIT_AND exp (EBinOp' (EBPrim (EBPIntAnd ()), exp1, exp2, (exp1left, exp2right)))
+     | exp BIT_OR exp (EBinOp' (EBPrim (EBPIntOr ()), exp1, exp2, (exp1left, exp2right)))
      | exp LT exp (EBinOp' (EBPrim (EBPIntLt ()), exp1, exp2, (exp1left, exp2right)))
      | exp GT exp (EBinOp' (EBPrim (EBPIntGt ()), exp1, exp2, (exp1left, exp2right)))
      | exp LE exp (EBinOp' (EBPrim (EBPIntLe ()), exp1, exp2, (exp1left, exp2right)))
@@ -535,7 +539,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | BANGBANG id (EGet (id, [], (BANGBANGleft, idright)))
      | DEREF aexp index_or_proj_star (EStorageDeref (EOffsetProjs (aexp, index_or_proj_star), (DEREFleft, index_or_proj_starright)))
      | POND aexp index_or_proj_star (EOffsetProjs (aexp, index_or_proj_star))
-     | STATE id (EState id)
+     (* | STATE id (EState id) *)
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
      | DDASH (EDec (DDASHleft, DDASHright))
      | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
