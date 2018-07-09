@@ -179,6 +179,7 @@ fun str_expr_anno a =
 (* primitive unary term operators *)
 datatype prim_expr_un_op =
          EUPIntNeg of unit
+         | EUPBitNot of unit
          | EUPBoolNeg of unit
          | EUPInt2Byte of unit
          | EUPByte2Int of unit
@@ -188,6 +189,7 @@ datatype prim_expr_un_op =
 fun str_prim_expr_un_op opr =
   case opr of
       EUPIntNeg () => "int_neg"
+    | EUPBitNot () => "bit_not"
     | EUPBoolNeg () => "not"
     | EUPInt2Byte () => "int2byte"
     | EUPByte2Int () => "byte2int"
@@ -239,6 +241,7 @@ datatype prim_expr_bin_op =
          | EBPIntExp of unit
          | EBPIntAnd of unit
          | EBPIntOr of unit
+         | EBPIntXor of unit
          | EBPIntLt of unit
          | EBPIntGt of unit
          | EBPIntLe of unit
@@ -259,6 +262,7 @@ fun str_prim_expr_bin_op opr =
     | EBPIntExp () => "exp"
     | EBPIntAnd () => "bit_and"
     | EBPIntOr () => "bit_or"
+    | EBPIntXor () => "bit_xor"
     | EBPIntLt () => "lt"
     | EBPIntGt () => "gt"
     | EBPIntLe () => "le"
@@ -279,6 +283,7 @@ fun pretty_str_prim_expr_bin_op opr =
     | EBPIntExp () => "exp"
     | EBPIntAnd () => "&"
     | EBPIntOr () => "|"
+    | EBPIntXor () => "^"
     | EBPIntLt () => "<"
     | EBPIntGt () => ">"
     | EBPIntLe () => "<="

@@ -1,5 +1,22 @@
 pragma etiml ^0.1
 
+structure Pervasive = struct
+  fun inc n = n + 1
+  fun dec n = n - 1
+  fun nat_inc {n : Nat} (n : nat {n}) = n #+ #1
+  fun nat_dec {n : Nat | n >= 1} (n : nat {n}) = n #- #1
+  fun addBy b a = a + b
+  fun subBy b a = a - b
+  fun orBy b a = a bit_or b
+  fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+  fun require b = if b then waste_time (); () else (throw using _) end
+  val assert = require
+  val ether = 1000000000000000000
+  val minute = 60
+  val hour = 60 * minute
+  val day = 24 * hour
+end
+
 (**
  * @title Ownable
  * @dev The Ownable contract has an owner address, and provides basic authorization control
@@ -27,7 +44,7 @@ contract Ownable = struct
    *)
   fun transferOwnership (newOwner : address) =
     onlyOwner ();
-    if (newOwner != address(0)) then
+    if (newOwner != 0) then
       owner := newOwner
     end
 
@@ -129,21 +146,21 @@ contract KittyAccessControl = struct
   (* @param _newCEO The address of the new CEO*)
   external fun setCEO (_newCEO : address) =
     onlyCEO ();             
-    require(_newCEO != address(0));
+    require(_newCEO != 0);
     ceoAddress := _newCEO
 
   (* @dev Assigns a new address to act as the CFO. Only available to the current CEO.*)
   (* @param _newCFO The address of the new CFO*)
   external fun setCFO (_newCFO : address) =
     onlyCEO ();
-    require(_newCFO != address(0));
+    require(_newCFO != 0);
     cfoAddress := _newCFO
 
   (* @dev Assigns a new address to act as the COO. Only available to the current CEO.*)
   (* @param _newCOO The address of the new COO*)
   external fun setCOO (_newCOO : address) =
     onlyCEO ();
-    require(_newCOO != address(0));
+    require(_newCOO != 0);
     cooAddress := _newCOO
 
   (*** Pausable funality adapted from OpenZeppelin ***)
@@ -212,7 +229,7 @@ contract KittyBase = struct
     (* The minimum timestamp after which this cat can engage in breeding*)
     (* activities again. This same timestamp is used for the pregnancy*)
     (* timer (for matrons) as well as the siring cooldown.*)
-    cooldownEndBlock : ref uint64,
+    cooldownEndBlock : uint64,
 
     (* The ID of the parents of this kitty, set to 0 for gen0 cats.*)
     (* Note that using 32-bit unsigned integers limits us to a "mere"*)
@@ -227,14 +244,14 @@ contract KittyBase = struct
     (* zero otherwise. A non-zero value here is how we know a cat*)
     (* is pregnant. Used to retrieve the genetic material for the new*)
     (* kitten when the birth transpires.*)
-    siringWithId : ref uint32,
+    siringWithId : uint32,
 
     (* Set to the index in the cooldown array (see below) that represents*)
     (* the current cooldown duration for this Kitty. This starts at zero*)
     (* for gen0 cats, and is initialized to floor(generation/2) for others.*)
     (* Incremented by one for each successful breeding action, regardless*)
     (* of whether this cat is acting as matron or sire.*)
-    cooldownIndex : ref uint16,
+    cooldownIndex : uint16,
 
     (* The "generation number" of this cat. Cats minted by the CK contract*)
     (* for sale are called "gen0" and have a generation number of 0. The*)
@@ -252,21 +269,21 @@ contract KittyBase = struct
   (*  is bred, encouraging owners not to just keep breeding the same cat over*)
   (*  and over again. Caps out at one week (a cat can breed an unbounded number*)
   (*  of times, and the maximum cooldown is always seven days).*)
-  public state cooldowns : array uint32 {14} = {
-    uint32(1 minutes),
-    uint32(2 minutes),
-    uint32(5 minutes),
-    uint32(10 minutes),
-    uint32(30 minutes),
-    uint32(1 hours),
-    uint32(2 hours),
-    uint32(4 hours),
-    uint32(8 hours),
-    uint32(16 hours),
-    uint32(1 days),
-    uint32(2 days),
-    uint32(4 days),
-    uint32(7 days),
+  public state cooldowns : vector uint32 = {
+    minute,
+    2 * minute,
+    5 * minute,
+    10 * minute,
+    30 * minute,
+    1 * hour,
+    2 * hour,
+    4 * hour,
+    8 * hour,
+    16 * hour,
+    1 * day,
+    2 * day,
+    4 * day,
+    7 * day,
   }
 
   (* An approximation of currently how many seconds are in between blocks.*)
@@ -279,7 +296,26 @@ contract KittyBase = struct
   (*  the unKitty, the mythical beast that is the parent of all gen0 cats. A bizarre*)
   (*  creature that is both matron and sire... to itself! Has an invalid genetic code.*)
   (*  In other words, cat ID 0 is invalid... ;-)*)
-  state kitties : vector Kitty
+  state kitties : map uint (* Kitty *){
+    genes : uint256,
+    birthTime : uint64,
+    cooldownEndBlock : uint64,
+    matronId : uint32,
+    sireId : uint32,
+    siringWithId : uint32,
+    cooldownIndex : uint16,
+    generation : uint16,
+  }
+
+  fun copy_Kitty (t : storage Kitty, s : Kitty) =
+    &t->genes ::= s.genes;
+    &t->birthTime ::= s.birthTime;
+    &t->cooldownEndBlock ::= s.cooldownEndBlock;
+    &t->matronId ::= s.matronId;
+    &t->sireId ::= s.sireId;
+    &t->siringWithId ::= s.siringWithId;
+    &t->cooldownIndex ::= s.cooldownIndex;
+    &t->generation ::= s.generation
 
   (* @dev A mapping from cat IDs to the address that owns them. All cats have*)
   (*  some valid owner address, even gen0 cats are created with a non-zero owner.*)
@@ -302,12 +338,12 @@ contract KittyBase = struct
   (* @dev The address of the ClockAuction contract that handles sales of Kitties. This*)
   (*  same contract handles both peer-to-peer sales as well as the gen0 sales which are*)
   (*  initiated every 15 minutes.*)
-  public state saleAuction : ref option SaleClockAuction 
+  public state saleAuction : cell address
 
   (* @dev The address of a custom ClockAuction subclassed contract that handles siring*)
   (*  auctions. Needs to be separate from saleAuction because the actions taken on success*)
   (*  after a sales and siring auction are quite different.*)
-  public state siringAuction : ref option SiringClockAuction 
+  public state siringAuction : cell address
 
   (* @dev Assigns ownership of a specific Kitty to an address.*)
   fun _transfer (_from : address, _to : address, _tokenId : uint256) internal =
@@ -316,15 +352,15 @@ contract KittyBase = struct
     (* transfer ownership*)
     set kittyIndexToOwner[_tokenId] _to;
     (* When creating new kittens _from is 0x0, but we can't account that address.*)
-    if (_from != address(0)) then
+    if (_from != 0) then
       modify ownershipTokenCount[_from] --;
       (* once the kitten is transferred also clear sire allowances*)
-      set sireAllowedToAddress[_tokenId] zero;
+      set sireAllowedToAddress[_tokenId] 0;
       (* clear any previously approved ownership exchange*)
-      set kittyIndexToApproved[_tokenId] zero
+      set kittyIndexToApproved[_tokenId] 0
     end;
     (* Emit the transfer event.*)
-    Transfer(_from, _to, _tokenId)
+    fire Transfer(_from, _to, _tokenId)
 
   (* @dev An internal method that creates a new kitty and stores it. This*)
   (*  method doesn't do any checking and should only be called when the*)
@@ -349,39 +385,40 @@ contract KittyBase = struct
     (* sure that these conditions are never broken. However! _createKitty() is already*)
     (* an expensive call (for storage), and it doesn't hurt to be especially careful*)
     (* to ensure our data structures are always valid.*)
-    require(_matronId == uint256(uint32(_matronId)));
-    require(_sireId == uint256(uint32(_sireId)));
-    require(_generation == uint256(uint16(_generation)));
+    require(_matronId == _matronId);
+    require(_sireId == _sireId);
+    require(_generation == _generation);
 
     (* New kitty starts with the same cooldown as parent gen/2*)
-    let cooldownIndex : ref uint16 = ref uint16(_generation / 2);
+    let cooldownIndex : ref uint16 = ref (_generation / 2);
     if (cooldownIndex.v > 13) then
       cooldownIndex := 13
     end;
 
     let _kitty = {
       genes = _genes,
-      birthTime = uint64(now),
-      cooldownEndBlock = ref 0,
-      matronId = uint32(_matronId),
-      sireId = uint32(_sireId),
-      siringWithId = ref 0,
-      cooldownIndex = ref cooldownIndex,
-      generation = uint16(_generation),
+      birthTime = now,
+      cooldownEndBlock = 0,
+      matronId = _matronId,
+      sireId = _sireId,
+      siringWithId = 0,
+      cooldownIndex = cooldownIndex,
+      generation = _generation,
     } : Kitty;
-    push_back (kitties, _kitty);
-    let newKittenId : uint256 = length kitties - 1;
-
+    let newKittenId : uint256 = nat2int !!numKitties;
+    copy_Kitty (&kitties->[newKittenId], _kitty);
+    modify numKittes nat_inc;
+        
     (* It's probably never going to happen, 4 billion cats is A LOT, but*)
     (* let's just be 100% sure we never let this happen.*)
-    require(newKittenId == uint256(uint32(newKittenId)));
+    require(newKittenId == truncate uint32 newKittenId);
 
     (* emit the birth event*)
-    Birth(
+    fire Birth(
       _owner,
       newKittenId,
-      uint256(_kitty.matronId),
-      uint256(_kitty.sireId),
+      _kitty.matronId,
+      _kitty.sireId,
       _kitty.genes
     );
 
@@ -403,23 +440,24 @@ end
 (*  it has one fun that will return the data as bytes.*)
 contract ERC721Metadata = struct
   (* @dev Given a token Id, return a byte array that is supposed to be converted into string.*)
-  public fun getMetadata (_tokenId : uint256, _: string) view return (buffer : array bytes32 {4}, count : uint256) =
+  public fun getMetadata {n : Nat} (_tokenId : uint256, _: string {n}) view return (buffer : array bytes32 {4}, count : uint256) =
     let buffer : array bytes32 {4} = {0, 0, 0, 0,};
     let count = ref 0;
     if (_tokenId == 1) then
-      set buffer[0] "Hello World! :D";
+      set buffer[0] short_str "Hello World! :D";
       count := 15
     elseif (_tokenId == 2) then
-      set buffer[0] "I would definitely choose a medi";
-      set buffer[1] "um length string.";
+      set buffer[0] short_str "I would definitely choose a medi";
+      set buffer[1] short_str "um length string.";
       count := 49
     elseif (_tokenId == 3) then
-      set buffer[0] "Lorem ipsum dolor sit amet, mi e";
-      set buffer[1] "st accumsan dapibus augue lorem,";
-      set buffer[2] " tristique vestibulum id, libero";
-      set buffer[3] " suscipit varius sapien aliquam.";
+      set buffer[0] short_str "Lorem ipsum dolor sit amet, mi e";
+      set buffer[1] short_str "st accumsan dapibus augue lorem,";
+      set buffer[2] short_str " tristique vestibulum id, libero";
+      set buffer[3] short_str " suscipit varius sapien aliquam.";
       count := 128
-    end
+    end;
+    (buffer, !count)
 
 end
 
@@ -434,22 +472,24 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   public val symbol : string = "CK"
 
   (* The contract that will return kitty metadata*)
-  public state erc721Metadata : ref option ERC721Metadata
+  public state erc721Metadata : cell address
+
+  fun truncate n v = v bit_and (2 ** (8*n) - 1)
 
   val InterfaceSignature_ERC165 : bytes4 =
-    bytes4(keccak256("supportsInterface(bytes4)"))
+    truncate 4 (keccak256("supportsInterface(bytes4)"))
 
   val InterfaceSignature_ERC721 : bytes4 =
-    bytes4(keccak256("name()")) ^
-    bytes4(keccak256("symbol()")) ^
-    bytes4(keccak256("totalSupply()")) ^
-    bytes4(keccak256("balanceOf(address)")) ^
-    bytes4(keccak256("ownerOf(uint256)")) ^
-    bytes4(keccak256("approve(address,uint256)")) ^
-    bytes4(keccak256("transfer(address,uint256)")) ^
-    bytes4(keccak256("transferFrom(address,address,uint256)")) ^
-    bytes4(keccak256("tokensOfOwner(address)")) ^
-    bytes4(keccak256("tokenMetadata(uint256,string)"))
+    truncate 4 (keccak256("name()")) bit_xor
+    truncate 4 (keccak256("symbol()")) bit_xor
+    truncate 4 (keccak256("totalSupply()")) bit_xor
+    truncate 4 (keccak256("balanceOf(address)")) bit_xor
+    truncate 4 (keccak256("ownerOf(uint256)")) bit_xor
+    truncate 4 (keccak256("approve(address,uint256)")) bit_xor
+    truncate 4 (keccak256("transfer(address,uint256)")) bit_xor
+    truncate 4 (keccak256("transferFrom(address,address,uint256)")) bit_xor
+    truncate 4 (keccak256("tokensOfOwner(address)")) bit_xor
+    truncate 4 (keccak256("tokenMetadata(uint256,string)"))
 
   (* @notice Introspection interface as per ERC-165 (https://github.com/ethereum/EIPs/issues/165).*)
   (*  Returns true for any standardized interfaces implemented by this contract. We implement*)
@@ -609,12 +649,12 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
 
       (* We count on the fact that all cats have IDs starting at 1 and increasing*)
       (* sequentially up to the totalCat count.*)
-      for (catId : uint256 = 1; catId <= totalCats; ++)
-        if (kittyIndexToOwner[catId] == _owner) then
-          set result[resultIndex] catId;
-          modify resultIndex ++
-        end
-      end;
+      (* for (catId : uint256 = 1; catId <= totalCats; ++) *)
+      (*   if (kittyIndexToOwner[catId] == _owner) then *)
+      (*     set result[resultIndex] catId; *)
+      (*     modify resultIndex ++ *)
+      (*   end *)
+      (* end; *)
 
       result
     end
@@ -623,35 +663,36 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   (*  This method is licenced under the Apache License.*)
   (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*)
   fun _memcpy (_dest : uint, _src : uint, _len : uint) private view =
+    ()
     (* Copy word-length chunks while possible*)
-    for(_len = _len; _len >= 32; -= 32)
-      assembly {
-        mstore(_dest, mload(_src))
-      };
-      modify _dest += 32;
-      modify _src += 32
-    end;
+    (* for(_len = _len; _len >= 32; -= 32) *)
+    (*   assembly { *)
+    (*     mstore(_dest, mload(_src)) *)
+    (*   }; *)
+    (*   modify _dest += 32; *)
+    (*   modify _src += 32 *)
+    (* end; *)
 
     (* Copy remaining bytes*)
-    let mask : uint256 = 256 ** (32 - _len) - 1;
-    assembly {
-      srcpart := and(mload(_src), not(mask));
-      destpart := and(mload(_dest), mask);
-      mstore(_dest, or(destpart, srcpart))
-    }
+    (* let mask : uint256 = 256 ** (32 - _len) - 1 *)
+    (* assembly { *)
+    (*   srcpart := and(mload(_src), not(mask)); *)
+    (*   destpart := and(mload(_dest), mask); *)
+    (*   mstore(_dest, or(destpart, srcpart)) *)
+    (* } *)
 
   (* @dev Adapted from toString(slice) by @arachnid (Nick Johnson <arachnid@notdot.net>)*)
   (*  This method is licenced under the Apache License.*)
   (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*)
   fun _toString (_rawBytes : array bytes32 {4}, _stringLength : uint256) private view return string =
     let outputString = string_of_length _stringLength;
-    let outputPtr : uint256;
-    let bytesPtr : uint256;
+    let outputPtr : uint256 = 0;
+    let bytesPtr : uint256 = 0;
 
-    assembly {
-      outputPtr := add(outputString, 32);
-      bytesPtr := _rawBytes
-    };
+    (* assembly { *)
+    (*   outputPtr := add(outputString, 32); *)
+    (*   bytesPtr := _rawBytes *)
+    (* }; *)
 
     _memcpy(outputPtr, bytesPtr, _stringLength);
 
@@ -717,7 +758,7 @@ contract KittyBreeding = struct inherit KittyOwnership
   (* @dev Set the cooldownEndTime for the given Kitty, based on its current cooldownIndex.*)
   (*  Also increments the cooldownIndex (unless it has hit the cap).*)
   (* @param _kitten A reference to the Kitty in storage which needs its timer started.*)
-  fun _triggerCooldown (storage _kitten : Kitty) internal =
+  fun _triggerCooldown (_kitten : storage Kitty) internal =
     (* Compute an estimation of the cooldown time in blocks (based on current cooldownIndex).*)
     _kitten.cooldownEndBlock := uint64((cooldowns[_kitten.cooldownIndex]/secondsPerBlock) + block.number);
 
@@ -725,7 +766,7 @@ contract KittyBreeding = struct inherit KittyOwnership
     (* cooldowns array. We could check the array size dynamically, but hard-coding*)
     (* this as a constant saves gas. Yay, Solidity!*)
     if (_kitten.cooldownIndex.v < 13) then
-      modify _kitten.cooldownIndex += 1
+      modify &_kitten->cooldownIndex += 1
     end
 
   (* @notice Grants approval to another user to sire with one of your Kitties.*)
@@ -790,9 +831,9 @@ contract KittyBreeding = struct inherit KittyOwnership
   (* @param _sire A reference to the Kitty struct of the potential sire.*)
   (* @param _sireId The sire's ID*)
   fun _isValidMatingPair (
-    Kitty storage _matron,
+    _matron : storage Kitty,
     _matronId : uint256,
-    Kitty storage _sire,
+    _sire : storage Kitty,
     _sireId : uint256 
   )
     private
@@ -801,33 +842,28 @@ contract KittyBreeding = struct inherit KittyOwnership
   =
     (* A Kitty can't breed with itself!*)
     if (_matronId == _sireId) then
-      return false
-    end;
+      false
 
     (* Kitties can't breed with their parents.*)
-    if (_matron.matronId == _sireId || _matron.sireId == _sireId) then
-      return false
-    end;
-    if (_sire.matronId == _matronId || _sire.sireId == _matronId) then
-      return false
-    end
+    elseif (_matron.matronId == _sireId || _matron.sireId == _sireId) then
+      false
+    elseif (_sire.matronId == _matronId || _sire.sireId == _matronId) then
+      false
 
     (* We can short circuit the sibling check (below) if either cat is*)
     (* gen zero (has a matron ID of zero).*)
-    if (_sire.matronId == 0 || _matron.matronId == 0) then
-      return true (* PW: trailing semicolon is OK *)
-    end;
+    elseif (_sire.matronId == 0 || _matron.matronId == 0) then
+      true (* PW: trailing semicolon is OK *)
 
     (* Kitties can't breed with full or half siblings.*)
-    if (_sire.matronId == _matron.matronId || _sire.matronId == _matron.sireId) then
-      return false
-    end;
-    if (_sire.sireId == _matron.matronId || _sire.sireId == _matron.sireId) then
-      return false
-    end;
-
-    (* Everything seems cool! Let's get DTF.*)
-    true
+    elseif (_sire.matronId == _matron.matronId || _sire.matronId == _matron.sireId) then
+      false
+    elseif (_sire.sireId == _matron.matronId || _sire.sireId == _matron.sireId) then
+      false
+    else
+      (* Everything seems cool! Let's get DTF.*)
+      true
+    end
 
   (* @dev Internal check to see if a given sire and matron are a valid mating pair for*)
   (*  breeding via auction (i.e. skips ownership and siring approval checks).*)
@@ -874,8 +910,8 @@ contract KittyBreeding = struct inherit KittyOwnership
 
     (* Clear siring permission for both parents. This may not be strictly necessary*)
     (* but it's likely to avoid confusion!*)
-    set sireAllowedToAddress[_matronId] zero;
-    set sireAllowedToAddress[_sireId] zero;
+    set sireAllowedToAddress[_matronId] 0;
+    set sireAllowedToAddress[_sireId] 0;
 
     (* Every time a kitty gets pregnant, counter is incremented.*)
     modify pregnantKitties ++;
@@ -979,7 +1015,7 @@ contract KittyBreeding = struct inherit KittyOwnership
 
     (* Clear the reference to sire from the matron (REQUIRED! Having siringWithId*)
     (* set is what marks a matron as being pregnant.)*)
-    matron.siringWithId := zero;
+    matron.siringWithId := 0;
 
     (* Every time a kitty gives birth counter is decremented.*)
     modify pregnantKitties --;
@@ -1146,18 +1182,18 @@ contract ClockAuctionBase = struct
   (* @dev Removes an auction from the list of open auctions.*)
   (* @param _tokenId - ID of NFT on auction.*)
   fun _removeAuction (_tokenId : uint256) internal =
-    set tokenIdToAuction[_tokenId] zero
+    set tokenIdToAuction[_tokenId] 0
 
   (* @dev Returns true if the NFT is on auction.*)
   (* @param _auction - Auction to check.*)
-  fun _isOnAuction (storage _auction : Auction) internal view return bool =
+  fun _isOnAuction (_auction : storage Auction) internal view return bool =
     (_auction.startedAt > 0)
 
   (* @dev Returns current price of an NFT on auction. Broken into two*)
   (*  funs (this one, that computes the duration from the auction*)
   (*  structure, and the other that does the price computation) so we*)
   (*  can easily test that the price computation works correctly.*)
-  fun _currentPrice (storage _auction : Auction)
+  fun _currentPrice (_auction : storage Auction)
     internal
     view
     return uint256
@@ -1567,10 +1603,10 @@ contract SaleClockAuction = struct inherit ClockAuction
 
   external fun averageGen0SalePrice () view return uint256 =
     let sum : ref uint256 = ref 0;
-    for (i : uint256 = 0; i < 5; ++)
-      modify sum += lastGen0SalePrices[i]
-    end;
-    return sum / 5
+    (* for (i : uint256 = 0; i < 5; ++) *)
+    (*   modify sum += lastGen0SalePrices[i] *)
+    (* end; *)
+    sum / 5
 
 end
 

@@ -41,6 +41,8 @@ datatype ('idx, 'ty) inst =
          | ISZERO of unit
          | AND of unit
          | OR of unit
+         | XOR of unit
+         | NOT of unit
          | BYTE of unit
          | SHA3 of unit
          | ORIGIN of unit

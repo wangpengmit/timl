@@ -982,6 +982,17 @@ fun pp_e s e =
           str ")";
           close_box ()
         )
+      (* | ETruncate (t, e, _) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     strs "ETruncate"; *)
+      (*     str "("; *)
+      (*     pp_t t; *)
+      (*     comma (); *)
+      (*     pp_e e; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
   end
 
 and pp_d s d =
@@ -1114,19 +1125,19 @@ and pp_d s d =
             pp_id x;
             close_box ()
           )
-        | DState (name, t, init) =>
+        | DState (name, t, e) =>
           let
-            fun pp_init init =
-              case init of
-                  InitExpr (e, _) => pp_e e
-                | InitVector (es, _) =>
-                  (
-                    open_vbox_noindent ();
-                    str "{";
-                    app (fn e => (pp_e e; comma ())) es;
-                    str "}";
-                    close_box ()
-                  )
+            (* fun pp_init init = *)
+            (*   case init of *)
+            (*       InitExpr (e, _) => pp_e e *)
+            (*     | InitVector (es, _) => *)
+            (*       ( *)
+            (*         open_vbox_noindent (); *)
+            (*         str "{"; *)
+            (*         app (fn e => (pp_e e; comma ())) es; *)
+            (*         str "}"; *)
+            (*         close_box () *)
+            (*       ) *)
           in
             (
               open_hbox ();
@@ -1134,7 +1145,7 @@ and pp_d s d =
               pp_id name;
               space ();
               pp_t t;
-              Option.app (fn init => (space (); equal (); pp_init init)) init;
+              Option.app (fn e => (space (); equal (); pp_e e)) e;
               close_box ()
             )
           end

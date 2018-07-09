@@ -373,6 +373,7 @@ fun trim s =
       
 fun concatMap f ls = (List.concat o map f) ls
 fun concatMapi f ls = (List.concat o mapi f) ls
+fun concatRepeat n v = List.concat $ repeat n v
 
 structure Range = struct
 

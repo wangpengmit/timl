@@ -148,6 +148,7 @@ datatype exp =
          | EIfs of ifelse list * region
          | EFor of id * ty option * exp * exp * exp * exp * region
          | EOffsetProjs of exp * (exp, tuple_record_proj * region) sum list
+         (* | ETruncate of ty * exp * region *)
 
      and decl =
          DVal of id list * ptrn * exp * region
@@ -158,7 +159,7 @@ datatype exp =
          | DAbsIdx of id * sort option * idx option * decl list * region
          | DTypeDef of id * ty
          | DOpen of id
-         | DState of id * ty * init option
+         | DState of id * ty * exp option
          | DEvent of id * (ty * bool) list
 
      and ifelse =
@@ -179,9 +180,9 @@ datatype exp =
          | FmTime of idx
          | FmSpace of idx
              
-     and init =
-         InitExpr of exp * region
-         | InitVector of exp list * region
+     (* and init = *)
+     (*     InitExpr of exp * region *)
+     (*     | InitVector of exp list * region *)
 
 type index_proj = (exp, tuple_record_proj * region) sum
 type index_proj_path = index_proj list
@@ -315,6 +316,10 @@ fun FmUsing (i, j) = [FmTime i] @ option2list (Option.map FmSpace j)
 
 type typing = id * ty
 type indexed_typing = id * (ty * bool)
+
+(* todo: implement *)
+fun short_str s =
+  s
 
 end
 

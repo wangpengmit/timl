@@ -12,6 +12,7 @@ val C_Printc = 5 * C_PUSH + C_MSTORE + C_ADD + C_LOG 0 + C_logdata
 fun C_UPrim opr =
   case opr of
       EUPIntNeg () => C_PUSH + C_SUB
+    | EUPBitNot () => C_NOT
     | EUPBoolNeg () => C_ISZERO
     | EUPInt2Byte () => C_PUSH + C_BYTE
     | EUPByte2Int () => 0
@@ -33,6 +34,7 @@ fun C_BPrim opr =
      | EBPIntExp () => C_EXP_max
      | EBPIntAnd () => C_AND
      | EBPIntOr () => C_OR
+     | EBPIntXor () => C_XOR
      | EBPIntLt () => C_GT
      | EBPIntGt () => C_LT
      | EBPIntLe () => C_LT + C_ISZERO

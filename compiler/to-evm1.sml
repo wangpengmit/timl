@@ -271,37 +271,6 @@ fun inline_macro_hval code =
 fun inline_macro_prog (H, I) =
   (map (mapSnd inline_macro_hval) H, inline_macro_insts I)
 
-fun impl_nat_cmp opr =
-  case opr of
-      NCLt () => [GT ()] (* a<b <-> b>a *)
-    | NCGt () => [LT ()]
-    | NCLe () => [LT (), ISZERO ()] (* a<=b <-> ~(a>b) <-> ~(b<a) *)
-    | NCGe () => [GT (), ISZERO ()]
-    | NCEq () => [EQ ()]
-    | NCNEq () => [EQ (), ISZERO ()]
-      
-fun impl_prim_expr_bin_op opr =
-  case opr of
-       EBPIntAdd () => [ADD ()]
-     | EBPIntMult () => [MUL ()]
-     | EBPIntMinus () => [SWAP1, SUB ()]
-     | EBPIntDiv () => [SWAP1, SDIV ()]
-     | EBPIntMod () => [SWAP1, MOD ()]
-     | EBPIntExp () => [SWAP1, EXP ()]
-     | EBPIntAnd () => [AND ()]
-     | EBPIntOr () => [OR ()]
-     | EBPIntLt () => [GT ()]
-     | EBPIntGt () => [LT ()]
-     | EBPIntLe () => [LT (), ISZERO ()]
-     | EBPIntGe () => [GT (), ISZERO ()]
-     | EBPIntEq () => [EQ ()]
-     | EBPIntNEq () => [EQ (), ISZERO ()]
-     | EBPBoolAnd () => [AND ()]
-     | EBPBoolOr () => [OR ()]
-     (* | EBPStrConcat () => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat" *)
-                  
-fun concatRepeat n v = List.concat $ repeat n v
-               
 fun cg_c c =
   case c of
       ECTT () => WCTT ()
@@ -315,6 +284,7 @@ fun cg_c c =
 fun impl_prim_expr_un_opr opr =
   case opr of
       EUPIntNeg () => [PUSH1 $ WInt "0", SUB ()]
+    | EUPBitNot () => [NOT ()]
     | EUPBoolNeg () => [ISZERO ()]
     | EUPInt2Byte () => int2byte
     | EUPByte2Int () => byte2int
@@ -322,7 +292,6 @@ fun impl_prim_expr_un_opr opr =
     (* | _ => raise Impossible $ "impl_prim_expr_up_op() on " ^ str_prim_expr_un_op opr *)
 
 fun impl_tuple_proj n = [PUSH_tuple_offset $ 32 * n, ADD (), MLOAD ()]
-                          
 fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
@@ -350,6 +319,27 @@ fun impl_expr_un_op opr =
         [PUSH1nat offset, ADD (), InstRestrictPtr len]
       end
                         
+fun impl_prim_expr_bin_op opr =
+  case opr of
+       EBPIntAdd () => [ADD ()]
+     | EBPIntMult () => [MUL ()]
+     | EBPIntMinus () => [SWAP1, SUB ()]
+     | EBPIntDiv () => [SWAP1, SDIV ()]
+     | EBPIntMod () => [SWAP1, MOD ()]
+     | EBPIntExp () => [SWAP1, EXP ()]
+     | EBPIntAnd () => [AND ()]
+     | EBPIntOr () => [OR ()]
+     | EBPIntXor () => [XOR ()]
+     | EBPIntLt () => [GT ()]
+     | EBPIntGt () => [LT ()]
+     | EBPIntLe () => [LT (), ISZERO ()]
+     | EBPIntGe () => [GT (), ISZERO ()]
+     | EBPIntEq () => [EQ ()]
+     | EBPIntNEq () => [EQ (), ISZERO ()]
+     | EBPBoolAnd () => [AND ()]
+     | EBPBoolOr () => [OR ()]
+     (* | EBPStrConcat () => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat" *)
+                  
 fun impl_nat_expr_bin_op opr =
   case opr of
       EBNAdd () => [ADD ()]
@@ -358,6 +348,15 @@ fun impl_nat_expr_bin_op opr =
     | EBNBoundedMinus () => [SWAP1, SUB ()]
     | EBNExp () => [SWAP1, EXP ()]
 
+fun impl_nat_cmp opr =
+  case opr of
+      NCLt () => [GT ()] (* a<b <-> b>a *)
+    | NCGt () => [LT ()]
+    | NCLe () => [LT (), ISZERO ()] (* a<=b <-> ~(a>b) <-> ~(b<a) *)
+    | NCGe () => [GT (), ISZERO ()]
+    | NCEq () => [EQ ()]
+    | NCNEq () => [EQ (), ISZERO ()]
+      
 val st_ref = ref IEmptyState
                  
 fun compile st_name2int ectx e =

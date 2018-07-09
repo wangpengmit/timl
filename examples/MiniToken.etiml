@@ -1,6 +1,6 @@
 pragma etiml ^0.1
 
-structure Util = struct
+structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
@@ -9,8 +9,6 @@ structure Util = struct
 end
 
 contract MyToken = struct
-
-  open Util
 
   (* This creates an array with all balances *)
   public state balanceOf : map address uint256

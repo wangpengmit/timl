@@ -101,9 +101,13 @@ val keywords = [
     ("for", T.FOR),
     ("while", T.WHILE),
     ("as", T.AS),
+    (* ("truncate", T.TRUNCATE), *)
+    ("short_str", T.SHORT_STR),
     ("suicide", T.SUICIDE),
     ("bit_and", T.BIT_AND),
     ("bit_or", T.BIT_OR),
+    ("bit_xor", T.BIT_XOR),
+    ("bit_not", T.BIT_NOT),
     ("deref", T.DEREF),
     ("sha3", T.SHA3),
     ("keccak256", T.SHA3), (* keccak256 is synonym to sha3 *)
@@ -217,7 +221,7 @@ string = [^\"];
 <INITIAL>"." => (T.DOT (make_region (yypos, size yytext)));
 <INITIAL>".." => (T.DOTDOT (make_region (yypos, size yytext)));
 <INITIAL>"<==" => (T.BIG_O_INFIX (make_region (yypos, size yytext)));
-<INITIAL>"^" => (T.STR_CONCAT (make_region (yypos, size yytext)));
+<INITIAL>"^" => (T.CARAT (make_region (yypos, size yytext)));
 <INITIAL>";" => (T.SEMI (make_region (yypos, size yytext)));
 <INITIAL>"++" => (T.PLUS_PLUS (make_region (yypos, size yytext)));
 <INITIAL>"+=" => (T.PLUS_EQ (make_region (yypos, size yytext)));

@@ -107,7 +107,7 @@ open Ast
     | SHARP
     | STRING of string
     | CHAR of Char.char
-    | STR_CONCAT
+    | CARAT
     | SEMI
     | NEVER
     | IFDEC
@@ -162,7 +162,11 @@ open Ast
     | DEREF
     | BIT_AND
     | BIT_OR
-
+    | BIT_XOR
+    | BIT_NOT
+    | SHORT_STR
+    (* | TRUNCATE *)
+      
 %nonterm start of prog
        | exp of exp
        | aexp of exp
@@ -178,6 +182,7 @@ open Ast
        | id of id
        | assign_comma_star_trailing of (id * exp) list
        | exp_term_comma_star_trailing of exp list
+       | exp_comma_star_trailing of exp list
        | exp_comma_star of exp list
        | comma_exp_star of exp list
        | aexp_comma_star of exp list
@@ -273,9 +278,9 @@ open Ast
        | fun_modifiers of fun_modifier list
        | named_ty of ty
        | idx_1or2 of idx * idx option
-       | optional_init of init option
+       | optional_init of exp option
        | optional_inherit of id list
-       | init of init
+       (* | init of exp *)
        | exps of exp
        | storage of storage
        | optional_storage of storage option
@@ -286,6 +291,8 @@ open Ast
        | proj_path of proj_path
        | index_or_proj of index_proj
        | index_or_proj_star of index_proj_path
+       | stmt of exp
+       | stmts of exp list
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
 
@@ -336,7 +343,7 @@ top_bind : STRUCTURE id EQ id LPAREN id RPAREN (TBFunctorApp (id1, id2, id3))
          | STRUCTURE id COLON_GT sgn EQ module (TBMod (id, ModSeal (module, sgn)))
          | STRUCTURE id COLON sgn EQ module (TBMod (id, ModTransparentAsc (module, sgn)))
          | STATE id COLON ty (TBState (id, ty))
-         | PRAGMA id STR_CONCAT NNREAL (TBPragma (id, NNREAL))
+         | PRAGMA id CARAT NNREAL (TBPragma (id, NNREAL))
          | INTERFACE id EQ sgn (TBInterface (id, sgn))
 
 module : STRUCT optional_inherit decl_star END (ModComponents (optional_inherit, decl_star, (decl_starleft, decl_starright)))
@@ -446,18 +453,32 @@ decl : optional_visi VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, 
      | optional_visi STATE id COLON ty optional_init (DState (id, ty, optional_init))
      | EVENT id LPAREN indexed_typing_comma_star RPAREN (DEvent (id, map snd indexed_typing_comma_star))
 
-optional_init : EQ init (SOME init)
+optional_init : EQ exp (SOME exp)
               | (NONE)
 
-init : exp (InitExpr (exp, (expleft, expright)))                  
-     | LCUR exp_term_comma_star_trailing RCUR (InitVector (exp_term_comma_star_trailing, (LCURleft, RCURright)))
+(* init : exp (InitExpr (exp, (expleft, expright)))                   *)
+     (* | LCUR exp_term_comma_star_trailing RCUR (InitVector (exp_term_comma_star_trailing, (LCURleft, RCURright))) *)
                   
-exps : exp_semi_plus (ESemis (exp_semi_plus, (exp_semi_plusleft, exp_semi_plusright)))
-         
-exp_semi_plus : exp semi_exp_star (exp :: semi_exp_star)
+exp_term_comma_star_trailing : exp_term COMMA exp_term_comma_star_trailing (exp_term :: exp_term_comma_star_trailing)
+	                     | ([])
 
-semi_exp_star : SEMI exp semi_exp_star (exp :: semi_exp_star)
-	       | ([])
+exp_comma_star_trailing : exp COMMA exp_comma_star_trailing (exp :: exp_comma_star_trailing)
+	                     | ([])
+
+(* exps : exp_semi_plus (ESemis (exp_semi_plus, (exp_semi_plusleft, exp_semi_plusright))) *)
+         
+(* exp_semi_plus : exp semi_exp_star (exp :: semi_exp_star) *)
+
+(* semi_exp_star : SEMI exp semi_exp_star (exp :: semi_exp_star) *)
+                (* 	       | ([]) *)
+
+exps : stmts (ESemis (stmts, (stmtsleft, stmtsright)))
+
+stmts : stmt ([stmt])
+      | stmts SEMI stmts (stmts1 @ stmts2)
+
+stmt : exp (exp)
+     | LET optional_storage ptrn optional_eq_exp (ELet2 (optional_storage, ptrn, optional_eq_exp, (LETleft, optional_eq_expright)))
 
 exp : exp_term (exp_term)
      | exp PLUS exp (EBinOp' (EBPrim (EBPIntAdd ()), exp1, exp2, (exp1left, exp2right)))
@@ -470,6 +491,7 @@ exp : exp_term (exp_term)
      | exp EXP exp (EBinOp' (EBPrim (EBPIntExp ()), exp1, exp2, (exp1left, exp2right)))
      | exp BIT_AND exp (EBinOp' (EBPrim (EBPIntAnd ()), exp1, exp2, (exp1left, exp2right)))
      | exp BIT_OR exp (EBinOp' (EBPrim (EBPIntOr ()), exp1, exp2, (exp1left, exp2right)))
+     | exp BIT_XOR exp (EBinOp' (EBPrim (EBPIntXor ()), exp1, exp2, (exp1left, exp2right)))
      | exp LT exp (EBinOp' (EBPrim (EBPIntLt ()), exp1, exp2, (exp1left, exp2right)))
      | exp GT exp (EBinOp' (EBPrim (EBPIntGt ()), exp1, exp2, (exp1left, exp2right)))
      | exp LE exp (EBinOp' (EBPrim (EBPIntLe ()), exp1, exp2, (exp1left, exp2right)))
@@ -494,13 +516,11 @@ exp : exp_term (exp_term)
      | exp DOUBLE_POND exp (EBinOp' (EBPrim (EBPBoolAnd ()), exp1, exp2, (exp1left, exp2right)))
      | exp DOUBLE_BAR exp (EBinOp' (EBPrim (EBPBoolOr ()), exp1, exp2, (exp1left, exp2right)))
      | NOT exp (EUnOp' (EUPrim (EUPBoolNeg ()), exp, (NOTleft, expright)))
-     | exp STR_CONCAT exp (EStrConcat (exp1, exp2, (exp1left, exp2right)))
+     | BIT_NOT exp (EUnOp' (EUPrim (EUPBitNot ()), exp, (BIT_NOTleft, expright)))
+     | exp CARAT exp (EStrConcat (exp1, exp2, (exp1left, exp2right)))
      | exp DOLLAR exp (EApp (exp1, exp2, (exp1left, exp2right)))
      (* | exp SEMI exp (ESemiColon (exp1, exp2, (exp1left, exp2right))) *)
      | exp DCOLON exp (ECons (exp1, exp2, (exp1left, exp2right)))
-     | exp COLON ty (EAsc (exp, ty, (expleft, tyright)))
-     | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
-     | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
      | set_modify id square_star exp (ESetModify (set_modify, id, square_star, exp, (set_modifyleft, expright)))
      | MODIFY POND aexp index_or_proj_star exp (EPtrModify (EOffsetProjs (aexp, index_or_proj_star), exp, (MODIFYleft, expright)))
      | RETURN exp (EReturn (exp, (RETURNleft, expright)))
@@ -511,7 +531,9 @@ exp : exp_term (exp_term)
      | FIRE exp (EFire (exp, (FIREleft, expright)))
      | ATTACH exp (EAttach (exp, (ATTACHleft, expright)))
      | SUICIDE exp (EUnOp (EUSuicide (), exp, (SUICIDEleft, expright)))
-     | LET optional_storage ptrn optional_eq_exp (ELet2 (optional_storage, ptrn, optional_eq_exp, (LETleft, optional_eq_expright)))
+     | exp_term COLON ty (EAsc (exp_term, ty, (exp_termleft, tyright)))
+     | exp_term RTRI idx (EAscTime (exp_term, idx, (exp_termleft, idxright)))
+     | exp_term RTRI idx COMMA idx (EAscTimeSpace (exp_term, (idx1, idx2), (exp_termleft, idx2right)))
 
 exp_term : aexp (aexp)
          | exp_term aexp (EApp (exp_term, aexp, (exp_termleft, aexpright)))
@@ -533,6 +555,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | SHARP INT (EConst (ECNat (str2int INT), (SHARPleft, INTright)))
      | INT (EConst (ECInt INT, (INTleft, INTright)))
      | STRING (EConst (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
+     | SHORT_STR STRING (EInt (short_str (chop_first_last STRING), (SHORT_STRleft, STRINGright)))
      | CHAR (EConst (ECChar CHAR, (CHARleft, CHARright)))
      | LSQSQ exp_comma_star RSQSQ (EList (exp_comma_star, (LSQSQleft, RSQSQright)))
      | NEVER (ENever (NEVERleft, NEVERright))
@@ -549,7 +572,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | BAR_EQ (EOrBy (BAR_EQleft, BAR_EQright))
      | aexp DOT id (EField (aexp, id, (aexpleft, idright)))
      | LCUR assign_comma_star_trailing RCUR (ERecord (assign_comma_star_trailing, (LCURleft, RCURright)))
-     | LCUR exp_term_comma_star_trailing RCUR (ENewArrayValues (exp_term_comma_star_trailing, (LCURleft, RCURright)))
+     | LCUR exp_comma_star_trailing RCUR (ENewArrayValues (exp_comma_star_trailing, (LCURleft, RCURright)))
      | FOR LPAREN id optional_colon_ty EQ exp SEMI exp SEMI exp RPAREN exps END (EFor (id, optional_colon_ty, exp1, exp2, exp3, exps, (FORleft, ENDright)))
      | WHILE LPAREN exp RPAREN exps END (EWhile (exp, exps, (WHILEleft, ENDright)))
      | ASSEMBLY LCUR exps RCUR (EAsm (exps, (ASSEMBLYleft, ASSEMBLYright)))
@@ -557,6 +580,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | THROW (EThrowError (THROWleft, THROWright))
      | NOW (ENow (NOWleft, NOWright))
      | THIS (EThis (THISleft, THISright))
+     (* | TRUNCATE ty aexp (ETruncate (ty, aexp, (TRUNCATEleft, aexpright))) *)
 
 ifs : IF exp THEN exps elses (If (exp, exps, (IFleft, expsright)) :: elses)
 elses : ELSEIF exp THEN exps elses (Elseif (exp, exps, (ELSEIFleft, expsright)) :: elses)
@@ -709,9 +733,6 @@ bsort : id (BSId id)
 id : ID ((ID, (IDleft, IDright)))
 
 assign_comma_star_trailing : id EQ exp COMMA assign_comma_star_trailing ((id, exp) :: assign_comma_star_trailing)
-	                   | ([])
-
-exp_term_comma_star_trailing : exp_term COMMA exp_term_comma_star_trailing (exp_term :: exp_term_comma_star_trailing)
 	                   | ([])
 
 exp_comma_star : exp comma_exp_star (exp :: comma_exp_star)
