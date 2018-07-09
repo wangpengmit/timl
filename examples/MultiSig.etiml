@@ -18,7 +18,7 @@ structure Pervasive = struct
   fun nat_dec {n : Nat | n >= 1} (n : nat {n}) = n #- #1
   fun addBy b a = a + b
   fun subBy b a = a - b
-  fun orBy b a = a || b
+  fun orBy b a = a bit_or b
   fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
   fun require b = if b then waste_time (); () else (throw using _) end
   val assert = require
@@ -47,18 +47,20 @@ contract multiowned = struct inherit Pervasive
 
   (* list of owners *)
   (* state m_owners : array uint {256} *)
-  state m_owners : vector uint
+  state m_owners : map uint uint
   val c_maxOwners = 250
   (* index on the list of owners to allow reverse lookup *)
   state m_ownerIndex : map uint uint
   (* the ongoing operations. *)
-  state m_pending : map bytes32 (* PendingState *){
+  state m_op2state : map bytes32 (* PendingState *){
       yetNeeded : uint,
       ownersDone : uint,
       index : uint,
   }
-  state m_pendingIndex : vector bytes32
-
+  state m_idx2op : map uint bytes32
+  state m_numOps : icell                       
+  public state m_needToIncNumOps : cell bool
+                       
   (* EVENTS *)
 
   (* this contract only has five types of events: it can accept a confirmation, in which case *)
@@ -78,27 +80,40 @@ contract multiowned = struct inherit Pervasive
     m_ownerIndex[_addr : uint] > 0
 
   (* simple single-sig function modifier. *)
-  fun onlyowner () =
+  fun onlyOwner () =
     require(isOwner msg.sender)
 
-  internal fun confirmAndCheck {len : Nat} (_operation : bytes32) pre {m_pendingIndex : len} return bool =
+  fun copy_PendingState (t : storage PendingState, s : PendingState) =
+      &t->yetNeeded ::= s.yetNeeded;
+      &t->ownersDone ::= s.ownersDone;
+      &t->index ::= s.index
+
+  fun opExists (_operation : bytes32) =
+    m_op2state[_operation].yetNeeded > 0
+
+  fun numOpsGood () = require (not !!m_needToIncNumOps)                                         
+  fun numOpsBad () = require (!!m_needToIncNumOps)
+                             
+  fun incNumOps {n : Nat} () pre {m_numOps : n} post {m_numOps : n+1} guard onlyOwner =
+    modify m_numOps %nat_inc;
+    set m_needToIncNumOps false
+                                         
+  internal fun confirmAndCheck {n : Nat} (_operation : bytes32) pre {m_numOps : n} guard onlyOwner =
     (* determine what index the present sender is: *)
     let ownerIndex : uint = m_ownerIndex[msg.sender : uint];
-    (* make sure they're an owner *)
-    if ownerIndex = 0 then
-      false
-    else
 
-    let pending = &m_pending->[_operation];
-    (* if we're not yet working on this operation, switch over and reset the confirmation status. *)
+    let pending = &m_op2state->[_operation];
     if deref pending->yetNeeded = 0 then
       (* reset count of confirmations needed. *)
       &pending->yetNeeded ::= !!m_required;
       (* reset which owners have confirmed (none) - set our bitmap to 0. *)
       &pending->ownersDone ::= 0;
-      &pending->index ::= nat2int (vector_len m_pendingIndex);
-      push_back (m_pendingIndex, _operation)
-    end;
+      let index = nat2int (!!m_numOps);
+      &pending->index ::= index;
+      set m_idx2op[index] _operation;
+      (* we need to rely on the users to increase m_numOps since the post-condition must specify a value for m_numOps *)
+      set m_needToIncNumOps true
+    end;      
     (* determine the bit to set for this owner. *)
     let ownerIndexBit : uint = 2**ownerIndex;
     (* make sure we (the message sender) haven't confirmed this operation previously. *)
@@ -107,8 +122,11 @@ contract multiowned = struct inherit Pervasive
       (* ok - check if count is enough to go ahead. *)
       if deref pending->yetNeeded <= 1 then
         (* enough confirmations: reset and run interior. *)
-        set m_pendingIndex[m_pending[_operation].index] 0;
-        set m_pending[_operation] 0;
+        set m_idx2op[m_op2state[_operation].index] 0;
+        copy_PendingState (pending, {yetNeeded = 0,
+                                     ownersDone = 0,
+                                     index = 0,
+                          });
         true
       else
         (* not enough: record that this owner in particular confirmed. *)
@@ -119,19 +137,18 @@ contract multiowned = struct inherit Pervasive
     else
       false
     end
-    end
 
   (* multi-sig function modifier: the operation must have an intrinsic hash in order *)
   (* that later attempts can be realised as the same underlying operation and *)
   (* thus count as confirmations. *)
-  fun onlymanyowners (_operation : bytes32) () =
-    require(confirmAndCheck(_operation))
+  fun onlymanyowners {n : Nat} (_operation : bytes32) () pre {m_numOps : n} =
+    require(%confirmAndCheck(_operation))
 
   (* METHODS *)
 
   (* constructor is given number of sigs required to do protected "onlymanyowners" transactions *)
   (* as well as the selection of addresses capable of confirming them. *)
-  fun init {len : Nat} (_owners : array address {len}, _required : uint) using $(15 + len * 4) =
+  fun init {old len : Nat} (_owners : array address {len}, _required : uint) pre {m_numOwners : old} post {m_numOwners : len+1} =
     set m_numOwners array_len _owners #+ #1;
     set m_owners[1] msg.sender;
     set m_ownerIndex[msg.sender] 1;
@@ -140,127 +157,117 @@ contract multiowned = struct inherit Pervasive
     (*   set m_owners[2 + i] uint(_owners[i]); *)
     (*   set m_ownerIndex[uint(_owners[i])] 2 + i *)
     (* end; *)
-    m_required := _required
+    m_required ::= _required
 
-(*   (* Revokes a prior confirmation of the given operation *) *)
-(*   external fun revoke (_operation : bytes32) = *)
-(*     let ownerIndex = m_ownerIndex[msg.sender : uint]; *)
-(*     (* make sure they're an owner *) *)
-(*     if ownerIndex = 0 then *)
-(*       return () *)
-(*     end; *)
-(*     let ownerIndexBit : uint = 2**ownerIndex; *)
-(*     let pending = &m_pending->[_operation]; *)
-(*     if pending.ownersDone && ownerIndexBit > 0 then *)
-(*       modify &pending->yetNeeded inc; *)
-(*       modify &pending->ownersDone -= ownerIndexBit; *)
-(*       fire Revoke(msg.sender, _operation) *)
-(*     end *)
+  (* Revokes a prior confirmation of the given operation *)
+  external fun revoke (_operation : bytes32) guard onlyOwner =
+    let ownerIndex = m_ownerIndex[msg.sender : uint];
+    let ownerIndexBit : uint = 2**ownerIndex;
+    let pending = &m_op2state->[_operation];
+    if deref pending->ownersDone bit_and ownerIndexBit > 0 then
+      modify &pending->yetNeeded inc;
+      modify &pending->ownersDone -= ownerIndexBit;
+      fire Revoke(msg.sender, _operation)
+    end
 
-(*   (* Replaces an owner `_from` with another `_to`. *) *)
-(*   external fun changeOwner (_from : address, _to : address) guard onlymanyowners(sha3(msg.data, block.number)) = *)
-(*     if isOwner(_to) then *)
-(*       return () *)
-(*     end; *)
-(*     let ownerIndex : uint = m_ownerIndex[uint(_from)]; *)
-(*     if ownerIndex = 0 then *)
-(*       return () *)
-(*     end; *)
+  internal fun clearPending {len : Nat} () pre {m_numOps : len} post {m_numOps : 0} guard numOpsGood =
+    let length = !!m_numOps;
+    (* for (i : uint = 0; i < length; inc) *)
+    (*   if m_idx2op[i] != 0 then *)
+    (*     set m_op2state [m_idx2op[i] ] zero *)
+    (*   end *)
+    (* end; *)
+    set m_numOps #0
 
-(*     clearPending(); *)
-(*     set m_owners[ownerIndex] uint(_to); *)
-(*     set m_ownerIndex[uint(_from)] 0; *)
-(*     set m_ownerIndex[uint(_to)] ownerIndex; *)
-(*     OwnerChanged(_from, _to) *)
+  (* Replaces an owner `_from` with another `_to`. *)
+  (* PW: why should we put block.number in the hash? Do we require the first and last attempts of this operations to be in the same block? *)      
+  external fun changeOwner {len : Nat} (_from : address, _to : address) pre {m_numOps : len} post {m_numOps : 0} guard %onlymanyowners(sha3(msg.data, block.number)), numOpsGood =
+    require (isOwner(_from));
+    require (not isOwner(_to));
+    let ownerIndex = m_ownerIndex[_from];
 
-(*   external fun addOwner (_owner : address) guard onlymanyowners(sha3(msg.data, block.number)) = *)
-(*     if isOwner(_owner) then *)
-(*       return () *)
-(*     end; *)
+    %clearPending();
+    set m_owners[ownerIndex] _to;
+    set m_ownerIndex[_from] 0;
+    set m_ownerIndex[_to] ownerIndex;
+    fire OwnerChanged(_from, _to)
 
-(*     clearPending(); *)
-(*     if !m_numOwners >= c_maxOwners then *)
-(*       reorganizeOwners() *)
-(*     end;                 *)
-(*     if m_numOwners >= c_maxOwners then *)
-(*       return () *)
-(*     end; *)
-(*     modify m_numOwners inc; *)
-(*     set m_owners[!m_numOwners] uint(_owner); *)
-(*     set m_ownerIndex[uint(_owner)] m_numOwners; *)
-(*     OwnerAdded(_owner) *)
+  fun hasConfirmed (_operation : bytes32, _owner : address) guard onlyOwner =
+    let ownerIndex : uint = m_ownerIndex[_owner];
 
-(*   external fun removeOwner (_owner : address) guard onlymanyowners(sha3(msg.data, block.number)) = *)
-(*     let ownerIndex : uint  = m_ownerIndex[uint(_owner)]; *)
-(*     if ownerIndex = 0 then *)
-(*       return () *)
-(*     end; *)
-(*     if m_required > m_numOwners - 1 then *)
-(*       return () *)
-(*     end; *)
+    (* determine the bit to set for this owner. *)
+    let ownerIndexBit : uint = 2**ownerIndex;
+    if m_op2state[_operation].ownersDone bit_and ownerIndexBit = 0 then
+      false
+    else
+      true
+    end
 
-(*     set m_owners[ownerIndex] 0; *)
-(*     set m_ownerIndex[uint(_owner)] 0; *)
-(*     clearPending(); *)
-(*     reorganizeOwners(); (* make sure m_numOwner is equal to the number of owners and always points to the optimal free slot *) *)
-(*     OwnerRemoved(_owner) *)
+  state m_newNumOwners : cell uint
+  state m_needToSetNumOwners : cell bool
+                            
+  fun numOwnersGood () = require (not !!m_needToSetNumOwners)                                         
+  fun numOwnersBad () = require (!!m_needToSetNumOwners)
+                             
+  fun incNumOwners {old new : Nat} (new : nat {new}) pre {m_numOwners : old} post {m_numOwners : new} guard numOwnersBad =
+    require(nat2int new = !!m_newNumOwners);
+    set m_numOwners new;
+    set m_needToSetNumOwners false
 
-(*   external fun changeRequirement (_newRequired : uint) guard onlymanyowners(sha3(msg.data, block.number)) = *)
-(*     if _newRequired > !m_numOwners then *)
-(*       return () *)
-(*     end; *)
-(*     m_required := _newRequired; *)
-(*     clearPending(); *)
-(*     RequirementChanged(_newRequired) *)
+  fun getNewNumOwners () = !!m_newNumOwners
 
-(*   fun hasConfirmed (_operation : bytes32, _owner : address) constant return bool = *)
-(*     let pending = m_pending[_operation]; *)
-(*     let ownerIndex : uint = m_ownerIndex[uint(_owner)]; *)
+  private fun reorganizeOwners {len : Nat} () pre {m_numOwners : len} guard numOwnersGood =
+    let free : ref uint = ref 1;
+    set m_newNumOwners 0;
+    (* while (!free < m_numOwners) *)
+    (*   while (!free < m_numOwners && m_owners[!free] != 0) modify free inc end; *)
+    (*   while (m_numOwners > 1 && m_owners[m_numOwners] = 0) modify m_numOwners dec end; *)
+    (*   if !free < m_numOwners && m_owners[m_numOwners] != 0 && m_owners[!free] = 0 then *)
+    (*     set m_owners[!free] m_owners[m_numOwners]; *)
+    (*     set m_ownerIndex[m_owners[!free] ] (!free); *)
+    (*     set m_owners[m_numOwners] 0 *)
+    (*   end *)
+    (* end; *)
+    set m_needToSetNumOwners true
 
-(*     (* make sure they're an owner *) *)
-(*     if ownerIndex = 0 then *)
-(*       return false *)
-(*     end; *)
+  external fun addOwner {len1 len2 : Nat} (_owner : address) pre {m_numOwners : len1, m_numOps : len2} post {m_numOwners : len1, m_numOps : 0} guard %onlymanyowners(sha3(msg.data, block.number)), numOwnersGood =
+    require (not isOwner(_owner));
 
-(*     (* determine the bit to set for this owner. *) *)
-(*     let ownerIndexBit : uint = 2**ownerIndex; *)
-(*     if !pending.ownersDone && ownerIndexBit = 0 then *)
-(*       false *)
-(*     else  *)
-(*       true *)
-(*     end *)
+    %clearPending();
+    if nat2int !!m_numOwners >= c_maxOwners then
+      %reorganizeOwners()
+    end;
+    require (!!m_newNumOwners < c_maxOwners);
+    modify m_newNumOwners inc;
+    let index = !!m_newNumOwners;
+    set m_owners[index] _owner;
+    set m_ownerIndex[_owner] index;
+    set m_needToSetNumOwners true;
+    fire OwnerAdded(_owner)
 
-(*   (* INTERNAL METHODS *) *)
+  external fun removeOwner {len1 len2 : Nat} (_owner : address) pre {m_numOwners : len1, m_numOps : len2} post {m_numOwners : len1, m_numOps : 0} guard %onlymanyowners(sha3(msg.data, block.number)), numOwnersGood =
+    require (isOwner(_owner));
+    let ownerIndex : uint  = m_ownerIndex[_owner];
+    require(!!m_required <= nat2int !!m_numOwners - 1);
 
-(*   private fun reorganizeOwners {len numNonzeros : Nat} () pre {m_numOwners : len} post {m_numOwners : numNonzeros} return bool using $(4 + len * 20) = *)
-(*     let free : ref uint = ref 1; *)
-(*     (* while (!free < m_numOwners) *) *)
-(*     (*   while (!free < m_numOwners && m_owners[!free] != 0) modify free inc end; *) *)
-(*     (*   while (m_numOwners > 1 && m_owners[m_numOwners] = 0) modify m_numOwners dec end; *) *)
-(*     (*   if !free < m_numOwners && m_owners[m_numOwners] != 0 && m_owners[!free] = 0 then *) *)
-(*     (*     set m_owners[!free] m_owners[m_numOwners]; *) *)
-(*     (*     set m_ownerIndex[m_owners[!free] ] (!free); *) *)
-(*     (*     set m_owners[m_numOwners] 0 *) *)
-(*     (*   end *) *)
-(*     (* end; *) *)
-(*     false   *)
+    set m_owners[ownerIndex] 0;
+    set m_ownerIndex[_owner] 0;
+    %clearPending();
+    %reorganizeOwners(); 
+    set m_needToSetNumOwners true;
+    fire OwnerRemoved(_owner)
 
-(*   internal fun clearPending {len : Nat} () pre {m_pendingIndex : len} post {m_pendingIndex : 0} using $(11 + len * 3) = *)
-(*     let length : uint = length m_pendingIndex; *)
-(*     (* for (i : uint = 0; i < length; inc) *) *)
-(*     (*   if m_pendingIndex[i] != 0 then *) *)
-(*     (*     set m_pending [m_pendingIndex[i] ] zero *) *)
-(*     (*   end *) *)
-(*     (* end; *) *)
-(*     empty m_pendingIndex *)
+  external fun changeRequirement {len1 len2 : Nat} (_newRequired : uint) pre {m_numOwners : len1, m_numOps : len2} post {m_numOwners : len1, m_numOps : 0} guard %onlymanyowners(sha3(msg.data, block.number)), numOwnersGood =
+                                                                                                           require (_newRequired <= nat2int !!m_numOwners);
+   set m_required _newRequired;
+   %clearPending();
+   fire RequirementChanged(_newRequired)
 
-(* end     *)
+end
 
-(* (* *) *)
-(* (* // inheritable "property" contract that enables methods to be protected by placing a linear limit (specifiable) *) *)
-(* (* // on a particular resource per calendar day. is multiowned to allow the limit to be altered. resource that method *) *)
-(* (* // uses is specified in the modifier. *) *)
-(* (* *) *)
+(* // inheritable "property" contract that enables methods to be protected by placing a linear limit (specifiable) *)
+(* // on a particular resource per calendar day. is multiowned to allow the limit to be altered. resource that method *)
+(* // uses is specified in the modifier. *)
 
 (* contract daylimit = struct inherit multiowned *)
 
@@ -417,9 +424,9 @@ contract multiowned = struct inherit Pervasive
 (*   (* INTERNAL METHODS *) *)
 
 (*   internal fun clearPending () = *)
-(*     let length : uint = length m_pendingIndex; *)
+(*     let length : uint = length m_idx2op; *)
 (*     for (i : uint = 0; i < length; inc) *)
-(*       set m_txs[m_pendingIndex[i] ] zero *)
+(*       set m_txs[m_idx2op[i] ] zero *)
 (*     end; *)
 (*     super.clearPending() *)
 
@@ -428,4 +435,4 @@ contract multiowned = struct inherit Pervasive
 (*   (* pending transactions we have at present. *) *)
 (*   state m_txs : map bytes32 Transaction *)
                                                   
-end
+(* end *)
