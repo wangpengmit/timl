@@ -101,6 +101,7 @@ datatype ast_expr_unop =
          | EUSend of unit
          | EUAttach of unit
          | EUFire of unit
+         | EUSuicide of unit
          | EUSHA3 of unit
          | EUSHA256 of unit
          | EUECREC of unit

@@ -101,6 +101,7 @@ val keywords = [
     ("for", T.FOR),
     ("while", T.WHILE),
     ("as", T.AS),
+    ("suicide", T.SUICIDE),
     ("bit_and", T.BIT_AND),
     ("bit_or", T.BIT_OR),
     ("deref", T.DEREF),

@@ -153,6 +153,7 @@ open Ast
     | SEND
     | FIRE
     | ATTACH
+    | SUICIDE
     | NOW
     | THIS
     | SHA256
@@ -509,6 +510,7 @@ exp : exp_term (exp_term)
      | SEND exp (ESend (exp, (SENDleft, expright)))
      | FIRE exp (EFire (exp, (FIREleft, expright)))
      | ATTACH exp (EAttach (exp, (ATTACHleft, expright)))
+     | SUICIDE exp (EUnOp (EUSuicide (), exp, (SUICIDEleft, expright)))
      | LET optional_storage ptrn optional_eq_exp (ELet2 (optional_storage, ptrn, optional_eq_exp, (LETleft, optional_eq_expright)))
 
 exp_term : aexp (aexp)

@@ -528,6 +528,7 @@ fun str_ast_expr_unop opr =
     | EUSend () => "send"
     | EUFire () => "fire"
     | EUAttach () => "attach"
+    | EUSuicide () => "suicide"
     | EUSHA3 () => "sha3"
     | EUSHA256 () => "sha256"
     | EUECREC () => "ecrec"

@@ -427,7 +427,7 @@ local
                 in
                   e
                 end
-              | S.ECZero () => raise Impossible "elaborate/ECZero"
+              | S.ECZero () => raise Error (r, "elaborate/ECZero")
               | S.ECNow () => EEnv (EnvNow (), r)
               | S.ECThis () => EEnv (EnvThis (), r)
               | S.ECState x => EState (x, r)
@@ -525,13 +525,14 @@ local
              | S.EUThrow () => EHalt (elab e, TUVar ((), r))
              | S.EUDeref true => EStorageGet (elab e, r)
              | S.EUDeref false => ERead (elab e, ENat (0, r))
-             | S.EUAsm _ => raise Impossible "elaborate/EAsm"
-             | S.EUReturn _ => raise Impossible "elaborate/EReturn"
+             | S.EUAsm _ => raise Error (r, "elaborate/EAsm")
+             | S.EUReturn _ => raise Error (r, "elaborate/EReturn")
              | S.EUCall () => elab $ S.EThrowError r
              | S.EUCallValue () => elab $ S.EThrowError r
              | S.EUSend () => ETrue r
              | S.EUFire () => ETT r
              | S.EUAttach () => ETT r
+             | S.EUSuicide () => ETT r
              | S.EUSHA3 () => EInt ("0", r)
              | S.EUSHA256 () => EInt ("0", r)
              | S.EUECREC () => EInt ("0", r)
@@ -559,8 +560,8 @@ local
         | S.ENewArrayValues (es, r) => ENewArrayValues (TUVar ((), r), map elab es, r)
         | S.ERecord (fields, r) =>
           ERecord (list2map r $ map (mapSnd elab) fields, r)
-        | S.EFor _ => raise Impossible "elaborate/EFor"
-        | S.EBinOp (EBWhile (), e1, e2, _) => raise Impossible "elaborate/EWhile"
+        | S.EFor (_, _, _, _, _, _, r) => raise Error (r, "elaborate/EFor")
+        | S.EBinOp (EBWhile (), e1, e2, r) => raise Error (r, "elaborate/EWhile")
         | S.ELet2 (_, pn, e, r) => raise Error (r, "let-binding are not allowed here ")
         | S.ESemis (es, r) =>
           let
@@ -722,8 +723,8 @@ local
           in
             SpecTypeDef (fst $ unBind dt, TDatatype (dt, r))
           end
-        | S.SpecFun (name, ts, mods) => raise Impossible "elaborate/SpecFun"
-        | S.SpecEvent (name, ts) => raise Impossible "elaborate/SpecEvent"
+        | S.SpecFun (name, ts, mods) => raise Error (snd name, "elaborate/SpecFun")
+        | S.SpecEvent (name, ts) => raise Error (snd name, "elaborate/SpecEvent")
 
   fun elab_sig sg =
       case sg of
