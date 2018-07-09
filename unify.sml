@@ -378,129 +378,204 @@ fun unify_mt r gctx ctx (t, t') =
     fun error ctxn (t, t') = unify_error "type" r (str_mt gctxn ctxn $ normalize_mt true gctx kctx t, str_mt gctxn ctxn $ normalize_mt true gctx kctx t')
     (* fun error ctxn (t, t') = unify_error "type" r (str_raw_mt t, str_raw_mt t') *)
     fun structural_compare (t, t') =
+      let
+        fun err () = raise error ctxn (t, t')
+      in
       if eq_mt t t' then ()
       (* if one-side is not in a normal form because of uvar, we can't do structural comparison *)
       else if isSome (is_TApp_TUVar t) orelse isSome (is_TApp_TUVar t') then
-        raise error ctxn (t, t')
+        err ()
       else
-      case (t, t') of
-          (TArrow ((st1, t1), (d, j), (st2, t2)), TArrow ((st1', t1'), (d', j'), (st2', t2'))) =>
-          (unify_state r gctxn sctxn (st1, st1');
-           unify_mt ctx (t1, t1');
-           unify_i r gctxn sctxn (d, d');
-           unify_i r gctxn sctxn (j, j');
-           unify_state r gctxn sctxn (st2, st2');
-           unify_mt ctx (t2, t2'))
-        | (TArray (t, i), TArray (t', i')) =>
-          (unify_mt ctx (t, t');
-           unify_i r gctxn sctxn (i, i')
-          )
-        | (TNat (i, _), TNat (i', _)) =>
-          unify_i r gctxn sctxn (i, i')
-        | (TiBool (i, _), TiBool (i', _)) =>
-          unify_i r gctxn sctxn (i, i')
-        | (TProd (t1, t2), TProd (t1', t2')) =>
-          (unify_mt ctx (t1, t1');
-           unify_mt ctx (t2, t2'))
-        | (TUniI (s, Bind ((name, _), ((i, j), t1)), _), TUniI (s', Bind (_, ((i', j'), t1')), _)) =>
-          let
-            val () = is_eqv_sort r gctxn sctxn (s, s')
-          in
-            open_close add_sorting_sk (name, s) ctx
-                       (fn ctx as (sctx, _) =>
-                           let
-                             val sctxn = sctx_names sctx
-                           in
-                             (unify_i r gctxn sctxn (i, i');
-                              unify_i r gctxn sctxn (j, j');
-                              unify_mt ctx (t1, t1'))
-                           end)
-          end
+      case t of
+          TArrow ((st1, t1), (d, j), (st2, t2)) =>
+          (case t' of
+               TArrow ((st1', t1'), (d', j'), (st2', t2')) =>
+               (unify_state r gctxn sctxn (st1, st1');
+                unify_mt ctx (t1, t1');
+                unify_i r gctxn sctxn (d, d');
+                unify_i r gctxn sctxn (j, j');
+                unify_state r gctxn sctxn (st2, st2');
+                unify_mt ctx (t2, t2'))
+             | _ => err ())
+        | TArray (t, i) =>
+          (case t' of
+               TArray (t', i') =>
+               (unify_mt ctx (t, t');
+                unify_i r gctxn sctxn (i, i')
+               )
+             | _ => err ())
+        | TNat (i, _) =>
+          (case t' of
+               TNat (i', _) =>
+               unify_i r gctxn sctxn (i, i')
+             | _ => err ())
+        | TiBool (i, _) =>
+          (case t' of
+               TiBool (i', _) =>
+               unify_i r gctxn sctxn (i, i')
+             | _ => err ())
+        | TProd (t1, t2) =>
+          (case t' of
+               TProd (t1', t2') =>
+               (unify_mt ctx (t1, t1');
+                unify_mt ctx (t2, t2'))
+             | _ => err ())
+        | TUniI (s, Bind ((name, _), ((i, j), t1)), _) =>
+          (case t' of
+               TUniI (s', Bind (_, ((i', j'), t1')), _) =>
+               let
+                 val () = is_eqv_sort r gctxn sctxn (s, s')
+               in
+                 open_close add_sorting_sk (name, s) ctx
+                            (fn ctx as (sctx, _) =>
+                                let
+                                  val sctxn = sctx_names sctx
+                                in
+                                  (unify_i r gctxn sctxn (i, i');
+                                   unify_i r gctxn sctxn (j, j');
+                                   unify_mt ctx (t1, t1'))
+                                end)
+               end
+             | _ => err ())
         (* | (TSumbool (s1, s2), TSumbool (s1', s2')) => *)
         (*   (is_eqv_sort r gctxn sctxn (s1, s1'); *)
         (*    is_eqv_sort r gctxn sctxn (s2, s2')) *)
-        | (TUnit _, TUnit _) => ()
-	| (TBase (c, _), TBase (c', _)) => check_eq r op= (c, c')
-        | (TAbs (k, Bind ((name, _), t), _), TAbs (k', Bind (_, t'), _)) =>
-          let
-            val () = unify_k r (k, k')
-            val () = unify_mt (add_kinding_sk (name, k) ctx) (t, t')
-          in
-            ()
-          end
-        | (TApp (t1, t2), TApp (t1', t2')) => 
-          let
-            val () = unify_mt ctx (t1, t1')
-            val () = unify_mt ctx (t2, t2')
-          in
-            ()
-          end
-        | (TAbsI (b, Bind ((name, _), t), _), TAbsI (b', Bind (_, t'), _)) =>
-          let
-            val () = unify_bs r (b, b')
-            val () = open_close add_sorting_sk (name, SBasic (b, r)) ctx (fn ctx => unify_mt ctx (t, t'))
-          in
-            ()
-          end
-        | (TAppI (t, i), TAppI (t', i')) => 
-          let
-            val () = unify_mt ctx (t, t')
-            val () = unify_i r gctxn sctxn (i, i')
-          in
-            ()
-          end
+        | TUnit _ =>
+          (case t' of
+               TUnit _ => ()
+             | _ => err ())
+	| TBase (c, _) =>
+          (case t' of
+               TBase (c', _) => check_eq r op= (c, c')
+             | _ => err ())
+        | TAbs (k, Bind ((name, _), t), _) =>
+          (case t' of
+               TAbs (k', Bind (_, t'), _) =>
+               let
+                 val () = unify_k r (k, k')
+                 val () = unify_mt (add_kinding_sk (name, k) ctx) (t, t')
+               in
+                 ()
+               end
+             | _ => err ())
+        | TApp (t1, t2) =>
+          (case t' of
+               TApp (t1', t2') => 
+               let
+                 val () = unify_mt ctx (t1, t1')
+                 val () = unify_mt ctx (t2, t2')
+               in
+                 ()
+               end
+             | _ => err ())
+        | TAbsI (b, Bind ((name, _), t), _) =>
+          (case t' of
+               TAbsI (b', Bind (_, t'), _) =>
+               let
+                 val () = unify_bs r (b, b')
+                 val () = open_close add_sorting_sk (name, SBasic (b, r)) ctx (fn ctx => unify_mt ctx (t, t'))
+               in
+                 ()
+               end
+             | _ => err ())
+        | TAppI (t, i) =>
+          (case t' of
+               TAppI (t', i') => 
+               let
+                 val () = unify_mt ctx (t, t')
+                 val () = unify_i r gctxn sctxn (i, i')
+               in
+                 ()
+               end
+             | _ => err ())
         (* now try a bit harder by not ignoring TDatatype when retrieving TVar *)
-        | (TDatatype _, TVar _) => unify_mt ctx (t, whnf_mt false gctx kctx t')
-        | (TVar _, TDatatype _) => unify_mt ctx (whnf_mt false gctx kctx t, t')
-        | (TVar _, TVar _) => unify_mt ctx (whnf_mt false gctx kctx t, whnf_mt false gctx kctx t')
-        | (TDatatype (dt, _), TDatatype (dt', _)) =>
-          let
-            (* val () = println "structural TDatatypes compare started" *)
-            fun dt_error () = error ctxn (t, t')
-            fun check b = if b then () else raise dt_error ()
-            fun check_length (ls, ls') = check $ length ls = length ls'
-            val Bind (name, tbinds) = dt
-            val Bind (name', tbinds') = dt
-            (* the self-referencing name is significant *)
-            val () = check $ fst name = fst name'
-            val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
-            val (tname_kinds', (bsorts', constr_decls')) = unfold_binds tbinds'
-            val () = check_length (tname_kinds, tname_kinds')
-            fun unify_bsorts p =
-              (check_length p;
-               ListPair.app (unify_bs r) p)
-            val () = unify_bsorts (bsorts, bsorts')
-            fun unify_is ctx p =
-              (check_length p;
-               ListPair.app (unify_i r gctxn $ sctx_names ctx) p)
-            fun unify_inner ctx ((t, is), (t', is')) =
-              (unify_mt ctx (t, t');
-               unify_is (#1 ctx) (is, is'))
-            fun unify_constr_decl ctx ((name, core, _), (name', core', _)) =
-              let
-                (* constructor names are significant *)
-                val () = check $ fst name = fst name'
-                fun unify_binds ctx (binds, binds') =
-                  case (binds, binds') of
-                      (BindNil inner, BindNil inner') => unify_inner ctx (inner, inner')
-                    | (BindCons (s, Bind (name, binds)), BindCons (s', Bind (name', binds'))) =>
-                      (is_eqv_sort r gctxn (sctx_names $ #1 ctx) (s, s');
-                       open_close add_sorting_sk (fst name, s) ctx (fn ctx => unify_binds ctx (binds, binds')))
-                    | _ => raise dt_error ()
-              in
-                unify_binds ctx (core, core')
-              end
-            fun unify_constr_decls ctx (ds, ds') =
-              (check_length (ds, ds');
-               ListPair.app (unify_constr_decl ctx) (ds, ds'))
-            val family_kind = (length tname_kinds, bsorts)
-            val new_kindings = rev $ (fst name, family_kind) :: map (fn (name, ()) => (fst name, Type)) tname_kinds
-            val () = unify_constr_decls (add_kindings_sk new_kindings ctx) (constr_decls, constr_decls')
-            (* val () = println "structural TDatatypes compare finished" *)
-          in
-            ()
-          end
-	| _ => raise error ctxn (t, t')
+        | TVar _ =>
+          (case t' of
+               TDatatype _ => unify_mt ctx (whnf_mt false gctx kctx t, t')
+             | TVar _ => unify_mt ctx (whnf_mt false gctx kctx t, whnf_mt false gctx kctx t')
+             | _ => err ())
+        | TDatatype (dt, _) =>
+          (case t' of
+               TVar _ => unify_mt ctx (t, whnf_mt false gctx kctx t')
+             | TDatatype (dt', _) =>
+               let
+                 (* val () = println "structural TDatatypes compare started" *)
+                 fun dt_error () = error ctxn (t, t')
+                 fun check b = if b then () else raise dt_error ()
+                 fun check_length (ls, ls') = check $ length ls = length ls'
+                 val Bind (name, tbinds) = dt
+                 val Bind (name', tbinds') = dt
+                 (* the self-referencing name is significant *)
+                 val () = check $ fst name = fst name'
+                 val (tname_kinds, (bsorts, constr_decls)) = unfold_binds tbinds
+                 val (tname_kinds', (bsorts', constr_decls')) = unfold_binds tbinds'
+                 val () = check_length (tname_kinds, tname_kinds')
+                 fun unify_bsorts p =
+                   (check_length p;
+                    ListPair.app (unify_bs r) p)
+                 val () = unify_bsorts (bsorts, bsorts')
+                 fun unify_is ctx p =
+                   (check_length p;
+                    ListPair.app (unify_i r gctxn $ sctx_names ctx) p)
+                 fun unify_inner ctx ((t, is), (t', is')) =
+                   (unify_mt ctx (t, t');
+                    unify_is (#1 ctx) (is, is'))
+                 fun unify_constr_decl ctx ((name, core, _), (name', core', _)) =
+                   let
+                     (* constructor names are significant *)
+                     val () = check $ fst name = fst name'
+                     fun unify_binds ctx (binds, binds') =
+                       case (binds, binds') of
+                           (BindNil inner, BindNil inner') => unify_inner ctx (inner, inner')
+                         | (BindCons (s, Bind (name, binds)), BindCons (s', Bind (name', binds'))) =>
+                           (is_eqv_sort r gctxn (sctx_names $ #1 ctx) (s, s');
+                            open_close add_sorting_sk (fst name, s) ctx (fn ctx => unify_binds ctx (binds, binds')))
+                         | _ => raise dt_error ()
+                   in
+                     unify_binds ctx (core, core')
+                   end
+                 fun unify_constr_decls ctx (ds, ds') =
+                   (check_length (ds, ds');
+                    ListPair.app (unify_constr_decl ctx) (ds, ds'))
+                 val family_kind = (length tname_kinds, bsorts)
+                 val new_kindings = rev $ (fst name, family_kind) :: map (fn (name, ()) => (fst name, Type)) tname_kinds
+                 val () = unify_constr_decls (add_kindings_sk new_kindings ctx) (constr_decls, constr_decls')
+                                             (* val () = println "structural TDatatypes compare finished" *)
+               in
+                 ()
+               end
+             | _ => err ())
+        | TNatCell _ =>
+          (case t' of
+               TNatCell _ => ()
+             | _ => err ())
+        | TMap t =>
+          (case t' of
+               TMap t' => unify_mt ctx (t, t')
+             | _ => err ())
+        | TVector t =>
+          (case t' of
+               TVector t' => unify_mt ctx (t, t')
+             | _ => err ())
+        | TSCell t =>
+          (case t' of
+               TSCell t' => unify_mt ctx (t, t')
+             | _ => err ())
+        | TPtr t =>
+          (case t' of
+               TPtr t' => unify_mt ctx (t, t')
+             | _ => err ())
+        | TState x =>
+          (case t' of
+               TState x' => check_eq r op= (x, x')
+             | _ => err ())
+        | TRecord (t, _) =>
+          (case t' of
+               TRecord (t', _) =>
+               ignore $ SMapU.check_equal err (unify_mt ctx) t t'
+             | _ => err ())
+        | TUVar _ => err ()
+      end
     val t = whnf_mt true gctx kctx t
     val t' = whnf_mt true gctx kctx t'
     (* val () = println $ sprintf "Unifying types\n\t$\n  and\n\t$" [str_mt gctxn ctxn t, str_mt gctxn ctxn t'] *)

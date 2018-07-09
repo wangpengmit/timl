@@ -56,12 +56,11 @@ open VisitorUtil
 exception Visitor2Error of string
                              
 fun visit2_pair visit2_fst visit2_snd env (a, b) (a', b') = (visit2_fst env a a', visit2_snd env b b')
-fun visit2_list visit env ls ls' = map2 (visit env) ls ls'
-                                   handle ListPair.UnequalLengths => raise Visitor2Error "unequal lengths"
-fun visit2_SMap visit env m m' =
-  if not (SMapU.is_same_domain m m') then raise Visitor2Error "not same domain"
-  else
-    SMap.intersectWith (fn (v, v') => visit env v v') (m, m')
+fun visit2_list visit env ls ls' =
+  map2 (visit env) ls ls'
+  handle ListPair.UnequalLengths => raise Visitor2Error "unequal lengths"
+fun visit2_SMap visit env =
+  SMapU.check_equal (fn () => raise Visitor2Error "not same domain") (uncurry $ visit env)
                                                   
 fun visit2_abs visit2_'p env (Abs p1) (Abs p1') =
   Abs $ visit2_'p (env2ctx env) p1 p1'

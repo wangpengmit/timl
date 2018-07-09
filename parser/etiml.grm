@@ -675,7 +675,7 @@ proj_path : DOT int_or_id proj_path ((int_or_id, (DOTleft, int_or_idright)) :: p
           | ([])
               
 index_or_proj : LSQ exp RSQ (inl exp)
-               | DOT int_or_id (inr (int_or_id, (DOTleft, int_or_idright)))
+               | ARROW int_or_id (inr (int_or_id, (ARROWleft, int_or_idright)))
 
 index_or_proj_star : index_or_proj index_or_proj_star (index_or_proj :: index_or_proj_star)
 	            | ([])

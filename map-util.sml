@@ -19,6 +19,10 @@ fun alli f m = List.all f (M.listItemsi m)
                              
 fun equal eq m m' =
   is_same_domain m m' andalso alli (fn (k, v) => eq v (Option.valOf (M.find (m', k)))) m
+fun check_equal err f m m' =
+  if not (is_same_domain m m') then err ()
+  else
+    M.intersectWith f (m, m')
 
 fun addList (m, kvs) = foldl (fn ((k, v), m) => M.insert (m, k, v)) m kvs
 fun fromList kvs = addList (M.empty, kvs)

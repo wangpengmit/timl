@@ -1688,10 +1688,11 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                 case t of
                     TRecord a => a
                   | _ => raise Error (r, ["can't infer the record type"])
-            val sorted_names = sort_string $ SMapU.domain fields
-            val offset = case indexOf (curry op= name) sorted_names of
-                             SOME a => a
-                           | NONE => raise Error (r, ["field not found"])
+            val fields = sort cmp_str_fst $ SMap.listItemsi fields
+            val (offset, (_, t)) =
+                case findi (fn (name', t) => name = name') fields of
+                    SOME a => a
+                  | NONE => raise Error (r, ["field not found"])
           in
             (EUnOp (EUField (name, SOME offset), e, r), t, i, st)
           end
