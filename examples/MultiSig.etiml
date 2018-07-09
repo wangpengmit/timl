@@ -150,7 +150,7 @@ contract multiOwned = struct inherit Pervasive
 
   (* constructor is given number of sigs required to do protected "onlymanyowners" transactions *)
   (* as well as the selection of addresses capable of confirming them. *)
-  fun multiOwned {old len : Nat} (_owners : array address {len}, _required : uint) pre {m_numOwners : old} post {m_numOwners : len+1} =
+  fun multiOwned {len : Nat} (_owners : array address {len}, _required : uint) pre {m_numOwners : 0} post {m_numOwners : len+1} =
     set m_numOwners array_len _owners #+ #1;
     set m_owners[1] msg.sender;
     set m_ownerIndex[msg.sender] 1;
@@ -367,26 +367,26 @@ contract Wallet = struct inherit multiOwned, daylimit
   type Transaction = {
     to : address,
     value : uint,
-    (* data : bytes, *)
+    dataHash : bytes32,
   }
 
   (* pending transactions we have at present. *)
   state m_txs : map bytes32 (* Transaction *){
     to : address,
     value : uint,
-    (* data : bytes, *)
+    dataHash : bytes32,
   }
                                                   
   (* METHODS *)
 
   (* constructor - just pass on the owner array to the multiOwned and *)
   (* the limit to daylimit *)
-  fun multisig {n : Nat} (_owners : array address {n}, _required : uint, _daylimit : uint) =
+  fun multisig {len : Nat} (_owners : array address {len}, _required : uint, _daylimit : uint) pre {m_numOwners : 0} post {m_numOwners : len+1} =
     %multiOwned(_owners, _required);
     daylimit(_daylimit)
 
   (* kills the contract sending everything to `_to`. *)
-  external fun kill (_to : address) guard onlymanyowners(sha3(msg.data, block.number)) =
+  external fun kill {len : Nat} (_to : address) pre {m_numOps : len} guard %onlymanyowners(sha3(msg.data, block.number)) =
     suicide(_to)
 
   (* gets called when no other function matches *)
@@ -396,13 +396,21 @@ contract Wallet = struct inherit multiOwned, daylimit
       fire Deposit(msg.sender, msg.value)
     end
 
-  (* confirm a transaction through just the hash. we use the previous transactions map, m_txs, in order *)
-  (* to determine the body of the transaction from the hash provided. *)
-  fun confirm (_h : bytes32) guard onlymanyowners(_h) return bool =
-    if !m_txs[_h].to != 0 then
-      call_with_value (!m_txs[_h].to, !m_txs[_h].value, !m_txs[_h].data);
-      fire MultiTransact(msg.sender, _h, !m_txs[_h].value, !m_txs[_h].to, !m_txs[_h].data);
-      set m_txs[_h] 0;
+  fun copy_Transaction (t : storage Transaction, s : Transaction) =
+    &t->to ::= s.to;
+    &t->value ::= s.value;
+    &t->dataHash ::= s.dataHash
+
+  (* confirm a transaction through just the hash. *)
+  fun confirm {len n : Nat} (_h : bytes32, data : bytes {n}) pre {m_numOps : len} guard %onlymanyowners(_h) return bool =
+    if m_txs[_h].to != 0 then
+      require (sha3(data) = m_txs[_h].dataHash);
+      call_with_value () m_txs[_h].to (m_txs[_h].value, data);
+      fire MultiTransact(msg.sender, _h, !m_txs[_h].value, !m_txs[_h].to, data);
+      copy_Transaction (&m_txs->[_h], {to = 0,
+                                      value = 0,
+                                      dataHash = 0,
+                       });
       true
     else
       false
@@ -412,32 +420,30 @@ contract Wallet = struct inherit multiOwned, daylimit
 (*   // If not, goes into multisig process. We provide a hash on return to allow the sender to provide *)
 (*   // shortcuts for the other confirmations (allowing them to avoid replicating the _to, _value *)
 (*   // and _data arguments). They still get the option of using them if they want, anyways. *)
-  external fun execute {n : Nat} (_to : address, _value : uint, _data : bytes {n}) guard onlyOwner return bytes32 =
+  external fun execute {len n : Nat} (_to : address, _value : uint, _data : bytes {n}) pre {m_numOps : len} guard onlyOwner return bytes32 =
     (* first, take the opportunity to check that we're under the daily limit. *)
     if underLimit(_value) then
       fire SingleTransact(msg.sender, _value, _to, _data);
       (* yes - just execute the call. *)
-      call_with_value (_to, _value, _data);
+      call_with_value () _to (_value, _data);
       0
     else
       (* determine our operation hash. *)
       let _r = sha3(msg.data, block.number);
-      if not confirm(_r) && !m_txs[_r].to == 0 then
-        m_txs[_r].to := _to;
-        m_txs[_r].value := _value;
-        (* m_txs[_r].data := _data; *)
+      if not %confirm(_r, _data) && m_txs[_r].to == 0 then
+        set m_txs[_r].to _to;
+        set m_txs[_r].value _value;
+        set m_txs[_r].dataHash sha3(_data);
         fire ConfirmationNeeded(_r, msg.sender, _value, _to, _data)
       end;
       _r
     end
       
-  (* INTERNAL METHODS *)
-
-  internal fun clearPending2 () =
+  internal fun clearPending2 {len : Nat} () pre {m_numOps : len} post {m_numOps : 0} guard numOpsGood =
     let length = !!m_numOps;
     (* for (i : uint = 0; i < length; inc) *)
     (*   set m_txs[m_idx2op[i] ] zero *)
     (* end; *)
-    clearPending()
+    %clearPending()
 
 end

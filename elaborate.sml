@@ -527,8 +527,8 @@ local
              | S.EUDeref false => ERead (elab e, ENat (0, r))
              | S.EUAsm _ => raise Error (r, "elaborate/EAsm")
              | S.EUReturn _ => raise Error (r, "elaborate/EReturn")
-             | S.EUCall () => elab $ S.EThrowError r
-             | S.EUCallValue () => elab $ S.EThrowError r
+             | S.EUCall () => elab e
+             | S.EUCallValue () => elab e
              | S.EUSend () => ETrue r
              | S.EUFire () => ETT r
              | S.EUAttach () => ETT r

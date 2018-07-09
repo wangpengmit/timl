@@ -46,7 +46,7 @@ contract tokenRecipient = struct
 
     public fun receiveApproval (_from : address, _value : uint256, _token : address(* , _extraData : bytes *)) =
       let t = attach _token Token;
-      require(call t transferFrom( _from, this, _value));
+      require(call false t transferFrom( _from, this, _value));
       fire receivedTokens(_from, _value, _token, _extraData)
 
     public fun default () payable =
@@ -328,7 +328,7 @@ contract Congress = struct inherit owned, tokenRecipient
       (* Proposal passed; execute the transaction *)
 
       &p->executed ::= true; (* Avoid recursive calling *)
-      require(call_with_value (deref p->recipient) (deref p->amount) transactionBytecode);
+      require(call_with_value false (deref p->recipient) (deref p->amount) transactionBytecode);
 
       &p->proposalPassed ::= true
     else
