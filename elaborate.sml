@@ -725,12 +725,13 @@ local
       case m of
           S.ModComponents (inherits, comps, r) =>
           let
+            val inherits = concatMap elab_decl $ map S.DOpen inherits
             val () = state_decls_ref := []
             val decls = concatMap elab_decl comps
             val state_decls = !state_decls_ref
             val state_init = elab_decl $ make_state_init r $ rev state_decls
           in
-            (ModComponents (state_init @ decls, r), state_decls)
+            (ModComponents (inherits @ state_init @ decls, r), state_decls)
           end
         | S.ModSeal (m, sg) =>
           let

@@ -3,7 +3,8 @@
 (* MiniToken.etiml *)
 (* Token.etiml *)
 (* Crowdsale.etiml *)
-EtherDelta.etiml
+(* EtherDelta.etiml *)
+Congress.etiml
 
 (* pervasive.timl *)
 (* basic.timl *)
