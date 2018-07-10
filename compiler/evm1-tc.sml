@@ -159,6 +159,8 @@ fun C_inst b =
     | ISZERO () => C_ISZERO
     | AND () => C_AND
     | OR () => C_OR
+    | XOR () => C_XOR
+    | NOT () => C_NOT
     | BYTE () => C_BYTE
     | MLOAD () => C_MLOAD
     | MSTORE () => C_MSTORE
@@ -270,6 +272,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
             case (whnf itctx t0, whnf itctx t1) of
                 (TConst (TCTiML (BTBool ())), TConst (TCTiML (BTBool ()))) => TBool
               | (TiBool i0, TiBool i1) => TiBool $ f (i0, i1)
+              | (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TInt
               | _ => raise Impossible $ sprintf "$: can't operate on operands of types ($) and ($)" [name, str_t t0, str_t t1]
       in
         ((itctx, rctx, t :: sctx, st))
@@ -355,6 +358,14 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st))
       end
+    (* | SELFDESTRUCT () => *)
+    (*   let *)
+    (*     val (t0, sctx) = assert_cons sctx *)
+    (*     val i = assert_TNat t0 *)
+    (*     val () = add_time_idx $ self_destruct_cost i *)
+    (*   in *)
+    (*     ((itctx, rctx, sctx, st)) *)
+    (*   end *)
     | LT () => cmp "LT" op<?
     | GT () => cmp "GT" op>?
     | SLT () => cmp "LT" op<=?
@@ -373,8 +384,19 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t :: sctx, st))
       end
+    | NOT () =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val t =
+            case t0 of
+                TConst (TCTiML (BTInt ())) => TBool
+              | _ => raise Impossible $ sprintf "NOT: can't operate on operand of type ($)" [str_t t0]
+      in
+        ((itctx, rctx, t :: sctx, st))
+      end
     | AND () => and_or "AND" op/\?
     | OR () => and_or "OR" op\/?
+    | XOR () => and_or "XOR" (raise Impossible "XOR can't operate on iBool")
     | POP () =>
       let
         val (t0, sctx) = assert_cons sctx

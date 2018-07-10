@@ -123,6 +123,8 @@ fun default_evm1_visitor_vtable
           | ISZERO () => ISZERO ()
           | AND () => AND ()
           | OR () => OR ()
+          | XOR () => XOR ()
+          | NOT () => NOT ()
           | BYTE () => BYTE ()
           | SHA3 () => SHA3 ()
           | ORIGIN () => ORIGIN ()

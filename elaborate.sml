@@ -212,6 +212,8 @@ local
                 TInt r
               else if x = "address" then
                 TInt r
+              else if x = "bytes4" then
+                TInt r
               else if x = "bytes32" then
                 TInt r
                      (* else if x = "bytes" then *)

@@ -386,7 +386,7 @@ contract Wallet = struct inherit multiOwned, daylimit
     daylimit(_daylimit)
 
   (* kills the contract sending everything to `_to`. *)
-  external fun kill {len : Nat} (_to : address) pre {m_numOps : len} guard %onlymanyowners(sha3(msg.data, block.number)) =
+  external fun kill {len to : Nat} (_to : nat {to}) pre {m_numOps : len} guard %onlymanyowners(sha3(msg.data, block.number)) =
     suicide(_to)
 
   (* gets called when no other function matches *)

@@ -15,6 +15,7 @@ structure Pervasive = struct
   val minute = 60
   val hour = 60 * minute
   val day = 24 * hour
+  fun truncate n v = v bit_and (2 ** (8*n) - 1)
 end
 
 (**
@@ -411,7 +412,7 @@ contract KittyBase = struct
         
     (* It's probably never going to happen, 4 billion cats is A LOT, but*)
     (* let's just be 100% sure we never let this happen.*)
-    require(newKittenId == truncate uint32 newKittenId);
+    require(newKittenId == truncate 4 newKittenId);
 
     (* emit the birth event*)
     fire Birth(
@@ -465,16 +466,14 @@ end
 (* @author Axiom Zen (https://www.axiomzen.co)*)
 (* @dev Ref: https://github.com/ethereum/EIPs/issues/721*)
 (*  See the KittyCore contract documentation to understand how the various contract facets are arranged.*)
-contract KittyOwnership = struct inherit KittyBase, ERC721
+contract KittyOwnership = struct inherit KittyBase
 
   (* @notice Name and symbol of the non fungible token, as defined in ERC721.*)
-  public val name : string = "CryptoKitties"
-  public val symbol : string = "CK"
+  public val name = "CryptoKitties"
+  public val symbol = "CK"
 
   (* The contract that will return kitty metadata*)
   public state erc721Metadata : cell address
-
-  fun truncate n v = v bit_and (2 ** (8*n) - 1)
 
   val InterfaceSignature_ERC165 : bytes4 =
     truncate 4 (keccak256("supportsInterface(bytes4)"))
@@ -504,7 +503,7 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   (*  CEO only.*)
   public fun setMetadataAddress (_contractAddress : address) =
     onlyCEO ();
-    erc721Metadata := SOME $ ERC721Metadata(_contractAddress)
+    erc721Metadata ::= _contractAddress
 
   (* Internal utility funs: These funs all assume that their input arguments*)
   (* are valid. We leave it to public methods to sanitize their inputs and follow*)
@@ -549,16 +548,16 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   =
     whenNotPaused ();
     (* Safety check to prevent against an unexpected 0x0 default.*)
-    require(_to != address(0));
+    require(_to !=0);
     (* Disallow transfers to this contract to prevent accidental misuse.*)
     (* The contract should never own any kitties (except very briefly*)
     (* after a gen0 cat is created and before it goes on auction).*)
-    require(_to != address(this));
+    require(_to != this);
     (* Disallow transfers to the auction contracts to prevent accidental*)
     (* misuse. Auction contracts should only take ownership of kitties*)
     (* through the allow + transferFrom flow.*)
-    require(_to != address(saleAuction));
-    require(_to != address(siringAuction));
+    require(_to != saleAuction);
+    require(_to != siringAuction);
 
     (* You can only send your own cat.*)
     require(_owns(msg.sender, _tokenId));
@@ -585,7 +584,7 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
     _approve(_tokenId, _to);
 
     (* Emit approval event.*)
-    Approval(msg.sender, _to, _tokenId)
+    fire Approval(msg.sender, _to, _tokenId)
 
   (* @notice Transfer a Kitty owned by another address, for which the calling address*)
   (*  has previously been granted transfer approval by the owner.*)
@@ -602,11 +601,11 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   =
     whenNotPaused ();
     (* Safety check to prevent against an unexpected 0x0 default.*)
-    require(_to != address(0));
+    require(_to != 0);
     (* Disallow transfers to this contract to prevent accidental misuse.*)
     (* The contract should never own any kitties (except very briefly*)
     (* after a gen0 cat is created and before it goes on auction).*)
-    require(_to != address(this));
+    require(_to != this);
     (* Check for approval and valid ownership*)
     require(_approvedFor(msg.sender, _tokenId));
     require(_owns(_from, _tokenId));
@@ -617,7 +616,7 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   (* @notice Returns the total number of Kitties currently in existence.*)
   (* @dev Required for ERC-721 compliance.*)
   public fun totalSupply () view return uint =
-    length kitties - 1
+    !!numKitties #- #1 (* because Kitty 0 is invalid *)
 
   (* @notice Returns the address currently assigned ownership of a given Kitty.*)
   (* @dev Required for ERC-721 compliance.*)
@@ -627,7 +626,7 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
     return (owner : address)
   =
     let owner = kittyIndexToOwner[_tokenId];
-    require(owner != address(0));
+    require(owner != 0);
     owner
 
   (* @notice Returns a list of all Kitty IDs assigned to an address.*)
@@ -636,7 +635,7 @@ contract KittyOwnership = struct inherit KittyBase, ERC721
   (*  expensive (it walks the entire Kitty array looking for cats belonging to owner),*)
   (*  but it also return a dynamic array, which is only supported for web3 calls, and*)
   (*  not contract-to-contract calls.*)
-  external fun tokensOfOwner {len : Nat | len > 0} (_owner : address) view pre {kitties : len} return (ownerTokens : vector uint256) using $(16 + len * 11) =
+  external fun tokensOfOwner {len : Nat | len > 0} (_owner : address) view pre {kitties : len} return (ownerTokens : vector uint256) =
     let tokenCount : uint256 = balanceOf(_owner);
 
     if (tokenCount == 0) then
