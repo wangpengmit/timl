@@ -194,7 +194,7 @@ local
                 TUnit r
               else if x = "icell" then
                 TNatCell r
-              else if x = "int" then
+              else if x = "address" then
                 TInt r
               else if x = "uint" then
                 TInt r
@@ -210,9 +210,25 @@ local
                 TInt r
               else if x = "uint256" then
                 TInt r
-              else if x = "address" then
+              else if x = "int" then
+                TInt r
+              else if x = "int8" then
+                TInt r
+              else if x = "int16" then
+                TInt r
+              else if x = "int32" then
+                TInt r
+              else if x = "int64" then
+                TInt r
+              else if x = "int128" then
+                TInt r
+              else if x = "int256" then
                 TInt r
               else if x = "bytes4" then
+                TInt r
+              else if x = "bytes8" then
+                TInt r
+              else if x = "bytes16" then
                 TInt r
               else if x = "bytes32" then
                 TInt r
@@ -473,13 +489,13 @@ local
                           S.EConst (S.ECString s, _) =>
                           EBuiltin (s, elab_mt (S.TVar (NONE, ("_", r))), r)
                         | _ => raise Error (r, "should be '__&builtin \"name\"'"))
-		   else if x = "__&array" then
+		   else if x = "__&array" orelse x = "new_array" then
                      (case e2 of
                           S.ETuple ([e1, e2], _) =>
                           ENew (elab e1, elab e2)
                         | _ => raise Error (r, "should be '__&array (_, _)'")
                      )
-		   else if x = "__&sub" then
+		   else if x = "__&sub" orelse x = "array_get" then
                      (case e2 of
                           S.ETuple ([e1, e2], _) =>
                           ERead (elab e1, elab e2)
@@ -491,7 +507,7 @@ local
                           EVectorPushBack (elab e1, elab e2)
                         | _ => raise Error (r, "should be 'push_back (_, _)'")
                      )
-		   else if x = "__&update" then
+		   else if x = "__&update" orelse x = "array_set" then
                      (case e2 of
                           S.ETuple ([e1, e2, e3], _) =>
                           EWrite (elab e1, elab e2, elab e3)

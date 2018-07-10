@@ -75,9 +75,12 @@ fun to_long_id (m, x) =
       NONE => ID x
     | SOME m => QID (m, x)
                     
+fun find_long_id' gctx sel ctx x =
+  Option.map to_long_id $ find_long_id gctx sel is_eq_snd ctx x
+                      
 fun on_long_id gctx sel ctx x =
-    case find_long_id gctx sel is_eq_snd ctx x of
-        SOME x => to_long_id x
+    case find_long_id' gctx sel ctx x of
+        SOME x => x
       | NONE => raise Error (S.get_region_long_id x, sprintf "Unbound (long) variable '$' in context: $ $" [SS.str_var #1 empty [] x, str_ls id ctx, str_ls id $ domain gctx])
                       
 fun find_constr (gctx : ns_sigcontext) ctx x =
@@ -472,13 +475,17 @@ fun on_expr_visitor_vtable cast gctx : ('this, context) EV.expr_visitor_vtable =
               if !st_ref @%! x then SOME (x, r)
               else NONE
       in
-        case is_state_field x of
-            SOME a => EState a
+        case find_long_id' gctx #4 tctx x of
+            SOME x => EVar (x, b)
           | NONE =>
             case find_constr gctx cctx x of
                 (* Always treat constructors as fully applied. Can't handle partially applied constructors. *)
 	        SOME (x, _) => EAppConstr ((x, b), [], [], ETT $ get_region_long_id x, NONE)
-	      | NONE => EVar ((on_long_id gctx #4 tctx x), b)
+	      | NONE => 
+                case (b, is_state_field x) of
+                    ((false, false), SOME a) => EState a
+                  | _ =>
+                    raise Error (S.get_region_long_id x, sprintf "Unbound (long) variable '$' in context: $ $" [SS.str_var #1 empty [] x, str_ls id tctx, str_ls id $ domain gctx])
       end
     val vtable = EV.override_visit_EVar vtable visit_EVar
     fun visit_EApp this (ctx as (_, _, cctx, _)) (e1, e2) =
