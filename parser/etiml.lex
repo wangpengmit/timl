@@ -52,6 +52,7 @@ val keywords = [
     ("unpack", T.UNPACK),
     ("of", T.OF),
     ("let", T.LET),
+    ("lets", T.LETS),
     ("in", T.IN),
     ("end", T.END),
     ("return", T.RETURN),
@@ -79,6 +80,7 @@ val keywords = [
     ("elseif", T.ELSEIF),
     ("never", T.NEVER),
     ("ifdec", T.IFDEC),
+    ("ifi", T.IFI),
     ("mod", T.MOD),
     ("imod", T.NAT_MOD),
     ("set", T.SET),
@@ -116,6 +118,7 @@ val keywords = [
     ("ecrecover", T.ECREC),
     ("now", T.NOW),
     ("this", T.THIS),
+    ("this_balance", T.BALANCE),
     ("constant", T.CONSTANT),
     ("indexed", T.INDEXED),
     ("memory", T.MEMORY),
@@ -200,6 +203,9 @@ string = [^\"];
 <INITIAL>"&&" => (T.DOUBLE_POND (make_region (yypos, size yytext)));
 <INITIAL>"&" => (T.POND (make_region (yypos, size yytext)));
 <INITIAL>"||" => (T.DOUBLE_BAR (make_region (yypos, size yytext)));
+<INITIAL>"#&&" => (T.IBOOL_AND (make_region (yypos, size yytext)));
+<INITIAL>"#||" => (T.IBOOL_OR (make_region (yypos, size yytext)));
+<INITIAL>"#^" => (T.IBOOL_XOR (make_region (yypos, size yytext)));
 <INITIAL>"+" => (T.PLUS (make_region (yypos, size yytext)));
 <INITIAL>"-" => (T.MINUS (make_region (yypos, size yytext)));
 <INITIAL>"*" => (T.MULT (make_region (yypos, size yytext)));
@@ -215,7 +221,8 @@ string = [^\"];
 <INITIAL>"#=" => (T.NAT_EQ (make_region (yypos, size yytext)));
 <INITIAL>"#<>" => (T.NAT_NEQ (make_region (yypos, size yytext)));
 <INITIAL>"**" => (T.EXP (make_region (yypos, size yytext)));
-<INITIAL>"#**" => (T.NAT_EXP (make_region (yypos, size yytext)));
+<INITIAL>"#**" => (T.INT_NAT_EXP (make_region (yypos, size yytext)));
+<INITIAL>"##**" => (T.NAT_EXP (make_region (yypos, size yytext)));
 <INITIAL>"#" => (T.SHARP (make_region (yypos, size yytext)));
 <INITIAL>"$" => (T.DOLLAR (make_region (yypos, size yytext)));
 <INITIAL>"@" => (T.AT (make_region (yypos, size yytext)));

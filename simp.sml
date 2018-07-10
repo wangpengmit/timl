@@ -48,7 +48,7 @@ open IdxUtil
 infixr 0 $
 
 infix 9 %@
-infix 8 %^
+infix 8 %**
 infix 7 %*
 infix 6 %+ 
 infix 4 %<=
@@ -224,6 +224,17 @@ local
                   mark $ ITrue $ r ()
                 else
                   def ()
+              | IBXor () =>
+                if eq_i i1 (IFalse dummy) andalso eq_i i2 (IFalse dummy) then
+                  mark $ IFalse $ r ()
+                else if eq_i i1 (IFalse dummy) andalso eq_i i2 (ITrue dummy) then
+                  mark $ ITrue $ r ()
+                else if eq_i i1 (ITrue dummy) andalso eq_i i2 (IFalse dummy) then
+                  mark $ ITrue $ r ()
+                else if eq_i i1 (ITrue dummy) andalso eq_i i2 (ITrue dummy) then
+                  mark $ IFalse $ r ()
+                else
+                  def ()
               | IBExpN () =>
                 let
                   val r = r ()
@@ -246,7 +257,7 @@ local
                             | _ => NONE
                       in
                         case partitionOptionFirst pred i2s of
-                            SOME (i2, rest) => mark $ i1 %^ i2 %* i1 %^ combine_IBAdd_Nat rest
+                            SOME (i2, rest) => mark $ i1 %** i2 %* i1 %** combine_IBAdd_Nat rest
                           | NONE => def ()
                       end
                 end

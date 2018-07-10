@@ -340,12 +340,19 @@ fun impl_prim_expr_bin_op opr =
      | EBPBoolOr () => [OR ()]
      (* | EBPStrConcat () => raise Impossible "impl_prim_expr_bin_op() on EBPStrConcat" *)
                   
+fun impl_ibool_expr_bin_op opr =
+  case opr of
+      EBBAnd () => [AND ()]
+    | EBBOr () => [OR ()]
+    | EBBXor () => [XOR ()]
+
 fun impl_nat_expr_bin_op opr =
   case opr of
       EBNAdd () => [ADD ()]
     | EBNMult () => [MUL ()]
     | EBNDiv () => [SWAP1, DIV ()]
     | EBNBoundedMinus () => [SWAP1, SUB ()]
+    | EBNMod () => [SWAP1, MOD ()]
     | EBNExp () => [SWAP1, EXP ()]
 
 fun impl_nat_cmp opr =
@@ -382,6 +389,7 @@ fun compile st_name2int ectx e =
          | EnvValue () => [CALLVALUE ()]
          | EnvNow () => [TIMESTAMP ()]
          | EnvThis () => [ADDRESS ()]
+         | EnvBalance () => [BALANCE ()]
          | EnvBlockNumber () => [NUMBER ()]
       )
     | EState x => (PUSH_value $ VState $ st_name2int @!! x) @ repeat C_MLOAD (JUMPDEST ())(*to make gas cost the same as get_reg, for debugging purpose*)
@@ -461,6 +469,10 @@ fun compile st_name2int ectx e =
     | EUnOp (EUTupleProj n, e) =>
       compile e @
       impl_tuple_proj n
+    | EBinOp (EBiBool opr, e1, e2) =>
+      compile e1 @ 
+      compile e2 @
+      impl_ibool_expr_bin_op opr
     | EBinOp (EBNat opr, e1, e2) =>
       compile e1 @ 
       compile e2 @
@@ -807,6 +819,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | EBinOp (EBNew (), _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
+    | EBinOp (EBiBool _, _, _) => err ()
     | EBinOp (EBNat _, _, _) => err ()
     | EBinOp (EBNatCmp _, _, _) => err ()
     | EBinOp (EBIntNatExp _, _, _) => err ()

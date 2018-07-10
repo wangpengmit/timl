@@ -23,6 +23,7 @@ open Ast
     | RTRI
     | LTRI
     | LET
+    | LETS
     | IN
     | END
     | COMMA
@@ -36,17 +37,22 @@ open Ast
     | DIV
     | PLUS
     | MINUS
+    | IBOOL_AND
+    | IBOOL_OR
+    | IBOOL_XOR
     | NAT_PLUS
     | NAT_MINUS
     | NAT_MULT
     | NAT_DIV
+    | NAT_MOD
+    | NAT_EXP
+    | INT_NAT_EXP
     | NAT_LT
     | NAT_GT
     | NAT_LE
     | NAT_GE
     | NAT_EQ
     | NAT_NEQ
-    | NAT_EXP
     | B_LT
     | B_GT
     | B_LE
@@ -111,6 +117,7 @@ open Ast
     | SEMI
     | NEVER
     | IFDEC
+    | IFI
     | MOD
     | SET
     | MODIFY
@@ -156,6 +163,7 @@ open Ast
     | SUICIDE
     | NOW
     | THIS
+    | BALANCE
     | SHA256
     | SHA3
     | ECREC
@@ -388,14 +396,14 @@ named_ty : ty (ty)
 idx_1or2 : idx ((idx, NONE))
          | idx COMMA idx ((idx1, SOME idx2))
                     
-(* return : RETURN named_ty RTRI idx ((SOME named_ty, SOME idx, NONE)) *)
-(*        | RETURN named_ty RTRI idx COMMA idx ((SOME named_ty, SOME idx1, SOME idx2)) *)
-(*        | RETURN named_ty ((SOME named_ty, NONE, NONE)) *)
-(*        | RETURN RTRI idx ((NONE, SOME idx, NONE)) *)
-(*        | RETURN RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2)) *)
-(*        | RTRI idx ((NONE, SOME idx, NONE)) *)
-(*        | RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2)) *)
-(*        | ((NONE, NONE, NONE)) *)
+return : RETURN named_ty RTRI idx ((SOME named_ty, SOME idx, NONE))
+       | RETURN named_ty RTRI idx COMMA idx ((SOME named_ty, SOME idx1, SOME idx2))
+       | RETURN named_ty ((SOME named_ty, NONE, NONE))
+       | RETURN RTRI idx ((NONE, SOME idx, NONE))
+       | RETURN RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2))
+       | RTRI idx ((NONE, SOME idx, NONE))
+       | RTRI idx COMMA idx ((NONE, SOME idx1, SOME idx2))
+       | ((NONE, NONE, NONE))
 
 (* rec_return : COLON ty RTRI idx ((SOME ty, SOME idx)) *)
 (*        | COLON ty ((SOME ty, NONE)) *)
@@ -478,7 +486,7 @@ stmts : stmt ([stmt])
       | stmts SEMI stmts (stmts1 @ stmts2)
 
 stmt : exp (exp)
-     | LET optional_storage ptrn optional_eq_exp (ELet2 (optional_storage, ptrn, optional_eq_exp, (LETleft, optional_eq_expright)))
+     | LET ptrn optional_eq_exp (ELet2 (NONE, ptrn, optional_eq_exp, (LETleft, optional_eq_expright)))
 
 exp : exp_term (exp_term)
      | exp PLUS exp (EBinOp' (EBPrim (EBPIntAdd ()), exp1, exp2, (exp1left, exp2right)))
@@ -502,12 +510,16 @@ exp : exp_term (exp_term)
      | exp BANG_EQ exp (EBinOp' (EBPrim (EBPIntNEq ()), exp1, exp2, (exp1left, exp2right)))
      | exp COLON_EQ exp (ESetMemRef (exp1, exp2, (exp1left, exp2right)))
      | exp COLONCOLON_EQ exp (ESetStorageRef (exp1, exp2, (exp1left, exp2right)))
+     | exp IBOOL_AND exp (EBinOp' (EBiBool (EBBAnd ()), exp1, exp2, (exp1left, exp2right)))
+     | exp IBOOL_OR exp (EBinOp' (EBiBool (EBBOr ()), exp1, exp2, (exp1left, exp2right)))
+     | exp IBOOL_XOR exp (EBinOp' (EBiBool (EBBXor ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_PLUS exp (EBinOp' (EBNat (EBNAdd ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_MINUS exp (EBinOp' (EBNat (EBNBoundedMinus ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_MULT exp (EBinOp' (EBNat (EBNMult ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_DIV exp (EBinOp' (EBNat (EBNDiv ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_MOD exp (EBinOp' (EBNat (EBNMod ()), exp1, exp2, (exp1left, exp2right)))
-     | exp NAT_EXP exp (EBinOp' (EBIntNatExp (), exp1, exp2, (exp1left, exp2right)))
+     | exp NAT_EXP exp (EBinOp' (EBNat (EBNExp ()), exp1, exp2, (exp1left, exp2right)))
+     | exp INT_NAT_EXP exp (EBinOp' (EBIntNatExp (), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_LT exp (EBinOp' (EBNatCmp (NCLt ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_GT exp (EBinOp' (EBNatCmp (NCGt ()), exp1, exp2, (exp1left, exp2right)))
      | exp NAT_LE exp (EBinOp' (EBNatCmp (NCLe ()), exp1, exp2, (exp1left, exp2right)))
@@ -551,8 +563,8 @@ aexp : decorated_eid (EVar decorated_eid)
      (* | IF exp THEN exps ELSE exps END (EIte (exp, exps1, exps2, (IFleft, ENDright))) *)
      (* | IF exp THEN exps END (EIte (exp, exps, ETuple ([], (ENDleft, ENDright)), (IFleft, ENDright))) *)
      | ifs (EIfs (ifs, (ifsleft, ifsright)))
-     | IFDEC exp THEN exps ELSE exps END (EIfi (exp, exps1, exps2, (IFDECleft, ENDright)))
-     (* | LET return decl_star IN exp END (ELet (return, decl_star, exp, (LETleft, ENDright))) *)
+     | IFI exp THEN exps ELSE exps END (EIfi (exp, exps1, exps2, (IFIleft, ENDright)))
+     | LETS return decl_star IN exps END (ELet (return, decl_star, exps, (LETSleft, ENDright)))
      | SHARP INT (EConst (ECNat (str2int INT), (SHARPleft, INTright)))
      | INT (EConst (ECInt INT, (INTleft, INTright)))
      | STRING (EConst (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
@@ -581,6 +593,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | THROW (EThrowError (THROWleft, THROWright))
      | NOW (ENow (NOWleft, NOWright))
      | THIS (EThis (THISleft, THISright))
+     | BALANCE (EConst (ECBalance (), (BALANCEleft, BALANCEright)))
      (* | TRUNCATE ty aexp (ETruncate (ty, aexp, (TRUNCATEleft, aexpright))) *)
 
 ifs : IF exp THEN exps elses (If (exp, exps, (IFleft, expsright)) :: elses)

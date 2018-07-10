@@ -26,6 +26,7 @@ fun print_idx_bin_op opr =
       | IBEq () => "="
       | IBAnd () => "and"
       | IBOr () => "or"
+      | IBXor () => "xor"
       | IBExpN () => "exp_i_i"
       (* | ExpNI () => "^" *)
       | IBLt () => "<"

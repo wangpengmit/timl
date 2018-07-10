@@ -224,6 +224,7 @@ fun is_value e =
     | EBinOp (EBNew (), _, _) => false
     | EBinOp (EBRead (), _, _) => false
     | EBinOp (EBPrim _, _, _) => false
+    | EBinOp (EBiBool _, _, _) => false
     | EBinOp (EBNat _, _, _) => false
     | EBinOp (EBNatCmp _, _, _) => false
     | EBinOp (EBIntNatExp _, _, _) => false

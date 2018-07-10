@@ -28,6 +28,7 @@ fun N1 r = INat (1, r)
 fun IDiv (i, (n, r)) = IUnOp (IUDiv n, i, r)
 (* fun ExpI (i, (s, r)) = IUnOp (IUExp s, i, r) *)
 fun IMod (a, b) = IBinOp (IBMod (), a, b)
+fun IXor (a, b) = IBinOp (IBXor (), a, b)
 fun ITrue r = IConst (ICBool true, r)
 fun IFalse r = IConst (ICBool false, r)
 fun ITT r = IConst (ICTT (), r)
@@ -46,7 +47,7 @@ fun INeq (a, b) = INeg (IEq (a, b), dummy)
 (* notations *)
          
 infix 9 %@
-infix 8 %^
+infix 8 %**
 infix 7 %*
 infix 6 %+ 
 infix 4 %<
@@ -68,7 +69,7 @@ infixr 1 -->
 infix 1 <->
 
 fun a %@ b = IBinOp (IBApp (), a, b)
-fun a %^ b = IBinOp (IBExpN (), a, b)
+fun a %** b = IBinOp (IBExpN (), a, b)
 fun a %* b = IBinOp (IBMult (), a, b)
 fun a %+ b = IBinOp (IBAdd (), a, b)
 fun a %< b = PBinPred (BPLt (), a, b)
@@ -204,6 +205,12 @@ fun SApps f args = foldl (fn (arg, f) => SApp (f, arg)) f args
 fun SAbs_Many (ctx, s, r) = foldr (fn ((name, s_arg), s) => SAbs (s_arg, Bind ((name, r), s), r)) s ctx
 fun IAbs_Many (ctx, i, r) = foldr (fn ((name, b), i) => IAbs (b, Bind ((name, r), i), r)) i ctx
                                  
+fun interp_ibool_expr_bin_op opr (i1, i2) =
+  case opr of
+      EBBAnd () => i1 /\? i2
+    | EBBOr () => i1 \/? i2
+    | EBBXor () => IXor (i1, i2)
+         
 fun interp_nat_expr_bin_op opr (i1, i2) err =
   case opr of
       EBNAdd () => i1 %+ i2
@@ -214,7 +221,8 @@ fun interp_nat_expr_bin_op opr (i1, i2) err =
           IConst (ICNat n, r) => IUnOp (IUFloor (), IUnOp (IUDiv n, IUnOp (IUToReal (), i1, r), r), r)
         | _ => err ()
       )
-    | EBNExp () => i1 %^ i2
+    | EBNMod () => IMod (i1, i2)
+    | EBNExp () => i1 %** i2
          
 fun interp_nat_cmp r opr =
   let

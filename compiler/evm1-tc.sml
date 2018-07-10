@@ -12,7 +12,7 @@ open EVM1
 infixr 0 $
 
 infix 9 %@
-infix 8 %^
+infix 8 %**
 infix 7 %*
 infix 6 %+ 
 infix 4 %<
@@ -350,7 +350,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                  TInt)
               | (TNat i0, TNat i1) =>
                 (add_time_idx $ nat_exp_cost i1;
-                 TNat $ i0 %^ i1)
+                 TNat $ i0 %** i1)
               | (TConst (TCTiML (BTInt ())), TNat i1) =>
                 (add_time_idx $ nat_exp_cost i1;
                  TInt)

@@ -88,6 +88,7 @@ datatype expr_const =
          | ECZero of unit
          | ECNow of unit
          | ECThis of unit
+         | ECBalance of unit
          | ECState of string
 
 datatype ast_expr_unop =

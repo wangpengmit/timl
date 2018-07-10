@@ -306,25 +306,6 @@ and get_basic_sort gctx (ctx, i) =
                 in
                   (IBinOp (opr, i1, i2), rettype)
                 end
-              fun idx_bin_op_type opr =
-                case opr of
-                    IBAnd () => (BSSBool (), BSSBool (), BSSBool ())
-                  | IBOr () => (BSSBool (), BSSBool (), BSSBool ())
-                  | IBExpN () => raise Impossible "idx_bin_op_type ()"
-                  | IBMax () => raise Impossible "idx_bin_op_type ()"
-                  | IBMin () => raise Impossible "idx_bin_op_type ()"
-                  | IBApp () => raise Impossible "idx_bin_op_type ()"
-                  | IBEq () => raise Impossible "idx_bin_op_type ()"
-                  | IBLt () => raise Impossible "idx_bin_op_type ()"
-                  | IBGt () => raise Impossible "idx_bin_op_type ()"
-                  | IBLe () => raise Impossible "idx_bin_op_type ()"
-                  | IBGe () => raise Impossible "idx_bin_op_type ()"
-                  | IBAdd () => raise Impossible "idx_bin_op_type ()"
-                  | IBMult () => raise Impossible "idx_bin_op_type ()"
-                  | IBMod () => raise Impossible "idx_bin_op_type ()"
-                  | IBBoundedMinus () => raise Impossible "idx_bin_op_type ()"
-                  | IBMinus () => raise Impossible "idx_bin_op_type()/MinusI"
-                  | IBUnion () => (BSSState (), BSSState (), BSSState ())
             in
               case opr of
                   IBApp () =>
@@ -351,6 +332,26 @@ and get_basic_sort gctx (ctx, i) =
                 | IBGe () => overloaded [BSSNat (), BSSTime ()(* , BSSBool (), UnitSort *)] (SOME (BSSBool ()))
                 | _ =>
                   let
+                    fun idx_bin_op_type opr =
+                      case opr of
+                          IBAnd () => (BSSBool (), BSSBool (), BSSBool ())
+                        | IBOr () => (BSSBool (), BSSBool (), BSSBool ())
+                        | IBXor () => (BSSBool (), BSSBool (), BSSBool ())
+                        | IBExpN () => raise Impossible "idx_bin_op_type ()"
+                        | IBMax () => raise Impossible "idx_bin_op_type ()"
+                        | IBMin () => raise Impossible "idx_bin_op_type ()"
+                        | IBApp () => raise Impossible "idx_bin_op_type ()"
+                        | IBEq () => raise Impossible "idx_bin_op_type ()"
+                        | IBLt () => raise Impossible "idx_bin_op_type ()"
+                        | IBGt () => raise Impossible "idx_bin_op_type ()"
+                        | IBLe () => raise Impossible "idx_bin_op_type ()"
+                        | IBGe () => raise Impossible "idx_bin_op_type ()"
+                        | IBAdd () => raise Impossible "idx_bin_op_type ()"
+                        | IBMult () => raise Impossible "idx_bin_op_type ()"
+                        | IBMod () => raise Impossible "idx_bin_op_type ()"
+                        | IBBoundedMinus () => raise Impossible "idx_bin_op_type ()"
+                        | IBMinus () => raise Impossible "idx_bin_op_type()/MinusI"
+                        | IBUnion () => (BSSState (), BSSState (), BSSState ())
                     val (arg1type, arg2type, rettype) = idx_bin_op_type opr
                   in
                     (IBinOp (opr,

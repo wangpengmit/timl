@@ -51,6 +51,7 @@ datatype idx_bin_op =
          | IBEq of unit
          | IBAnd of unit
          | IBOr of unit
+         | IBXor of unit
          | IBExpN of unit
          | IBLt of unit
          | IBGt of unit
@@ -63,13 +64,14 @@ datatype idx_bin_op =
 fun str_idx_bin_op opr =
   case opr of
       IBAdd () => "+"
-    | IBMult () => " *"
+    | IBMult () => " * " (* adding spaces around '*' to avoid forming comment mark with parenthesis *)
     | IBMod () => "mod"
     | IBMax () => "max"
     | IBMin () => "min"
     | IBApp () => "app"
     | IBAnd () => "&&"
     | IBOr () => "||"
+    | IBXor () => "^"
     | IBExpN () => "**"
     | IBEq () => "=?"
     | IBLt () => "<?"
@@ -294,12 +296,31 @@ fun pretty_str_prim_expr_bin_op opr =
     | EBPBoolOr () => "||"
 (* | EBPStrConcat () => "^" *)
 
+(* binary ibool operators *)
+datatype ibool_expr_bin_op =
+         EBBAnd of unit
+         | EBBOr of unit
+         | EBBXor of unit
+
+fun str_ibool_expr_bin_op opr =
+  case opr of
+      EBBAnd () => "ibool_and"
+    | EBBOr () => "ibool_or"
+    | EBBXor () => "ibool_xor"
+
+fun pretty_str_ibool_expr_bin_op opr =
+  case opr of
+      EBBAnd () => "#&&"
+    | EBBOr () => "#||"
+    | EBBXor () => "#^"
+                    
 (* binary nat operators *)
 datatype nat_expr_bin_op =
          EBNAdd of unit
          | EBNBoundedMinus of unit
          | EBNMult of unit
          | EBNDiv of unit
+         | EBNMod of unit
          | EBNExp of unit
 
 fun str_nat_expr_bin_op opr =
@@ -308,6 +329,7 @@ fun str_nat_expr_bin_op opr =
     | EBNBoundedMinus () => "nat_bounded_minus"
     | EBNMult () => "nat_mult"
     | EBNDiv () => "nat_div"
+    | EBNMod () => "nat_mod"
     | EBNExp () => "nat_exp"
 
 fun pretty_str_nat_expr_bin_op opr =
@@ -316,6 +338,7 @@ fun pretty_str_nat_expr_bin_op opr =
     | EBNBoundedMinus () => "#-"
     | EBNMult () => "#*"
     | EBNDiv () => "#/"
+    | EBNMod () => "#mod"
     | EBNExp () => "#^"
                     
 datatype nat_cmp =
@@ -355,6 +378,7 @@ datatype expr_bin_op =
          | EBStorageSet of unit
          | EBNatCellSet of unit
          | EBPrim of prim_expr_bin_op
+         | EBiBool of ibool_expr_bin_op
          | EBNat of nat_expr_bin_op
          | EBNatCmp of nat_cmp
          | EBIntNatExp of unit
@@ -368,6 +392,7 @@ fun str_expr_bin_op opr =
     | EBPrim opr => str_prim_expr_bin_op opr
     | EBNat opr => str_nat_expr_bin_op opr
     | EBNatCmp opr => str_nat_cmp opr
+    | EBiBool opr => str_ibool_expr_bin_op opr
     | EBVectorGet () => "vector_get"
     | EBVectorPushBack () => "vector_push_back"
     | EBMapPtr () => "map_ptr"
@@ -384,6 +409,7 @@ fun pretty_str_expr_bin_op opr =
     | EBPrim opr => pretty_str_prim_expr_bin_op opr
     | EBNat opr => pretty_str_nat_expr_bin_op opr
     | EBNatCmp opr => pretty_str_nat_cmp opr
+    | EBiBool opr => pretty_str_ibool_expr_bin_op opr
     | EBVectorGet () => "vector_get"
     | EBVectorPushBack () => "vector_push_back"
     | EBMapPtr () => "map_ptr"
@@ -439,6 +465,7 @@ datatype env_info =
          | EnvValue of unit
          | EnvNow of unit
          | EnvThis of unit
+         | EnvBalance of unit
          | EnvBlockNumber of unit
              
 fun str_env_info name =
@@ -447,6 +474,7 @@ fun str_env_info name =
       | EnvValue () => "value"
       | EnvNow () => "now"
       | EnvThis () => "this"
+      | EnvBalance () => "balance"
       | EnvBlockNumber () => "block.number"
                         
 end

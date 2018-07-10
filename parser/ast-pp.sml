@@ -514,6 +514,7 @@ fun str_expr_const c =
     | ECZero () => "zero"
     | ECNow () => "now"
     | ECThis () => "this"
+    | ECBalance () => "balance"
     | ECState x => "state " ^ x
 
 fun str_ast_expr_unop opr =

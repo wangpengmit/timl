@@ -389,7 +389,7 @@ local
                 EConst (ECiBool false, r)
                        (* else if no_decorate andalso x = "never" then *)
                        (*   ENever (elab_mt (S.TVar (NONE, ("_", r))), r) *)
-              else if no_decorate andalso x = "__&empty_array" then
+              else if no_decorate andalso (x = "__&empty_array" orelse x = "empty_array") then
                 EEmptyArray (elab_mt (S.TVar (NONE, ("_", r))), r)
               else if x = "__&builtin" then raise Error (r, "should be '__&builtin \"name\"'")
               else
@@ -456,6 +456,7 @@ local
            | S.ECZero () => raise Error (r, "elaborate/ECZero")
            | S.ECNow () => EEnv (EnvNow (), r)
            | S.ECThis () => EEnv (EnvThis (), r)
+           | S.ECBalance () => EEnv (EnvBalance (), r)
            | S.ECState x => EState (x, r)
         )
       | S.EBinOp (EBTiML (EBApp ()), e1, e2, r) =>
@@ -474,6 +475,7 @@ local
 		   else if x = "__&nat2int" then EUnOp (EUNat2Int (), elab e2, r)
 		   else if x = "nat2int" then EUnOp (EUNat2Int (), elab e2, r)
 		   else if x = "__&int2nat" then EUnOp (EUInt2Nat (), elab e2, r)
+		   else if x = "int2nat" then EUnOp (EUInt2Nat (), elab e2, r)
 		   else if x = "__&byte2int" then EUnOp (EUPrim (EUPByte2Int ()), elab e2, r)
 		   else if x = "__&int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
 		   else if x = "__&array_length" then EUnOp (EUArrayLen (), elab e2, r)

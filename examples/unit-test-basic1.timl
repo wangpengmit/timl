@@ -210,9 +210,11 @@ fun inc x = x + 1
 val a = %map inc ls
                                  
 val a = "abc" using _, _
-          
 val () = __&printc #"a"
 
+val a = empty_array using _, _
+val a = new_array (#3, 123) using _, _
+           
 val a = 1
 val a = ()
 val a = ""

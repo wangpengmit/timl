@@ -127,6 +127,14 @@ fun assert_TNat_m t err =
   case t of
       TNat a => a
     | _ => err $ "assert_TNat failed; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TiBool t =
+  case t of
+      TiBool a => a
+    | _ => raise assert_fail $ "assert_TiBool failed; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+fun assert_TiBool_m t err =
+  case t of
+      TiBool a => a
+    | _ => err $ "assert_TiBool failed; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 (* fun assert_fst_true p = *)
 (*   case p of *)
 (*       (true, a) => a *)

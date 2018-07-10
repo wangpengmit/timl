@@ -654,6 +654,7 @@ fun get_msg_info_type name =
       | EnvValue () => TInt
       | EnvNow () => TInt
       | EnvThis () => TInt
+      | EnvBalance () => TInt
       | EnvBlockNumber () => TInt
 
 fun get_expr_const_type c =
@@ -1671,15 +1672,30 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           in
             (EBinOp (opr, e1, e2), TInt, d1 %%+ d2 %%+ (E_nat_exp_cost i2, N0), st)
           end
+      | EBinOp (EBiBool opr, e1, e2) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val st_e1 = st
+          val t1 = whnf itctx t1
+          val i1 = assert_TiBool_m t1 (fn msg => raise MTCError $ "EiBool 1: " ^ msg)
+          val (e2, t2, j2, st) = tc (ctx, st) e2
+          val t2 = whnf itctx t2
+          val i2 = assert_TiBool_m t2 (fn msg => raise MTCError $ "EiBool 2: " ^ msg)
+          val (e1, e2) = if !anno_ENat then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val (e1, e2) = if !anno_ENat_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
+          val t = TiBool $ interp_ibool_expr_bin_op opr (i1, i2)
+        in
+          (EBinOp (EBiBool opr, e1, e2), t, j1 %%+ j2 %%+ TN (C_EiBool opr), st)
+        end
       | EBinOp (EBNat opr, e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
           val t1 = whnf itctx t1
-          val i1 = assert_TNat_m t1 (fn msg => raise MTCError $ "ENatAdd 1: " ^ msg)
+          val i1 = assert_TNat_m t1 (fn msg => raise MTCError $ "ENat 1: " ^ msg)
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val t2 = whnf itctx t2
-          val i2 = assert_TNat_m t2 (fn msg => raise MTCError $ "ENatAdd 2: " ^ msg)
+          val i2 = assert_TNat_m t2 (fn msg => raise MTCError $ "ENat 2: " ^ msg)
           val i2 = Simp.simp_i $ update_i i2
           val () = if opr = EBNBoundedMinus () then check_prop (i2 %<= i1) else ()
           val (e1, e2) = if !anno_ENat then (e1 %: t1, e2 %: t2) else (e1, e2)

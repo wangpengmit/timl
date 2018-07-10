@@ -759,6 +759,7 @@ fun is_value (e : U.expr) : bool =
            | EBPrim _ => false
            | EBNat _ => false
            | EBNatCmp _ => false
+           | EBiBool _ => false
            | EBIntNatExp () => false
            | EBVectorGet () => false
            | EBVectorPushBack () => false
@@ -810,6 +811,7 @@ fun get_msg_info_type r name =
       | EnvValue () => TInt r
       | EnvNow () => TInt r
       | EnvThis () => TInt r
+      | EnvBalance () => TInt r
       | EnvBlockNumber () => TInt r
 
 fun get_expr_const_type (c, r) =
@@ -1590,6 +1592,17 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
           in
             (EBinOp (opr, e1, e2), TInt r, d1 %%+ d2 %%+ (E_nat_exp_cost i2, N0 r), st)
+          end
+	| U.EBinOp (EBiBool opr, e1, e2) =>
+          let
+            val r = U.get_region_e e_all
+            val i1 = fresh_i gctx sctx BSTime r
+            val i2 = fresh_i gctx sctx BSTime r
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TiBool (i1, r))
+            val (e2, d2, st) = check_mtype (ctx, st) (e2, TiBool (i2, r))
+            val i = interp_ibool_expr_bin_op opr (i1, i2)
+          in
+            (EBinOp (EBiBool opr, e1, e2), TiBool (i, r), d1 %%+ d2 %%+ TN (C_EiBool opr), st)
           end
 	| U.EBinOp (EBNat opr, e1, e2) =>
           let
@@ -2504,6 +2517,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
 	  | U.DRec (name, bind, r) =>
             (* a version that delegates most of the work to EAbs and EAbsI *)
 	    let
+              val () = println "before DRec"
               val (name, r1) = unBinderName name
               val ((tnames, Rebind binds), ((pre_st, post_st), (t, d), e)) = Unbound.unBind $ unInner bind
               val tnames = map (mapPair' unBinderName unOuter) tnames
@@ -2558,7 +2572,9 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               (* val () = println $ sprintf "te[pre] = $" [US.str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
 	      val te = check_kind_Type gctx ((sctx, kctx), te)
               (* val () = println $ sprintf "te[post] = $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
+              val () = println "before check_mtype"
 	      val (e, i, st) = check_mtype gctx (add_typing_skct (name, PTMono te) ctx, st) (e, te) 
+              val () = println "after check_mtype"
               val n_fvars = EVarSet.numItems $ EVarSetU.delete (FreeEVars.free_evars e, inl 0)
               val sctxn = sctx_names sctx
               val is_tail_call = is_tail_call e
@@ -2566,10 +2582,13 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val e = UpdateExpr.update_e e
               val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
               val e = foldli (fn (v, uvar_ref, e) => SubstUVar.substu_t_e uvar_ref v e) e free_uvars
+              val () = println "before check_tname_times"
               val i = check_tname_times r sctxn n_fvars is_tail_call i tnames
+              val () = println "after check_tname_times"
               val poly_te = PTUni_Many (tnames, poly_te, r)
               val tnames = tnames @ free_uvar_names
               val decl = DRec (Binder $ EName (name, r1), Inner $ Unbound.Bind ((map (mapPair' (Binder o TName) Outer) tnames, Rebind TeleNil), ((StMap.empty, StMap.empty), (te, TN0 r), e)), r)
+              val () = println "after DRec"
             in
               (decl, ctx_from_typing (name, poly_te), 0, [i], st)
 	    end
@@ -2677,9 +2696,9 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
       fun extra_msg () = ["when type-checking declaration "] @ indent [fst $ US.str_decl (gctx_names gctx) (ctx_names ctx) decl]
       val ret as (decl, ctxd, nps, ds, st) =
           main ()
-               (* handle *)
-               (* Error (r, msg) => raise Error (r, msg @ extra_msg ()) *)
-               (* | Impossible msg => raise Impossible $ join_lines $ msg :: extra_msg () *)
+          handle
+          Error (r, msg) => raise Error (r, msg @ extra_msg ())
+          | Impossible msg => raise Impossible $ join_lines $ msg :: extra_msg ()
                (* val () = println $ sprintf " Typed Decl $ " [fst $ str_decl (gctx_names gctx) (ctx_names ctx) decl] *)
 	       (* val () = print $ sprintf "   Time : $: \n" [str_i sctxn d] *)
     in
@@ -2688,9 +2707,18 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
 
 and check_mtype gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, t) =
     let
-      val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names ctx
       val (e, t', d, st) = get_mtype gctx ctx_st e
+      fun extra_msg () =
+        let
+          val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names ctx
+          val gctxn = gctx_names gctx
+        in
+          ["when comparing type"] @ indent [str_mt gctxn (sctxn, kctxn) t'] @ ["against"] @ indent [str_mt gctxn (sctxn, kctxn) t'] @ ["for expr"] @ indent [str_e gctxn ctxn e]
+        end
       val () = unify_mt (get_region_e e) gctx (sctx, kctx) (t', t)
+               handle
+               Error (r, msg) => raise Error (r, msg @ extra_msg ())
+               | Impossible msg => raise Impossible $ join_lines $ msg :: extra_msg ()
                         (* val () = println "check type" *)
                         (* val () = println $ str_region "" "ilist.timl" $ get_region_e e *)
     in

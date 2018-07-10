@@ -16,14 +16,6 @@ fun C_UPrim opr =
     | EUPBoolNeg () => C_ISZERO
     | EUPInt2Byte () => C_PUSH + C_BYTE
     | EUPByte2Int () => 0
-fun C_NatCmp opr =
-    case opr of
-      NCLt () => C_GT
-    | NCGt () => C_LT
-    | NCLe () => C_LT + C_ISZERO
-    | NCGe () => C_GT + C_ISZERO
-    | NCEq () => C_EQ
-    | NCNEq () => C_EQ + C_ISZERO
 fun C_BPrim opr =
   case opr of
        EBPIntAdd () => C_ADD
@@ -43,6 +35,27 @@ fun C_BPrim opr =
      | EBPIntNEq () => C_EQ + C_ISZERO
      | EBPBoolAnd () => C_AND
      | EBPBoolOr () => C_OR
+fun C_iBool opr =
+  case opr of
+      EBBAnd () => C_AND
+    | EBBOr () => C_OR
+    | EBBXor () => C_XOR
+fun C_Nat opr =
+  case opr of
+      EBNAdd () => C_ADD
+    | EBNMult () => C_MUL
+    | EBNDiv () => C_SWAP + C_DIV
+    | EBNBoundedMinus () => C_SWAP + C_SUB
+    | EBNMod () => C_SWAP + C_MOD
+    | EBNExp () => 0 (* will depend on operands *)
+fun C_NatCmp opr =
+    case opr of
+      NCLt () => C_GT
+    | NCGt () => C_LT
+    | NCLe () => C_LT + C_ISZERO
+    | NCGe () => C_GT + C_ISZERO
+    | NCEq () => C_EQ
+    | NCNEq () => C_EQ + C_ISZERO
 
 val C_ArrayLen = C_PUSH + C_SWAP + C_SUB + C_MLOAD
 val C_Nat2Int = 0
@@ -78,13 +91,6 @@ val C_NatCellSet = C_SWAP + C_PUSH (* the cost of SSTORE will depend on operands
 (* val C_State = C_PUSH *)
 (* val C_EState = C_State + C_Let *)
 val C_EState = 0
-fun C_Nat opr =
-  case opr of
-      EBNAdd () => C_ADD
-    | EBNMult () => C_MUL
-    | EBNDiv () => C_SWAP + C_DIV
-    | EBNBoundedMinus () => C_SWAP + C_SUB
-    | EBNExp () => 0 (* will depend on operands *)
 val C_Write = C_SWAP * 2 + C_array_ptr
 val C_br_sum = C_DUP + C_MLOAD + C_SWAP + C_JUMPI
 fun C_NewArrayValues n = C_PUSH + C_DUP + C_array_malloc + C_SWAP + C_array_init_len + C_PUSH + n * (C_SWAP * 2 + C_array_init_assign + C_SWAP + C_POP + C_SWAP + C_PUSH + C_ADD) + C_POP + C_MARK_PreArray2ArrayPtr
@@ -134,6 +140,7 @@ fun C_Env name =
       | EnvValue () => C_CALLVALUE
       | EnvNow () => C_TIMESTAMP
       | EnvThis () => C_ADDRESS
+      | EnvBalance () => C_BALANCE
       | EnvBlockNumber () => C_NUMBER
 fun C_EEnv name = C_Env name + C_Let
 val C_EPrintc = C_Printc + C_Var + C_Let
@@ -150,6 +157,7 @@ val C_ENew_order0 = C_New_pre_loop + C_New_loop_test + C_New_post_loop + (2 * C_
 val C_ENew_order1 = C_New_loop
 val C_ERead = C_Read + 2 * C_Var + C_Let
 fun C_ENat opr = C_Nat opr + 2 * C_Var + C_Let
+fun C_EiBool opr = C_iBool opr + 2 * C_Var + C_Let
 fun C_EBPrim opr = C_BPrim opr + 2 * C_Var + C_Let
 fun C_ENatCmp opr = C_NatCmp opr + 2 * C_Var + C_Let
 val C_EMapPtr = C_MapPtr + 2 * C_Var + C_Let
