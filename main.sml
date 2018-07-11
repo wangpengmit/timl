@@ -300,6 +300,7 @@ fun usage () =
       val () = println "  --unit-test <dir-name>: do unit test under directory dir-name"
       val () = println "  -n <file-name>: typecheck a negative file (succeeds only when there are errors)"
       val () = println "  --etiml: use ETiML syntax"
+      val () = println "  --pervasive: add 'open Pervasive' to each module"
     in
       ()
     end
@@ -347,6 +348,7 @@ fun parse_arguments (opts : options, args) =
 	    (* | parseArgs ("-B"        :: ts) = (do_B();         parseArgs ts) *)
 	    | "-n" :: arg :: ts => (push_ref positionals (false, arg); parseArgs ts)
 	    | "--etiml" :: ts => (ParserFactory.set ETiMLParser.parse_file; parseArgs ts)
+	    | "--pervasive" :: ts => (Elaborate.add_pervasive_flag := true; parseArgs ts)
 	    | arg :: ts =>
               if String.isPrefix "-" arg then
 	        raise ParseArgsError ("Unrecognized option: " ^ arg)

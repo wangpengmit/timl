@@ -16,12 +16,16 @@ val lookahead = 15
 type input_stream = int -> string
 			       
 fun parse (input : input_stream, on_lex_error : reporter, on_parse_error : reporter) =
+  let
+    val () = println "Using TiML syntax"
+  in
   #1 (TiMLParser.parse 
 	  (lookahead,
 	   TiMLParser.makeLexer input on_lex_error,
 	   on_parse_error,
 	   on_lex_error))
   handle TiMLParser.ParseError => raise Error
+  end
 					
 open Util
 	 

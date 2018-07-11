@@ -964,9 +964,16 @@ val anno_ENatCellSet = ref false
 val anno_ENatCellSet_state = ref false
 val anno_EPtrProj = ref false
 val anno_EPtrProj_state = ref false
-                                 
+
+val anno_ENew_cont = ref false
+                              
 val allow_substate_call = ref false
 
+fun is_ENew_cont e =
+  case fst $ collect_all_anno e of
+      EBinOp (EBNew (), _, _) => !anno_ENew_cont
+    | _ => false
+             
 datatype phase =
          PhBeforeCPS of unit
          | PhBeforeCC of unit
@@ -1991,7 +1998,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 val st_e1 = st
                 val e2 = EAscTypes (e2, ts)
                 val e2 = EAscTime (e2, IBinOp (IBMinus (), i, i1))
-                val (e2, t2, (_, j2), st) = tc (add_typing_full (fst name, t1) ctx, st) e2
+                val (e2, t2, (i2, j2), st) = tc (add_typing_full (fst name, t1) ctx, st) e2
+                val e2 = if is_ENew_cont e1 then e2 |># (i2, j2) else e2
                 val e1 = if !anno_ELet then e1 %: t1 else e1
                 val e1 = if !anno_ELet_state then e1 %~ st_e1 else e1
                 val e = MakeELet (e1, name, e2)
@@ -2067,37 +2075,40 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EBuiltin (name, t), t, TN C_EBuiltin, st)
         end
-      (* | ELet data => *)
-      (*   let *)
-      (*     val (e1, (name, e2)) = unELet data *)
-      (*     val (e1, t1, i1) = tc ctx e1 *)
-      (*     val (e2, t2, i2) = tc (add_typing_full (fst name, t1) ctx) e2 *)
-      (*   in *)
-      (*     (MakeELet (e1 %: t1, name, e2), t2, i1 %+ i2) *)
-      (*   end *)
-      | ELet _ =>
+      | ELet data =>
         let
-          val (decls, e) = collect_ELet e_input
-          fun foo ((name, e), (decls, ctx, st)) =
-              let
-                val (e, t, i, st) = tc (ctx, st) e
-                val e = if !anno_ELet then e %: t else e
-                val e = if !anno_ELet_state then e %~ st else e
-                val decl = ((name, e), i)
-                val decls = decl :: decls
-                val ctx = add_typing_full (fst name, t) ctx
-              in
-                (decls, ctx, st)
-              end
-          val (decls, ctx, st) = foldl foo ([], ctx, st) decls
-          val decls = rev decls
-          val (decls, is) = unzip decls 
-          val (e, t, i, st) = tc (ctx, st) e
-          val e = ELets (decls, e)
-          val is = combine_IBAdd_Time_Nat is
+          val (e1, (name, e2)) = unELet data
+          val (e1, t1, i1, st) = tc (ctx, st) e1
+          val e1 = if !anno_ELet then e1 %: t1 else e1
+          val e1 = if !anno_ELet_state then e1 %~ st else e1
+          val (e2, t2, i2, st) = tc (add_typing_full (fst name, t1) ctx, st) e2
+          val e2 = if is_ENew_cont e1 then e2 |># i2 else e2
         in
-          (e, t, is %%+ i, st)
+          (MakeELet (e1 %: t1, name, e2), t2, i1 %%+ i2, st)
         end
+      (* | ELet _ => *)
+      (*   let *)
+      (*     val (decls, e) = collect_ELet e_input *)
+      (*     fun foo ((name, e), (decls, ctx, st)) = *)
+      (*         let *)
+      (*           val (e, t, i, st) = tc (ctx, st) e *)
+      (*           val e = if !anno_ELet then e %: t else e *)
+      (*           val e = if !anno_ELet_state then e %~ st else e *)
+      (*           val decl = ((name, e), i) *)
+      (*           val decls = decl :: decls *)
+      (*           val ctx = add_typing_full (fst name, t) ctx *)
+      (*         in *)
+      (*           (decls, ctx, st) *)
+      (*         end *)
+      (*     val (decls, ctx, st) = foldl foo ([], ctx, st) decls *)
+      (*     val decls = rev decls *)
+      (*     val (decls, is) = unzip decls  *)
+      (*     val (e, t, i, st) = tc (ctx, st) e *)
+      (*     val e = ELets (decls, e) *)
+      (*     val is = combine_IBAdd_Time_Nat is *)
+      (*   in *)
+      (*     (e, t, is %%+ i, st) *)
+      (*   end *)
       | ELetType data =>
         let
           val (t, (name, e)) = unELetType data

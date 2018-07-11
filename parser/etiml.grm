@@ -197,8 +197,8 @@ open Ast
        | comma_aexp_star of exp list
        | exp_term_comma_plus of exp list
        | comma_exp_term_star of exp list
-       | exp_semi_plus of exp list
-       | semi_exp_star of exp list
+       (* | exp_semi_plus of exp list *)
+       (* | semi_exp_star of exp list *)
        | id_comma_plus of id list
        | id_comma_star of id list
        | comma_id_star of id list
@@ -266,8 +266,8 @@ open Ast
        | square_plus of (exp * proj_path) list
        | square_star of (exp * proj_path) list
        | square of exp * proj_path
-       | pre of state
-       | post of state option
+       (* | pre of state *)
+       (* | post of state option *)
        | state of state
        | state_field_comma_star of state
        | comma_state_field_star of state

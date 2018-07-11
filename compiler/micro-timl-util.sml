@@ -256,5 +256,51 @@ fun map_kind f k =
       | KArrow (b, k) => KArrow (f b, map_kind f k)
       | KArrowT (k1, k2) => KArrowT (map_kind f k1, map_kind f k2)
 
+datatype ('idx, 'ty) anno =
+         AnnoType of 'ty
+         | AnnoTime of 'idx
+         | AnnoSpace of 'idx
+         | AnnoState of 'idx
+         | AnnoEA of expr_anno
+                       
+fun collect_all_anno_rev e =
+  let
+    val self = collect_all_anno_rev
+  in
+    case e of
+        EAscType (e, t) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoType t :: args)
+        end
+      | EAscTime (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoTime i :: args)
+        end
+      | EAscSpace (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoSpace i :: args)
+        end
+      | EAscState (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoState i :: args)
+        end
+      | EUnOp (EUTiML (EUAnno anno), e) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoEA anno :: args)
+        end
+      | _ => (e, [])
+  end
+fun collect_all_anno e = mapSnd rev $ collect_all_anno_rev e
+
 end
                                  

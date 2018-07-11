@@ -1089,6 +1089,7 @@ fun test1 dirname =
     (* val () = println "" *)
     val () = println "Started MicroTiML typechecking #_3 ..."
     val () = phase := PhBeforeCodeGen ()
+    val () = anno_ENew_cont := true
     val ((e, t, i, st), (vcs, admits)) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), init_st) e
     val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
     val () = check_vcs vcs

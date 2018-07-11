@@ -15,6 +15,8 @@ fun m @+ a = StMap.insert' (a, m)
                            
 exception Error of region * string
 
+val add_pervasive_flag = ref false
+                             
 local
 
   fun runError m _ =
@@ -789,7 +791,7 @@ local
       case m of
           S.ModComponents (inherits, comps, r) =>
           let
-            val inheritPervasive = if addPervasive then [(pervasive, r)] else []
+            val inheritPervasive = if addPervasive andalso (!add_pervasive_flag) then [(pervasive, r)] else []
             val inherits = concatMap elab_decl $ map S.DOpen $ inheritPervasive @ inherits
             val () = state_decls_ref := []
             val decls = concatMap elab_decl comps
