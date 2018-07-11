@@ -385,7 +385,7 @@ exp : aexp (aexp)
 
 aexp : decorated_eid (EVar decorated_eid)
      | LPAREN exp_comma_star RPAREN (ETuple (exp_comma_star, (LPARENleft, RPARENright)))
-     | FN bind_plus return DARROW exp (EAbs (bind_plus, return, exp, (FNleft, expright)))
+     | FN bind_plus fun_modifiers DARROW exp (EAbs (bind_plus, fun_modifiers, exp, (FNleft, expright)))
      | CASE exp return OF rule_bar_star (ECase (exp, return, rule_bar_star, (CASEleft, rule_bar_starright)))
      | IF exp THEN exp ELSE exp (EIte (exp1, exp2, exp3, (IFleft, exp3right)))
      | IFDEC exp THEN exp ELSE exp (EIfi (exp1, exp2, exp3, (IFDECleft, exp3right)))

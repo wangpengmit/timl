@@ -133,6 +133,7 @@
     * [ ] array of tuples
     * [ ] indexed nat
     * [ ] unindexed vectors as values of the above containers. An access to an element of an unindexed vector should include a length check.
+- [ ] TiML should support state polymorphism (i.e. treating the entire state as an index) as MicroTiML, in order to support the 'for' combinator for stateful computations.
 
 # To-do for MicroTiML
 

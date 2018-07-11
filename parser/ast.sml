@@ -130,7 +130,7 @@ type proj_path = (tuple_record_proj * region) list
 datatype exp = 
 	 EVar of long_id * (bool * bool)
          | ETuple of exp list * region
-         | EAbs of bind list * return * exp * region
+         | EAbs of bind list * fun_modifier list * exp * region
          | EAppI of exp * idx * region
          | ECase of exp * return * (ptrn * exp) list * region
          | EAsc of exp * ty * region
@@ -262,6 +262,7 @@ fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
 fun IUnOp (opr, i, r) = IBinOp (IBApp (), IVar (NONE, (str_idx_un_op opr, r)), i, r)
 
 fun TPureArrow (t1, i, t2, r) = TArrow ((empty_state, t1), i, (empty_state, t2), r)
+fun TArrowWithPre ((t1, pre), i, t2, r) = TArrow ((pre, t1), i, (pre, t2), r)
 fun TTuple (ts, r) = foldl_nonempty (fn (t, acc) => TProd (acc, t, r)) ts
                                
 fun EUnOp' (opr, e, r) = EUnOp (EUTiML opr, e, r)

@@ -8,9 +8,22 @@ structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a bit_or b
-  fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+                                                                                              
+fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 =
+  lets
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then waste_time (); acc
+      else
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+      end
+  in
+    %loop (start, init)
+  end
+  
   fun require b = if b then waste_time (); () else (throw using _) end
   val assert = require
+  fun unop_ref ['a] {m : Time} {m' : Nat} r (f : 'a -- m, m' --> 'a) = r := f !r
   val ether = 1000000000000000000
   val finney = 1000000000000000
   val minute = 60
@@ -645,82 +658,95 @@ contract KittyOwnership = struct inherit KittyBase
   external fun tokensOfOwner {len : Nat | len > 0} (_owner : address) view pre {numKitties : len} return (ownerTokens : some_array uint256) =
     let tokenCount : uint256 = balanceOf(_owner);
 
-    if (tokenCount == 0) then
-      (* Return an empty array*)
-      SomeArray empty_array
-    else
-      lets return using $(5601+59*(len-1)), 78+len-1
-        val @SomeNat {n} n = int2nat tokenCount
-      in
-      let totalCats = %totalSupply();
-      let n = %imin (n, totalCats);
-      let result = new_array (n, 0);
-      let resultIndex : ref uint256 = ref 0;
+    lets (* return using $(5601+59*(len-1)), 78+len-1 *)
+      val @SomeNat {n} n = int2nat tokenCount
+    in
+      ifi (n #= #0) then
+        (* Return an empty array*)
+        SomeArray empty_array
+      else
+        let totalCats = %totalSupply();
+        let n = %imin (n, totalCats);
+        let result = new_array (n, 0) using $(140+59*(len-1)), len;
+        let resultIndex : ref uint256 = ref 0;
 
-      (* We count on the fact that all cats have IDs starting at 1 and increasing*)
-      (* sequentially up to the totalCat count.*)
-      (* for (catId : uint256 = 1; catId <= totalCats; ++) *)
-      (*   if (kittyIndexToOwner[catId] == _owner) then *)
-      (*     set result[resultIndex] catId; *)
-      (*     modify resultIndex ++ *)
-      (*   end *)
-      (* end; *)
+        (* We count on the fact that all cats have IDs starting at 1 and increasing*)
+        (* sequentially up to the totalCat count. *)
+        (* for (catId : uint256 = 1; catId <= totalCats; ++) *)
+        (*   if (kittyIndexToOwner[catId] == _owner) then *)
+        (*     set result[resultIndex] catId; *)
+        (*     modify resultIndex ++ *)
+        (*   end *)
+        (* end; *)
+        %for_ (#1, totalCats #+ #1, (), fn {i | 1 <= i /\ i < len} (catId : nat {i}, ()) => 
+          let catId = nat2int catId;
+          if (kittyIndexToOwner[catId] == _owner) then
+            lets
+              val @SomeNat {_} index = int2nat !resultIndex
+            in
+              array_set(result, index imod n, catId)
+            end;
+            %unop_ref resultIndex ++
+          end
+        );
 
-      SomeArray result
+        SomeArray result
       end
     end
 
-  (* @dev Adapted from memcpy() by @arachnid (Nick Johnson <arachnid@notdot.net>)*)
-  (*  This method is licenced under the Apache License.*)
-  (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*)
-  fun _memcpy {_len : Nat} (_dest : uint, _src : uint, _len : nat {_len}) private view =
-    ()
-    (* Copy word-length chunks while possible*)
-    (* for(_len = _len; _len >= 32; -= 32) *)
-    (*   assembly { *)
-    (*     mstore(_dest, mload(_src)) *)
-    (*   }; *)
-    (*   modify _dest += 32; *)
-    (*   modify _src += 32 *)
-    (* end; *)
+  (* (* @dev Adapted from memcpy() by @arachnid (Nick Johnson <arachnid@notdot.net>)*) *)
+  (* (*  This method is licenced under the Apache License.*) *)
+  (* (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*) *)
+  (* fun _memcpy {_len : Nat} (_dest : uint, _src : uint, _len : nat {_len}) private view = *)
+  (*   () *)
+  (*   (* Copy word-length chunks while possible*) *)
+  (*   (* for (_len = _len; _len >= 32; -= 32) *) *)
+  (*   (*   assembly { *) *)
+  (*   (*     mstore(_dest, mload(_src)) *) *)
+  (*   (*   }; *) *)
+  (*   (*   modify _dest += 32; *) *)
+  (*   (*   modify _src += 32 *) *)
+  (*   (* end; *) *)
 
-    (* Copy remaining bytes*)
-    (* let mask : uint256 = 256 ** (32 - _len) - 1 *)
-    (* assembly { *)
-    (*   srcpart := and(mload(_src), not(mask)); *)
-    (*   destpart := and(mload(_dest), mask); *)
-    (*   mstore(_dest, or(destpart, srcpart)) *)
-    (* } *)
+  (*   (* Copy remaining bytes*) *)
+  (*   (* let mask : uint256 = 256 ** (32 - _len) - 1 *) *)
+  (*   (* assembly { *) *)
+  (*   (*   srcpart := and(mload(_src), not(mask)); *) *)
+  (*   (*   destpart := and(mload(_dest), mask); *) *)
+  (*   (*   mstore(_dest, or(destpart, srcpart)) *) *)
+  (*   (* } *) *)
 
-  fun new_string {n : Nat} (len : nat {n}) return string {n} = new_array (len, int2byte 0)
-      
-  (* @dev Adapted from toString(slice) by @arachnid (Nick Johnson <arachnid@notdot.net>)*)
-  (*  This method is licenced under the Apache License.*)
-  (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*)
-  fun _toString {n : Nat} (_rawBytes : array bytes32 {4}, _stringLength : nat {n}) private view return string {n} =
-    let outputString = %new_string _stringLength;
-    let outputPtr : uint256 = 0;
-    let bytesPtr : uint256 = 0;
+  (* (* @dev Adapted from toString(slice) by @arachnid (Nick Johnson <arachnid@notdot.net>)*) *)
+  (* (*  This method is licenced under the Apache License.*) *)
+  (* (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*) *)
+  (* fun _toString {n : Nat} (_rawBytes : array bytes32 {4}, _stringLength : nat {n}) private view return string {n} = *)
+  (*   let outputString = %new_string _stringLength; *)
+  (*   let outputPtr : uint256 = 0; *)
+  (*   let bytesPtr : uint256 = 0; *)
 
-    (* assembly { *)
-    (*   outputPtr := add(outputString, 32); *)
-    (*   bytesPtr := _rawBytes *)
-    (* }; *)
+  (*   (* assembly { *) *)
+  (*   (*   outputPtr := add(outputString, 32); *) *)
+  (*   (*   bytesPtr := _rawBytes *) *)
+  (*   (* }; *) *)
 
-    %_memcpy(outputPtr, bytesPtr, _stringLength);
+  (*   %_memcpy(outputPtr, bytesPtr, _stringLength); *)
 
-    outputString
+  (*   outputString *)
 
-  datatype some_string = SomeString {n : Nat} of string {n} --> some_string
+  (* fun new_string {n : Nat} (len : nat {n}) return string {n} = new_array (len, int2byte 0) *)
+  (* datatype some_string = SomeString {n : Nat} of string {n} --> some_string *)
       
   (* @notice Returns a URI pointing to a metadata package for this token conforming to*)
   (*  ERC-721 (https://github.com/ethereum/EIPs/issues/721)*)
   (* @param _tokenId The ID number of the Kitty whose metadata should be returned.*)
-  external fun tokenMetadata {n : Nat} (_tokenId : uint256, _preferredTransport : string {n}) view return (infoUrl : some_string) =
+  (* PW: currently our string cell is 256-bit wide, same as arrays, so instead of using 'some_string' for 'infoUrl' we'll just use 'some_array'. In the future when strings become 8-bit wide, we'll have a 'array2string' function which doesn't change the content and only multiply the length value by 32. *)
+  external fun tokenMetadata {n : Nat} (_tokenId : uint256, _preferredTransport : string {n}) view return (infoUrl : some_array uint256) =
     require(!!erc721Metadata <> 0);
-    let (buffer, count) = call (new_array (#4, 0), #0) erc721Metadata getMetadata(_tokenId, _preferredTransport);
+    let (buffer, count) = call (new_array (#4, 0), 0) erc721Metadata getMetadata(_tokenId, _preferredTransport);
 
-    SomeString (%_toString(buffer, count))
+    (* SomeString (%_toString(buffer, count)) *)
+    require(count=4*32);
+    SomeArray buffer
 
 end
 
@@ -1658,11 +1684,26 @@ contract SaleClockAuction = struct inherit ClockAuction
       modify gen0SaleCount ++
     end
 
-  external fun averageGen0SalePrice () view return uint256 =
+(* PW: here is a limitation of TiML: it can't parametrize on states. MicroTiML actually supports it (for continuations), so TiML should support it too.  *)                              
+fun for_lastGen0SalePrices ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), funtype {lastGen0SalePrices : st} nat {i} * 'a -- m2, m2' --> 'a) pre {lastGen0SalePrices : st} return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 =
+  lets
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {lastGen0SalePrices : st} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then waste_time (); acc
+      else
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+      end
+  in
+    %loop (start, init)
+  end
+  
+  external fun averageGen0SalePrice () view pre {lastGen0SalePrices : 5} return uint256 =
     let sum : ref uint256 = ref 0;
     (* for (i : uint256 = 0; i < 5; ++) *)
     (*   modify sum += lastGen0SalePrices[i] *)
     (* end; *)
+    %for_lastGen0SalePrices (#0, #5, (), fn {i | 0 <= i /\ i < 5} (i : nat {i}, ()) pre {lastGen0SalePrices : 5} => 
+      %unop_ref sum (+= lastGen0SalePrices[i])
+    );
     !sum / 5
 
 end

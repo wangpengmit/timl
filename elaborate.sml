@@ -370,6 +370,29 @@ local
   val state_decls_ref = ref ([] : (name * S.ty * exp option) list)
   (* val state_inits_ref = ref ([] : (name * init) list) *)
                             
+  fun process_mods ls =
+    let
+      val (pre, post, return, time, space) =
+          (ref $ NONE, ref $ NONE, ref $ NONE, ref $ NONE, ref $ NONE)
+      val guards = ref []
+      fun f m =
+        case m of
+            FmPre v => pre := SOME v
+          | FmPost v => post := SOME v
+          | FmReturn v => return := SOME v
+          | FmTime v => time := SOME v
+          | FmSpace v => space := SOME v
+          | FmGuards es => unop_ref (fn acc => rev es @ acc) guards
+          | FmView () => ()
+          | FmPure () => ()
+          | FmPayable () => ()
+          | FmConst () => ()
+          | FmVisi _ => ()
+      val () = app f ls
+    in
+      (!pre, !post, !return, !time, !space, rev (!guards))
+    end
+                
   fun elab e =
     case e of
 	S.EVar (id as (m, (x, r)), (eia, has_insert)) =>
@@ -404,11 +427,20 @@ local
 	(case es of
 	     [] => ETT r
 	   | e :: es => foldl (fn (e2, e1) => EPair (e1, elab e2)) (elab e) es)
-      | S.EAbs (binds, (t, d, j), e, r) =>
+      | S.EAbs (binds, mods, e, r) =>
 	let 
+          val (pre, post, t, d, j, guards) = process_mods mods
+          val pre = default empty_state pre
+          val is_first = ref true
+          fun get_pre () =
+            if !is_first then
+              (is_first := false;
+               elab_state r pre)
+            else
+              StMap.empty
           fun f (b, e) =
 	    case b of
-		BindTyping pn => EAbs (StMap.empty, Unbound.Bind (elab_pn pn, e), NONE)
+		BindTyping pn => EAbs (get_pre (), Unbound.Bind (elab_pn pn, e), NONE)
 	      | BindSorting (name, s, _) => EAbsI (BindAnno ((IName name, elab_s s), e), r)
           val e = elab e
           val e = case d of SOME d => EAscTime (e, elab_i d) | _ => e
@@ -662,28 +694,6 @@ local
           end
 	| S.DRec (tnames, name, binds, mods, e, r) =>
           let
-            fun process_mods ls =
-              let
-                val (pre, post, return, time, space) =
-                    (ref $ NONE, ref $ NONE, ref $ NONE, ref $ NONE, ref $ NONE)
-                val guards = ref []
-                fun f m =
-                  case m of
-                      FmPre v => pre := SOME v
-                    | FmPost v => post := SOME v
-                    | FmReturn v => return := SOME v
-                    | FmTime v => time := SOME v
-                    | FmSpace v => space := SOME v
-                    | FmGuards es => unop_ref (fn acc => rev es @ acc) guards
-                    | FmView () => ()
-                    | FmPure () => ()
-                    | FmPayable () => ()
-                    | FmConst () => ()
-                    | FmVisi _ => ()
-                val () = app f ls
-              in
-                (!pre, !post, !return, !time, !space, rev (!guards))
-              end
             val (pre, post, t, d, j, guards) = process_mods mods
             val pre = default empty_state pre
             val post = default pre post

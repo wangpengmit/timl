@@ -570,6 +570,7 @@ fun pp_e s e =
   let
     val pp_e = pp_e s
     val pp_decls = pp_decls s
+    val pp_fun_mod = pp_fun_mod s
     val pp_i = pp_i s
     val pp_t = pp_t s
     val pp_return = pp_return s
@@ -652,13 +653,13 @@ fun pp_e s e =
           str ")";
           close_box ()
         )
-      | EAbs (binds, return, e, _) =>
+      | EAbs (binds, mods, e, _) =>
         (
           open_hbox ();
           strs "EAbs";
           str "(";
           app (fn bind => (pp_bind bind; comma ())) binds;
-          pp_return return;
+          app (fn m => (str "["; pp_fun_mod m; strs "]")) mods;
           comma ();
           pp_e e;
           str ")";
@@ -996,10 +997,38 @@ fun pp_e s e =
       (*   ) *)
   end
 
+and pp_fun_mod s m =
+    let
+      val pp_e = pp_e s
+      val pp_i = pp_i s
+      val pp_t = pp_t s
+      val pp_st = pp_st s
+      fun space () = PP.space s 1
+      fun str v = PP.string s v
+      fun strs s = (str s; space ())
+      fun comma () = (str ","; space ())
+      fun colon () = (str ":"; space ())
+      fun pp_id x = str $ fst x
+    in
+      case m of
+          FmView () => str "View"
+        | FmPure () => str "Pure"
+        | FmPayable () => str "Payable"
+        | FmConst () => str "Const"
+        | FmGuards es => (strs "Guard"; app (fn e => (pp_e e; comma ())) es)
+        | FmVisi v => str $ str_visi v
+        | FmPre st => (strs "Pre"; pp_st st)
+        | FmPost st => (strs "Post"; pp_st st)
+        | FmReturn t => (strs "Return"; pp_t t)
+        | FmTime i => (strs "Time"; pp_i i)
+        | FmSpace i => (strs "Space"; pp_i i)
+    end
+      
 and pp_d s d =
     let
       val pp_d = pp_d s
       val pp_e = pp_e s
+      val pp_fun_mod = pp_fun_mod s
       val pp_i = pp_i s
       val pp_t = pp_t s
       val pp_pn = pp_pn s
@@ -1034,21 +1063,6 @@ and pp_d s d =
             close_box ()
           )
         | DRec (tnames, name, binds, mods, e, _) =>
-          let
-            fun pp_fun_mod m =
-              case m of
-                  FmView () => str "View"
-                | FmPure () => str "Pure"
-                | FmPayable () => str "Payable"
-                | FmConst () => str "Const"
-                | FmGuards es => (strs "Guard"; app (fn e => (pp_e e; comma ())) es)
-                | FmVisi v => str $ str_visi v
-                | FmPre st => (strs "Pre"; pp_st st)
-                | FmPost st => (strs "Post"; pp_st st)
-                | FmReturn t => (strs "Return"; pp_t t)
-                | FmTime i => (strs "Time"; pp_i i)
-                | FmSpace i => (strs "Space"; pp_i i)
-          in
           (
             open_vbox ();
             open_hbox ();
@@ -1065,7 +1079,6 @@ and pp_d s d =
             pp_e e;
             close_box ()
           )
-          end
         | DDatatype dt =>
           (
             open_hbox ();

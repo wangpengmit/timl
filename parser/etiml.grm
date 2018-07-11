@@ -10,6 +10,7 @@ open Ast
     | DARROW
     | FN
     | FUN
+    | FUNTYPE
     | LSQ
     | RSQ
     | LSQSQ
@@ -561,7 +562,7 @@ exp_term : aexp (aexp)
 
 aexp : decorated_eid (EVar decorated_eid)
      | LPAREN exp_comma_star RPAREN (ETuple (exp_comma_star, (LPARENleft, RPARENright)))
-     | FN bind_plus return DARROW exps (EAbs (bind_plus, return, exps, (FNleft, expsright)))
+     | FN bind_plus fun_modifiers DARROW exps (EAbs (bind_plus, fun_modifiers, exps, (FNleft, expsright)))
      | CASE exp return OF bar_rule_star END (ECase (exp, return, bar_rule_star, (CASEleft, bar_rule_starright)))
      (* | IF exp THEN exps ELSE exps END (EIte (exp, exps1, exps2, (IFleft, ENDright))) *)
      (* | IF exp THEN exps END (EIte (exp, exps, ETuple ([], (ENDleft, ENDright)), (IFleft, ENDright))) *)
@@ -613,6 +614,7 @@ optional_eq_exp : EQ exp (SOME exp)
 ty : ty_term (ty_term)
    | ty DDASH idx LARROW ty (TPureArrow (ty1, (idx, INat (0, (idxleft, idxright))), ty2, (ty1left, ty2right)))
    | ty DDASH idx COMMA idx LARROW ty (TPureArrow (ty1, (idx1, idx2), ty2, (ty1left, ty2right)))
+   | FUNTYPE state ty DDASH idx COMMA idx LARROW ty (TArrowWithPre ((ty1, state), (idx1, idx2), ty2, (ty1left, ty2right)))
    | ty ARROW ty (TPureArrow (ty1, (IVar (underscore (ty1left, ty2right)), INat (0, (ty1left, ty2right))), ty2, (ty1left, ty2right)))
    | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), INat (0, (ty1left, ty2right))), ty2, (ty1left, ty2right)))
    | ty MULT ty (TProd (ty1, ty2, (ty1left, ty2right)))

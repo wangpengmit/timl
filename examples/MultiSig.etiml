@@ -34,11 +34,11 @@ fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (
   
   fun require b = if b then waste_time (); () else (throw using _) end
   val assert = require
+  fun unop_ref ['a] {m : Time} {m' : Nat} r (f : 'a -- m, m' --> 'a) = r := f !r
   val ether = 1000000000000000000
   val minute = 60
   val hour = 60 * minute
   val day = 24 * hour
-  fun unop_ref ['a] {m : Time} {m' : Nat} r (f : 'a -- m, m' --> 'a) = r := f !r
 end
 
 contract multiOwned = struct inherit Pervasive
