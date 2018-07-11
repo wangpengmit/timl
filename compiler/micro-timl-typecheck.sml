@@ -990,7 +990,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
     val tc_against_time_space = tc_against_time_space st_types
     val tc_against_ty_time_space = tc_against_ty_time_space st_types
     (* val () = println "tc() start: " *)
-    val e_input_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input
+    (* val e_input_str = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) (ctx_names ctx) e_input *)
     (* val () = print $ e_input_str *)
     fun err () = raise Impossible $ "unknown case in tc: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) (ctx_names ctx) e_input)
     val itctx = (ictx, tctx)
@@ -2084,7 +2084,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, i2, st) = tc (add_typing_full (fst name, t1) ctx, st) e2
           val e2 = if is_ENew_cont e1 then e2 |># i2 else e2
         in
-          (MakeELet (e1 %: t1, name, e2), t2, i1 %%+ i2, st)
+          (MakeELet (e1, name, e2), t2, i1 %%+ i2, st)
         end
       (* | ELet _ => *)
       (*   let *)
@@ -2193,13 +2193,13 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                       | MUnifyError (r, m) => raise MTCError ("Unification error:\n" ^ join_lines m ^ extra_msg ())
                       | MTCError m => raise MTCError (m ^ extra_msg ())
                       | Impossible m => raise Impossible (m ^ extra_msg ())
-    val () = println "tc() finished:"
-    val () = print $ e_input_str
+    (* val () = println "tc() finished:" *)
+    (* val () = print $ e_input_str *)
     (* val () = println "of time:" *)
     (* val () = println $ ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i *)
-    val () = println "of type:"
-    val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) $ MicroTiMLSimp.simp_t t
-    val () = println ""
+    (* val () = println "of type:" *)
+    (* val () = println $ ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE (itctx_names (ictx, tctx)) $ MicroTiMLSimp.simp_t t *)
+    (* val () = println "" *)
   in
     (e_output, t, i, st)
   end

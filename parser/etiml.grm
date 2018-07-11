@@ -208,6 +208,9 @@ open Ast
        | sort_bind_plus of sort_bind list
        | sort_bind_star of sort_bind list
        | sort_bind of sort_bind list
+       | sort_bind_idx2_plus of sort_bind_idx2 list
+       | sort_bind_idx2_star of sort_bind_idx2 list
+       | sort_bind_idx2 of sort_bind_idx2 list
        | return of return
        (* | rec_return of ty option * idx option *)
        | rule_bar_star of (ptrn * exp) list
@@ -621,7 +624,7 @@ ty_term : aty (aty)
                   
 aty : long_id (TVar long_id)
         | LPAREN ty RPAREN (ty)
-        | quan sort_bind_plus COMMA ty (TQuan (quan, sort_bind_plus, ty, (quanleft, tyright)))
+        | quan sort_bind_idx2_plus COMMA ty (TQuan (quan, sort_bind_idx2_plus, ty, (quanleft, tyright)))
         | FN id_or_bsort_bind_plus DARROW ty (TAbs (id_or_bsort_bind_plus, ty, (FNleft, tyright)))
         | LCUR typing_comma_star_trailing RCUR (TRecord (typing_comma_star_trailing, (LCURleft, RCURright)))
         | STORAGE aty (TPtr aty)
@@ -787,7 +790,12 @@ sort_bind_star : sort_bind sort_bind_star (sort_bind @ sort_bind_star)
 sort_bind_plus : sort_bind sort_bind_star (sort_bind @ sort_bind_star)
 
 sort_bind : sorting (sorting)
-      | LPAREN sort_bind RPAREN (sort_bind)
+          | LPAREN sort_bind RPAREN (sort_bind)
+
+sort_bind_idx2_star : sort_bind_idx2 sort_bind_idx2_star (sort_bind_idx2 @ sort_bind_idx2_star)
+	   | ([])
+sort_bind_idx2_plus : sort_bind_idx2 sort_bind_idx2_star (sort_bind_idx2 @ sort_bind_idx2_star)
+sort_bind_idx2 : sort_bind RTRI LPAREN idx COMMA idx RPAREN (make_sort_bind_idx2 (sort_bind, (idx1, idx2)))
 
 rule_bar_star : rule bar_rule_star (rule :: bar_rule_star)
 	      | ([])

@@ -47,11 +47,13 @@ type id_or_bsort_bind = (id, bsort_bind) sum
 type state = (id * idx) list
 val empty_state = []
 
+type sort_bind_idx2 = sort_bind * (idx * idx)
+                                    
 datatype ty =
 	 TVar of long_id
 	 | TArrow of (state * ty) * (idx * idx) * (state * ty) * region
 	 | TProd of ty * ty * region
-	 | TQuan of quan * sort_bind list * ty * region
+	 | TQuan of quan * sort_bind_idx2 list * ty * region
 	 | TAppT of ty * ty * region
 	 | TAppI of ty * idx * region
 	 | TAbs of id_or_bsort_bind list * ty * region
@@ -322,5 +324,7 @@ type indexed_typing = id * (ty * bool)
 fun short_str s =
   s
 
+fun make_sort_bind_idx2 (binds, i2) = map (attach_snd i2) binds
+  
 end
 

@@ -8,7 +8,7 @@ structure TestState = struct
 fun inc n = n + 1
 fun addBy b a = a + b
                 
-fun foo (a : int, b : int) return using _ =
+fun foo (a : int, b : int) using _ =
     (* TestState_m[[a]] *)
     (* set TestState_m[[a]] b *)
     (* set TestState_m[[a]] ((((addBy b) using _, _) a) using _, _) (* TestState_m[[a]] *) *)

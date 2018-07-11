@@ -161,7 +161,8 @@ local
 	| _ => NONE
     end
 
-  fun IUnderscore r = elab_i (S.IVar (NONE, ("_", r)))
+  fun IUnderscore r = IUVar ((), r)
+  fun TUnderscore r = TUVar ((), r)
   fun IUnderscore2 r = (IUnderscore r, IUnderscore r)
                          
   fun elab_state r ls =
@@ -252,9 +253,10 @@ local
       | S.TProd (t1, t2, _) => TProd (elab_mt t1, elab_mt t2)
       | S.TQuan (quan, binds, t, r) =>
 	let
-          fun f ((x, s, _), t) =
+          fun f (((x, s, r1), (i, j)), t) =
 	    case quan of
-		S.Forall () => TUniI (elab_s s, Bind (x, (IUnderscore2 r, t)), r)
+		S.Forall () =>
+                TUniI (elab_s s, Bind (x, ((elab_i i, elab_i j), t)), r)
 	in
 	  foldr f (elab_mt t) binds
 	end

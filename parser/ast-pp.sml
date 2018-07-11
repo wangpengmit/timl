@@ -337,7 +337,7 @@ fun pp_t s t =
           str "(";
           str $ str_quan q;
           comma ();
-          app (fn b => (pp_sort_bind b; comma ())) binds;
+          app (fn (b, (i, j)) => (pp_sort_bind b; comma (); pp_i i; comma (); pp_i j; comma ())) binds;
           pp_t t;
           str ")";
           close_box ()
