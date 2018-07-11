@@ -19,13 +19,26 @@ structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a bit_or b
-  fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+                                                                                              
+fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 =
+  lets
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then waste_time (); acc
+      else
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+      end
+  in
+    %loop (start, init)
+  end
+  
   fun require b = if b then waste_time (); () else (throw using _) end
   val assert = require
   val ether = 1000000000000000000
   val minute = 60
   val hour = 60 * minute
   val day = 24 * hour
+  fun unop_ref ['a] {m : Time} {m' : Nat} r (f : 'a -- m, m' --> 'a) = r := f !r
 end
 
 contract multiOwned = struct inherit Pervasive
@@ -38,6 +51,11 @@ contract multiOwned = struct inherit Pervasive
       ownersDone : uint,
       index : uint,
   }
+
+  fun copy_PendingState (t : storage PendingState, s : PendingState) =
+      &t->yetNeeded ::= s.yetNeeded;
+      &t->ownersDone ::= s.ownersDone;
+      &t->index ::= s.index
 
   (* FIELDS *)
 
@@ -84,11 +102,6 @@ contract multiOwned = struct inherit Pervasive
   (* simple single-sig function modifier. *)
   fun onlyOwner () =
     require(isOwner msg.sender)
-
-  fun copy_PendingState (t : storage PendingState, s : PendingState) =
-      &t->yetNeeded ::= s.yetNeeded;
-      &t->ownersDone ::= s.ownersDone;
-      &t->index ::= s.index
 
   fun opExists (_operation : bytes32) =
     m_op2state[_operation].yetNeeded > 0
@@ -159,6 +172,11 @@ contract multiOwned = struct inherit Pervasive
     (*   set m_owners[2 + i] uint(_owners[i]); *)
     (*   set m_ownerIndex[uint(_owners[i])] 2 + i *)
     (* end; *)
+    %for_ (#0, array_len _owners, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) => 
+      let i' = nat2int i;
+      set m_owners[2 + i'] array_get (_owners, i);
+      set m_ownerIndex[array_get(_owners, i)] 2 + i'
+    );
     m_required ::= _required
 
   (* Revokes a prior confirmation of the given operation *)
@@ -179,6 +197,16 @@ contract multiOwned = struct inherit Pervasive
     (*     set m_op2state [m_idx2op[i] ] zero *)
     (*   end *)
     (* end; *)
+    %for_ (#0, length, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) => 
+      let i = nat2int i;
+      let opr = m_idx2op[i];
+      if opr != 0 then
+        copy_PendingState (&m_op2state->[opr], {yetNeeded = 0,
+                                               ownersDone = 0,
+                                               index = 0,
+                          })
+      end
+    );
     set m_numOps #0
 
   (* Replaces an owner `_from` with another `_to`. *)
@@ -229,17 +257,27 @@ contract multiOwned = struct inherit Pervasive
     (*     set m_owners[m_numOwners] 0 *)
     (*   end *)
     (* end; *)
-    let len = nat2int !!m_numOwners;    
-    let notfree = ref len;
+    let len = !!m_numOwners;    
+    let len' = nat2int len;
+    let notfree = ref len';
     (* for (i = 1; i <= len; ++i) *)
     (*   if !free < !notfree && m_owners[!free] <> 0 then unop_ref free ++ *)
     (*   elseif !notfree > 1 && m_owners[!notfree] = 0 then unop_ref notfree -- *)
-    (*   elseif !free < !notfree && m_owners[!notfree] <> 0 && m_owners[!free] = 0 then                     *)
+    (*   elseif !free < !notfree && m_owners[!notfree] <> 0 && m_owners[!free] = 0 then *)
     (*     set m_owners[!free] m_owners[!notfree]; *)
     (*     set m_ownerIndex[m_owners[!free] ] !free; *)
     (*     set m_owners[!notfree] 0 *)
     (*   end *)
     (* end; *)
+    %for_ (#0, len, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) => 
+      if !free < !notfree && m_owners[!free] <> 0 then %unop_ref free ++
+      elseif !notfree > 1 && m_owners[!notfree] = 0 then %unop_ref notfree --
+      elseif !free < !notfree && m_owners[!notfree] <> 0 && m_owners[!free] = 0 then
+        set m_owners[!free] m_owners[!notfree];
+        set m_ownerIndex[m_owners[!free] ] !free;
+        set m_owners[!notfree] 0
+      end
+    );
     set m_newNumOwners !notfree;
     (* we need to rely on the users to update m_numOwners since the post-condition must specify a value for m_numOwners and we can't determine the value statically *)
     set m_needToSetNumOwners #1
@@ -444,6 +482,13 @@ contract Wallet = struct inherit multiOwned, daylimit
     (* for (i : uint = 0; i < length; inc) *)
     (*   set m_txs[m_idx2op[i] ] zero *)
     (* end; *)
+    %for_ (#0, length, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) => 
+      let i = nat2int i;
+      copy_Transaction (&m_txs->[m_idx2op[i] ], {to = 0,
+                                                value = 0,
+                                                dataHash = 0,
+                       })
+    );
     %clearPending()
 
 end
