@@ -2713,7 +2713,7 @@ and check_mtype gctx (ctx_st as (ctx as (sctx, kctx, cctx, tctx), st)) (e, t) =
           val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names ctx
           val gctxn = gctx_names gctx
         in
-          ["when comparing type"] @ indent [str_mt gctxn (sctxn, kctxn) t'] @ ["against"] @ indent [str_mt gctxn (sctxn, kctxn) t'] @ ["for expr"] @ indent [str_e gctxn ctxn e]
+          ["when comparing type"] @ indent [str_mt gctxn (sctxn, kctxn) t'] @ ["against"] @ indent [str_mt gctxn (sctxn, kctxn) t] @ ["for expr"] @ indent [str_e gctxn ctxn e]
         end
       val () = unify_mt (get_region_e e) gctx (sctx, kctx) (t', t)
                handle

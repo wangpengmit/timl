@@ -576,20 +576,22 @@ fun unify_mt r gctx ctx (t, t') =
              | _ => err ())
         | TUVar _ => err ()
       end
-    val t = whnf_mt true gctx kctx t
-    val t' = whnf_mt true gctx kctx t'
-    (* val () = println $ sprintf "Unifying types\n\t$\n  and\n\t$" [str_mt gctxn ctxn t, str_mt gctxn ctxn t'] *)
-    (* Apply [unify_TApp] in which order? Here is a heuristic: *)
     fun more_uvar_args (a, b) =
       case (is_TApp_TUVar a, is_TApp_TUVar b) of
           (SOME (_, i_args, t_args), SOME (_, i_args', t_args')) =>
           length i_args > length i_args' andalso length t_args > length t_args'
         | _ => false
-    val (t_more, t_less) = if more_uvar_args (t', t) then
-               (t', t)
-             else
-               (t, t')
-    val () = 
+    val t = whnf_mt true gctx kctx t
+    val t' = whnf_mt true gctx kctx t'
+    (* val () = println $ sprintf "Unifying types\n\t$\n  and\n\t$" [str_mt gctxn ctxn t, str_mt gctxn ctxn t'] *)
+    (* Apply [unify_TApp] in which order? Here is a heuristic: *)
+    fun main () =
+      let
+        val (t_more, t_less) = if more_uvar_args (t', t) then
+                                 (t', t)
+                               else
+                                 (t, t')
+      in
         unify_TApp t_more t_less
         handle
         UnifyAppUVarFailed msg =>
@@ -608,9 +610,15 @@ fun unify_mt r gctx ctx (t, t') =
             structural_compare (t, t')
           end
         end
+      end
+    fun extra_msg () = ["when unifying"] @ indent [str_mt gctxn ctxn t] @ ["and"] @ indent [str_mt gctxn ctxn t']
+    val ret = main ()
+              handle
+              Error (r, msg) => raise Error (r, msg @ extra_msg ())
+              | Impossible msg => raise Impossible $ join_lines $ msg :: extra_msg ()
     (* val () = println "unify_mt () ended" *)
   in
-    ()
+    ret
   end
 
 fun unify_t r gctx ctx (t, t') =

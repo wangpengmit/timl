@@ -478,6 +478,7 @@ local
 		   else if x = "int2nat" then EUnOp (EUInt2Nat (), elab e2, r)
 		   else if x = "__&byte2int" then EUnOp (EUPrim (EUPByte2Int ()), elab e2, r)
 		   else if x = "__&int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
+		   else if x = "int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
 		   else if x = "__&array_length" then EUnOp (EUArrayLen (), elab e2, r)
 		   else if x = "array_len" then EUnOp (EUArrayLen (), elab e2, r)
 		   else if x = "vector_len" then EUnOp (EUVectorLen (), elab e2, r)

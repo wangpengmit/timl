@@ -692,11 +692,13 @@ contract KittyOwnership = struct inherit KittyBase
     (*   mstore(_dest, or(destpart, srcpart)) *)
     (* } *)
 
+  fun new_string {n : Nat} (len : nat {n}) return string {n} = new_array (len, int2byte 0)
+      
   (* @dev Adapted from toString(slice) by @arachnid (Nick Johnson <arachnid@notdot.net>)*)
   (*  This method is licenced under the Apache License.*)
   (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*)
   fun _toString {n : Nat} (_rawBytes : array bytes32 {4}, _stringLength : nat {n}) private view return string {n} =
-    let outputString = new_array (_stringLength, 0);
+    let outputString = %new_string _stringLength;
     let outputPtr : uint256 = 0;
     let bytesPtr : uint256 = 0;
 
@@ -715,10 +717,10 @@ contract KittyOwnership = struct inherit KittyBase
   (*  ERC-721 (https://github.com/ethereum/EIPs/issues/721)*)
   (* @param _tokenId The ID number of the Kitty whose metadata should be returned.*)
   external fun tokenMetadata {n : Nat} (_tokenId : uint256, _preferredTransport : string {n}) view return (infoUrl : some_string) =
-    require(erc721Metadata <> 0);
+    require(!!erc721Metadata <> 0);
     let (buffer, count) = call (new_array (#4, 0), #0) erc721Metadata getMetadata(_tokenId, _preferredTransport);
 
-    SomeString (_toString(buffer, count))
+    SomeString (%_toString(buffer, count))
 
 end
 
