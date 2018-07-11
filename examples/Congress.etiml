@@ -8,7 +8,19 @@ structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
-  fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+                                                                                              
+fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 =
+  lets
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then waste_time (); acc
+      else
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+      end
+  in
+    %loop (start, init)
+  end
+  
   fun require b = if b then waste_time (); () else (throw using _) end
   val assert = require
   val ether = 1000000000000000000
@@ -81,6 +93,14 @@ contract Congress = struct inherit owned, tokenRecipient
     memberSince : uint,
   }
 
+  fun copy_Member (t : storage Member, s : Member) =
+    &t->member ::= s.member;
+    &t->memberSince ::= s.memberSince                       
+
+  fun copy_Member_s2s (t : storage Member, s : storage Member) =
+    &t->member ::= deref s->member;
+    &t->memberSince ::= deref s->memberSince                       
+
   (* Contract Variables and events *)
   public state minimumQuorum : cell uint
   public state debatingPeriodInMinutes : cell uint
@@ -116,10 +136,6 @@ contract Congress = struct inherit owned, tokenRecipient
   (* Modifier that allows only shareholders to vote and create new proposals *)
   fun onlyMembers () =
     require(memberId[msg.sender] != 0)
-
-  fun copy_Member (t : storage Member, s : Member) =
-    &t->member ::= s.member;
-    &t->memberSince ::= s.memberSince                       
 
   (** *)
 (*    * Add member *)
@@ -163,6 +179,13 @@ contract Congress = struct inherit owned, tokenRecipient
     (* for (i : uint = memberId[targetMember]; i < length members - 1; inc) *)
     (*   set members[i] members[i+1] *)
     (* end; *)
+    let begin = memberId[targetMember];
+    %for_ (#0, !!numMembers #- #1, (), fn {i | 0 <= i /\ i < len-1} (i : nat {i}, ()) => 
+      let i = nat2int i;
+      if i >= begin then
+        copy_Member_s2s (&members->[i], &members->[i+1])
+      end
+    );
     modify numMembers %nat_dec
 
   (** *)
