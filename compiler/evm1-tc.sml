@@ -848,6 +848,7 @@ infix 4 %%<=
         
 fun shiftn_i_i n = shiftx_i_i 0 n
 fun shiftn_i_2i n (a, b) = (shiftn_i_i n a, shiftn_i_i n b)
+fun forget_i_2i x n = unop_pair $ forget_i_i x n
       
 fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itctx as (ictx, tctx), rctx, sctx, st)) insts =
   let
@@ -973,19 +974,21 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
             let
               val i = sc_against_sort ictx (unInner i, STime)
               val ((i', j), ni) = tc_insts ctx I
-              val i = shiftn_i_i ni i
+              val () = close_n ni
+              val (i', j) = forget_i_2i 0 ni (i', j)
               val () = check_prop (i' %<= i)
             in
-              ((i, j), ni)
+              ((i, j), 0)
             end
           | ASCSPACE i =>
             let
               val i = sc_against_sort ictx (unInner i, SNat)
               val ((j, i'), ni) = tc_insts ctx I
-              val i = shiftn_i_i ni i
+              val () = close_n ni
+              val (j, i') = forget_i_2i 0 ni (j, i')
               val () = check_prop (i' %<= i)
             in
-              ((j, i), ni)
+              ((j, i), 0)
             end
           | _ =>
             let
@@ -1047,16 +1050,15 @@ fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
     val () = println "before checking insts"
     val (i', ni) = tc_insts params (itctx, rctx, sctx, st) insts
     val () = println "after checking insts"
-    (* todo: shouldn't be shift-and-close, should be close-and-forget *)
-    val () = check_prop (i' %%<= shiftn_i_2i ni (time, space))
-    val () = close_n $ ni + length ictx
+    val () = close_n ni
+    val i' = forget_i_2i 0 ni i'
+    val () = check_prop (i' %%<= (time, space))
+    val () = close_n $ length ictx
     (* val () = println "tc_hval() finished" *)
   in
     ()
   end
 
-fun forget_i_2i x n = unop_pair $ forget_i_i x n
-      
 fun tc_prog (num_regs, st_name2ty, st_int2name, init_st) (H, I) =
   let
     fun get_hval_type h =
