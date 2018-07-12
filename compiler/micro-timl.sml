@@ -240,6 +240,7 @@ fun is_value e =
          | EUPtrProj _ => false
          | EUArrayLen () => false
          | EUPrim _ => false
+         | EUiBoolNeg () => false
          | EUNat2Int () => false
          | EUInt2Nat () => false
          | EUPrintc () => false

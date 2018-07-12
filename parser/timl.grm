@@ -114,6 +114,7 @@ open Ast
     | PLUS_EQ
     | PERCENT
     | NOT
+    | IBOOL_NOT
     | BANG
 
 %nonterm start of prog
@@ -398,6 +399,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | LSQ exp_comma_star RSQ (EList (exp_comma_star, (LSQleft, RSQright)))
      | TILDE aexp (EUnOp' (EUPrim (EUPIntNeg ()), aexp, (TILDEleft, aexpright)))
      | NOT aexp (EUnOp' (EUPrim (EUPBoolNeg ()), aexp, (NOTleft, aexpright)))
+     | IBOOL_NOT aexp (EUnOp' (EUiBoolNeg (), aexp, (IBOOL_NOTleft, aexpright)))
      | NEVER (ENever (NEVERleft, NEVERright))
      | id square_plus (EGet (id, square_plus, (idleft, square_plusright)))
      | BANG id (EGet (id, [], (BANGleft, idright)))

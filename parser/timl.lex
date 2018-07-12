@@ -82,6 +82,7 @@ val keywords = [
     ("pre", T.PRE),
     ("post", T.POST),
     ("not", T.NOT),
+    ("inot", T.IBOOL_NOT),
     ("as", T.AS),
     ("ifdec", T.IFDEC)
 ]

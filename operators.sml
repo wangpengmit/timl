@@ -204,6 +204,7 @@ datatype expr_un_op =
          EUProj of projector
          | EUPrim of prim_expr_un_op
          | EUArrayLen of unit
+         | EUiBoolNeg of unit
          | EUNat2Int of unit
          | EUInt2Nat of unit
          | EUPrintc of unit
@@ -221,6 +222,7 @@ fun str_expr_un_op opr =
       EUProj opr => str_proj opr
     | EUPrim opr => str_prim_expr_un_op opr
     | EUArrayLen () => "array_len"
+    | EUiBoolNeg () => "inot"
     | EUNat2Int () => "nat2int"
     | EUInt2Nat () => "int2nat"
     | EUPrintc () => "printc"

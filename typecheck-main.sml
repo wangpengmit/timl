@@ -739,6 +739,7 @@ fun is_value (e : U.expr) : bool =
            | EUPtrProj _ => false
            | EUArrayLen () => false
            | EUPrim _ => false
+           | EUiBoolNeg () => false
            | EUNat2Int () => false
            | EUInt2Nat () => false
            | EUPrintc () => false
@@ -1478,6 +1479,14 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (e, d, st) = check_mtype ctx_st (e, TArray (t, i))
           in
             (EUnOp (opr, e, r), TNat (i, r), d %%+ TN C_EArrayLen, st)
+          end
+	| U.EUnOp (opr as EUiBoolNeg (), e, r) =>
+          let
+            val r = U.get_region_e e_all
+            val i = fresh_i gctx sctx BSBool r
+            val (e, d, st) = check_mtype ctx_st (e, TiBool (i, r))
+          in
+            (EUnOp (opr, e, r), TiBool (INeg (i, r), r), d %%+ TN C_EiBoolNeg, st)
           end
 	| U.EUnOp (opr as EUNat2Int (), e, r) =>
           let

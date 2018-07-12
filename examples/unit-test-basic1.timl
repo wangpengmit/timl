@@ -5,9 +5,6 @@ structure UnitTestBasic1 = struct
 (* val () = __&halt 0x1111 *)
 (* val b = (f 64) using _ *)
                     
-(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
-(* (* fun assert p = if p then () else __&halt 0x11111111 *) *)
-
 val a = {1,2,3,}
 val a = empty_array using _, _
 val a = new_array (#0, 0x123) using _, _
@@ -273,18 +270,6 @@ val a = %twice f 0xdd
 (*            case a of *)
 (*                inl () => () *)
 
-fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
-
-(* fun assert p = if p then () else __&halt 0x11111111 *)
-(* val () = assert (1 < 2) *)
-(* val () = assert (not (2 < 1)) *)
-(* val () = assert (2 > 1) *)
-(* val () = assert (not (1 > 2)) *)
-(* val () = assert (1 <= 2) *)
-(* val () = assert (not (2 <= 1)) *)
-(* val () = assert (2 >= 1) *)
-(* val () = assert (not (1 >= 2)) *)
-           
 val a = (if 1 > 2 then 1 else 2) using _, _
 val a = (ifdec #1 #>= #2 then 1 else 2) using _, _
                                      
@@ -297,12 +282,35 @@ val a = #3 #* #2
 val a = #5 #/ #2
                                
 fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+fun assert p = if p then waste_time (); () else __&halt 0x11111111
+fun iassert (p : ibool {true}) = ifdec p then waste_time (); () else __&halt 0x11111111
+                                   
+val () = assert (1 < 2)
+val () = assert (not (2 < 1))
+val () = assert (2 > 1)
+val () = assert (not (1 > 2))
+val () = assert (1 <= 2)
+val () = assert (not (2 <= 1))
+val () = assert (2 >= 1)
+val () = assert (not (1 >= 2))
+           
+val () = iassert (#1 #< #2)
+val () = iassert (inot (#2 #< #1))
+val () = iassert (#2 #> #1)
+val () = iassert (inot (#1 #> #2))
+val () = iassert (#1 #<= #2)
+val () = iassert (inot (#2 #<= #1))
+val () = iassert (#2 #>= #1)
+val () = iassert (inot (#1 #>= #2))
+           
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
 
 fun fact_tail {n : Nat} (n : nat {n}, acc) =
   ifdec n #< #1 then waste_time (); acc
   else %fact_tail (n #- #1, __&nat2int n *acc) using $(1780*n+1651), 25*n+16
                  
 val a = (%fact_tail (#4, 1)) using _, _
+val () = assert (a = 24)
                   
 fun fact {n : Nat} (n : nat {n}) =
   ifdec n #< #1 then waste_time(); 1
@@ -310,7 +318,8 @@ fun fact {n : Nat} (n : nat {n}) =
     __&nat2int n * %fact (n #- #1) using $(2170*n+1454), 31*n+13
                  
 val a = (%fact #4) using _, _
-                 
-(* val () = __&halt a *)
+val () = assert (a = 24)
+                                            
+(* (* val () = __&halt a *) *)
               
 end

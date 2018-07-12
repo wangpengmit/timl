@@ -1088,17 +1088,25 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EUnOp (EUTiML (EUArrayLen ()), e), TNat i, j %%+ TN C_EArrayLen, st)
         end
-      | EUnOp (EUTiML (EUNat2Int ()), e) =>
+      | EUnOp (opr as EUTiML (EUiBoolNeg ()), e) =>
         let
           val (e, t, j, st) = tc (ctx, st) e
           val t = whnf itctx t
-          val i = case t of
-                            TNat data => data
-                          | _ => raise MTCError "ENat2Int"
+          val i = assert_TiBool_m t (fn msg => raise MTCError $ "EiBoolNeg" ^ msg)
           val e = if !anno_ENat2Int then e %: t else e
           val e = if !anno_ENat2Int_state then e %~ st else e
         in
-          (EUnOp (EUTiML (EUNat2Int ()), e), TInt, j %%+ TN C_ENat2Int, st)
+          (EUnOp (opr, e), TiBool $ INeg (i, dummy), j %%+ TN C_EiBoolNeg, st)
+        end
+      | EUnOp (opr as EUTiML (EUNat2Int ()), e) =>
+        let
+          val (e, t, j, st) = tc (ctx, st) e
+          val t = whnf itctx t
+          val i = assert_TNat_m t (fn msg => raise MTCError $ "ENat2Int" ^ msg)
+          val e = if !anno_ENat2Int then e %: t else e
+          val e = if !anno_ENat2Int_state then e %~ st else e
+        in
+          (EUnOp (opr, e), TInt, j %%+ TN C_ENat2Int, st)
         end
       | EUnOp (EUTiML (EUInt2Nat ()), e) =>
         let

@@ -295,6 +295,7 @@ fun impl_tuple_proj n = [PUSH_tuple_offset $ 32 * n, ADD (), MLOAD ()]
 fun impl_expr_un_op opr =
   case opr of
       EUPrim opr => impl_prim_expr_un_opr opr
+    | EUiBoolNeg () => [ISZERO ()]
     | EUNat2Int () => [NAT2INT ()]
     | EUInt2Nat () => [INT2NAT ()]
     | EUArrayLen () => [PUSH1nat 32, SWAP1, SUB (), MLOAD ()]

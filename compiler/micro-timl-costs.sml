@@ -145,6 +145,7 @@ fun C_Env name =
 fun C_EEnv name = C_Env name + C_Let
 val C_EPrintc = C_Printc + C_Var + C_Let
 fun C_EUPrim opr = C_UPrim opr + C_Var + C_Let
+val C_EiBoolNeg = C_EUPrim (EUPBoolNeg ())
 val C_EArrayLen = C_ArrayLen + C_Var + C_Let
 val C_ENat2Int = C_Nat2Int + C_Var + C_Let
 val C_EInt2Nat = C_Int2Nat + C_Var + C_Let
