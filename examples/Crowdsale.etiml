@@ -1,10 +1,6 @@
 pragma etiml ^0.1
 
-interface token = sig
-  fun transfer(receiver : address, amount : uint)
-end
-
-structure Util = struct
+structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
@@ -15,10 +11,12 @@ structure Util = struct
   val minute = 60
 end
 
+interface token = sig
+  fun transfer(receiver : address, amount : uint)
+end
+
 contract Crowdsale = struct
 
-  open Util
-       
   public state beneficiary : cell address
   public state fundingGoal : cell uint
   public state amountRaised : cell uint

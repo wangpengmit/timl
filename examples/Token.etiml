@@ -1,10 +1,6 @@
 pragma etiml ^0.1
 
-interface tokenRecipient = sig
-  public fun receiveApproval (_from : address, _value : uint256, _token : address, _extraData : bytes)
-end
-
-structure Util = struct
+structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
@@ -13,10 +9,12 @@ structure Util = struct
   val assert = require
 end
 
+interface tokenRecipient = sig
+  public fun receiveApproval (_from : address, _value : uint256, _token : address, _extraData : bytes)
+end
+
 contract TokenERC20 = struct
 
-  open Util
-                        
   (* Public variables of the token *)
   (* public state name : ref string *)
   (* public state symbol : ref string *)

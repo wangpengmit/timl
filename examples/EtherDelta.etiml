@@ -13,8 +13,6 @@ end
 
 structure SafeMath = struct
 
-  open Pervasive
-       
   internal fun safeMul (a : uint, b : uint) return uint =
     let c : uint = a * b;
     assert(a == 0 || c / a == b);
@@ -242,7 +240,7 @@ contract EtherDelta = struct
   fun depositToken (token : address, amount : uint) =
     (*remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.*)
     if (token==0) then throw end;
-    if not (call (attach token Token) transferFrom(msg.sender, this, amount)) then throw end;
+    if not (call false (attach token Token) transferFrom(msg.sender, this, amount)) then throw end;
     set tokens[token][msg.sender] safeAdd(tokens[token][msg.sender], amount);
     fire Deposit(token, msg.sender, amount, tokens[token][msg.sender])
 
@@ -250,7 +248,7 @@ contract EtherDelta = struct
     if (token==0) then throw end;
     if (tokens[token][msg.sender] < amount) then throw end;
     set tokens[token][msg.sender] safeSub(tokens[token][msg.sender], amount);
-    if not (call (attach token Token) transfer(msg.sender, amount)) then throw end;
+    if not (call false (attach token Token) transfer(msg.sender, amount)) then throw end;
     fire Withdraw(token, msg.sender, amount, tokens[token][msg.sender])
 
   fun balanceOf (token : address, user : address) constant return uint =
@@ -266,7 +264,7 @@ contract EtherDelta = struct
     let feeTakeXfer : uint = safeMul(amount, !!feeTake) / ether;
     let feeRebateXfer = ref 0;
     if (!!accountLevelsAddr != 0) then
-      let accountLevel : uint = call (attach accountLevelsAddr AccountLevels) accountLevel(user);
+      let accountLevel : uint = call 0 (attach accountLevelsAddr AccountLevels) accountLevel(user);
       if (accountLevel==1) then feeRebateXfer := safeMul(amount, !!feeRebate) / ether end;
       if (accountLevel==2) then feeRebateXfer := feeTakeXfer end
     end;
