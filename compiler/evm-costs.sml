@@ -88,9 +88,9 @@ val C_get_reg = C_PUSH + C_MLOAD
 val C_set_reg = C_PUSH + C_MSTORE
 val C_array_init_assign = 3 * C_DUP + C_ADD + C_MSTORE
                                                 
-val C_New_loop_test = 2 * C_PUSH + C_DUP + C_ISZERO + C_JUMPI
+val C_New_loop_test = C_JUMPDEST + 2 * C_PUSH + C_DUP + C_ISZERO + C_JUMPI
 val C_New_loop = C_New_loop_test + 2 * C_PUSH + C_UNPACKI + C_POP + C_SWAP + C_SUB + C_array_init_assign + C_JUMP
-val C_New_post_loop = C_UNPACKI + 3 * C_POP + C_SWAP + C_MARK_PreArray2ArrayPtr + C_set_reg
+val C_New_post_loop = C_JUMPDEST + C_UNPACKI + 3 * C_POP + C_SWAP + C_MARK_PreArray2ArrayPtr + C_set_reg
 
 val C_Ifi_branch_prelude = C_set_reg
 val C_Case_branch_prelude = C_PUSH + C_ADD + C_MLOAD + C_set_reg

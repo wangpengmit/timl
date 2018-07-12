@@ -642,6 +642,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         [PUSH1 WTT, DUP2, ISZERO ()] @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel post_loop_label, itctx), [inl $ FIV i])) @@
                         [JUMPI (), UNPACKI $ IBinder ("__n_neq0", dummy)] @@
+                        (* todo: should add a ASCTIME and ASCSPACE here using 'i' instead of 'i-1' to utilize the 'i>0' premise, which will be lost in the outer environment *)
                         (shift01_i_insts $
                         [POP (), PUSH1nat 32, SWAP1, SUB ()] @@
                         array_init_assign @@

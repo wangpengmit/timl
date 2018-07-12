@@ -250,8 +250,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     fun str_ts ts = surround "[" "]" $ join ",\n" $ map (trim o str_t) ts
     (* val () = println "tc() start: " *)
     (* val () = println $ str_ts sctx *)
-    (* val inst_input_str = EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctxn ()) inst *)
-    (* val () = print $ inst_input_str *)
+    val inst_input_str = EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctxn ()) inst
+    val () = print $ inst_input_str
     fun arith int_result nat_result name f =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
@@ -886,6 +886,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
   case insts of
       JUMP () =>
       let
+        val () = println "JUMP"
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
         val (st', rctx', sctx', i) = assert_TArrowEVM t0
@@ -919,7 +920,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
             JUMPI () =>
             let
               (* val () = println $ str_ts sctx *)
-              (* val () = println "JUMPI" *)
+              val () = println "JUMPI"
               val (t0, t1, sctx) = assert_cons2 sctx
             in
               case whnf itctx t1 of
@@ -1043,9 +1044,10 @@ fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
     val time = sc_against_sort ictx (time, STime)
     val space = sc_against_sort ictx (space, SNat)
     val st = sc_against_sort ictx (st, SState)
-    (* val () = println "before checking insts" *)
+    val () = println "before checking insts"
     val (i', ni) = tc_insts params (itctx, rctx, sctx, st) insts
-    (* val () = println "after checking insts" *)
+    val () = println "after checking insts"
+    (* todo: shouldn't be shift-and-close, should be close-and-forget *)
     val () = check_prop (i' %%<= shiftn_i_2i ni (time, space))
     val () = close_n $ ni + length ictx
     (* val () = println "tc_hval() finished" *)

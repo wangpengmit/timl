@@ -134,6 +134,7 @@
     * [ ] indexed nat
     * [ ] unindexed vectors as values of the above containers. An access to an element of an unindexed vector should include a length check.
 - [ ] TiML should support state polymorphism (i.e. treating the entire state as an index) as MicroTiML, in order to support the 'for' combinator for stateful computations.
+- [ ] Since TiML now has full support for record idx (IState) and record types (TRecord), we should change TRecord to be a type constructor that given a record idx constructs a record type. Then TiML is as powerful as Ur/Web!
 
 # To-do for MicroTiML
 
