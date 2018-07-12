@@ -642,8 +642,9 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         [PUSH1 WTT, DUP2, ISZERO ()] @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel post_loop_label, itctx), [inl $ FIV i])) @@
                         [JUMPI (), UNPACKI $ IBinder ("__n_neq0", dummy)] @@
-                        (* todo: should add a ASCTIME and ASCSPACE here using 'i' instead of 'i-1' to utilize the 'i>0' premise, which will be lost in the outer environment *)
                         (shift01_i_insts $
+                        [ASCTIME $ Inner $ IToReal (FIV i %* INat C_New_loop) %+ to_real C_New_post_loop %+ i_e] @@                 
+                        [ASCSPACE $ Inner space_e] @@                 
                         [POP (), PUSH1nat 32, SWAP1, SUB ()] @@
                         array_init_assign @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
@@ -663,7 +664,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         (shift01_i_insts $
                         [POP (), POP (), SWAP1, POP (), MARK_PreArray2ArrayPtr ()] @@
                         set_reg r @@
-                        cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArr (t, len)), st) e)
+                        cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArrayPtr (t, len, INat 32)), st) e)
                     val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N32 =? N0) %= Itrue
                     val block = ((st, rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], (to_real C_New_post_loop %+ i_e, space_e)), post_loop_code)
                     val block = close0_i_block i $ shift01_i_block block

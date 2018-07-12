@@ -8,11 +8,13 @@ structure UnitTestBasic1 = struct
 (* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
 (* (* fun assert p = if p then () else __&halt 0x11111111 *) *)
 
-(* val a = empty_array using _, _ *)
-(* val a = new_array (#5, 123) using _, _ *)
-(* (* val b = array_get (a, #1) *) *)
-(* (* val () = array_set (a, #1, 333) *) *)
-(* (* val b = array_get (a, #1) *) *)
+val a = {1,2,3,}
+val a = empty_array using _, _
+val a = new_array (#0, 0x123) using _, _
+val a = new_array (#5, 0x123) using _, _
+val b = array_get (a, #1)
+val () = array_set (a, #1, 0x333)
+val b = array_get (a, #1)
                                        
 val x = 1
 val f = fn y => 1 + y

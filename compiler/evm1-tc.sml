@@ -250,8 +250,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     fun str_ts ts = surround "[" "]" $ join ",\n" $ map (trim o str_t) ts
     (* val () = println "tc() start: " *)
     (* val () = println $ str_ts sctx *)
-    val inst_input_str = EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctxn ()) inst
-    val () = print $ inst_input_str
+    (* val inst_input_str = EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctxn ()) inst *)
+    (* val () = print $ inst_input_str *)
     fun arith int_result nat_result name f =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
@@ -887,7 +887,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
   case insts of
       JUMP () =>
       let
-        val () = println "JUMP"
+        (* val () = println "JUMP" *)
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
         val (st', rctx', sctx', i) = assert_TArrowEVM t0
@@ -921,7 +921,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
             JUMPI () =>
             let
               (* val () = println $ str_ts sctx *)
-              val () = println "JUMPI"
+              (* val () = println "JUMPI" *)
               val (t0, t1, sctx) = assert_cons2 sctx
             in
               case whnf itctx t1 of

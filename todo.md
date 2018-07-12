@@ -154,6 +154,7 @@
 - [ ] Add "let nat {i} = x in ..." to name the index of nat.
 - [ ] Add register-file polymorphism so that EVM snippets for new_array and string_concat can be shared instead of inlined.
 - [ ] pattern-ex.sml/remove_deep_many() should handle empty datatypes.
+- [ ] The changed EVM typechecker (checking ASCTIME without later premises) still works on example recursive functions annotated only with case's return clause, because TiML typechecker added EAscTime (_, return - adjust) to everybranch. This trick won't work when the truthfulness of 'return >= adjust' depends on local premises. A thorough solution should be having bi-directional typechecking on every level and in the 'check type' mode, passing in (total_time_spec, time_accumulated_already), and allowing time_accumulated_already to be larger than total_time_spec, because later code can introduce a 'false' premise.
 
 # To-do for Examples:
 
