@@ -1,6 +1,71 @@
 pragma etiml ^0.1
 
 structure Pervasive = struct
+  fun inc n = n + 1
+  fun dec n = n - 1
+  fun nat_inc {n : Nat} (n : nat {n}) = n #+ #1
+  fun nat_dec {n : Nat | n >= 1} (n : nat {n}) = n #- #1
+  fun addBy b a = a + b
+  fun subBy b a = a - b
+  fun orBy b a = a || b
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+                                                                                              
+fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 =
+  lets
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then waste_time (); acc
+      else
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+      end
+  in
+    %loop (start, init)
+  end
+  
+  fun require b = if b then waste_time (); () else (throw using _) end
+  val assert = require
+  val ether = 1000000000000000000
+  val minute = 60
+end
+
+contract owned = struct
+
+  public state owner : cell address = 0
+
+  public fun init () =
+    owner ::= msg.sender
+
+  public fun onlyOwner () =
+    require(msg.sender = !!owner)
+
+  public fun transferOwnership (newOwner : address) =
+    onlyOwner ();
+    owner ::= newOwner
+
+end
+
+interface Token = sig
+  public fun transferFrom(_from : address, _to : address, _value : uint256) return bool
+end
+
+contract tokenRecipient = struct
+
+    open Pervasive
+
+    event receivedEther(sender : address, amount : uint)
+    event receivedTokens(_from : address, _value : uint256, _token : address, _extraData : bytes)
+
+    public fun receiveApproval (_from : address, _value : uint256, _token : address(* , _extraData : bytes *)) =
+      let t = attach _token Token;
+      require(call false t transferFrom( _from, this, _value));
+      fire receivedTokens(_from, _value, _token, _extraData)
+
+    public fun default () payable =
+      fire receivedEther(msg.sender, msg.value)
+
+end
+
+contract Congress = struct inherit owned, tokenRecipient
+
   type Member = {
     member : address,
     (* name : string, *)
@@ -8,83 +73,8 @@ structure Pervasive = struct
   }
 
   fun copy_Member (t : storage Member, s : Member) =
-    (* &t->member ::= s.member; *)
+    &t->member ::= s.member;
     &t->memberSince ::= s.memberSince
-
-(*   fun inc n = n + 1 *)
-(*   fun dec n = n - 1 *)
-(*   fun nat_inc {n : Nat} (n : nat {n}) = n #+ #1 *)
-(*   fun nat_dec {n : Nat | n >= 1} (n : nat {n}) = n #- #1 *)
-(*   fun addBy b a = a + b *)
-(*   fun subBy b a = a - b *)
-(*   fun orBy b a = a || b *)
-(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
-                                                                                              
-(* fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 = *)
-(*   lets *)
-(*     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) = *)
-(*       ifi i #>= eend then waste_time (); acc *)
-(*       else *)
-(*         %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16 *)
-(*       end *)
-(*   in *)
-(*     %loop (start, init) *)
-(*   end *)
-  
-(*   fun require b = if b then waste_time (); () else (throw using _) end *)
-(*   val assert = require *)
-(*   val ether = 1000000000000000000 *)
-(*   val minute = 60 *)
-end
-
-(* contract owned = struct *)
-
-(*   public state owner : cell address = 0 *)
-
-(*   public fun init () = *)
-(*     owner ::= msg.sender *)
-
-(*   public fun onlyOwner () = *)
-(*     require(msg.sender = !!owner) *)
-
-(*   public fun transferOwnership (newOwner : address) = *)
-(*     onlyOwner (); *)
-(*     owner ::= newOwner *)
-
-(* end *)
-
-(* interface Token = sig *)
-(*   public fun transferFrom(_from : address, _to : address, _value : uint256) return bool *)
-(* end *)
-
-(* contract tokenRecipient = struct *)
-
-(*     open Pervasive *)
-
-(*     event receivedEther(sender : address, amount : uint) *)
-(*     event receivedTokens(_from : address, _value : uint256, _token : address, _extraData : bytes) *)
-
-(*     public fun receiveApproval (_from : address, _value : uint256, _token : address(* , _extraData : bytes *)) = *)
-(*       let t = attach _token Token; *)
-(*       require(call false t transferFrom( _from, this, _value)); *)
-(*       fire receivedTokens(_from, _value, _token, _extraData) *)
-
-(*     public fun default () payable = *)
-(*       fire receivedEther(msg.sender, msg.value) *)
-
-(* end *)
-
-(* contract Congress = struct inherit owned, tokenRecipient *)
-
-(*   type Member = { *)
-(*     member : address, *)
-(*     (* name : string, *) *)
-(*     memberSince : uint, *)
-(*   } *)
-
-(*   fun copy_Member (t : storage Member, s : Member) = *)
-(*     &t->member ::= s.member; *)
-(*     &t->memberSince ::= s.memberSince *)
 
   (* type Vote = { *)
   (*   inSupport : bool, *)
@@ -92,273 +82,273 @@ end
   (*   justification : string, *)
   (* } *)
 
-  (* type Proposal = { *)
-  (*   recipient : address, *)
-  (*   amount : uint, *)
-  (*   (* description : string, *) *)
-  (*   votingDeadline : uint, *)
-  (*   executed : bool, *)
-  (*   proposalPassed : bool, *)
-  (*   numberOfVotes : uint, *)
-  (*   currentResult : int, *)
-  (*   proposalHash : bytes32, *)
-  (*   (* votes : vector Vote, *) *)
-  (* } *)
+  type Proposal = {
+    recipient : address,
+    amount : uint,
+    (* description : string, *)
+    votingDeadline : uint,
+    executed : bool,
+    proposalPassed : bool,
+    numberOfVotes : uint,
+    currentResult : int,
+    proposalHash : bytes32,
+    (* votes : vector Vote, *)
+  }
 
-  (* fun copy_Member_s2s (t : storage Member, s : storage Member) = *)
-  (*   &t->member ::= deref s->member; *)
-  (*   &t->memberSince ::= deref s->memberSince *)
+  fun copy_Member_s2s (t : storage Member, s : storage Member) =
+    &t->member ::= deref s->member;
+    &t->memberSince ::= deref s->memberSince
 
-  (* (* Contract Variables and events *) *)
-  (* public state minimumQuorum : cell uint *)
-  (* public state debatingPeriodInMinutes : cell uint *)
-  (* public state majorityMargin : cell int *)
-  (* public state proposals : map uint (* Proposal *){ *)
-  (*   recipient : address, *)
-  (*   amount : uint, *)
-  (*   (* description : string, *) *)
-  (*   votingDeadline : uint, *)
-  (*   executed : bool, *)
-  (*   proposalPassed : bool, *)
-  (*   numberOfVotes : uint, *)
-  (*   currentResult : int, *)
-  (*   proposalHash : bytes32, *)
-  (*   (* votes : vector Vote, *) *)
-  (* } *)
-  (* public state voted : map uint (map address bool) *)
-  (* public state numProposals : cell uint *)
-  (* public state memberId : map address uint *)
-  (* public state members : map uint (* Member *){ *)
-  (*   member : address, *)
-  (*   (* name : string, *) *)
-  (*   memberSince : uint, *)
-  (* } *)
-  (* public state numMembers : icell *)
+  (* Contract Variables and events *)
+  public state minimumQuorum : cell uint
+  public state debatingPeriodInMinutes : cell uint
+  public state majorityMargin : cell int
+  public state proposals : map uint (* Proposal *){
+    recipient : address,
+    amount : uint,
+    (* description : string, *)
+    votingDeadline : uint,
+    executed : bool,
+    proposalPassed : bool,
+    numberOfVotes : uint,
+    currentResult : int,
+    proposalHash : bytes32,
+    (* votes : vector Vote, *)
+  }
+  public state voted : map uint (map address bool)
+  public state numProposals : cell uint
+  public state memberId : map address uint
+  public state members : map uint (* Member *){
+    member : address,
+    (* name : string, *)
+    memberSince : uint,
+  }
+  public state numMembers : icell
 
-  (* event ProposalAdded(proposalID : uint, recipient : address, amount : uint, description : string) *)
-  (* event Voted(proposalID : uint, position : bool, voter : address, justification : string) *)
-  (* event ProposalTallied(proposalID : uint, result : int, quorum : uint, active : bool) *)
-  (* event MembershipChanged(member : address, isMember : bool) *)
-  (* event ChangeOfRules(newMinimumQuorum : uint, newDebatingPeriodInMinutes : uint, newMajorityMargin : int) *)
+  event ProposalAdded(proposalID : uint, recipient : address, amount : uint, description : string)
+  event Voted(proposalID : uint, position : bool, voter : address, justification : string)
+  event ProposalTallied(proposalID : uint, result : int, quorum : uint, active : bool)
+  event MembershipChanged(member : address, isMember : bool)
+  event ChangeOfRules(newMinimumQuorum : uint, newDebatingPeriodInMinutes : uint, newMajorityMargin : int)
 
-(*   (* Modifier that allows only shareholders to vote and create new proposals *) *)
-(*   fun onlyMembers () = *)
-(*     require(memberId[msg.sender] != 0) *)
+  (* Modifier that allows only shareholders to vote and create new proposals *)
+  fun onlyMembers () =
+    require(memberId[msg.sender] != 0)
 
-(* (*    * Add member *) *)
-(* (*    * *) *)
-(* (*    * Make `targetMember` a member named `memberName` *) *)
-(* (*    * *) *)
-(* (*    * @param targetMember ethereum address to be added *) *)
-(* (*    * @param memberName public name for that member *) *)
-(*   public fun addMember {len : Nat} (targetMember : address(* , memberName : string *)) pre {numMembers : len} post {numMembers : len+1} guard onlyOwner = *)
-(*     require(memberId[targetMember] = 0); *)
-(*     let id = nat2int (!!numMembers); *)
-(*     modify numMembers %nat_inc; *)
-(*     set memberId[targetMember] id; *)
-(*     copy_Member(&members->[id], {member = targetMember, memberSince = now, (* name = memberName,  *)} : Member ); *)
-(*     fire MembershipChanged(targetMember, true) *)
+(*    * Add member *)
+(*    * *)
+(*    * Make `targetMember` a member named `memberName` *)
+(*    * *)
+(*    * @param targetMember ethereum address to be added *)
+(*    * @param memberName public name for that member *)
+  public fun addMember {len : Nat} (targetMember : address(* , memberName : string *)) pre {numMembers : len} post {numMembers : len+1} guard onlyOwner =
+    require(memberId[targetMember] = 0);
+    let id = nat2int (!!numMembers);
+    modify numMembers %nat_inc;
+    set memberId[targetMember] id;
+    copy_Member(&members->[id], {member = targetMember, memberSince = now, (* name = memberName,  *)} : Member );
+    fire MembershipChanged(targetMember, true)
 
-  (* public fun init ( *)
-  (*       minimumQuorumForProposals : uint, *)
-  (*       minutesForDebate : uint, *)
-  (*       marginOfVotesForMajority : int *)
-  (*   ) payable pre {numMembers : 0} post {numMembers : 2} = *)
-  (*   fire changeVotingRules(minimumQuorumForProposals, minutesForDebate, marginOfVotesForMajority); *)
-  (*   (* It’s necessary to add an empty first member *) *)
-  (*   %addMember(0(* , "" *)); *)
-  (*   (* and let's add the founder, to save a step later *) *)
-  (*   %addMember(!!owner(* , 'founder' *)) *)
+  public fun init (
+        minimumQuorumForProposals : uint,
+        minutesForDebate : uint,
+        marginOfVotesForMajority : int
+    ) payable pre {numMembers : 0} post {numMembers : 2} =
+    fire changeVotingRules(minimumQuorumForProposals, minutesForDebate, marginOfVotesForMajority);
+    (* It’s necessary to add an empty first member *)
+    %addMember(0(* , "" *));
+    (* and let's add the founder, to save a step later *)
+    %addMember(!!owner(* , 'founder' *))
 
-  (*  (** *) *)
-  (* (*   * Remove member *) *)
-  (* (*   * *) *)
-  (* (*   * @notice Remove membership from `targetMember` *) *)
-  (* (*   * *) *)
-  (* (*   * @param targetMember ethereum address to be removed *) *)
-  (* (*   *) *)
-  (* public fun removeMember {len : Nat | len > 0} (targetMember : address) pre {numMembers : len} post {numMembers : len-1} guard onlyOwner = *)
-  (*   require(memberId[targetMember] != 0); *)
-  (*   (* for (i : uint = memberId[targetMember]; i < length members - 1; inc) *) *)
-  (*   (*   set members[i] members[i+1] *) *)
-  (*   (* end; *) *)
-  (*   let begin = memberId[targetMember]; *)
-  (*   %for_ (#0, !!numMembers #- #1, (), fn {i | 0 <= i /\ i < len-1} (i : nat {i}, ()) => *)
-  (*     let i = nat2int i; *)
-  (*     if i >= begin then *)
-  (*       copy_Member_s2s (&members->[i], &members->[i+1]) *)
-  (*     end *)
-  (*   ); *)
-  (*   modify numMembers %nat_dec *)
+   (** *)
+  (*   * Remove member *)
+  (*   * *)
+  (*   * @notice Remove membership from `targetMember` *)
+  (*   * *)
+  (*   * @param targetMember ethereum address to be removed *)
+  (*   *)
+  public fun removeMember {len : Nat | len > 0} (targetMember : address) pre {numMembers : len} post {numMembers : len-1} guard onlyOwner =
+    require(memberId[targetMember] != 0);
+    (* for (i : uint = memberId[targetMember]; i < length members - 1; inc) *)
+    (*   set members[i] members[i+1] *)
+    (* end; *)
+    let begin = memberId[targetMember];
+    %for_ (#0, !!numMembers #- #1, (), fn {i | 0 <= i /\ i < len-1} (i : nat {i}, ()) =>
+      let i = nat2int i;
+      if i >= begin then
+        copy_Member_s2s (&members->[i], &members->[i+1])
+      end
+    );
+    modify numMembers %nat_dec
 
-(* (*    * Change voting rules *) *)
-(* (*    * *) *)
-(* (*    * Make so that proposals need to be discussed for at least `minutesForDebate/60` hours, *) *)
-(* (*    * have at least `minimumQuorumForProposals` votes, and have 50% + `marginOfVotesForMajority` votes to be executed *) *)
-(* (*    * *) *)
-(* (*    * @param minimumQuorumForProposals how many members must vote on a proposal for it to be executed *) *)
-(* (*    * @param minutesForDebate the minimum amount of delay between when a proposal is made and when it can be executed *) *)
-(* (*    * @param marginOfVotesForMajority the proposal needs to have 50% plus this number *) *)
-(*   public fun changeVotingRules ( *)
-(*         minimumQuorumForProposals : uint, *)
-(*         minutesForDebate : uint, *)
-(*         marginOfVotesForMajority : int *)
-(*     ) guard onlyOwner = *)
-(*     minimumQuorum ::= minimumQuorumForProposals; *)
-(*     debatingPeriodInMinutes ::= minutesForDebate; *)
-(*     majorityMargin ::= marginOfVotesForMajority; *)
+(*    * Change voting rules *)
+(*    * *)
+(*    * Make so that proposals need to be discussed for at least `minutesForDebate/60` hours, *)
+(*    * have at least `minimumQuorumForProposals` votes, and have 50% + `marginOfVotesForMajority` votes to be executed *)
+(*    * *)
+(*    * @param minimumQuorumForProposals how many members must vote on a proposal for it to be executed *)
+(*    * @param minutesForDebate the minimum amount of delay between when a proposal is made and when it can be executed *)
+(*    * @param marginOfVotesForMajority the proposal needs to have 50% plus this number *)
+  public fun changeVotingRules (
+        minimumQuorumForProposals : uint,
+        minutesForDebate : uint,
+        marginOfVotesForMajority : int
+    ) guard onlyOwner =
+    minimumQuorum ::= minimumQuorumForProposals;
+    debatingPeriodInMinutes ::= minutesForDebate;
+    majorityMargin ::= marginOfVotesForMajority;
 
-(*     fire ChangeOfRules(minimumQuorum, debatingPeriodInMinutes, majorityMargin) *)
+    fire ChangeOfRules(minimumQuorum, debatingPeriodInMinutes, majorityMargin)
 
-(*   fun copy_Proposal (t : storage Proposal, s : Proposal) = *)
-(*     &t->recipient ::= s.recipient; *)
-(*     &t->amount ::= s.amount; *)
-(*     &t->votingDeadline ::= s.votingDeadline; *)
-(*     &t->executed ::= s.executed; *)
-(*     &t->proposalPassed ::= s.proposalPassed; *)
-(*     &t->numberOfVotes ::= s.numberOfVotes; *)
-(*     &t->currentResult ::= s.currentResult; *)
-(*     &t->proposalHash ::= s.proposalHash *)
+  fun copy_Proposal (t : storage Proposal, s : Proposal) =
+    &t->recipient ::= s.recipient;
+    &t->amount ::= s.amount;
+    &t->votingDeadline ::= s.votingDeadline;
+    &t->executed ::= s.executed;
+    &t->proposalPassed ::= s.proposalPassed;
+    &t->numberOfVotes ::= s.numberOfVotes;
+    &t->currentResult ::= s.currentResult;
+    &t->proposalHash ::= s.proposalHash
 
-(* (*    * Add Proposal *) *)
-(* (*    * *) *)
-(* (*    * Propose to send `weiAmount / 1e18` ether to `beneficiary` for `jobDescription`. `transactionBytecode ? Contains : Does not contain` code. *) *)
-(* (*    * *) *)
-(* (*    * @param beneficiary who to send the ether to *) *)
-(* (*    * @param weiAmount amount of ether to send, in wei *) *)
-(* (*    * @param jobDescription Description of job *) *)
-(* (*    * @param transactionBytecode bytecode of transaction *) *)
-(* (*    *) *)
-(*   public fun newProposal {n1 n2 : Nat} ( *)
-(*         beneficiary : address, *)
-(*         weiAmount : uint, *)
-(*         jobDescription : string {n1}, *)
-(*         transactionBytecode : bytes {n2} *)
-(*     ) *)
-(*       guard onlyMembers *)
-(*       return uint = *)
-(*     let proposalID = !!numProposals; *)
-(*     copy_Proposal (&proposals->[proposalID], { *)
-(*       recipient = beneficiary, *)
-(*       amount = weiAmount, *)
-(*       (* description = jobDescription, *) *)
-(*       proposalHash = keccak256(beneficiary, weiAmount, transactionBytecode), *)
-(*       votingDeadline = now + !!debatingPeriodInMinutes * minute, *)
-(*       executed = false, *)
-(*       proposalPassed = false, *)
-(*       numberOfVotes = 0, *)
-(*       currentResult = 0, *)
-(*     } : Proposal); *)
-(*     fire ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription); *)
-(*     numProposals ::= proposalID+1; *)
-(*     proposalID *)
+(*    * Add Proposal *)
+(*    * *)
+(*    * Propose to send `weiAmount / 1e18` ether to `beneficiary` for `jobDescription`. `transactionBytecode ? Contains : Does not contain` code. *)
+(*    * *)
+(*    * @param beneficiary who to send the ether to *)
+(*    * @param weiAmount amount of ether to send, in wei *)
+(*    * @param jobDescription Description of job *)
+(*    * @param transactionBytecode bytecode of transaction *)
+(*    *)
+  public fun newProposal {n1 n2 : Nat} (
+        beneficiary : address,
+        weiAmount : uint,
+        jobDescription : string {n1},
+        transactionBytecode : bytes {n2}
+    )
+      guard onlyMembers
+      return uint =
+    let proposalID = !!numProposals;
+    copy_Proposal (&proposals->[proposalID], {
+      recipient = beneficiary,
+      amount = weiAmount,
+      (* description = jobDescription, *)
+      proposalHash = keccak256(beneficiary, weiAmount, transactionBytecode),
+      votingDeadline = now + !!debatingPeriodInMinutes * minute,
+      executed = false,
+      proposalPassed = false,
+      numberOfVotes = 0,
+      currentResult = 0,
+    } : Proposal);
+    fire ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription);
+    numProposals ::= proposalID+1;
+    proposalID
 
-(*   (** *) *)
-(* (*    * Add proposal in Ether *) *)
-(* (*    * *) *)
-(* (*    * Propose to send `etherAmount` ether to `beneficiary` for `jobDescription`. `transactionBytecode ? Contains : Does not contain` code. *) *)
-(* (*    * This is a convenience function to use if the amount to be given is in round number of ether units. *) *)
-(* (*    * *) *)
-(* (*    * @param beneficiary who to send the ether to *) *)
-(* (*    * @param etherAmount amount of ether to send *) *)
-(* (*    * @param jobDescription Description of job *) *)
-(* (*    * @param transactionBytecode bytecode of transaction *) *)
-(* (*    *) *)
-(*   public fun newProposalInEther {n1 n2 : Nat} ( *)
-(*         beneficiary : address, *)
-(*         etherAmount : uint, *)
-(*         jobDescription : string {n1}, *)
-(*         transactionBytecode : bytes {n2} *)
-(*     ) *)
-(*         guard onlyMembers *)
-(*         return uint = *)
-(*     %newProposal(beneficiary, etherAmount * ether, jobDescription, transactionBytecode) *)
+  (** *)
+(*    * Add proposal in Ether *)
+(*    * *)
+(*    * Propose to send `etherAmount` ether to `beneficiary` for `jobDescription`. `transactionBytecode ? Contains : Does not contain` code. *)
+(*    * This is a convenience function to use if the amount to be given is in round number of ether units. *)
+(*    * *)
+(*    * @param beneficiary who to send the ether to *)
+(*    * @param etherAmount amount of ether to send *)
+(*    * @param jobDescription Description of job *)
+(*    * @param transactionBytecode bytecode of transaction *)
+(*    *)
+  public fun newProposalInEther {n1 n2 : Nat} (
+        beneficiary : address,
+        etherAmount : uint,
+        jobDescription : string {n1},
+        transactionBytecode : bytes {n2}
+    )
+        guard onlyMembers
+        return uint =
+    %newProposal(beneficiary, etherAmount * ether, jobDescription, transactionBytecode)
 
-(* (*    * Check if a proposal code matches *) *)
-(* (*    * *) *)
-(* (*    * @param proposalNumber ID number of the proposal to query *) *)
-(* (*    * @param beneficiary who to send the ether to *) *)
-(* (*    * @param weiAmount amount of ether to send *) *)
-(* (*    * @param transactionBytecode bytecode of transaction *) *)
-(* (*    *) *)
-(*  (* According to http://solidity.readthedocs.io/en/latest/miscellaneous.html#modifiers : *) *)
-(* (*     pure for functions: Disallows modification or access of state - this is not enforced yet. *) *)
-(* (*     view for functions: Disallows modification of state - this is not enforced yet. *) *)
-(* (*     constant for state variables: Disallows assignment (except initialisation), does not occupy storage slot. *) *)
-(* (*     constant for functions: Same as view. *) *)
-(*   public fun checkProposalCode {n : Nat} ( *)
-(*         proposalNumber : uint, *)
-(*         beneficiary : address, *)
-(*         weiAmount : uint, *)
-(*         transactionBytecode : bytes {n} *)
-(*     )  constant *)
-(*         return bool = *)
-(*     let p = &proposals->[proposalNumber]; *)
-(*     deref p->proposalHash = keccak256(beneficiary, weiAmount, transactionBytecode) *)
+(*    * Check if a proposal code matches *)
+(*    * *)
+(*    * @param proposalNumber ID number of the proposal to query *)
+(*    * @param beneficiary who to send the ether to *)
+(*    * @param weiAmount amount of ether to send *)
+(*    * @param transactionBytecode bytecode of transaction *)
+(*    *)
+ (* According to http://solidity.readthedocs.io/en/latest/miscellaneous.html#modifiers : *)
+(*     pure for functions: Disallows modification or access of state - this is not enforced yet. *)
+(*     view for functions: Disallows modification of state - this is not enforced yet. *)
+(*     constant for state variables: Disallows assignment (except initialisation), does not occupy storage slot. *)
+(*     constant for functions: Same as view. *)
+  public fun checkProposalCode {n : Nat} (
+        proposalNumber : uint,
+        beneficiary : address,
+        weiAmount : uint,
+        transactionBytecode : bytes {n}
+    )  constant
+        return bool =
+    let p = &proposals->[proposalNumber];
+    deref p->proposalHash = keccak256(beneficiary, weiAmount, transactionBytecode)
 
-(*     fun validProposalNumber n () = *)
-(*       require (n < !!numProposals) *)
+    fun validProposalNumber n () =
+      require (n < !!numProposals)
               
-(*   (** *) *)
-(* (*    * Log a vote for a proposal *) *)
-(* (*    * *) *)
-(* (*    * Vote `supportsProposal? in support of : against` proposal #`proposalNumber` *) *)
-(* (*    * *) *)
-(* (*    * @param proposalNumber number of proposal *) *)
-(* (*    * @param supportsProposal either in favor or against it *) *)
-(* (*    * @param justificationText optional justification text *) *)
-(* (*    *) *)
-(*   public fun vote {n : Nat} ( *)
-(*         proposalNumber : uint, *)
-(*         supportsProposal : bool, *)
-(*         justificationText : string {n} *)
-(*     ) *)
-(*         guard onlyMembers, validProposalNumber proposalNumber *)
-(*         return uint = *)
-(*     let p = &proposals->[proposalNumber];         (* Get the proposal *) *)
-(*     require(not voted[proposalNumber][msg.sender]);         (* If has already voted, cancel *) *)
-(*     set voted[proposalNumber][msg.sender] true;              (* Set this voter as having voted *) *)
-(*     modify &p->numberOfVotes ++;                              (* Increase the number of votes *) *)
-(*     if supportsProposal then                         (* If they support the proposal *) *)
-(*       modify &p->currentResult ++                          (* Increase score *) *)
-(*     else                                         (* If they don't *) *)
-(*       modify &p->currentResult --                          (* Decrease the score *) *)
-(*     end; *)
+  (** *)
+(*    * Log a vote for a proposal *)
+(*    * *)
+(*    * Vote `supportsProposal? in support of : against` proposal #`proposalNumber` *)
+(*    * *)
+(*    * @param proposalNumber number of proposal *)
+(*    * @param supportsProposal either in favor or against it *)
+(*    * @param justificationText optional justification text *)
+(*    *)
+  public fun vote {n : Nat} (
+        proposalNumber : uint,
+        supportsProposal : bool,
+        justificationText : string {n}
+    )
+        guard onlyMembers, validProposalNumber proposalNumber
+        return uint =
+    let p = &proposals->[proposalNumber];         (* Get the proposal *)
+    require(not voted[proposalNumber][msg.sender]);         (* If has already voted, cancel *)
+    set voted[proposalNumber][msg.sender] true;              (* Set this voter as having voted *)
+    modify &p->numberOfVotes ++;                              (* Increase the number of votes *)
+    if supportsProposal then                         (* If they support the proposal *)
+      modify &p->currentResult ++                          (* Increase score *)
+    else                                         (* If they don't *)
+      modify &p->currentResult --                          (* Decrease the score *)
+    end;
 
-(*     (* Create a log of this event *) *)
-(*     fire Voted(proposalNumber,  supportsProposal, msg.sender, justificationText); *)
-(*     deref p->numberOfVotes *)
+    (* Create a log of this event *)
+    fire Voted(proposalNumber,  supportsProposal, msg.sender, justificationText);
+    deref p->numberOfVotes
 
-(*   (** *) *)
-(* (*    * Finish vote *) *)
-(* (*    * *) *)
-(* (*    * Count the votes proposal #`proposalNumber` and execute it if approved *) *)
-(* (*    * *) *)
-(* (*    * @param proposalNumber proposal number *) *)
-(* (*    * @param transactionBytecode optional: if the transaction contained a bytecode, you need to send it *) *)
-(* (*    *) *)
-(*   public fun executeProposal {n : Nat} (proposalNumber : uint, transactionBytecode : bytes {n}) = *)
-(*     let p = &proposals->[proposalNumber]; *)
-(*     require(now > deref p->votingDeadline                                            (* If it is past the voting deadline *) *)
-(*       && not (deref p->executed)                                                         (* and it has not already been executed *) *)
-(*       && deref p->proposalHash = keccak256(deref p->recipient, deref p->amount, transactionBytecode)  (* and the supplied code matches the proposal *) *)
-(*       && deref p->numberOfVotes >= !!minimumQuorum);                                  (* and a minimum quorum has been reached... *) *)
+  (** *)
+(*    * Finish vote *)
+(*    * *)
+(*    * Count the votes proposal #`proposalNumber` and execute it if approved *)
+(*    * *)
+(*    * @param proposalNumber proposal number *)
+(*    * @param transactionBytecode optional: if the transaction contained a bytecode, you need to send it *)
+(*    *)
+  public fun executeProposal {n : Nat} (proposalNumber : uint, transactionBytecode : bytes {n}) =
+    let p = &proposals->[proposalNumber];
+    require(now > deref p->votingDeadline                                            (* If it is past the voting deadline *)
+      && not (deref p->executed)                                                         (* and it has not already been executed *)
+      && deref p->proposalHash = keccak256(deref p->recipient, deref p->amount, transactionBytecode)  (* and the supplied code matches the proposal *)
+      && deref p->numberOfVotes >= !!minimumQuorum);                                  (* and a minimum quorum has been reached... *)
 
-(*     (* ...then execute result *) *)
+    (* ...then execute result *)
 
-(*     if deref p->currentResult > !!majorityMargin then *)
-(*       (* Proposal passed; execute the transaction *) *)
+    if deref p->currentResult > !!majorityMargin then
+      (* Proposal passed; execute the transaction *)
 
-(*       &p->executed ::= true; (* Avoid recursive calling *) *)
-(*       require(call_with_value false (deref p->recipient) (deref p->amount) transactionBytecode); *)
+      &p->executed ::= true; (* Avoid recursive calling *)
+      require(call_with_value false (deref p->recipient) (deref p->amount) transactionBytecode);
 
-(*       &p->proposalPassed ::= true *)
-(*     else *)
-(*       (* Proposal failed *) *)
-(*       &p->proposalPassed ::= false *)
-(*     end; *)
+      &p->proposalPassed ::= true
+    else
+      (* Proposal failed *)
+      &p->proposalPassed ::= false
+    end;
 
-(*     (* Fire Events *) *)
-(*     fire ProposalTallied(proposalNumber, !p.currentResult, !p.numberOfVotes, !p.proposalPassed) *)
+    (* Fire Events *)
+    fire ProposalTallied(proposalNumber, !p.currentResult, !p.numberOfVotes, !p.proposalPassed)
 
-(* end *)
+end

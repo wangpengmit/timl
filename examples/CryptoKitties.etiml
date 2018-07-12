@@ -667,7 +667,7 @@ contract KittyOwnership = struct inherit KittyBase
       else
         let totalCats = %totalSupply();
         let n = %imin (n, totalCats);
-        let result = new_array (n, 0) using $(140+59*(len-1)), len;
+        let result = new_array (n, 0) using $(141+60*(len-1)), len;
         let resultIndex : ref uint256 = ref 0;
 
         (* We count on the fact that all cats have IDs starting at 1 and increasing*)

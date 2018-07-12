@@ -1727,7 +1727,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                     SOME a => a
                   | NONE => raise Error (r, ["field not found"])
           in
-            (EUnOp (EUField (name, SOME offset), e, r), t, i, st)
+            (EUnOp (EUField (name, SOME offset), e, r), t, i %%+ TN C_EProj, st)
           end
 	(* | U.EBinOp (opr as EBMapPtr (path, _), e1, e2) => *)
         (*   let *)

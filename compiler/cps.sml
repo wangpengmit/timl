@@ -803,7 +803,22 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
               | EBVectorPushBack () => (N C_EVectorPushBack, N 0)
               | EBMapPtr () => (N C_EMapPtr, N 0)
               | EBStorageSet () => (N C_EStorageSet, N 0)
-              | EBNatCellSet () => (N C_ENatCellSet, N 0)
+              | EBNatCellSet () =>
+                let
+                  fun get_nat_cell st t1 =
+                    let
+                      val x = assert_TState t1 
+                      infix  9 @%!!
+                      val i = st @%!! x
+                    in
+                      (x, i)
+                    end
+                  val (x, old) = get_nat_cell st_e2 t_e1
+                  val new = assert_TNat_m t_e2 (fn s => raise Impossible $ "cps/ENetCellSet: " ^ s)
+                  val store_cost = set_cost old new
+                in
+                  (N C_ENatCellSet %+ store_cost, N 0)
+                end
         val (e, i_e) = cps (e2, t_e2) (e, mapFst IToReal' cost %%+ j_k) 
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e), NONE)
       in
