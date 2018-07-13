@@ -562,15 +562,15 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
     | TTuplePtr (ts, i, b) =>
       let
         val ts = map (kc_against_KType ctx) ts
-        val i = sc_against_sort ictx (i, SNat)
+        val () = assert_b "kc()/TTuplePtr" (i >= 0)
       in
         (TTuplePtr (ts, i, b), KType ())
       end
     | TPreTuple (ts, i, i2) =>
       let
         val ts = map (kc_against_KType ctx) ts
-        val i = sc_against_sort ictx (i, SNat)
-        val i2 = sc_against_sort ictx (i2, SNat)
+        val () = assert_b "kc()/TPreTuple" (i >= 0)
+        val () = assert_b "kc()/TPreTuple" (i2 >= 0)
       in
         (TPreTuple (ts, i, i2), KType ())
       end

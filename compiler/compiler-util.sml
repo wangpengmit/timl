@@ -17,6 +17,10 @@ fun assert_INat a =
   case a of
       IConst (ICNat a, _) => a
     | _ => raise assert_fail $ "assert_INat; got: " ^ (ExportPP.str_i $ ExportPP.export_i [] a)
+fun assert_INat_m a err =
+  case a of
+      IConst (ICNat a, _) => a
+    | _ => err $ "assert_INat; got: " ^ (ExportPP.str_i $ ExportPP.export_i [] a)
 fun assert_IBool a =
   case a of
       IConst (ICBool a, _) => a

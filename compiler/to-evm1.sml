@@ -99,7 +99,7 @@ fun assert_EState e =
       EState a => a
     | _ => raise assert_fail "assert_EState"
 
-fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
+fun TProd (a, b) = TMemTuplePtr ([a, b], 0)
 
 fun flatten_tuple_record t =
   let
@@ -154,7 +154,7 @@ fun cg_ty_visitor_vtable cast () =
           let
             val cg_t = #visit_ty (cast this) this env
           in
-            TMemTuplePtr (map cg_t ts, N 0)
+            TMemTuplePtr (map cg_t ts, 0)
           end
         | TRecord fields =>
           let
@@ -167,7 +167,7 @@ fun cg_ty_visitor_vtable cast () =
             val ts = flatten_tuple_record t
             val ts = visit_list (#visit_ty vtable this) env ts
           in
-            TStorageTuplePtr (ts, N0)
+            TStorageTuplePtr (ts, 0)
           end
         | TMap t =>
           let

@@ -137,8 +137,8 @@ fun default_ty_visitor_vtable
                        visit_pair (#visit_idx vtable this) (#visit_idx vtable this) env i2)
           | TPreArray (t, i1, i2, b) => TPreArray (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2, b)
           | TArrayPtr (t, i1, i2) => TArrayPtr (#visit_ty vtable this env t, #visit_idx vtable this env i1, #visit_idx vtable this env i2)
-          | TPreTuple (ts, i, i2) => TPreTuple (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, #visit_idx vtable this env i2)
-          | TTuplePtr (ts, i, b) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, #visit_idx vtable this env i, b)
+          | TPreTuple (ts, i, i2) => TPreTuple (visit_list (#visit_ty vtable this) env ts, i, i2)
+          | TTuplePtr (ts, i, b) => TTuplePtr (visit_list (#visit_ty vtable this) env ts, i, b)
           | TVectorPtr (x, i) => TVectorPtr (x, #visit_idx vtable this env i)
           | TTuple ts => TTuple (visit_list (#visit_ty vtable this) env ts)
           | TRecord fields => TRecord $ SMap.map (#visit_ty vtable this env) fields

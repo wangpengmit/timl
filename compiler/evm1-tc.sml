@@ -37,6 +37,7 @@ infix 7 %/
 infix 6 %-
         
 infix 6 %%-
+infix 6 %%%-
 
 fun a %/ b =
   case simp_i b of
@@ -73,12 +74,10 @@ fun assert_TCell t =
   in
     case t of
         TTuplePtr (ts, offset, true) =>
-        (case Simp.simp_i offset of
-             IConst (ICNat n, _) =>
-             (case nth_error ts n of
-                  SOME t => t
-                | NONE => err ())
-           | _ => err ())
+        (case nth_error ts offset of
+             SOME t => t
+           | NONE => err ()
+        )
       | _ => err ()
   end
 
@@ -287,6 +286,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     fun add_space j = unop_ref (fn i => i %+ j) space_ref
     fun add_ishift n = unop_ref (fn m => m + n) ishift_ref
     fun open_with pair = (add_ishift 1; open_sorting pair)
+    fun assert_INat_simp i = assert_INat_m (Simp.simp_i i) (fn msg => raise Impossible $ "tc_inst/assert_INat: " ^ msg)
     val ctx = 
   case inst of
       ADD () =>
@@ -296,10 +296,10 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
             case (t0, t1) of
                 (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TInt
               | (TNat i0, TNat i1) => TNat $ i1 %+ i0
-              | (TNat i, TTuplePtr (ts, offset, b)) => TTuplePtr (ts, offset %+ i, b)
-              | (TTuplePtr (ts, offset, b), TNat i) => TTuplePtr (ts, offset %+ i, b)
-              | (TNat i, TPreTuple (ts, offset, inited)) => TPreTuple (ts, offset %+ i, inited)
-              | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset %+ i, inited)
+              | (TNat i, TTuplePtr (ts, offset, b)) => TTuplePtr (ts, offset + assert_INat_simp i, b)
+              | (TTuplePtr (ts, offset, b), TNat i) => TTuplePtr (ts, offset + assert_INat_simp i, b)
+              | (TNat i, TPreTuple (ts, offset, inited)) => TPreTuple (ts, offset + assert_INat_simp i, inited)
+              | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset + assert_INat_simp i, inited)
               | (TNat i, TArrayPtr (t, len, offset)) => TArrayPtr (t, len, offset %+ i)
               | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %+ i)
               | (TVectorPtr (x, offset), TNat i) => TVectorPtr (x, offset %+ i)
@@ -311,12 +311,13 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         fun a %%- b = (check_prop (a %>= b); a %- b)
+        fun a %%%- b = (assert_b "tc_inst/a>=b" (a >= b); a - b)
         val t =
             case (t0, t1) of
                 (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TInt
               | (TNat i0, TNat i1) => TNat $ i0 %%- i1
-              | (TTuplePtr (ts, offset, b), TNat i) => TTuplePtr (ts, offset %%- i, b)
-              | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset %%- i, inited)
+              | (TTuplePtr (ts, offset, b), TNat i) => TTuplePtr (ts, offset %%%- assert_INat_simp i, b)
+              | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset %%%- assert_INat_simp i, inited)
               | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %%- i)
               | (TVectorPtr (x, offset), TNat i) => TVectorPtr (x, offset %%- i)
               | _ => raise Impossible $ sprintf "SUB: can't subtract operands of types ($) and ($)" [str_t t0, str_t t1]
@@ -419,13 +420,11 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                             | NONE => raise Impossible $ sprintf "MLOAD: reg$'s type is unknown" [str_int n])
                        | NONE => def ())
                   | _ => def ())
-              | TTuplePtr (ts, offset, false) =>
-                (case simp_i offset of
-                     IConst (ICNat n, _) =>
-                     (case is_tuple_offset (length ts) n of
-                          SOME n => List.nth (ts, n)
-                        | NONE => raise Impossible $ sprintf "MLOAD: bad offset in type ($)" [str_t t0])
-                   | _ => raise Impossible $ sprintf "MLOAD: unknown offset in type ($)" [str_t t0])
+              | TTuplePtr (ts, n, false) =>
+                (case is_tuple_offset (length ts) n of
+                     SOME n => List.nth (ts, n)
+                   | NONE => raise Impossible $ sprintf "MLOAD: bad offset in type ($)" [str_t t0]
+                )
               | TArrayPtr (t, len, offset) =>
                 let
                   fun read () = (check_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); t)
@@ -671,23 +670,23 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val len = length ts
         val () = add_space $ N len
       in
-        (add_stack (TPreTuple (ts, N0, INat len)) ctx)
+        (add_stack (TPreTuple (ts, 0, len)) ctx)
       end
     | MACRO_tuple_assign () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val (ts, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t1
-        val () = check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest_inited)
-        val n = assert_INat $ simp_i lowest_inited
-        val () = is_eq_ty itctx (t0, List.nth (ts, n-1))
+        val () = assert_b "tc_inst/MACRO_tuple_assign" (offset >= 0 andalso offset mod 32 = 0 andalso (offset div 32) + 1 = lowest_inited)
+        (* val () = check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest_inited) *)
+        val () = is_eq_ty itctx (t0, List.nth (ts, lowest_inited - 1))
       in
-        ((itctx, rctx, TPreTuple (ts, offset, lowest_inited %- N1) :: sctx, st))
+        ((itctx, rctx, TPreTuple (ts, offset, lowest_inited - 1) :: sctx, st))
       end
     | MARK_PreTuple2TuplePtr () =>
       let
         val (t0, sctx) = assert_cons sctx
         val (t, offset, lowest_inited) = assert_TPreTuple $ whnf itctx t0
-        val () = check_prop (lowest_inited %= N0)
+        val () = assert_b "tc_inst/MARK_PreTuple2TuplePtr" (lowest_inited = 0)
       in
         ((itctx, rctx, TTuplePtr (t, offset, false) :: sctx, st))
       end
@@ -727,18 +726,17 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val ts = assert_TTuple $ assert_TMap $ assert_TCell t1
         val () = assert_TInt t0
       in
-        ((itctx, rctx, TStorageTuplePtr (ts, INat 0) :: sctx, st))
+        ((itctx, rctx, TStorageTuplePtr (ts, 0) :: sctx, st))
       end
     | InstRestrictPtr len =>
       let
         val (t0, sctx) = assert_cons sctx
         val t0 = whnf itctx t0
         val (ts, offset) = assert_TStorageTuplePtr t0
-        val offset = assert_INat $ simp_i offset
         val () = assert_b "InstRestrictPtr/assert()" $ offset + len <= length ts
         val ts = take len $ drop offset ts
       in
-        ((itctx, rctx, TStorageTuplePtr (ts, INat 0) :: sctx, st))
+        ((itctx, rctx, TStorageTuplePtr (ts, 0) :: sctx, st))
       end
     | SLOAD () => 
       let
@@ -841,7 +839,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     ret
   end
       
-fun TProd (a, b) = TMemTuplePtr ([a, b], N 0)
+fun TProd (a, b) = TMemTuplePtr ([a, b], 0)
 
 infix 6 %%+ 
 infix 4 %%<=

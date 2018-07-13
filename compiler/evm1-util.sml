@@ -52,7 +52,7 @@ fun N a = INat (a, dummy)
 fun T a = ITime (a, dummy)
 val N32 = N 32
 
-fun TCell t = TStorageTuplePtr ([t], N 0)
+fun TCell t = TStorageTuplePtr ([t], 0)
                         
 fun assert_TTuple t =
   case t of

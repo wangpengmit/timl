@@ -204,12 +204,12 @@ fun default_ty_visitor2_vtable
           | TPreTuple (ts, i, i2) =>
             (case other of
                  TPreTuple (ts', i', i2') =>
-                 TPreTuple (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i', #visit2_idx vtable this env i2 i2')
+                 TPreTuple (visit2_list (#visit2_ty vtable this) env ts ts', visit2_eq op= this env i i', visit2_eq op= this env i2 i2')
                | _ => error (TPreTuple (ts, i, i2)) other)
           | TTuplePtr (data as (ts, i, b)) =>
             (case other of
                  TTuplePtr (ts', i', b') =>
-                 TTuplePtr (visit2_list (#visit2_ty vtable this) env ts ts', #visit2_idx vtable this env i i', visit2_eq op= this env b b')
+                 TTuplePtr (visit2_list (#visit2_ty vtable this) env ts ts', visit2_eq op= this env i i', visit2_eq op= this env b b')
                | _ => error (TTuplePtr data) other)
           | TVectorPtr (data as (x, i)) =>
             (case other of

@@ -351,7 +351,7 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           space ();
           str "(";
           app (fn t => (pp_t t; comma ())) ts;
-          str $ str_i i;
+          str $ str_int i;
           comma ();
           str $ str_bool b;
           str ")";
@@ -364,9 +364,9 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           space ();
           str "(";
           app (fn t => (pp_t t; comma ())) ts;
-          str $ str_i i;
+          str $ str_int i;
           comma ();
-          str $ str_i i2;
+          str $ str_int i2;
           str ")";
           close_box ()
         )
