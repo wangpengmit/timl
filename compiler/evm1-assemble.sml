@@ -23,22 +23,6 @@ fun w2i w =
       WConst c => wc2i c
     | _ => inl 0
 
-fun hex_fn fmt nBytes i =
-  let
-    val n = nBytes * 2
-    val s = fmt StringCvt.HEX i
-    val len = String.size s
-    val s = if len > n then String.extract (s, len-n, NONE)
-            else s
-    val s = StringCvt.padLeft #"0" n s
-  in
-    s
-  end
-
-fun hex len n = hex_fn Int.fmt len n
-
-fun hex_str len s = hex_fn LargeInt.fmt len $ str2int_large s
-
 fun enc inst =
   let
     fun macro name = raise Impossible $ "Can't assemble instruction " ^ name

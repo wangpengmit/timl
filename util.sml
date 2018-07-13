@@ -601,6 +601,26 @@ fun str2int a = str2int_fn Int.scan a
 fun scan_large a = scan_fn LargeInt.scan a
 fun str2int_large a = str2int_fn LargeInt.scan a
                                         
+fun hex_fn fmt nBytes i =
+  let
+    val n = nBytes * 2
+    val s = fmt StringCvt.HEX i
+    val len = String.size s
+    val s = if len > n then String.extract (s, len-n, NONE)
+            else s
+    val s = StringCvt.padLeft #"0" n s
+  in
+    s
+  end
+
+fun hex len n = hex_fn Int.fmt len n
+
+fun hex_str len s = hex_fn LargeInt.fmt len $ str2int_large s
+
+(* todo: implement *)
+fun short_str s =
+  "0x" ^ String.translate (fn c => hex 2 $ Char.ord c) s
+
 fun bounded_minus a b = max 0 $ a - b
 
 (* types that avoids the use of parameter-less constructor NONE to prevent misspelling in patterns *)

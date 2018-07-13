@@ -321,10 +321,6 @@ fun FmUsing (i, j) = [FmTime i] @ option2list (Option.map FmSpace j)
 type typing = id * ty
 type indexed_typing = id * (ty * bool)
 
-(* todo: implement *)
-fun short_str s =
-  s
-
 fun make_sort_bind_idx2 (binds, i2) = map (attach_snd i2) binds
   
 end

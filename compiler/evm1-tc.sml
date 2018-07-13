@@ -396,7 +396,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | AND () => and_or "AND" op/\?
     | OR () => and_or "OR" op\/?
-    | XOR () => and_or "XOR" (raise Impossible "XOR can't operate on iBool")
+    | XOR () => and_or "XOR" IXor
     | POP () =>
       let
         val (t0, sctx) = assert_cons sctx
@@ -998,7 +998,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
               (shiftn_i_2i ni2 i1 %%+ i2, ni1 + ni2)
             end
       end
-    fun extra_msg () = "\nwhen typechecking\n" ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (NONE, SOME 5) (itctx_names itctx) insts)
+    fun extra_msg () = "\nwhen typechecking\n" ^ (EVM1ExportPP.pp_insts_to_string $ EVM1ExportPP.export_insts (SOME 3, SOME 5) (itctx_names itctx) insts)
     val ret = main ()
               handle
               Impossible m => raise Impossible (m ^ extra_msg ())
