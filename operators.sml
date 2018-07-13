@@ -150,20 +150,20 @@ fun str_expr_const c =
     | ECByte c => str_char c
 (* | ECString s => surround "\"" "\"" s *)
                                 
-(* projector for product type *)
-datatype projector =
-         ProjFst of unit
-         | ProjSnd of unit
+(* (* projector for product type *) *)
+(* datatype projector = *)
+(*          ProjFst of unit *)
+(*          | ProjSnd of unit *)
 
-fun str_proj opr =
-  case opr of
-      ProjFst () => "fst"
-    | ProjSnd () => "snd"
+(* fun str_proj opr = *)
+(*   case opr of *)
+(*       ProjFst () => "fst" *)
+(*     | ProjSnd () => "snd" *)
 
-fun choose (t1, t2) proj =
-  case proj of
-      ProjFst () => t1
-    | ProjSnd () => t2
+(* fun choose (t1, t2) proj = *)
+(*   case proj of *)
+(*       ProjFst () => t1 *)
+(*     | ProjSnd () => t2 *)
                                  
 datatype expr_anno =
          EALiveVars of int(* num of live vars afterwards *) * bool(*does it have continuation?*)
@@ -201,7 +201,7 @@ fun str_prim_expr_un_op opr =
 type tuple_record_proj = (int, string) sum
        
 datatype expr_un_op =
-         EUProj of projector
+         EUProj of int
          | EUPrim of prim_expr_un_op
          | EUArrayLen of unit
          | EUiBoolNeg of unit
@@ -219,7 +219,7 @@ datatype expr_un_op =
 
 fun str_expr_un_op opr = 
   case opr of
-      EUProj opr => str_proj opr
+      EUProj n => "proj" ^ str_int n
     | EUPrim opr => str_prim_expr_un_op opr
     | EUArrayLen () => "array_len"
     | EUiBoolNeg () => "inot"
@@ -371,7 +371,7 @@ fun pretty_str_nat_cmp opr =
                     
 datatype expr_bin_op =
          EBApp of unit
-         | EBPair of unit
+         (* | EBPair of unit *)
          | EBNew of unit
          | EBRead of unit
          | EBVectorGet of unit
@@ -388,7 +388,7 @@ datatype expr_bin_op =
 fun str_expr_bin_op opr =
   case opr of
       EBApp _ => "app"
-    | EBPair () => "pair"
+    (* | EBPair () => "pair" *)
     | EBNew () => "new"
     | EBRead () => "read"
     | EBPrim opr => str_prim_expr_bin_op opr
@@ -405,7 +405,7 @@ fun str_expr_bin_op opr =
 fun pretty_str_expr_bin_op opr =
   case opr of
       EBApp _ => "$"
-    | EBPair () => "pair"
+    (* | EBPair () => "pair" *)
     | EBNew () => "new"
     | EBRead () => "read"
     | EBPrim opr => pretty_str_prim_expr_bin_op opr

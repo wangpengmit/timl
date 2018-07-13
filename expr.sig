@@ -34,6 +34,7 @@ signature EXPR = sig
            | EET of Operators.expr_ET * expr * mtype
            | ET of Operators.expr_T * mtype * Region.region
            | ERecord of expr SMap.map * Region.region
+           | ETuple of expr list
            | ENewArrayValues of mtype * expr list * Region.region
 	   | EAbs of idx StMap.map * (ptrn, expr) Unbound.bind * (idx * idx) option
 	   | EAbsI of (sort, expr) Binders.ibind_anno * Region.region

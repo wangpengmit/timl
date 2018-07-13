@@ -29,13 +29,14 @@ val TInt = TConst TCInt
 val TBool = TConst TCBool
 val TByte = TConst TCByte
 fun TSum (t1, t2) = TBinOp (TBSum (), t1, t2)
-fun TProd (t1, t2) = TBinOp (TBProd (), t1, t2)
+(* fun TProd (t1, t2) = TBinOp (TBProd (), t1, t2) *)
+fun TProd (t1, t2) = TTuple [t1, t2]          
 fun TAppIs (t, is) = foldl (swap TAppI) t is
 fun TAppTs (t, ts) = foldl (swap TAppT) t ts
 fun TMemTuplePtr (ts, i) = TTuplePtr (ts, i, false)
 fun TStorageTuplePtr (ts, i) = TTuplePtr (ts, i, true)
          
-fun EPair (e1, e2) = EBinOp (EBPair (), e1, e2)
+fun EPair (e1, e2) = ETuple [e1, e2]
 fun EProj (proj, e) = EUnOp (EUTiML $ EUProj proj, e)
 fun EFst e = EProj (ProjFst (), e)
 fun ESnd e = EProj (ProjSnd (), e)

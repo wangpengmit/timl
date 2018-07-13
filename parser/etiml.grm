@@ -305,6 +305,7 @@ open Ast
        | index_or_proj_star of index_proj_path
        | stmt of exp
        | stmts of exp list
+       | ty_tuple of ty list
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
 
@@ -617,7 +618,10 @@ ty : ty_term (ty_term)
    | FUNTYPE state ty DDASH idx COMMA idx LARROW ty (TArrowWithPre ((ty1, state), (idx1, idx2), ty2, (ty1left, ty2right)))
    | ty ARROW ty (TPureArrow (ty1, (IVar (underscore (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
    | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
-   | ty MULT ty (TProd (ty1, ty2, (ty1left, ty2right)))
+   | ty_tuple (TTuple (ty_tuple, (ty_tupleleft, ty_tupleright)))
+
+ty_tuple : ty_term ([ty_term])
+         | ty_tuple MULT ty_tuple (ty_tuple1 @ ty_tuple2)
 
 ty_term : aty (aty)
         | ty_term aty (TAppT (ty_term, aty, (ty_termleft, atyright)))

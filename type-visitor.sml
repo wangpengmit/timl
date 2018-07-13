@@ -26,7 +26,7 @@ type ('this, 'env) type_visitor_vtable =
        visit_TArray : 'this -> 'env -> mtype * idx -> T.mtype,
        visit_TBase : 'this -> 'env -> base_type * region -> T.mtype,
        visit_TUnit : 'this -> 'env -> region -> T.mtype,
-       visit_TProd : 'this -> 'env -> mtype * mtype -> T.mtype,
+       (* visit_TProd : 'this -> 'env -> mtype * mtype -> T.mtype, *)
        visit_TUniI : 'this -> 'env -> sort * (name * ((idx * idx) * mtype)) Bind.ibind * region -> T.mtype,
        visit_TVar : 'this -> 'env -> var -> T.mtype,
        visit_TAbs : 'this -> 'env -> kind * (name * mtype) Bind.tbind * region -> T.mtype,
@@ -101,7 +101,7 @@ fun default_type_visitor_vtable
           | TArray data => #visit_TArray vtable this env data
 	  | TBase data => #visit_TBase vtable this env data
           | TUnit data => #visit_TUnit vtable this env data
-	  | TProd data => #visit_TProd vtable this env data
+	  (* | TProd data => #visit_TProd vtable this env data *)
 	  | TUniI data => #visit_TUniI vtable this env data
           | TVar data => #visit_TVar vtable this env data
           | TAbs data => #visit_TAbs vtable this env data
@@ -152,15 +152,15 @@ fun default_type_visitor_vtable
       T.TBase data
     fun visit_TUnit this env data =
       T.TUnit data
-    fun visit_TProd this env data =
-      let
-        val vtable = cast this
-        val (t1, t2) = data
-        val t1 = #visit_mtype vtable this env t1
-        val t2 = #visit_mtype vtable this env t2
-      in
-        T.TProd (t1, t2)
-      end
+    (* fun visit_TProd this env data = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val (t1, t2) = data *)
+    (*     val t1 = #visit_mtype vtable this env t1 *)
+    (*     val t2 = #visit_mtype vtable this env t2 *)
+    (*   in *)
+    (*     T.TProd (t1, t2) *)
+    (*   end *)
     fun visit_ibind this =
       let
         val vtable = cast this
@@ -337,7 +337,7 @@ fun default_type_visitor_vtable
       visit_TArray = visit_TArray,
       visit_TBase = visit_TBase,
       visit_TUnit = visit_TUnit,
-      visit_TProd = visit_TProd,
+      (* visit_TProd = visit_TProd, *)
       visit_TUniI = visit_TUniI,
       visit_TVar = visit_TVar,
       visit_TAbs = visit_TAbs,
@@ -373,7 +373,7 @@ fun override_visit_mtype (record : ('this, 'env) type_visitor_vtable) new =
     visit_TArray = #visit_TArray record,
     visit_TBase = #visit_TBase record,
     visit_TUnit = #visit_TUnit record,
-    visit_TProd = #visit_TProd record,
+    (* visit_TProd = #visit_TProd record, *)
     visit_TUniI = #visit_TUniI record,
     visit_TVar = #visit_TVar record,
     visit_TAbs = #visit_TAbs record,
@@ -408,7 +408,7 @@ fun override_visit_TVar (record : ('this, 'env) type_visitor_vtable) new =
     visit_TArray = #visit_TArray record,
     visit_TBase = #visit_TBase record,
     visit_TUnit = #visit_TUnit record,
-    visit_TProd = #visit_TProd record,
+    (* visit_TProd = #visit_TProd record, *)
     visit_TUniI = #visit_TUniI record,
     visit_TVar = new,
     visit_TAbs = #visit_TAbs record,
@@ -443,7 +443,7 @@ fun override_visit_TAppI (record : ('this, 'env) type_visitor_vtable) new =
     visit_TArray = #visit_TArray record,
     visit_TBase = #visit_TBase record,
     visit_TUnit = #visit_TUnit record,
-    visit_TProd = #visit_TProd record,
+    (* visit_TProd = #visit_TProd record, *)
     visit_TUniI = #visit_TUniI record,
     visit_TVar = #visit_TVar record,
     visit_TAbs = #visit_TAbs record,
@@ -478,7 +478,7 @@ fun override_visit_TApp (record : ('this, 'env) type_visitor_vtable) new =
     visit_TArray = #visit_TArray record,
     visit_TBase = #visit_TBase record,
     visit_TUnit = #visit_TUnit record,
-    visit_TProd = #visit_TProd record,
+    (* visit_TProd = #visit_TProd record, *)
     visit_TUniI = #visit_TUniI record,
     visit_TVar = #visit_TVar record,
     visit_TAbs = #visit_TAbs record,
@@ -513,7 +513,7 @@ fun override_visit_TUVar (record : ('this, 'env) type_visitor_vtable) new =
     visit_TArray = #visit_TArray record,
     visit_TBase = #visit_TBase record,
     visit_TUnit = #visit_TUnit record,
-    visit_TProd = #visit_TProd record,
+    (* visit_TProd = #visit_TProd record, *)
     visit_TUniI = #visit_TUniI record,
     visit_TVar = #visit_TVar record,
     visit_TAbs = #visit_TAbs record,
@@ -548,7 +548,7 @@ fun override_extend_t_anno (record : ('this, 'env) type_visitor_vtable) new =
     visit_TArray = #visit_TArray record,
     visit_TBase = #visit_TBase record,
     visit_TUnit = #visit_TUnit record,
-    visit_TProd = #visit_TProd record,
+    (* visit_TProd = #visit_TProd record, *)
     visit_TUniI = #visit_TUniI record,
     visit_TVar = #visit_TVar record,
     visit_TAbs = #visit_TAbs record,

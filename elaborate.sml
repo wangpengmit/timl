@@ -299,7 +299,8 @@ local
       | S.PnTuple (pns, r) =>
         (case pns of
              [] => PnTT r
-           | pn :: pns => foldl (fn (pn2, pn1) => PnPair (pn1, elab_pn pn2)) (elab_pn pn) pns)
+           | pn :: pns => foldl (fn (pn2, pn1) => PnPair (pn1, elab_pn pn2)) (elab_pn pn) pns
+        )
       | S.PnAlias (name, pn, r) =>
         PnAlias (Binder $ EName name, elab_pn pn, r)
       | S.PnAnno (pn, t, r) =>
@@ -431,7 +432,9 @@ local
       | S.ETuple (es, r) =>
 	(case es of
 	     [] => ETT r
-	   | e :: es => foldl (fn (e2, e1) => EPair (e1, elab e2)) (elab e) es)
+           | [e] => elab e
+	   | _ :: _ => ETuple $ map elab es
+        )
       | S.EAbs (binds, mods, e, r) =>
 	let 
           val (pre, post, t, d, j, guards) = process_mods mods

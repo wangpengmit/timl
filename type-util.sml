@@ -6,6 +6,8 @@ open Bind
        
 infixr 0 $
 
+fun TProd (t1, t2) = TTuple [t1, t2]          
+         
 fun collect_TUniI t =
   case t of
       TUniI (s, Bind (name, (i, t)), _) =>
@@ -45,10 +47,10 @@ fun collect_TApp t =
       end
     | _ => (t, [])
              
-fun collect_TProd_left t =
-    case t of
-        TProd (t1, t2) => collect_TProd_left t1 @ [t2]
-      | _ => [t]
+(* fun collect_TProd_left t = *)
+(*     case t of *)
+(*         TProd (t1, t2) => collect_TProd_left t1 @ [t2] *)
+(*       | _ => [t] *)
              
 fun is_TApp_TUVar t =
   let

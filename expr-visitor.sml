@@ -72,12 +72,12 @@ type ('this, 'env) expr_visitor_vtable =
        visit_ptrn : 'this -> 'env ctx -> ptrn -> T.ptrn,
        visit_PnVar : 'this -> 'env ctx -> ebinder -> T.ptrn,
        visit_PnTT : 'this -> 'env ctx -> region -> T.ptrn,
-       visit_PnPair : 'this -> 'env ctx -> ptrn * ptrn -> T.ptrn,
+       (* visit_PnPair : 'this -> 'env ctx -> ptrn * ptrn -> T.ptrn, *)
        visit_PnAlias : 'this -> 'env ctx -> ebinder * ptrn * region -> T.ptrn,
        visit_PnConstr : 'this -> 'env ctx -> ((cvar * ptrn_constr_tag) * bool) outer * ibinder list * ptrn * region -> T.ptrn,
        visit_PnAnno : 'this -> 'env ctx -> ptrn * mtype outer -> T.ptrn,
        visit_EApp : 'this -> 'env -> expr * expr -> T.expr,
-       visit_EPair : 'this -> 'env -> expr * expr -> T.expr,
+       (* visit_EPair : 'this -> 'env -> expr * expr -> T.expr, *)
        visit_EAdd : 'this -> 'env -> expr * expr -> T.expr,
        visit_ENatAdd : 'this -> 'env -> expr * expr -> T.expr,
        visit_ENew : 'this -> 'env -> expr * expr -> T.expr,
@@ -198,7 +198,7 @@ fun default_expr_visitor_vtable
       in
         case opr of
             EBApp () => #visit_EApp vtable this env data
-          | EBPair () => #visit_EPair vtable this env data
+          (* | EBPair () => #visit_EPair vtable this env data *)
           | EBNew () => #visit_ENew vtable this env data
           | EBRead () => #visit_ERead vtable this env data
           | EBPrim (EBPIntAdd ()) => #visit_EAdd vtable this env data
@@ -214,15 +214,15 @@ fun default_expr_visitor_vtable
       in
         T.EBinOp (EBApp (), e1, e2)
       end
-    fun visit_EPair this env data =
-      let
-        val vtable = cast this
-        val (e1, e2) = data
-        val e1 = #visit_expr vtable this env e1
-        val e2 = #visit_expr vtable this env e2
-      in
-        T.EBinOp (EBPair (), e1, e2)
-      end
+    (* fun visit_EPair this env data = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val (e1, e2) = data *)
+    (*     val e1 = #visit_expr vtable this env e1 *)
+    (*     val e2 = #visit_expr vtable this env e2 *)
+    (*   in *)
+    (*     T.EBinOp (EBPair (), e1, e2) *)
+    (*   end *)
     fun visit_EAdd this env data =
       let
         val vtable = cast this
@@ -690,7 +690,7 @@ fun default_expr_visitor_vtable
           visit_ptrn = #visit_ptrn vtable,
           visit_PnVar = #visit_PnVar vtable,
           visit_PnTT = #visit_PnTT vtable,
-          visit_PnPair = #visit_PnPair vtable,
+          (* visit_PnPair = #visit_PnPair vtable, *)
           visit_PnAlias = #visit_PnAlias vtable,
           visit_PnAnno = #visit_PnAnno vtable,
           visit_PnConstr = #visit_PnConstr vtable,
@@ -901,7 +901,7 @@ fun default_expr_visitor_vtable
       visit_ptrn = #visit_ptrn pv_vtable,
       visit_PnVar = #visit_PnVar pv_vtable,
       visit_PnTT = #visit_PnTT pv_vtable,
-      visit_PnPair = #visit_PnPair pv_vtable,
+      (* visit_PnPair = #visit_PnPair pv_vtable, *)
       visit_PnAlias = #visit_PnAlias pv_vtable,
       visit_PnAnno = #visit_PnAnno pv_vtable,
       visit_PnConstr = #visit_PnConstr pv_vtable,
@@ -919,7 +919,7 @@ fun default_expr_visitor_vtable
       visit_ModSeal = visit_ModSeal,
       visit_ModTransparentAsc = visit_ModTransparentAsc,
       visit_EApp = visit_EApp,
-      visit_EPair = visit_EPair,
+      (* visit_EPair = visit_EPair, *)
       visit_EAdd = visit_EAdd,
       visit_ENatAdd = visit_ENatAdd,
       visit_ENew = visit_ENew,
@@ -1036,7 +1036,7 @@ fun override_visit_PnConstr (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = new,
     visit_PnAnno = #visit_PnAnno record,
@@ -1053,7 +1053,7 @@ fun override_visit_PnConstr (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1105,7 +1105,7 @@ fun override_visit_PnVar (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = new,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1122,7 +1122,7 @@ fun override_visit_PnVar (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1174,7 +1174,7 @@ fun override_visit_EVar (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1191,7 +1191,7 @@ fun override_visit_EVar (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1243,7 +1243,7 @@ fun override_visit_EBinOp (record : ('this, 'env) expr_visitor_vtable) new : ('t
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1260,7 +1260,7 @@ fun override_visit_EBinOp (record : ('this, 'env) expr_visitor_vtable) new : ('t
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1312,7 +1312,7 @@ fun override_visit_EApp (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1329,7 +1329,7 @@ fun override_visit_EApp (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = new,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1381,7 +1381,7 @@ fun override_visit_EEI (record : ('this, 'env) expr_visitor_vtable) new : ('this
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1398,7 +1398,7 @@ fun override_visit_EEI (record : ('this, 'env) expr_visitor_vtable) new : ('this
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1450,7 +1450,7 @@ fun override_visit_EAppI (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1467,7 +1467,7 @@ fun override_visit_EAppI (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1519,7 +1519,7 @@ fun override_visit_EAscTime (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1536,7 +1536,7 @@ fun override_visit_EAscTime (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1588,7 +1588,7 @@ fun override_visit_EAsc (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1605,7 +1605,7 @@ fun override_visit_EAsc (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1657,7 +1657,7 @@ fun override_visit_ECase (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1674,7 +1674,7 @@ fun override_visit_ECase (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1726,7 +1726,7 @@ fun override_visit_DRec (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1743,7 +1743,7 @@ fun override_visit_DRec (record : ('this, 'env) expr_visitor_vtable) new : ('thi
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1795,7 +1795,7 @@ fun override_visit_DTypeDef (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1812,7 +1812,7 @@ fun override_visit_DTypeDef (record : ('this, 'env) expr_visitor_vtable) new : (
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1864,7 +1864,7 @@ fun override_visit_DOpen (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1881,7 +1881,7 @@ fun override_visit_DOpen (record : ('this, 'env) expr_visitor_vtable) new : ('th
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,
@@ -1933,7 +1933,7 @@ fun override_visit_SpecTypeDef (record : ('this, 'env) expr_visitor_vtable) new 
     visit_ptrn = #visit_ptrn record,
     visit_PnVar = #visit_PnVar record,
     visit_PnTT = #visit_PnTT record,
-    visit_PnPair = #visit_PnPair record,
+    (* visit_PnPair = #visit_PnPair record, *)
     visit_PnAlias = #visit_PnAlias record,
     visit_PnConstr = #visit_PnConstr record,
     visit_PnAnno = #visit_PnAnno record,
@@ -1950,7 +1950,7 @@ fun override_visit_SpecTypeDef (record : ('this, 'env) expr_visitor_vtable) new 
     visit_ty = #visit_ty record,
     visit_kind = #visit_kind record,
     visit_EApp = #visit_EApp record,
-    visit_EPair = #visit_EPair record,
+    (* visit_EPair = #visit_EPair record, *)
     visit_EAdd = #visit_EAdd record,
     visit_ENatAdd = #visit_ENatAdd record,
     visit_ENew = #visit_ENew record,

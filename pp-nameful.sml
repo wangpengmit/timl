@@ -128,17 +128,17 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
         )
       | TUnit _ =>
         str "TUnit"
-      | TProd (t1, t2) =>
-        let
-          val ts = collect_TProd_left t
-          val (t, ts) = assert_cons ts
-          val pp_t = fn t => (str "("; pp_t t; str ")")
-        in
-          open_hbox ();
-          pp_t t;
-          app (fn t => (space (); str "*"; space (); pp_t t)) ts;
-          close_box ()
-        end
+      (* | TProd (t1, t2) => *)
+      (*   let *)
+      (*     val ts = collect_TProd_left t *)
+      (*     val (t, ts) = assert_cons ts *)
+      (*     val pp_t = fn t => (str "("; pp_t t; str ")") *)
+      (*   in *)
+      (*     open_hbox (); *)
+      (*     pp_t t; *)
+      (*     app (fn t => (space (); str "*"; space (); pp_t t)) ts; *)
+      (*     close_box () *)
+      (*   end *)
       | TUniI (s, Bind (name, ((i, j), t)), _) =>
         (
           open_hbox ();
@@ -419,17 +419,17 @@ fun pp_pn (params as pp_t) s pn =
           str $ binder2str name;
           close_box ()
         )
-      | PnPair (pn1, pn2) =>
-        (
-          open_hbox ();
-          strs "PnPair";
-          str "(";
-          pp_pn pn1;
-          comma ();
-          pp_pn pn2;
-          str ")";
-          close_box ()
-        )
+      (* | PnPair (pn1, pn2) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     strs "PnPair"; *)
+      (*     str "("; *)
+      (*     pp_pn pn1; *)
+      (*     comma (); *)
+      (*     pp_pn pn2; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | PnTT _ => str "PnTT"
       | PnAlias (name, pn, _) =>
         (
@@ -565,18 +565,18 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           str ")";
           close_box ()
         )
-      | EBinOp (EBPair (), e1, e2) =>
-        (
-          open_hbox ();
-          str "EPair";
-          space ();
-          str "(";
-          pp_e e1;
-          comma ();
-          pp_e e2;
-          str ")";
-          close_box ()
-        )
+      (* | EBinOp (EBPair (), e1, e2) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EPair"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e1; *)
+      (*     comma (); *)
+      (*     pp_e e2; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | EBinOp (EBPrim (EBPIntAdd ()), e1, e2) =>
         (
           open_hbox ();

@@ -30,7 +30,8 @@ type inj = int * int
 datatype ('mtype, 'expr) ptrn =
          PnVar of ename binder
          | PnTT of region
-         | PnPair of ('mtype, 'expr) ptrn * ('mtype, 'expr) ptrn
+         (* | PnPair of ('mtype, 'expr) ptrn * ('mtype, 'expr) ptrn *)
+         | PnTuple of ('mtype, 'expr) ptrn list
          | PnAlias of ename binder * ('mtype, 'expr) ptrn * region
 	 | PnConstr of inj outer * iname binder list * ('mtype, 'expr) ptrn * region
          | PnAnno of ('mtype, 'expr) ptrn * 'mtype outer

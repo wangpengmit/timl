@@ -21,8 +21,8 @@ datatype ty_const =
 
 (* binary type constructors *)
 datatype ty_bin_op =
-         TBProd of unit
-         | TBSum of unit
+         TBSum of unit
+         (* | TBProd of unit *)
 
 structure Rctx = IntBinaryMap
                    

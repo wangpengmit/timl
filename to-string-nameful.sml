@@ -231,7 +231,7 @@ fun strn_mt t =
       | TiBool (i, _) => sprintf "(ibool $)" [strn_i i]
       | TArray (t, i) => sprintf "(array $ $)" [strn_mt t, strn_i i]
       | TUnit _ => "unit"
-      | TProd (t1, t2) => sprintf "($ * $)" [strn_mt t1, strn_mt t2]
+      (* | TProd (t1, t2) => sprintf "($ * $)" [strn_mt t1, strn_mt t2] *)
       | TUniI _ =>
         let
           val (binds, t) = collect_TUniI t
@@ -314,7 +314,7 @@ fun strn_pn pn =
   case pn of
       PnConstr (Outer ((x, _), eia), inames, pn, _) => sprintf "$$$" [decorate_var eia x, join_prefix " " $ map (surround "{" "}" o binder2str) inames, " " ^ strn_pn pn]
     | PnVar name => binder2str name
-    | PnPair (pn1, pn2) => sprintf "($, $)" [strn_pn pn1, strn_pn pn2]
+    (* | PnPair (pn1, pn2) => sprintf "($, $)" [strn_pn pn1, strn_pn pn2] *)
     | PnTT _ => "()"
     | PnAlias (name, pn, _) => sprintf "$ as $" [binder2str name, strn_pn pn]
     | PnAnno (pn, Outer t) => sprintf "($ : $)" [strn_pn pn, strn_mt t]
@@ -339,12 +339,12 @@ fun strn_e e =
     | EBinOp (opr, e1, e2) =>
       (case opr of
            EBApp _ => sprintf "($ $)" [strn_e e1, strn_e e2]
-         | EBPair () =>
-           let
-             val es = collect_Pair e
-           in
-             sprintf "($)" [join ", " $ map strn_e es]
-           end
+         (* | EBPair () => *)
+         (*   let *)
+         (*     val es = collect_Pair e *)
+         (*   in *)
+         (*     sprintf "($)" [join ", " $ map strn_e es] *)
+         (*   end *)
          | EBNew () => sprintf "(new $ $)" [strn_e e1, strn_e e2]
          | EBRead () => sprintf "(read $ $)" [strn_e e1, strn_e e2]
          | _ => sprintf "($ $ $)" [strn_e e1, pretty_str_expr_bin_op opr, strn_e e2]

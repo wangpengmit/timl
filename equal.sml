@@ -165,11 +165,11 @@ fun eq_mt t t' =
              TUnit _ => true
            | _ => false
         )
-      | TProd (t1, t2) =>
-        (case t' of
-             TProd (t1', t2') => eq_mt t1 t1' andalso eq_mt t2 t2'
-           | _ => false
-        )
+      (* | TProd (t1, t2) => *)
+      (*   (case t' of *)
+      (*        TProd (t1', t2') => eq_mt t1 t1' andalso eq_mt t2 t2' *)
+      (*      | _ => false *)
+      (*   ) *)
       | TUniI (s, Bind (_, (i, t)), r) =>
         (case t' of
              TUniI (s', Bind (_, (i', t')), _) => eq_s s s' andalso eq_2i i i' andalso eq_mt t t'

@@ -29,7 +29,8 @@ datatype mtype =
          | TArray of mtype * idx
 	 | TBase of base_type * region
          | TUnit of region
-	 | TProd of mtype * mtype
+	 (* | TProd of mtype * mtype *)
+	 | TTuple of mtype list
 	 | TUniI of sort * (name * ((idx * idx) * mtype)) ibind * region
          | TVar of var
          | TAbs of kind * (name * mtype) tbind * region

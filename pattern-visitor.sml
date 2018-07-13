@@ -9,7 +9,7 @@ type ('this, 'env, 'cvar, 'mtype, 'cvar2, 'mtype2) ptrn_visitor_vtable =
        visit_ptrn : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn -> ('cvar2, 'mtype2) ptrn,
        visit_PnVar : 'this -> 'env ctx -> ename binder -> ('cvar2, 'mtype2) ptrn,
        visit_PnTT : 'this -> 'env ctx -> region -> ('cvar2, 'mtype2) ptrn,
-       visit_PnPair : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * ('cvar, 'mtype) ptrn -> ('cvar2, 'mtype2) ptrn,
+       (* visit_PnPair : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * ('cvar, 'mtype) ptrn -> ('cvar2, 'mtype2) ptrn, *)
        visit_PnAlias : 'this -> 'env ctx -> ename binder * ('cvar, 'mtype) ptrn * region -> ('cvar2, 'mtype2) ptrn,
        visit_PnConstr : 'this -> 'env ctx -> ('cvar * bool) outer * iname binder list * ('cvar, 'mtype) ptrn * region -> ('cvar2, 'mtype2) ptrn,
        visit_PnAnno : 'this -> 'env ctx -> ('cvar, 'mtype) ptrn * 'mtype outer -> ('cvar2, 'mtype2) ptrn,
@@ -55,7 +55,7 @@ fun default_ptrn_visitor_vtable
         case data of
             PnVar data => #visit_PnVar vtable this env data
           | PnTT data => #visit_PnTT vtable this env data
-          | PnPair data => #visit_PnPair vtable this env data
+          (* | PnPair data => #visit_PnPair vtable this env data *)
           | PnAlias data => #visit_PnAlias vtable this env data
           | PnConstr data => #visit_PnConstr vtable this env data
           | PnAnno data => #visit_PnAnno vtable this env data
@@ -68,15 +68,15 @@ fun default_ptrn_visitor_vtable
       end
     fun visit_PnTT this env data =
       PnTT data
-    fun visit_PnPair this env data = 
-      let
-        val vtable = cast this
-        val (p1, p2) = data
-        val p1 = #visit_ptrn vtable this env p1
-        val p2 = #visit_ptrn vtable this env p2
-      in
-        PnPair (p1, p2)
-      end
+    (* fun visit_PnPair this env data =  *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val (p1, p2) = data *)
+    (*     val p1 = #visit_ptrn vtable this env p1 *)
+    (*     val p2 = #visit_ptrn vtable this env p2 *)
+    (*   in *)
+    (*     PnPair (p1, p2) *)
+    (*   end *)
     fun visit_PnAlias this env data =
       let
         val vtable = cast this
@@ -110,7 +110,7 @@ fun default_ptrn_visitor_vtable
       visit_ptrn = visit_ptrn,
       visit_PnVar = visit_PnVar,
       visit_PnTT = visit_PnTT,
-      visit_PnPair = visit_PnPair,
+      (* visit_PnPair = visit_PnPair, *)
       visit_PnAlias = visit_PnAlias,
       visit_PnAnno = visit_PnAnno,
       visit_PnConstr = visit_PnConstr,

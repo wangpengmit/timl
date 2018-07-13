@@ -642,6 +642,11 @@ val uniqueSort = ListMergeSort.uniqueSort
 
 fun sort_string a = sort String.compare a
 fun cmp_str_fst (a, b) = String.compare (fst a, fst b)
+
+fun int_exp (base, exp) =
+  if exp = 0 then 1
+  else if exp > 0 then base * int_exp (base, exp-1)
+  else raise Impossible "int_exp: exp < 0"
              
 end
 

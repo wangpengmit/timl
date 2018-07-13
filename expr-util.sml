@@ -8,8 +8,8 @@ open Bind
 
 infixr 0 $
 
-val EUFst = EUProj (ProjFst ())
-val EUSnd = EUProj (ProjSnd ())
+(* val EUFst = EUProj (ProjFst ()) *)
+(* val EUSnd = EUProj (ProjSnd ()) *)
 (* val EUInt2Str = EUPrim EUPInt2Str *)
 val EBAdd = EBPrim (EBPIntAdd ())
 val EBNatAdd = EBNat (EBNAdd ())
@@ -27,11 +27,11 @@ val EConstChar = EByte
 fun EBool (b, r) = EConst (ECBool b, r)
 fun ETrue r = EBool (true, r)
 fun EFalse r = EBool (false, r)
-fun EFst (e, r) = EUnOp (EUFst, e, r)
-fun ESnd (e, r) = EUnOp (EUSnd, e, r)
+(* fun EFst (e, r) = EUnOp (EUFst, e, r) *)
+(* fun ESnd (e, r) = EUnOp (EUSnd, e, r) *)
 fun EApp (e1, e2) = EBinOp (EBApp (), e1, e2)
 fun EIntAdd (e1, e2) = EBinOp (EBAdd, e1, e2)
-fun EPair (e1, e2) = EBinOp (EBPair (), e1, e2)
+fun EPair (e1, e2) = ETuple [e1, e2]
 fun EAppI (e, i) = EEI (EEIAppI (), e, i)
 fun EAppIs (f, args) = foldl (swap EAppI) f args
 fun EAppT (e, i) = EET (EETAppT (), e, i)
@@ -74,11 +74,11 @@ fun a |# b = EAscSpace (a, b)
 fun EAscTimeSpace (e, (i, j)) = e |> i |# j
 fun a |># b = EAscTimeSpace (a, b)
                                
-fun collect_Pair e =
-  case e of
-      EBinOp (EBPair (), e1, e2) =>
-      collect_Pair e1 @ [e2]
-    | _ => [e]
+(* fun collect_Pair e = *)
+(*   case e of *)
+(*       EBinOp (EBPair (), e1, e2) => *)
+(*       collect_Pair e1 @ [e2] *)
+(*     | _ => [e] *)
              
 fun collect_EAppI e =
   case e of

@@ -16,7 +16,7 @@ datatype cover =
          | AndC of cover * cover
          | OrC of cover * cover
          | ConstrC of var * cover
-         | PairC of cover * cover
+         | TupleC of cover list
          | TTC
 
 fun combine_covers covers = foldl' (swap OrC) FalseC covers
@@ -71,13 +71,41 @@ fun cover_neg gctx (ctx as (sctx, kctx, cctx)) (t : mtype) c =
       | AndC (a, b) => neg t a \/ neg t b
       | OrC (a, b) => neg t a /\ neg t b
       | TTC => FalseC
-      | PairC (c1, c2) =>
+      (* | PairC (c1, c2) => *)
+      (*   (case t of *)
+      (*        TProd (t1, t2) => *)
+      (*        PairC (neg t1 c1, c2) \/ *)
+      (*        PairC (c1, neg t2 c2) \/ *)
+      (*        PairC (neg t1 c1, neg t2 c2) *)
+      (*      | _ => raise impossible "cover_neg()/PairC" *)
+      (*   ) *)
+      | TupleC cs =>
         (case t of
-             TProd (t1, t2) =>
-             PairC (neg t1 c1, c2) \/
-             PairC (c1, neg t2 c2) \/
-             PairC (neg t1 c1, neg t2 c2)
-           | _ => raise impossible "cover_neg()/PairC")
+             TTuple ts =>
+             let
+               val len = length cs
+               val () = assert_b "cover_neg/length eq" $ len = length ts
+               val () = assert_b "cover_neg/len>=2" $ len >= 2
+               fun perm n =
+                 if n = 0 then [[]]
+                 else
+                   let
+                     val perms = perm $ n - 1
+                   in
+                     map (curry op:: true) perms @ map (curry op:: false) perms
+                   end
+               val perms = perm len
+               val () = assert_b "#perms=2**len" $ length perms = int_exp (2, len)
+               val (all_true, perms) = assert_cons perms
+               val () = assert_b "cover_neg/all_true" $ List.all id all_true
+               val tcs = zip (ts, cs)
+               fun perm_ptrn perm = TupleC $ map (fn (b, (t, c)) => if b then c else neg t c) $ zip (perm, tcs)
+               val r = foldl_nonempty (fn (c, acc) => acc \/ c) $ map perm_ptrn perms
+             in
+               r
+             end
+           | _ => raise impossible "cover_neg()/PairC"
+        )
       | c_all as ConstrC (x, c) =>
 	(case is_TAppV t of
 	     SOME (family, ts, _) =>
