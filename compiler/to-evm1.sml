@@ -465,8 +465,23 @@ fun compile st_name2int ectx e =
     | EUnOp (EUUnfold (), e) =>
       compile e @ [UNFOLD ()]
     | EUnOp (EUTiML opr, e) =>
-      compile e @
-      impl_expr_un_op opr
+      let
+        val I =
+            compile e @
+            impl_expr_un_op opr
+        val () =
+            case opr of
+                EUVectorClear () =>
+                let
+                  val x = assert_EState e
+                  val st = !st_ref
+                in
+                  st_ref := st @%+ (x, N0)
+                end
+              | _ => ()
+      in
+        I
+      end
     | EUnOp (EUTupleProj n, e) =>
       compile e @
       impl_tuple_proj n
@@ -505,9 +520,20 @@ fun compile st_name2int ectx e =
       compile e2 @
       [SWAP1, SSTORE (), PUSH1 WTT]
     | EBinOp (EBNatCellSet (), e1, e2) =>
-      compile e1 @ 
-      compile e2 @
-      [SWAP1, SSTORE (), PUSH1 WTT]
+      let
+        val (e1, t1) = assert_EAscType e1
+        val (e2, t2) = assert_EAscType e2
+        val I =
+            compile e1 @ 
+            compile e2 @
+            [SWAP1, SSTORE (), PUSH1 WTT]
+        val x = assert_TState t1
+        val i = assert_TNat $ whnf ([], []) t2
+        val st = !st_ref
+        val () = st_ref := st @%+ (x, i)
+      in
+        I
+      end
     | EBinOp (EBVectorGet (), e1, e2) =>
       compile e1 @ 
       compile e2 @
@@ -519,9 +545,10 @@ fun compile st_name2int ectx e =
       [SWAP2, MACRO_vector_ptr (), SSTORE (), PUSH1 WTT]
     | EBinOp (EBVectorPushBack (), e1, e2) =>
       let
-        val I = compile e1 @
-                compile e2 @
-                [MACRO_vector_push_back (), PUSH1 WTT]
+        val I =
+            compile e1 @
+            compile e2 @
+            [MACRO_vector_push_back (), PUSH1 WTT]
         val x = assert_EState e1
         val st = !st_ref
         val len = st @%!! x
@@ -928,7 +955,7 @@ val code_gen_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EIfi, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EIfi_e2_time, Anno_EPair, Anno_EInj]
+      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EIfi, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EIfi_e2_time, Anno_EPair, Anno_EInj, Anno_ENatCellSet]
     end
                      
 structure UnitTest = struct
@@ -1140,18 +1167,29 @@ fun test1 dirname =
     val () = check_vcs vcs
     val () = println "Finished EVM1 typechecking"
     val () = println $ "num-of-registers: " ^ str_int num_regs
-    val i = print_time_space i
-    val () = case i of
-                 (IConst (ICTime t, _), IConst (ICNat s, _)) =>
-                 let
-                   val total_mem = s + num_regs + 1
-                   fun C_mem a = C_memory * a + a * a div 512
-                   open TimeType
-                   val total_gas = t + fromInt (C_mem total_mem)
-                 in
-                   println $ "Gas-bound: " ^ str_time total_gas 
-                 end
-               | _ => ()
+    val (i, j) = print_time_space i
+    (* val () = case j of *)
+    (*              IConst (ICNat s, _) => *)
+    (*              let *)
+    (*                val total_mem = s + num_regs + 1 *)
+    (*                fun C_mem a = C_memory * a + a * a div 512 *)
+    (*                open TimeType *)
+    (*                val total_gas = i %+ to_real (C_mem total_mem) *)
+    (*              in *)
+    (*                println $ "Gas-bound: " ^ (ToString.str_i Gctx.empty [] $ Simp.simp_i total_gas ) *)
+    (*              end *)
+    (*            | _ => () *)
+    val () = 
+        let
+          val total_mem = j %+ N (num_regs + 1)
+          infix 7 %/
+          fun a %/ b = IDiv (a, (b, dummy))
+          fun C_mem a = N C_memory %* a %+ (a %* a) %/ 512
+          open TimeType
+          val total_gas = i %+ IToReal' (C_mem total_mem)
+        in
+          println $ "Gas-bound: " ^ (ToString.str_i Gctx.empty [] $ Simp.simp_i total_gas )
+        end
 
     val () = println "ToEVM1.UnitTest passed"
   in

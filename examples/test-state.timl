@@ -2,6 +2,7 @@ val TestState_m : map int int
 val TestState_mm : map int (map int int)
 val TestState_v : vector int
 val TestState_r : cell int
+val TestState_i : icell
 
 structure TestState = struct
 
@@ -45,11 +46,14 @@ fun foo {len : Nat} () pre {TestState_v : len} post {TestState_v : len+1} =
 
 val a = %foo ()
 
-(* val () = __&halt a *)
+(* (* val () = __&halt a *) *)
             
 val a = vector_len TestState_v
-
 val () = vector_clear TestState_v
 val a = vector_len TestState_v
                    
+val () = set TestState_i #12
+                   
+val a = new_array (#5, 0x123) using _, _
+                                         
 end

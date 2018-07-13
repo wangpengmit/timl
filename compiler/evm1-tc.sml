@@ -891,7 +891,9 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         val (st', rctx', sctx', i) = assert_TArrowEVM t0
         val () = is_sub_rctx itctx (rctx, rctx')
         val () = is_eq_stack itctx (sctx, sctx')
+        val () = println "before is_eq_st"
         val () = is_eq_st ictx (st, st')
+        val () = println "after is_eq_st"
       in
         (TN (C_insts insts) %%+ i, 0)
       end
