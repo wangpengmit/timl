@@ -35,7 +35,7 @@ fun hex_fn fmt nBytes i =
     s
   end
 
-fun hex a = hex_fn Int.fmt a 
+fun hex len n = hex_fn Int.fmt len n
 
 fun hex_str len s = hex_fn LargeInt.fmt len $ str2int_large s
 

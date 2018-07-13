@@ -1112,14 +1112,20 @@ fun test1 dirname =
     val () = println $ StMapU.str_map (id, prefix "" o pp_t_to_string NONE o export_t NONE ([], [])) st_name2ty
     val () = println "Finished Code Generation"
     open EVM1Simp
+    val () = println "before simp_prog()"
     val prog = simp_prog prog
+    val () = println "after simp_prog()"
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
+    val () = println "before inline_macro_prog()"
     val inlined_prog = inline_macro_prog prog
+    val () = println "after inline_macro_prog()"
     val inlined_prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) inlined_prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-inline-macro.tmp", inlined_prog_str)
     open EVM1Assemble
+    val () = println "before ass2str()"
     val prog_bytes = ass2str inlined_prog
+    val () = println "after ass2str()"
     val () = write_file (join_dir_file' dirname $ "evm-bytecode.tmp", prog_bytes)
     (* val () = println "EVM Bytecode:" *)
     (* val () = println prog_bytes *)

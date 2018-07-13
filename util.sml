@@ -584,10 +584,17 @@ fun a @@ b = (a; b)
 
 fun scan_fn scan radix s = StringCvt.scanString (scan radix) s
 fun str2int_fn scan s =
-    if String.isPrefix "0x" s then
-      Option.valOf (scan_fn scan StringCvt.HEX s)
-    else
-      Option.valOf (scan_fn scan StringCvt.DEC s)
+  let
+    val r = 
+        if String.isPrefix "0x" s then
+          scan_fn scan StringCvt.HEX s
+        else
+          scan_fn scan StringCvt.DEC s
+  in
+    case r of
+        SOME a => a
+      | NONE => raise Impossible $ "str2int_fn() failed on: " ^ s
+  end
                                         
 fun scan a = scan_fn Int.scan a
 fun str2int a = str2int_fn Int.scan a
