@@ -42,7 +42,10 @@ local
     case m of
         NONE => ID x
       | SOME m => QID (m, x)
-                      
+
+  fun elab_int r s = assert_SOME_m (fn () => raise Error (r, "failed when parsing the integer")) $ str2int s
+  fun elab_large_int r s = assert_SOME_m (fn () => raise Error (r, "failed when parsing the integer")) $ str2large_int s
+                                   
   fun elab_i i =
     case i of
 	S.IVar (id as (m, (x, r))) =>
@@ -60,8 +63,8 @@ local
 	       IVar (to_long_id id, [])
            | SOME _ => IVar (to_long_id id, [])
         )
-      | S.INat n =>
-	INat n
+      | S.INat (n, r) =>
+	INat (elab_int r n, r)
       | S.ITime (x, r) =>
         let
           infixr 0 !!
@@ -70,7 +73,7 @@ local
 	  ITime (x, r)
         end
       (* | S.IUnOp (opr, i, r) => IUnOp (opr, elab_i i, r) *)
-      | S.IDiv (i1, n2, _) => IDiv (elab_i i1, n2)
+      | S.IDiv (i1, (n2, r), _) => IDiv (elab_i i1, (elab_int r n2, r))
       | S.IBinOp (opr, i1, i2, r) =>
         (case is_un_op (opr, i1) of
              SOME opr => IUnOp (opr, elab_i i2, r)
@@ -392,7 +395,9 @@ local
     in
       (!pre, !post, !return, !time, !space, rev (!guards))
     end
-                
+
+  fun elab_path ls = map (fn (p, r) => (map_inl_inr (elab_int r) id p, r)) ls
+      
   fun elab e =
     case e of
 	S.EVar (id as (m, (x, r)), (eia, has_insert)) =>
@@ -467,8 +472,8 @@ local
         ELet (elab_return return, Unbound.Bind (Teles $ concatMap elab_decl decs, elab e), r)
       | S.EConst (c, r) =>
         (case c of
-             S.ECInt n => EConstInt (n, r)
-	   | S.ECNat n => EConstNat (n, r)
+             S.ECInt n => EConstInt (elab_large_int r n, r)
+	   | S.ECNat n => EConstNat (elab_int r n, r)
 	   | S.ECChar n => EConstByte (n, r)
 	   | S.ECString s =>
              let
@@ -598,9 +603,9 @@ local
            | S.EUFire () => ETT r
            | S.EUAttach () => ETT r
            | S.EUSuicide () => ETT r
-           | S.EUSHA3 () => EInt ("0", r)
-           | S.EUSHA256 () => EInt ("0", r)
-           | S.EUECREC () => EInt ("0", r)
+           | S.EUSHA3 () => EInt (elab_large_int r "0", r)
+           | S.EUSHA256 () => EInt (elab_large_int r "0", r)
+           | S.EUECREC () => EInt (elab_large_int r "0", r)
         )
       | S.ETriOp (S.ETIte (), e1, e2, e3, _) =>
         ETriOp (ETIte (), elab e1, elab e2, elab e3)
@@ -610,11 +615,11 @@ local
         EIfi (elab e, IBind (("__p", r), elab e1), IBind (("__p", r), elab e2), r)
       | S.ENever r => ENever (elab_mt (S.TVar (NONE, ("_", r))), r)
       | S.EGet (x, offsets, r) =>
-        EGet (fst x, map (mapFst elab) offsets, r)
+        EGet (fst x, map (mapPair' elab elab_path) offsets, r)
       | S.ESetModify (is_modify, x, offsets, e, r) =>
         let
           val x = fst x
-          val offsets = map (mapFst elab) offsets
+          val offsets = map (mapPair' elab elab_path) offsets
           val e = elab e
         in
           if is_modify then
@@ -671,10 +676,12 @@ local
         in
           elab e
         end
-      | S.EOffsetProjs (e, projs) => foldl (fn (p, acc) => case p of
-                                                               inl e => EMapPtr (acc, elab e)
-                                                             | inr (p, r) => EPtrProj (acc, (p, NONE), r)
-                                           ) (elab e) projs
+      | S.EOffsetProjs (e, projs) =>
+        foldl (fn (p, acc) =>
+                  case p of
+                      inl e => EMapPtr (acc, elab e)
+                    | inr (p, r) => EPtrProj (acc, (map_inl_inr (elab_int r) id p, NONE), r)
+              ) (elab e) projs
       (* | S.ETruncate (n, e, _) => EIntAnd (elab e, mask n) *)
 
   and elab_decl decl =

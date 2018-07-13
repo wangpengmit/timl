@@ -37,7 +37,7 @@ fun pp_i s i =
   in
     case i of
 	IVar x => pp_long_id x
-      | INat (n, _) => pp_int n
+      | INat (n, _) => str n
       | ITime (s, _) => str s
       | IBinOp (opr, i1, i2, _) =>
         (
@@ -73,7 +73,7 @@ fun pp_i s i =
           str "(";
           pp_i i;
           comma ();
-          pp_int n;
+          str n;
           str ")";
           close_box ()
         )
@@ -508,7 +508,7 @@ fun pp_bind s bind =
 fun str_expr_const c =
   case c of
       ECInt n => n
-    | ECNat n => "#" ^ str_int n
+    | ECNat n => "#" ^ n
     | ECString s => sprintf "\"$\"" [s]
     | ECChar c => sprintf "'$'" [str_char c]
     | ECZero () => "zero"
@@ -626,7 +626,7 @@ fun pp_e s e =
       (
         open_hbox ();
         pp_e e;
-        app (fn (proj, _) => (space (); str "."; str $ str_sum str_int id proj)) path;
+        app (fn (proj, _) => (space (); str "."; str $ str_sum id id proj)) path;
         close_box ()
       )
   in
@@ -980,7 +980,7 @@ fun pp_e s e =
           pp_e e;
           comma ();
           app (app_inl_inr (fn e => (str "["; pp_e e; str "]"))
-                           (fn (proj, _) => str $ "." ^ str_sum str_int id proj)) path;
+                           (fn (proj, _) => str $ "." ^ str_sum id id proj)) path;
           str ")";
           close_box ()
         )

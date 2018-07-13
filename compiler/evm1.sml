@@ -11,7 +11,7 @@ type label = int
 datatype word_const =
          WCTT of unit
          | WCNat of nat
-         | WCInt of string
+         | WCInt of LargeInt.int
          | WCBool of bool
          | WCByte of Char.char
          | WCiBool of bool

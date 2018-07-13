@@ -71,6 +71,7 @@ fun str_ls f ls = (surround "[" "]" o join ", " o map f) ls
 fun str_pair (f, g) (a, b) = sprintf "($, $)" [f a, g b]
 fun str_opt_default def f opt = default def $ Option.map f opt
 fun str_opt a = str_opt_default "" a
+val str_large_int = LargeInt.toString
 (* val str_int = Int.toString *)
 fun str_int i =
   let
@@ -537,6 +538,7 @@ fun assert_cons3 ls =
       | _ => raise Impossible "assert_cons3 fails"
                             
 fun assert_SOME a = case a of SOME v => v | NONE => raise Impossible "assert_SOME()"
+fun assert_SOME_m err a = case a of SOME v => v | NONE => err ()
 
 fun find_unique ls name =
   if not (mem op= name ls) then
@@ -591,15 +593,16 @@ fun str2int_fn scan s =
         else
           scan_fn scan StringCvt.DEC s
   in
-    case r of
-        SOME a => a
-      | NONE => raise Impossible $ "str2int_fn() failed on: " ^ s
+    r
+    (* case r of *)
+    (*     SOME a => a *)
+    (*   | NONE => raise Impossible $ "str2int_fn() failed on: " ^ s *)
   end
                                         
 fun scan a = scan_fn Int.scan a
 fun str2int a = str2int_fn Int.scan a
-fun scan_large a = scan_fn LargeInt.scan a
-fun str2int_large a = str2int_fn LargeInt.scan a
+fun scan_large_int a = scan_fn LargeInt.scan a
+fun str2large_int a = str2int_fn LargeInt.scan a
                                         
 fun hex_fn fmt nBytes i =
   let
@@ -614,8 +617,8 @@ fun hex_fn fmt nBytes i =
   end
 
 fun hex len n = hex_fn Int.fmt len n
-
-fun hex_str len s = hex_fn LargeInt.fmt len $ str2int_large s
+fun hex_large_int len n = hex_fn LargeInt.fmt len n
+(* fun hex_str len s = hex_large_int len $ str2large_int s *)
 
 (* todo: implement *)
 fun short_str s =

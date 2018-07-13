@@ -203,7 +203,7 @@ open Ast
        | state_field_star of state
        | state_field_plus of state
        | state_field of id * idx
-       | int_or_id of (int, string) sum
+       | int_or_id of (string, string) sum
        | proj_path of proj_path
        | fun_modifier of fun_modifier list
        | fun_modifiers of fun_modifier list
@@ -333,10 +333,10 @@ datatype_def_kind : COLON cur_bsort_plus (cur_bsort_plus)
                   | ([])
                     
 ty : ty_term (ty_term)
-   | ty DDASH idx LARROW ty (TPureArrow (ty1, (idx, INat (0, (idxleft, idxright))), ty2, (ty1left, ty2right)))
+   | ty DDASH idx LARROW ty (TPureArrow (ty1, (idx, INat ("0", (idxleft, idxright))), ty2, (ty1left, ty2right)))
    | ty DDASH idx COMMA idx LARROW ty (TPureArrow (ty1, (idx1, idx2), ty2, (ty1left, ty2right)))
-   | ty ARROW ty (TPureArrow (ty1, (IVar (underscore (ty1left, ty2right)), INat (0, (ty1left, ty2right))), ty2, (ty1left, ty2right)))
-   | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), INat (0, (ty1left, ty2right))), ty2, (ty1left, ty2right)))
+   | ty ARROW ty (TPureArrow (ty1, (IVar (underscore (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
+   | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
    | ty MULT ty (TProd (ty1, ty2, (ty1left, ty2right)))
 
 ty_term : ty_atom (ty_atom)
@@ -392,7 +392,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | IF exp THEN exp ELSE exp (EIte (exp1, exp2, exp3, (IFleft, exp3right)))
      | IFDEC exp THEN exp ELSE exp (EIfi (exp1, exp2, exp3, (IFDECleft, exp3right)))
      | LET return decl_star IN exp END (ELet (return, decl_star, exp, (LETleft, ENDright)))
-     | SHARP INT (EConst (ECNat (str2int INT), (SHARPleft, INTright)))
+     | SHARP INT (EConst (ECNat INT, (SHARPleft, INTright)))
      | INT (EConst (ECInt INT, (INTleft, INTright)))
      | STRING (EConst (ECString (chop_first_last STRING), (STRINGleft, STRINGright)))
      | CHAR (EConst (ECChar CHAR, (CHARleft, CHARright)))
@@ -410,7 +410,7 @@ aexp : decorated_eid (EVar decorated_eid)
 exp_comma_star_trailing : exp COMMA exp_comma_star_trailing (exp :: exp_comma_star_trailing)
 	                     | ([])
 
-int_or_id : INT (inl (str2int INT))
+int_or_id : INT (inl INT)
           | id (inr (fst id))
                
 proj_path : DOT int_or_id proj_path ((int_or_id, (DOTleft, int_or_idright)) :: proj_path)
@@ -442,7 +442,7 @@ idx : aidx (aidx)
     | idx MAX idx (IBinOp (IBMax (), idx1, idx2, (idx1left, idx2right)))
     | idx MIN idx (IBinOp (IBMin (), idx1, idx2, (idx1left, idx2right)))
     | idx MULT idx (IBinOp (IBMult (), idx1, idx2, (idx1left, idx2right)))
-    | idx DIV INT (IDiv (idx, (str2int INT, (INTleft, INTright)), (idxleft, INTright)))
+    | idx DIV INT (IDiv (idx, (INT, (INTleft, INTright)), (idxleft, INTright)))
     | idx EXP idx (IBinOp (IBExpN (), idx1, idx2, (idx1left, idx2right)))
     | idx B_EQ idx (IBinOp (IBEq (), idx1, idx2, (idx1left, idx2right)))
     | idx B_NEQ idx (let val r = (idx1left, idx2right) in IUnOp (IUNeg (), IBinOp (IBEq (), idx1, idx2, r), r) end)
@@ -454,7 +454,7 @@ idx : aidx (aidx)
     | idx aidx (IBinOp (IBApp (), idx, aidx, (idxleft, aidxright)))
 
 aidx : long_id (IVar long_id)
-    | INT (INat (str2int INT, (INTleft, INTright)))
+    | INT (INat (INT, (INTleft, INTright)))
     | NNREAL (ITime (NNREAL, (NNREALleft, NNREALright)))
     | DOLLAR aidx (IBinOp (IBApp (), IVar (NONE, (str_idx_un_op (IUToReal ()), (DOLLARleft, DOLLARright))), aidx, (DOLLARleft, aidxright)))
     | LPAREN RPAREN (ITT (LPARENleft, RPARENright))

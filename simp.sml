@@ -289,7 +289,7 @@ local
             fun log base c =
               let
                 open TimeType
-                val base = fromInt $ str2int base
+                val base = fromInt $ assert_SOME $ str2int base
               in
                 SOME $ Math.ln c / Math.ln base
               end

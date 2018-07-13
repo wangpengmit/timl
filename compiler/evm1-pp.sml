@@ -10,7 +10,7 @@ infixr 0 $
 fun str_word_const c =
   case c of
       WCTT () => "()"
-    | WCInt n => n
+    | WCInt n => str_large_int n
     | WCNat n => "#" ^ str_int n
     | WCBool b => str_bool b
     | WCByte c => Char.toCString c

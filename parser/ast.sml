@@ -7,13 +7,13 @@ type long_id = id option * id
                              
 datatype idx = 
 	 IVar of long_id
-	 | INat of int * region
+	 | INat of string * region
 	 | ITime of string * region
          (* | UnOpI of idx_un_op * idx * region *)
 	 | IBinOp of idx_bin_op * idx * idx * region
 	 | ITT of region
          | IAbs of id list * idx * region
-         | IDiv of idx * (int * region) * region
+         | IDiv of idx * (string * region) * region
 
 datatype prop =
 	 PConst of string * region
@@ -84,7 +84,7 @@ datatype visi =
 
 datatype expr_const =
          ECInt of string
-         | ECNat of int
+         | ECNat of string
          | ECString of string
          | ECChar of Char.char
          | ECZero of unit
@@ -125,6 +125,7 @@ datatype storage =
          | StStorage of unit
          (* | StIndexed *)
                       
+type tuple_record_proj = (string, string) sum
 type proj_path = (tuple_record_proj * region) list
                                                 
 datatype exp = 
