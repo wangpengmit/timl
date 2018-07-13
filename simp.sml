@@ -201,7 +201,11 @@ local
               | IBEq () =>
                 if eq_i i1 i2 then
                   mark $ ITrue $ r ()
-                else def ()
+                else
+                  (case (i1, i2) of
+                      (IConst (ICNat c1, _), IConst (ICNat c2, _)) => mark $ IBool (c1 = c2, r ())
+                    | _ => def ()
+                  )
               | IBAnd () =>
                 if eq_i i1 (ITrue dummy) then
                   mark i2

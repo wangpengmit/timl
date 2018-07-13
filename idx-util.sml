@@ -13,6 +13,7 @@ infixr 0 $
 
 fun ITime (s, r) = IConst (ICTime s, r)
 fun INat (d, r) = IConst (ICNat d, r)
+fun IBool (d, r) = IConst (ICBool d, r)
 fun T0 r = ITime (TimeType.zero, r)
 fun is_T0 i =
   case i of
