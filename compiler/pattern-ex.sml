@@ -110,6 +110,29 @@ type ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable =
 type ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_interface =
      ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable
                                        
+fun override_visit_ptrn (record : ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable) new : ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable =
+  {
+    visit_ptrn = new,
+    (* visit_PnPair = #visit_PnPair record, *)
+    visit_PnTT = #visit_PnTT record,
+    visit_PnAnno = #visit_PnAnno record,
+    visit_PnAlias = #visit_PnAlias record,
+    visit_PnVar = #visit_PnVar record,
+    visit_PnConstr = #visit_PnConstr record,
+    visit_PnInj = #visit_PnInj record,
+    visit_PnUnfold = #visit_PnUnfold record,
+    visit_PnUnpackI = #visit_PnUnpackI record,
+    visit_PnExpr = #visit_PnExpr record,
+    visit_expr = #visit_expr record,
+    visit_mtype = #visit_mtype record,
+    visit_region = #visit_region record,
+    visit_inj = #visit_inj record,
+    visit_ibinder = #visit_ibinder record,
+    visit_ebinder = #visit_ebinder record,
+    extend_i = #extend_i record,
+    extend_e = #extend_e record
+  }
+
 fun override_visit_PnVar (record : ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable) new : ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable =
   {
     visit_ptrn = #visit_ptrn record,
@@ -155,6 +178,16 @@ fun override_visit_PnVar (record : ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2)
 (*     extend_i = #extend_i record, *)
 (*     extend_e = #extend_e record *)
 (*   } *)
+
+fun override_visit_PnTuple (record : ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable) new : ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable =
+  let
+    fun visit_ptrn this env p =
+      case p of
+          PnTuple data => new this env data
+        | _ => #visit_ptrn record this env p
+  in
+    override_visit_ptrn record visit_ptrn
+  end
 
 fun override_visit_PnAnno (record : ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable) new : ('this, 'env, 'mtype, 'expr, 'mtype2, 'expr2) ptrn_visitor_vtable =
   {
@@ -514,6 +547,17 @@ fun shift_imposs msg _ _ _ = raise Impossible msg
 
 fun PnUnpackIMany (names, p) = foldr PnUnpackI p names
                                     
+fun assert_fail msg = Impossible $ "Assert failed: " ^ msg
+                             
+fun assert_PnTuple t =
+  case t of
+      PnTuple a => a
+    | _ => raise assert_fail $ "assert_PnTuple failed"
+fun assert_PnTuple_m t err =
+  case t of
+      PnTuple a => a
+    | _ => err $ "assert_PnTuple failed"
+                                                 
 fun remove_constr_ptrn_visitor_vtable (cast : 'this -> ('this, ('mtype, 'expr) ptrn ref, 'mtype, 'expr, 'mtype2, 'expr) ptrn_visitor_interface) (shift_i_e, str_e)
     : ('this, ('mtype, 'expr) ptrn ref, 'mtype, 'expr, 'mtype2, 'expr) ptrn_visitor_vtable =
   let
@@ -545,19 +589,36 @@ fun remove_constr_ptrn_visitor_vtable (cast : 'this -> ('this, ('mtype, 'expr) p
       in
         p
       end
-    fun visit_PnPair this (env : ('mtype, 'expr) ptrn ref ctx) (p1, p2) = 
+    (* fun visit_PnPair this (env : ('mtype, 'expr) ptrn ref ctx) (p1, p2) =  *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val pk = !(#outer env) *)
+    (*     val () = #outer env := PnPair (p2, pk) *)
+    (*     val p1 = #visit_ptrn vtable this env p1 *)
+    (*     val (p2, pk) = case !(#outer env) of *)
+    (*                        PnPair a => a *)
+    (*                      | _ => raise Impossible "remove_constr/visit_PnPair()" *)
+    (*     val () = #outer env := pk *)
+    (*     val p2 = #visit_ptrn vtable this env p2 *)
+    (*   in *)
+    (*     PnPair (p1, p2) *)
+    (*   end *)
+    fun visit_PnTuple this (env : ('mtype, 'expr) ptrn ref ctx) ps =
+      if length ps <= 1 then
+        PnTuple $ map (#visit_ptrn (cast this) this env) ps
+      else
       let
+        val () = assert_b "remove_constr_ptrn_visitor_vtable/length>=2" $ length ps >= 2
+        val (p1, ps) = assert_cons ps
         val vtable = cast this
         val pk = !(#outer env)
-        val () = #outer env := PnPair (p2, pk)
+        val () = #outer env := PnTuple (ps @ [pk])
         val p1 = #visit_ptrn vtable this env p1
-        val (p2, pk) = case !(#outer env) of
-                           PnPair a => a
-                         | _ => raise Impossible "remove_constr/visit_PnPair()"
+        val (ps, pk) = assert_last $ assert_PnTuple_m (!(#outer env)) (fn msg => raise Impossible $ "remove_constr/visit_PnTuple(): " ^ msg)
         val () = #outer env := pk
-        val p2 = #visit_ptrn vtable this env p2
+        val ps = assert_PnTuple $ #visit_ptrn vtable this env $ PnTuple ps
       in
-        PnPair (p1, p2)
+        PnTuple (p1 :: ps)
       end
     val vtable =
         default_ptrn_visitor_vtable
@@ -567,7 +628,8 @@ fun remove_constr_ptrn_visitor_vtable (cast : 'this -> ('this, ('mtype, 'expr) p
           visit_noop
           (visit_imposs "remove_constr_ptrn_visitor_vtable/visit_mtype()")
     val vtable = override_visit_PnConstr vtable visit_PnConstr
-    val vtable = override_visit_PnPair vtable visit_PnPair
+    (* val vtable = override_visit_PnPair vtable visit_PnPair *)
+    val vtable = override_visit_PnTuple vtable visit_PnTuple
   in
     vtable
   end

@@ -261,8 +261,7 @@ fun live_vars_expr_visitor_vtable cast () =
               let
                 val (es, paths) = unzip es
                 val (_, es) = assert_cons $ visit_es_left this env $ [EState (x, r)] @ es @ [e]
-                val (e, es) = assert_cons $ rev es
-                val es = rev es
+                val (es, e) = assert_last es
                 val es = zip (es, paths)
               in
                 ESet (x, es, e, r)

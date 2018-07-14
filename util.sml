@@ -536,7 +536,16 @@ fun assert_cons3 ls =
     case ls of
         x1 :: x2 :: x3 :: xs => (x1, x2, x3, xs)
       | _ => raise Impossible "assert_cons3 fails"
-                            
+                   
+fun assert_last es =
+  let
+    val es = rev es
+    val (e, es) = assert_cons es
+    val es = rev es
+  in
+    (es, e)
+  end
+    
 fun assert_SOME a = case a of SOME v => v | NONE => raise Impossible "assert_SOME()"
 fun assert_SOME_m err a = case a of SOME v => v | NONE => err ()
 
