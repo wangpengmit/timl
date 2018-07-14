@@ -299,7 +299,8 @@ local
       | S.PnTuple (pns, r) =>
         (case pns of
              [] => PnTT r
-           | pn :: pns => foldl (fn (pn2, pn1) => PnPair (pn1, elab_pn pn2)) (elab_pn pn) pns
+           | [pn] => elab_pn pn
+           | _ :: _ => PnTuple $ map elab_pn pns
         )
       | S.PnAlias (name, pn, r) =>
         PnAlias (Binder $ EName name, elab_pn pn, r)

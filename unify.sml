@@ -414,12 +414,12 @@ fun unify_mt r gctx ctx (t, t') =
                TiBool (i', _) =>
                unify_i r gctxn sctxn (i, i')
              | _ => err ())
-        | TProd (t1, t2) =>
-          (case t' of
-               TProd (t1', t2') =>
-               (unify_mt ctx (t1, t1');
-                unify_mt ctx (t2, t2'))
-             | _ => err ())
+        (* | TProd (t1, t2) => *)
+        (*   (case t' of *)
+        (*        TProd (t1', t2') => *)
+        (*        (unify_mt ctx (t1, t1'); *)
+        (*         unify_mt ctx (t2, t2')) *)
+        (*      | _ => err ()) *)
         | TUniI (s, Bind ((name, _), ((i, j), t1)), _) =>
           (case t' of
                TUniI (s', Bind (_, ((i', j'), t1')), _) =>

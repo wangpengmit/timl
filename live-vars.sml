@@ -333,7 +333,7 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         case opr of
             EBApp () => #visit_EApp vtable this env data
-          | EBPair () => #visit_EPair vtable this env data
+          (* | EBPair () => #visit_EPair vtable this env data *)
           | EBNew () => #visit_ENew vtable this env data
           | EBRead () => #visit_ERead vtable this env data
           | EBPrim (EBPIntAdd ()) => #visit_EAdd vtable this env data
@@ -369,14 +369,14 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EAppConstr ((var, eia), ts, is, e, ot)
       end
-    fun visit_EPair this env data =
-      let
-        val vtable = cast this
-        val (e1, e2) = data
-        val (e1, e2) = visit_e2 this env (e1, e2)
-      in
-        EBinOp (EBPair (), e1, e2)
-      end
+    (* fun visit_EPair this env data = *)
+    (*   let *)
+    (*     val vtable = cast this *)
+    (*     val (e1, e2) = data *)
+    (*     val (e1, e2) = visit_e2 this env (e1, e2) *)
+    (*   in *)
+    (*     EBinOp (EBPair (), e1, e2) *)
+    (*   end *)
     fun visit_EAdd this env data =
       let
         val vtable = cast this
@@ -766,7 +766,7 @@ fun live_vars_expr_visitor_vtable cast () =
           visit_ptrn = #visit_ptrn vtable,
           visit_PnVar = #visit_PnVar vtable,
           visit_PnTT = #visit_PnTT vtable,
-          visit_PnPair = #visit_PnPair vtable,
+          (* visit_PnPair = #visit_PnPair vtable, *)
           visit_PnAlias = #visit_PnAlias vtable,
           visit_PnAnno = #visit_PnAnno vtable,
           visit_PnConstr = #visit_PnConstr vtable,
@@ -908,7 +908,7 @@ fun live_vars_expr_visitor_vtable cast () =
       visit_ptrn = #visit_ptrn pv_vtable,
       visit_PnVar = #visit_PnVar pv_vtable,
       visit_PnTT = #visit_PnTT pv_vtable,
-      visit_PnPair = #visit_PnPair pv_vtable,
+      (* visit_PnPair = #visit_PnPair pv_vtable, *)
       visit_PnAlias = #visit_PnAlias pv_vtable,
       visit_PnAnno = #visit_PnAnno pv_vtable,
       visit_PnConstr = #visit_PnConstr pv_vtable,
@@ -925,7 +925,7 @@ fun live_vars_expr_visitor_vtable cast () =
       visit_ModSeal = visit_ModSeal,
       visit_ModTransparentAsc = visit_ModTransparentAsc,
       visit_EApp = visit_EApp,
-      visit_EPair = visit_EPair,
+      (* visit_EPair = visit_EPair, *)
       visit_EAdd = visit_EAdd,
       visit_ENatAdd = visit_ENatAdd,
       visit_ENew = visit_ENew,

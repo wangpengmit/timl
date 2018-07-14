@@ -11,34 +11,35 @@ open Normalize
 infixr 0 $
          
 datatype cover =
-         TrueC
-         | FalseC
+         TrueC of unit
+         | FalseC of unit
          | AndC of cover * cover
          | OrC of cover * cover
          | ConstrC of var * cover
          | TupleC of cover list
-         | TTC
+         | TTC of unit
 
-fun combine_covers covers = foldl' (swap OrC) FalseC covers
+fun combine_covers covers = foldl' (swap OrC) (FalseC ()) covers
 
 datatype habitant =
-         TrueH
+         TrueH of unit
          | ConstrH of var * habitant
-         | PairH of habitant * habitant
-         | TTH
+         (* | PairH of habitant * habitant *)
+         | TupleH of habitant list
+         | TTH of unit
 
 fun str_cover gctx cctx c =
   let
     val str_cover = str_cover gctx
   in
     case c of
-        TrueC => "_"
-      | FalseC => "False"
+        TrueC () => "_"
+      | FalseC () => "False"
       | AndC (c1, c2) => sprintf "($ /\\ $)" [str_cover cctx c1, str_cover cctx c2]
       | OrC (c1, c2) => sprintf "($ \\/ $)" [str_cover cctx c1, str_cover cctx c2]
       | ConstrC (x, c) => sprintf "($ $)" [str_var #3 gctx cctx x, str_cover cctx c]
-      | PairC (c1, c2) => sprintf "($, $)" [str_cover cctx c1, str_cover cctx c2]
-      | TTC => "()"
+      (* | PairC (c1, c2) => sprintf "($, $)" [str_cover cctx c1, str_cover cctx c2] *)
+      | TTC () => "()"
   end
 
 fun str_habitant gctx cctx c =
@@ -46,10 +47,10 @@ fun str_habitant gctx cctx c =
     val str_habitant = str_habitant gctx
   in
     case c of
-        TrueH => "_"
+        TrueH () => "_"
       | ConstrH (x, c) => sprintf "($ $)" [str_var #3 gctx cctx x, str_habitant cctx c]
-      | PairH (c1, c2) => sprintf "($, $)" [str_habitant cctx c1, str_habitant cctx c2]
-      | TTH => "()"
+      (* | PairH (c1, c2) => sprintf "($, $)" [str_habitant cctx c1, str_habitant cctx c2] *)
+      | TTH () => "()"
   end
 
 infixr 3 /\
@@ -66,11 +67,11 @@ fun cover_neg gctx (ctx as (sctx, kctx, cctx)) (t : mtype) c =
     val t = whnf_mt true gctx kctx t
   in
     case c of
-        TrueC => FalseC
-      | FalseC => TrueC
+        TrueC () => FalseC ()
+      | FalseC () => TrueC ()
       | AndC (a, b) => neg t a \/ neg t b
       | OrC (a, b) => neg t a /\ neg t b
-      | TTC => FalseC
+      | TTC () => FalseC ()
       (* | PairC (c1, c2) => *)
       (*   (case t of *)
       (*        TProd (t1, t2) => *)
@@ -118,7 +119,7 @@ fun cover_neg gctx (ctx as (sctx, kctx, cctx)) (t : mtype) c =
                val (_, ibinds) = unfold_binds tbinds
                val (_, (t', _)) = unfold_binds ibinds
 	       val t' = subst_ts_mt ts t'
-               val covers = ConstrC (x, neg t' c) :: map (fn y => ConstrC (y, TrueC)) others
+               val covers = ConstrC (x, neg t' c) :: map (fn y => ConstrC (y, TrueC ())) others
 	     in
                combine_covers covers
 	     end
@@ -157,42 +158,42 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
           in
             acc
           end
-        | TrueC => acc
+        | TrueC () => acc
         | _ => c :: acc
     val collect_AndC = fn c => collect_AndC [] c
     (* fun combine_AndC cs = foldl' AndC TrueC cs *)
     local
-      exception IsFalse
+      exception IsFalse of unit
       fun runUntilFalse m =
-        m () handle IsFalse => FalseC
+        m () handle IsFalse () => FalseC ()
       fun simp c =
         case c of
             AndC (c1, c2) =>
             (case (simp c1, simp c2) of
-                 (TrueC, c) => c
-               | (c, TrueC) => c
+                 (TrueC (), c) => c
+               | (c, TrueC ()) => c
                | (c1, c2) => AndC (c1, c2)
             )
           | OrC (c1, c2) =>
             (case (runUntilFalse (fn () => simp c1), runUntilFalse (fn () => simp c2)) of
-                 (FalseC, FalseC) => raise IsFalse
-               | (FalseC, c) => c
-               | (c, FalseC) => c
+                 (FalseC (), FalseC ()) => raise IsFalse ()
+               | (FalseC (), c) => c
+               | (c, FalseC ()) => c
                | (c1, c2) => OrC (c1, c2)
             )
-          | TTC => TTC
-          | PairC (c1, c2) => PairC (simp c1, simp c2)
+          | TTC () => TTC ()
+          (* | PairC (c1, c2) => PairC (simp c1, simp c2) *)
           | ConstrC (x, c) => ConstrC (x, simp c)
-          | TrueC => TrueC
-          | FalseC => raise IsFalse
+          | TrueC () => TrueC ()
+          | FalseC () => raise IsFalse ()
     in
     fun simp_cover cover =
       runUntilFalse (fn () => simp cover)
     fun simp_covers cs =
       let
-        fun main () = List.filter (fn c => case c of TrueC => false | _ => true) $ map simp cs
+        fun main () = List.filter (fn c => case c of TrueC () => false | _ => true) $ map simp cs
       in
-        main () handle IsFalse => [FalseC]
+        main () handle IsFalse () => [FalseC ()]
       end
     end              
     (* val () = println $ "before simp_cover(): size=" ^ (str_int $ covers_size cs) *)
@@ -237,7 +238,7 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
         case cs_all of
             [] =>
             if not deep then
-              TrueH
+              TrueH ()
             else
               let
                 (* val () = println (sprintf "Empty constraints now. Now try to find any inhabitant of type $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) t]) *)
@@ -252,14 +253,15 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                             val all = fetch_constrs gctx (cctx, family)
                             (* val () = println $ sprintf "Constructors of $: $" [str_long_id #2 (gctx_names gctx) (names kctx) family, str_ls (str_long_id #3 (gctx_names gctx) (names cctx)) all] *)
                           in
-                            case all of x :: _ => ConstrH (x, TrueH) | [] => raise Incon "empty datatype"
+                            case all of x :: _ => ConstrH (x, TrueH ()) | [] => raise Incon "empty datatype"
                           end
-                        else TrueH (* an abstract type is treated as an inhabited type *)
+                        else TrueH () (* an abstract type is treated as an inhabited type *)
                       | NONE =>
                         (case t of
-                             TUnit _ => TTH
-                           | TProd (t1, t2) => PairH (loop $ check_size (t1, []), loop $ check_size (t2, []))
-                           | _ => TrueH
+                             TUnit _ => TTH ()
+                           (* | TProd (t1, t2) => PairH (loop $ check_size (t1, []), loop $ check_size (t2, [])) *)
+                           | TTuple ts => TupleH $ map (fn t => loop $ check_size (t, [])) ts
+                           | _ => TrueH ()
                         )
                 (* val () = println "Found" *)
               in
@@ -271,9 +273,10 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
               (* val () = println $ sprintf "try to satisfy $" [str_cover (gctx_names gctx) (names cctx) c] *)
               fun conflict_half a b =
                 case (a, b) of
-                    (PairC _, ConstrC _) => true
-                  | (PairC _, TTC) => true
-                  | (ConstrC _, TTC) => true
+                    (TupleC _, ConstrC _) => true
+                  | (TupleC _, TTC _) => true
+                  | (ConstrC _, TTC _) => true
+                  | (TupleC ls, TupleC ls') => length ls <> length ls'
                   | _ => false
               fun conflict a b = conflict_half a b orelse conflict_half b a
               val () = app (fn c' => if conflict c c' then ((* println "conflict";  *)raise Incon "conflict") else ()) cs
@@ -281,11 +284,11 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
               fun default () = inr (c, cs, t)
               val result =
                   case c of
-                      TTC =>
+                      TTC () =>
                       (case t of
                            TUnit _ =>
-                           (case allSome (fn c => case c of TTC => SOME () | _ => NONE) cs of
-                                OK _ => inl TTH
+                           (case allSome (fn c => case c of TTC () => SOME () | _ => NONE) cs of
+                                OK _ => inl $ TTH ()
                               | Failed (i, dissident) =>
                                 if conflict c dissident then
                                   raise Incon "conflicts on tt"
@@ -294,24 +297,61 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                            )
                          | _ => default ()
                       )
-                    | PairC (c1, c2) =>
+                    (* | PairC (c1, c2) => *)
+                    (*   (case t of *)
+                    (*        TProd (t1, t2) => *)
+                    (*        (case allSome (fn c => case c of PairC p => SOME p | _ => NONE ) cs of *)
+                    (*             OK cs => *)
+                    (*             let *)
+                    (*               val (cs1, cs2) = unzip cs *)
+                    (*               val c1 = loop $ check_size (t1, c1 :: cs1) *)
+                    (*               val c2 = loop $ check_size (t2, c2 :: cs2) *)
+                    (*             in *)
+                    (*               inl $ PairH (c1, c2) *)
+                    (*             end *)
+                    (*           | Failed (i, dissident) => *)
+                    (*             if conflict c dissident then *)
+                    (*               raise Incon "conflicts on pair" *)
+                    (*             else *)
+                    (*               inr (dissident, c :: remove i cs, t) *)
+                    (*        ) *)
+                    (*      | _ => default () *)
+                    (*   ) *)
+                    | TupleC covers =>
                       (case t of
-                           TProd (t1, t2) =>
-                           (case allSome (fn c => case c of PairC p => SOME p | _ => NONE ) cs of
+                           TTuple ts =>
+                           let
+                             val len = length covers
+                             val () = assert_b "find_hab/len>=2" $ len >= 2
+                             val () = assert_b "find_hab/length eq" $ len = length ts
+                             val tcs = zip (ts, covers)
+                             fun unzip_many n lss =
+                               if n <= 0 then lss
+                               else
+                               let
+                                 val (heads, lss) = unzip $ map assert_cons lss
+                                 val r = heads :: unzip_many (n-1) lss
+                                 val () = assert_b "unzip_many/length r = n" $ length r = n
+                               in
+                                 r
+                               end
+                           in
+                           (case allSome (fn c => case c of TupleC p => if length p = len then SOME p else NONE
+                                                          | _ => NONE ) cs of
                                 OK cs =>
                                 let
-                                  val (cs1, cs2) = unzip cs
-                                  val c1 = loop $ check_size (t1, c1 :: cs1)
-                                  val c2 = loop $ check_size (t2, c2 :: cs2)
+                                  val css = unzip_many len cs
+                                  val covers = map (fn ((t, c), cs) => loop $ check_size (t, c :: cs)) $ zip (tcs, css)
                                 in
-                                  inl $ PairH (c1, c2)
+                                  inl $ TupleH covers
                                 end
                               | Failed (i, dissident) =>
                                 if conflict c dissident then
-                                  raise Incon "conflicts on pair"
+                                  raise Incon "conflicts on tuple"
                                 else
                                   inr (dissident, c :: remove i cs, t)
                            )
+                           end
                          | _ => default ()
                       )
                     | ConstrC (x, c') =>
@@ -371,8 +411,8 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                       inl hab => hab
                     | inr (c, cs, t) =>
                       case (c, t) of
-                          (TrueC, _) => loop $ check_size (t, cs)
-                        | (FalseC, _) => raise Incon "false"
+                          (TrueC (), _) => loop $ check_size (t, cs)
+                        | (FalseC (), _) => raise Incon "false"
                         | (AndC (c1, c2), _) => loop $ check_size (t, c1 :: c2 :: cs)
                         | (OrC (c1, c2), _) =>
                           (loop $ check_size (t, c1 :: cs) handle Incon _ => loop $ check_size (t, c2 :: cs))
