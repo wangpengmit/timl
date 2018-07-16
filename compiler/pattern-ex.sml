@@ -683,11 +683,12 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
              | _ => p
           )
         | _ => p
-    (* fun get_top_alias p = *)
-    (*   case p of *)
-    (*       PnPair (p, _) => get_pn_alias p *)
-    (*     | _ => NONE *)
-    val get_alias = firstSuccess get_pn_alias
+    fun get_pns_alias p =
+      case p of
+          p :: _ => get_pn_alias p
+        | _ => NONE
+    val get_first_alias = firstSuccess get_pn_alias
+    val get_first_pns_alias = firstSuccess get_pns_alias
     datatype shape =
              ShTT of unit
              | ShTuple of int
@@ -748,7 +749,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
             [] =>
             (case pks of
                  (* There could be multiple candidates (due to wildcard expansion). We just need to choose the first one. *)
-                 [PnExpr (Rebind (Outer e))] :: _ => e
+                 [PnExpr e] :: _ => unInner e
                | _ => raise Impossible $ sprintf "remove_deep_many(): $" [str_ls (str_ls str_pn) pks]
             )
           | matchee :: matchees =>
@@ -760,7 +761,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
               (* val () = app (fn p => println $ str_pn p) pks *)
               val pks = map (remove_top_aliases matchee) pks
               (* val () = app (fn p => println $ str_pn p) pks *)
-              val () = assert (fn () => isNone $ get_alias pks) "get_alias pks = NONE"
+              val () = assert (fn () => isNone $ get_first_pns_alias pks) "get_alias pks = NONE"
               (* val () = println "before" *)
               val (pns, pks') = split_first_column pks
               (* val () = println "after" *)
@@ -792,7 +793,7 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                         val pks = map (shift_e_pns 0 n) pks
                         val (pns, pks) = split_first_column pks
                         val pns_ls = is_all_Tuple n pns
-                        val enames = map (lazy_default fresh_name o get_alias) pns_ls
+                        val enames = map (lazy_default fresh_name o get_first_alias) pns_ls
                       in
                         MakeEMatchTuple (matchee, enames, remove_deep_many ((rev $ int_mapi EV n) @ matchees) $ foldr (fn (pns, pks) => add_column pns pks) pks pns_ls)
                       end
@@ -802,17 +803,17 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                         val pks = map (shift_e_pns 0 1) pks
                         val pn_groups = group_inj n pks
                         val cases = map (remove_deep_many (EV 0 :: matchees)) $ pn_groups
-                        val enames = map (lazy_default fresh_name o get_alias) pn_groups
+                        val enames = map (lazy_default fresh_name o get_first_pns_alias) pn_groups
                       in
                         EMatchSum (matchee, zip (enames, cases))
                       end
-                    | ShUnfold =>
+                    | ShUnfold () =>
                       let
                         val matchees = map (shift_e_e 0 1) matchees
-                        val pks = map (shift_e_pn 0 1) pks
+                        val pks = map (shift_e_pns 0 1) pks
                         val (pns, pks) = split_first_column pks
                         val pns = is_all_Unfold pns
-                        val ename = lazy_default fresh_name $ get_alias pns
+                        val ename = lazy_default fresh_name $ get_first_alias pns
                       in
                         EMatchUnfold (matchee, ename, remove_deep_many (EV 0 :: matchees) (add_column pns pks))
                       end
@@ -820,23 +821,23 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                       let
                         val matchees = map (shift_e_e 0 1) matchees
                         val matchees = map (shift_i_e 0 1) matchees
-                        val pks = map (shift_e_pn 0 1) pks
-                        (* don't need to (shift_i_pn pks) because pks already know the index var *)
+                        val pks = map (shift_e_pns 0 1) pks
                         fun shift_i_pn x n p = shift_i_pn_fn shift_i_e (shift_imposs "remove_deep/shift_i_mt()") x n p
-                        fun is_all_UnpackI ps =
+                        fun shift_i_pns x n ls = assert_PnTuple $ shift_i_pn x n $ PnTuple ls
+                        fun is_all_UnpackI pks =
                           unzip $ map
                                 (fn p =>
                                     case p of
-                                        PnPair (p1, p2) =>
+                                        p1 :: ps =>
                                         (case p1 of
-                                             PnUnpackI (_, p) => (p, p2)
-                                           | PnWildcard => (PnWildcard, shift_i_pn 0 1 p2)
+                                             PnUnpackI (_, p) => (p, ps) (* don't need to (shift_i_pns ps) because ps already know the index var *)
+                                           | PnWildcard () => (PnWildcard (), shift_i_pns 0 1 ps)
                                            | _ => raise Impossible "is_all_UnpackI()"
                                         )
                                       | _ => raise Impossible "is_all_UnpakcI()/split"
-                                ) ps
+                                ) pks
                         val (pns, pks) = is_all_UnpackI pks
-                        val ename = lazy_default fresh_name $ get_alias pns
+                        val ename = lazy_default fresh_name $ get_first_alias pns
                       in
                         EUnpackI (matchee, iname, ename, remove_deep_many (EV 0 :: matchees) (add_column pns pks))
                       end
@@ -854,8 +855,6 @@ fun get_and_inc r =
     v
   end
     
-fun PnBind (p, e) = PnPair (p, PnExpr $ Inner e)
-                           
 fun remove_deep params matchee =
   let
     val counter = ref 0
@@ -865,13 +864,17 @@ fun remove_deep params matchee =
     remove_deep_many fresh_name params [matchee]
   end
   
-fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e, _)) matchee (branches : ('mtype, 'expr) ptrn list) =
+fun PnBind (p, e) = PnTuple [p, PnExpr $ Inner e]
+                           
+fun to_expr (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e, _)) matchee (branches : (('mtype, 'expr) ptrn * 'expr) list) =
   let
     (* val str_pn = str_pn str_e *)
     (* val () = println $ "before to_expr: " ^ str_ls str_pn branches *)
+    val branches = map PnBind branches
     val branches = map remove_anno branches
     val branches = map (remove_constr (shift_i_e, str_e)) branches
     val branches = map remove_var branches
+    val branches = map assert_PnTuple branches
     val e = remove_deep params matchee branches
     (* val () = println $ "after to_expr: " ^ str_e e *)
   in

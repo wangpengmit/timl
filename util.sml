@@ -55,6 +55,8 @@ fun option2list a =
       SOME a => [a]
     | NONE => []
 
+fun pair2list (a, b) = [a, b]                 
+                
 fun min (a, b) = if a < b then a else b
                                       
 val join = String.concatWith

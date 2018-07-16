@@ -234,10 +234,10 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
 	  (TiBool (check_basic_sort gctx (sctx, i, BSBool), r),
            HType)
         | U.TUnit r => (TUnit r, HType)
-	| U.TProd (c1, c2) => 
-	  (TProd (check_higher_kind_Type (ctx, c1),
-	         check_higher_kind_Type (ctx, c2)),
-           HType)
+	(* | U.TProd (c1, c2) =>  *)
+	(*   (TProd (check_higher_kind_Type (ctx, c1), *)
+	(*          check_higher_kind_Type (ctx, c2)), *)
+        (*    HType) *)
 	| U.TUniI (s, Bind ((name, r), (i, t)), r_all) => 
           let
             val s = is_wf_sort gctx (sctx, s)
@@ -754,7 +754,7 @@ fun is_value (e : U.expr) : bool =
       | EBinOp (opr, e1, e2) =>
         (case opr of
              EBApp () => false
-           | EBPair () => is_value e1 andalso is_value e2
+           (* | EBPair () => is_value e1 andalso is_value e2 *)
            | EBNew () => false
            | EBRead () => false
            | EBPrim _ => false
@@ -1051,28 +1051,28 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
           val () = if is_first_capital name then println $ sprintf "Warning: pattern $ is treated as a wildcard (did you misspell a constructor name?)" [name]
                    else ()
         in
-          (PnVar ename, TrueC, ctx_from_typing (name, PTMono t), 0)
+          (PnVar ename, TrueC (), ctx_from_typing (name, PTMono t), 0)
         end
-      | U.PnPair (pn1, pn2) =>
-        let 
-          val r = U.get_region_pn pn
-          val t1 = fresh_mt gctx (sctx, kctx) r
-          val t2 = fresh_mt gctx (sctx, kctx) r
-          (* val () = println $ sprintf "before: $ : $" [U.str_pn (sctxn, kctxn, names cctx) pn, str_mt skctxn t] *)
-          val () = unify_mt r gctx (sctx, kctx) (t, TProd (t1, t2))
-          (* val () = println "after" *)
-          val (pn1, cover1, ctxd, nps1) = match_ptrn (ctx, pn1, t1)
-          val ctx = add_ctx_skc ctxd ctx
-          val (pn2, cover2, ctxd', nps2) = match_ptrn (ctx, pn2, shift_ctx_mt ctxd t2)
-          val ctxd = add_ctx ctxd' ctxd
-        in
-          (PnPair (pn1, pn2), PairC (cover1, cover2), ctxd, nps1 + nps2)
-        end
+      (* | U.PnPair (pn1, pn2) => *)
+      (*   let  *)
+      (*     val r = U.get_region_pn pn *)
+      (*     val t1 = fresh_mt gctx (sctx, kctx) r *)
+      (*     val t2 = fresh_mt gctx (sctx, kctx) r *)
+      (*     (* val () = println $ sprintf "before: $ : $" [U.str_pn (sctxn, kctxn, names cctx) pn, str_mt skctxn t] *) *)
+      (*     val () = unify_mt r gctx (sctx, kctx) (t, TProd (t1, t2)) *)
+      (*     (* val () = println "after" *) *)
+      (*     val (pn1, cover1, ctxd, nps1) = match_ptrn (ctx, pn1, t1) *)
+      (*     val ctx = add_ctx_skc ctxd ctx *)
+      (*     val (pn2, cover2, ctxd', nps2) = match_ptrn (ctx, pn2, shift_ctx_mt ctxd t2) *)
+      (*     val ctxd = add_ctx ctxd' ctxd *)
+      (*   in *)
+      (*     (PnPair (pn1, pn2), PairC (cover1, cover2), ctxd, nps1 + nps2) *)
+      (*   end *)
       | U.PnTT r =>
         let
           val () = unify_mt r gctx (sctx, kctx) (t, TUnit dummy)
         in
-          (PnTT r, TTC, empty_ctx, 0)
+          (PnTT r, TTC (), empty_ctx, 0)
         end
       | U.PnAlias (ename, pn, r) =>
         let
@@ -1143,19 +1143,19 @@ fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
                                    end
                                  | NONE => default ()
                               )
-                            | TTH =>
+                            | TTH () =>
                               (case t of
                                    TUnit _ =>
                                    PnTT dummy
                                  | _ => default ()
                               )
-                            | PairH (h1, h2) =>
-                              (case t of
-                                   TProd (t1, t2) =>
-                                   PnPair (loop (* cutoff *) t1 h1, loop (* cutoff *) t2 h2)
-                                 | _ => default ()
-                              )
-                            | TrueH => PnVar $ str2ebinder "_"
+                            (* | PairH (h1, h2) => *)
+                            (*   (case t of *)
+                            (*        TProd (t1, t2) => *)
+                            (*        PnPair (loop (* cutoff *) t1 h1, loop (* cutoff *) t2 h2) *)
+                            (*      | _ => default () *)
+                            (*   ) *)
+                            | TrueH () => PnVar $ str2ebinder "_"
                         end
                     in
                       (* runError (fn () => loop t hab) () *)
@@ -1167,16 +1167,16 @@ fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
                     in
                       case pn of
                           PnConstr (Outer ((x, ()), _), _, pn, _) => ConstrC (x, ptrn_to_cover pn)
-                        | PnVar _ => TrueC
-                        | PnPair (pn1, pn2) => PairC (ptrn_to_cover pn1, ptrn_to_cover pn2)
-                        | PnTT _ => TTC
+                        | PnVar _ => TrueC ()
+                        (* | PnPair (pn1, pn2) => PairC (ptrn_to_cover pn1, ptrn_to_cover pn2) *)
+                        | PnTT _ => TTC ()
                         | PnAlias (_, pn, _) => ptrn_to_cover pn
                         | PnAnno (pn, _) => ptrn_to_cover pn
                     end
                   fun convert_pn pn =
                     case pn of
                         PnTT a => U.PnTT a
-                      | PnPair (pn1, pn2) => U.PnPair (convert_pn pn1, convert_pn pn2)
+                      (* | PnPair (pn1, pn2) => U.PnPair (convert_pn pn1, convert_pn pn2) *)
                       | PnConstr (x, inames, opn, r) => U.PnConstr (x, inames, convert_pn opn, r) 
                       | PnVar a => U.PnVar a
                       | PnAlias (name, pn, r) => U.PnAlias (name, convert_pn pn, r)
