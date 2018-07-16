@@ -177,6 +177,12 @@ fun foldlWithIdx f init xs = fst $ foldl (fn (x, (acc, n)) => (f (x, acc, n), n 
 fun foldli f = foldlWithIdx (fn (x, acc, n) => f (n, x, acc))
 fun foldrWithIdx start f init xs = fst $ foldr (fn (x, (acc, n)) => (f (x, acc, n), n + 1)) (init, start) xs
 fun foldri f = foldrWithIdx 0 (fn (x, acc, n) => f (n, x, acc))
+fun foldri' f acc ls =
+  let
+    val len = length ls
+  in
+    foldri (fn (i, x, acc) => f (len-1-i, x, acc)) acc ls
+  end
 fun mapWithIdx f ls = rev $ foldlWithIdx (fn (x, acc, n) => f (n, x) :: acc) [] ls
 val mapi = mapWithIdx
 fun appi f = ignore o mapi f
@@ -656,6 +662,16 @@ fun int_exp (base, exp) =
   if exp = 0 then 1
   else if exp > 0 then base * int_exp (base, exp-1)
   else raise Impossible "int_exp: exp < 0"
+
+fun unzip_many n lss =
+  if n <= 0 then lss
+  else
+    let
+      val (heads, lss) = unzip $ map assert_cons lss
+      val r = heads :: unzip_many (n-1) lss
+      val () = assert_b "unzip_many/length r = n" $ length r = n
+    in
+      r
+    end
              
 end
-

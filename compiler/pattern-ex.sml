@@ -40,7 +40,7 @@ datatype ('mtype, 'expr) ptrn =
          | PnUnfold of ('mtype, 'expr) ptrn
          | PnUnpackI of iname binder * ('mtype, 'expr) ptrn
          | PnExpr of 'expr inner
-         | PnWildcard
+         | PnWildcard of unit
 
 fun from_TiML_ptrn (get_inj : 'cvar -> inj) (p : ('cvar, 'mtype) S.ptrn) =
   let
@@ -74,7 +74,7 @@ fun str_pn str_e p =
       | PnUnfold p => sprintf "PnUnfold ($)" [str_pn p]
       | PnUnpackI (name, p) => sprintf "PnUnpackI ($, $)" [get_name name, str_pn p]
       | PnExpr e => sprintf "PnExpr $" [str_e $ unInner e(* "<expr>" *)]
-      | PnWildcard => "PnWildcard"
+      | PnWildcard () => "PnWildcard"
   end
 end
 
@@ -263,7 +263,7 @@ fun default_ptrn_visitor_vtable
           | PnInj data => #visit_PnInj vtable this env data
           | PnUnfold data => #visit_PnUnfold vtable this env data
           | PnExpr data => #visit_PnExpr vtable this env data
-          | PnWildcard => PnWildcard
+          | PnWildcard () => PnWildcard ()
       end
     fun visit_PnVar this env data =
       let
@@ -519,7 +519,7 @@ fun remove_var_ptrn_visitor_vtable cast ()
       (* if fst (unBinderName data) = "_" then *)
       (*   PnWildcard *)
       (* else *)
-        PnAlias (data, PnWildcard, dummy)
+        PnAlias (data, PnWildcard (), dummy)
     val vtable =
         default_ptrn_visitor_vtable
           cast
@@ -666,18 +666,20 @@ fun get_pn_alias p =
     | PnVar (Binder name) => SOME name
     | PnAnno (p, _) => get_pn_alias p
     | _ => NONE
-             
-fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e, (EMatchPair, EMatchSum, EMatchUnfold, EUnpackI))) matchees pks =
+
+fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV, str_e, (MakeEMatchTuple, EMatchSum, EMatchUnfold, EUnpackI))) matchees (pks : ('a, 'b) ptrn list list) =
   let
     fun shift_e_pn a = shift_e_pn_fn shift_e_e a
+    fun shift_e_pns x n ls = assert_PnTuple $ shift_e_pn x n $ PnTuple ls
     fun subst0_e_pn a = subst0_e_pn_fn subst_e_e a
+    fun subst0_e_pns e pns = assert_PnTuple $ subst0_e_pn e $ PnTuple pns
     val remove_deep_many = remove_deep_many fresh_name params
     val str_pn = str_pn str_e
     fun remove_top_aliases e p =
       case p of
-          PnPair (p1, pk) =>
+          p1 :: pk =>
           (case p1 of
-               PnAlias (_, p1, _) => remove_top_aliases e $ subst0_e_pn e (PnPair (p1, pk))
+               PnAlias (_, p1, _) => remove_top_aliases e $ subst0_e_pns e $ p1 :: pk
              | _ => p
           )
         | _ => p
@@ -687,31 +689,32 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
     (*     | _ => NONE *)
     val get_alias = firstSuccess get_pn_alias
     datatype shape =
-             ShTT
-             | ShPair
-             | ShUnfold
+             ShTT of unit
+             | ShTuple of int
+             | ShUnfold of unit
              | ShInj of int
              | ShUnpackI of iname
     fun get_shape p =
       case p of
-          PnWildcard => NONE
-        | PnTT _ => SOME ShTT
-        | PnPair _ => SOME ShPair
+          PnWildcard () => NONE
+        | PnTT _ => SOME $ ShTT ()
+        | PnTuple pns => SOME $ ShTuple $ length pns
         | PnInj (Outer (n, _), _) => SOME $ ShInj n
-        | PnUnfold _ => SOME ShUnfold
+        | PnUnfold _ => SOME $ ShUnfold ()
         | PnUnpackI (Binder iname, _) => SOME $ ShUnpackI iname
         | _ => raise Impossible "get_shape()"
     val is_all_Wildcard = firstSuccess get_shape
-    fun is_all_TT ps = app (fn p => case p of PnTT _ => () | PnWildcard => () | _ => raise Impossible "is_all_TT()") ps
-    fun is_all_Pair ps = unzip $ map (fn p => case p of PnPair p => p | PnWildcard => (PnWildcard, PnWildcard) | _ => raise Impossible "is_all_Pair()") ps
-    fun is_all_Unfold ps = map (fn p => case p of PnUnfold p => p | PnWildcard => PnWildcard | _ => raise Impossible "is_all_Unfold()") ps
+    fun is_all_TT ps = app (fn p => case p of PnTT _ => () | PnWildcard () => () | _ => raise Impossible "is_all_TT()") ps
+    (* fun is_all_Pair ps = unzip $ map (fn p => case p of PnPair p => p | PnWildcard () => (PnWildcard (), PnWildcard ()) | _ => raise Impossible "is_all_Pair()") ps *)
+    fun is_all_Tuple n ps = unzip_many n $ map (fn p => case p of PnTuple ps => (assert_b "is_all_Tuple/len=n" $ length ps = n; ps) | PnWildcard () => repeat n $ PnWildcard () | _ => raise Impossible "is_all_Tuple()") ps
+    fun is_all_Unfold ps = map (fn p => case p of PnUnfold p => p | PnWildcard () => PnWildcard () | _ => raise Impossible "is_all_Unfold()") ps
     fun group_inj n ps =
       let
         fun do_group (p, acc) =
           let
             val (p, pk) =
                 case p of
-                    PnPair data => data
+                    x :: xs => (x, xs)
                   | _ => raise Impossible "do_group()/PnPair"
             fun add_to i a ls =
               let
@@ -726,17 +729,17 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                   val () = assert (fn () => n' = n) "n' = n"
                   val () = assert (fn () => i < n) "i < n"
                 in
-                  add_to i (PnPair (p, pk)) acc
+                  add_to i (p :: pk) acc
                 end
-              | PnWildcard => map (curry Cons $ PnPair (PnWildcard, pk)) acc
+              | PnWildcard () => map (curry Cons $ (PnWildcard () :: pk)) acc
               | _ => raise Impossible "do_group()"
           end
         val groups = map rev $ foldl do_group (repeat n []) ps
       in
         groups
       end
-    fun split_first_column ps = unzip $ map (fn p => case p of PnPair p => p | _ => raise Impossible "split_first_column()") ps
-    fun add_column ps pks = map PnPair $ zip (ps, pks)
+    fun split_first_column ps = unzip $ map (fn p => case p of x :: xs => (x, xs) | _ => raise Impossible "split_first_column()") ps
+    fun add_column ps pks = map op:: $ zip (ps, pks)
     (* val () = println $ "before " ^ str_int (length matchees) *)
     (* val () = println $ str_ls str_pn pks *)
     (* val () = println "" *)
@@ -745,8 +748,8 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
             [] =>
             (case pks of
                  (* There could be multiple candidates (due to wildcard expansion). We just need to choose the first one. *)
-                 PnExpr (Rebind (Outer e)) :: _ => e
-               | _ => raise Impossible $ sprintf "remove_deep_many(): $" [str_ls str_pn pks]
+                 [PnExpr (Rebind (Outer e))] :: _ => e
+               | _ => raise Impossible $ sprintf "remove_deep_many(): $" [str_ls (str_ls str_pn) pks]
             )
           | matchee :: matchees =>
             (* todo: handle empty datatypes here *)
@@ -766,27 +769,37 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
                   NONE => remove_deep_many matchees pks'
                 | SOME shape =>
                   case shape of
-                      ShTT =>
+                      ShTT () =>
                       let
                         val () = is_all_TT pns
                       in
                         remove_deep_many matchees pks'
                       end
-                    | ShPair =>
+                    (* | ShPair => *)
+                    (*   let *)
+                    (*     val matchees = map (shift_e_e 0 2) matchees *)
+                    (*     val pks = map (shift_e_pn 0 2) pks *)
+                    (*     val (pns, pks) = split_first_column pks *)
+                    (*     val (pns1, pns2) = is_all_Pair pns *)
+                    (*     val ename1 = lazy_default fresh_name $ get_alias pns1 *)
+                    (*     val ename2 = lazy_default fresh_name $ get_alias pns2 *)
+                    (*   in *)
+                    (*     EMatchPair (matchee, ename1, ename2, remove_deep_many (EV 1 :: EV 0 :: matchees) (add_column pns1 $ add_column pns2 pks)) *)
+                    (*   end *)
+                    | ShTuple n =>
                       let
-                        val matchees = map (shift_e_e 0 2) matchees
-                        val pks = map (shift_e_pn 0 2) pks
+                        val matchees = map (shift_e_e 0 n) matchees
+                        val pks = map (shift_e_pns 0 n) pks
                         val (pns, pks) = split_first_column pks
-                        val (pns1, pns2) = is_all_Pair pns
-                        val ename1 = lazy_default fresh_name $ get_alias pns1
-                        val ename2 = lazy_default fresh_name $ get_alias pns2
+                        val pns_ls = is_all_Tuple n pns
+                        val enames = map (lazy_default fresh_name o get_alias) pns_ls
                       in
-                        EMatchPair (matchee, ename1, ename2, remove_deep_many (EV 1 :: EV 0 :: matchees) (add_column pns1 $ add_column pns2 pks))
+                        MakeEMatchTuple (matchee, enames, remove_deep_many ((rev $ int_mapi EV n) @ matchees) $ foldr (fn (pns, pks) => add_column pns pks) pks pns_ls)
                       end
                     | ShInj n =>
                       let
                         val matchees = map (shift_e_e 0 1) matchees
-                        val pks = map (shift_e_pn 0 1) pks
+                        val pks = map (shift_e_pns 0 1) pks
                         val pn_groups = group_inj n pks
                         val cases = map (remove_deep_many (EV 0 :: matchees)) $ pn_groups
                         val enames = map (lazy_default fresh_name o get_alias) pn_groups

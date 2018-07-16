@@ -74,6 +74,7 @@ fun MakeTForallI (s, name, i, t) = MakeTQuanI (Forall (), s, name, i, t)
 fun MakeTForall (s, name, i, t) = MakeTQuan (Forall (), s, name, i, t)
 fun EAbsTKind (name, e) = MakeEAbsT (name, KType (), e) 
 fun EAbsTKind_Many (names, e) = foldr EAbsTKind e names
+fun MakeEMatchTuple (e1, names, e2) = EMatchTuple (e1, Bind (map str2ebinder names, e2))
 
 fun choose_update (b1, b2) proj =
   case proj of

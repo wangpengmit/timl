@@ -23,17 +23,30 @@ fun post_process_expr_visitor_vtable cast () =
     fun visit_EMatchUnfold this env (e, bind) =
       #visit_expr (cast this) this env $ ELet (EUnfold e, bind)
     val vtable = override_visit_EMatchUnfold vtable visit_EMatchUnfold
-    fun visit_EMatchPair this env (e, bind) =
+    (* fun visit_EMatchPair this env (e, bind) = *)
+    (*   let *)
+    (*     val () = case e of *)
+    (*                  EVar _ => () *)
+    (*                | _ => raise Impossible "post-process: matchee must be EVar" *)
+    (*     val (name1, bind) = unBind bind *)
+    (*     val (name2, e_body) = unBind bind *)
+    (*   in *)
+    (*     #visit_expr (cast this) this env $ ELet (EFst e, Bind (name1, ELet (ESnd $ shift01_e_e e, Bind (name2, e_body)))) *)
+    (*   end *)
+    (* val vtable = override_visit_EMatchPair vtable visit_EMatchPair *)
+    fun visit_EMatchTuple this env (e, bind) =
       let
         val () = case e of
                      EVar _ => ()
                    | _ => raise Impossible "post-process: matchee must be EVar"
-        val (name1, bind) = unBind bind
-        val (name2, e_body) = unBind bind
+        val (names, e_body) = unBind bind
+        val len = length names
+        val () = assert_b "post_process/visit_EMatchTuple: len>=2" $ len >= 2
+        val e_body = foldri' (fn (i, name, e_body) => ELet (curry EProj i $ shift_e_e 0 i e, Bind (name, e_body))) e_body names
       in
-        #visit_expr (cast this) this env $ ELet (EFst e, Bind (name1, ELet (ESnd $ shift01_e_e e, Bind (name2, e_body))))
+        #visit_expr (cast this) this env e_body
       end
-    val vtable = override_visit_EMatchPair vtable visit_EMatchPair
+    val vtable = override_visit_EMatchTuple vtable visit_EMatchTuple
     (* fun visit_ELet this env (data as (e, bind)) = *)
     (*   case e of *)
     (*       EVar _ => *)

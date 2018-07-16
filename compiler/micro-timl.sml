@@ -115,7 +115,8 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EVarConstr of 'var (* todo: should be 'cvar *)
          | EPackIs of 'ty * 'idx list * ('var, 'idx, 'sort, 'kind, 'ty) expr
          | EMatchSum of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind list
-         | EMatchPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ebind
+         (* | EMatchPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind ebind *)
+         | EMatchTuple of ('var, 'idx, 'sort, 'kind, 'ty) expr * (ebinder list, ('var, 'idx, 'sort, 'kind, 'ty) expr) bind
          | EMatchUnfold of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          | EIfi of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          (* introduced by compiler/CPS *)

@@ -325,16 +325,6 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
                              val () = assert_b "find_hab/len>=2" $ len >= 2
                              val () = assert_b "find_hab/length eq" $ len = length ts
                              val tcs = zip (ts, covers)
-                             fun unzip_many n lss =
-                               if n <= 0 then lss
-                               else
-                               let
-                                 val (heads, lss) = unzip $ map assert_cons lss
-                                 val r = heads :: unzip_many (n-1) lss
-                                 val () = assert_b "unzip_many/length r = n" $ length r = n
-                               in
-                                 r
-                               end
                            in
                            (case allSome (fn c => case c of TupleC p => if length p = len then SOME p else NONE
                                                           | _ => NONE ) cs of
