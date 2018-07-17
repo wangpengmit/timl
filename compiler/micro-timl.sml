@@ -74,7 +74,7 @@ datatype 'ty expr_un_op =
          | EUFold of 'ty
          | EUUnfold of unit
          | EUTiML of Operators.expr_un_op
-         | EUTupleProj of int
+         (* | EUTupleProj of int *)
          (* | EUExfalso of 'ty *)
 
 (* term *)
@@ -252,7 +252,7 @@ fun is_value e =
          | EUAnno _ => is_value e
          | EUField _ => false
       )
-    | EUnOp (EUTupleProj _, _) => false
+    (* | EUnOp (EUTupleProj _, _) => false *)
     | ETriOp (ETWrite (), _, _, _) => false
     | ETriOp (ETIte (), _, _, _) => false
     | ETriOp (ETVectorSet (), _, _, _) => false
@@ -267,6 +267,7 @@ fun is_value e =
     | EAppConstr _ => false
     | EMatchSum _ => false
     (* | EMatchPair _ => false *)
+    | EMatchTuple _ => false
     | EMatchUnfold _ => false
     | EIfi _ => false
     | EHalt _ => false

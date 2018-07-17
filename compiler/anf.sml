@@ -86,6 +86,7 @@ fun anf_decls_expr_visitor_vtable cast output =
                 | EPackIs _ => true
                 | EMatchSum _ => true
                 (* | EMatchPair _ => true *)
+                | EMatchTuple _ => true
                 | EMatchUnfold _ => true
                 (* | EMallocPair _ => true *)
                 (* | EPairAssign _ => true *)

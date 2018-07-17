@@ -299,6 +299,7 @@ fun on_e (e : S.expr) : mtiml_expr =
     | S.ESet _ => err ()
     | S.EGet _ => err ()
     | S.ERecord (fields, _) => ERecord $ SMap.map on_e fields
+    | S.ETuple es => ETuple $ map on_e es
     fun extra_msg () = "\nwhen translating\n" ^ ToString.str_e Gctx.empty ToStringUtil.empty_ctx e
     val ret = main ()
               handle

@@ -676,6 +676,28 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
       (*     str ")"; *)
       (*     close_box () *)
       (*   end *)
+      | EMatchTuple (e, bind) =>
+        let
+          val (names, branch) = unBind bind
+          val names = map binder2str names
+        in
+          open_vbox ();
+          (* space (); *)
+          open_hbox ();
+          str "EMatchTuple";
+          space ();
+          str "(";
+          pp_e e;
+          close_box ();
+          comma ();
+          open_hbox ();
+          app (fn s => (str s; comma ())) names;
+          close_box ();
+          space ();
+          pp_e branch;
+          str ")";
+          close_box ()
+        end
       | EMatchUnfold (e, branch) =>
         (
           open_hbox ();
@@ -777,7 +799,7 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
                 | EUFold t => sprintf "fold $" [str_t t]
                 | EUUnfold () => "unfold"
                 | EUTiML opr => Operators.str_expr_un_op opr
-                | EUTupleProj n => "proj " ^ str_int n
+                (* | EUTupleProj n => "proj " ^ str_int n *)
         in
         (
           open_hbox ();

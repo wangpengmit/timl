@@ -1,4 +1,4 @@
-test-state.timl
+(* test-state.timl *)
 (* unit-test-basic1.timl *)
 (* MiniToken.etiml *)
 (* Token.etiml *)
@@ -6,7 +6,7 @@ test-state.timl
 (* EtherDelta.etiml *)
 (* Congress.etiml *)
 (* MultiSig.etiml *)
-(* CryptoKitties.etiml *)
+CryptoKitties.etiml
 
 (* pervasive.timl *)
 (* basic.timl *)

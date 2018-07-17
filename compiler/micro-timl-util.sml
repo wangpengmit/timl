@@ -234,7 +234,7 @@ fun EAbsIT (bind, e) =
       | inr bind => EAbsT $ TBindAnno (bind, e)
 fun EAbsITs (binds, e) = foldr EAbsIT e binds
 
-fun ETupleProj (e, n) = EUnOp (EUTupleProj n, e)
+(* fun ETupleProj (e, n) = EUnOp (EUTupleProj n, e) *)
   
 fun is_tail_call e =
   case e of

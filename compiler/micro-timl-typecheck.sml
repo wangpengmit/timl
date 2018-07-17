@@ -1035,7 +1035,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       (*   in *)
       (*     (EUnOp (opr, e), choose (t1, t2) proj, i %%+ TN C_EProj, st) *)
       (*   end *)
-      | EUnOp (opr as EUTupleProj n, e) =>
+      | EUnOp (opr as EUTiML (EUProj n), e) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e
           val t_e = whnf itctx t_e
@@ -2190,6 +2190,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       | EVarConstr _ => err ()
       | EMatchSum _ => err ()
       (* | EMatchPair _ => err () *)
+      | EMatchTuple _ => err ()
       | EMatchUnfold _ => err ()
     fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, SOME 5) (ctx_names ctx) e_input)
     val (e_output, t, i, st) = main ()

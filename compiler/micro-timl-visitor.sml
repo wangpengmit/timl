@@ -1140,6 +1140,13 @@ fun default_expr_visitor_vtable
           | EVarConstr data => #visit_EVarConstr vtable this env data
           | EMatchSum data => #visit_EMatchSum vtable this env data
           (* | EMatchPair data => #visit_EMatchPair vtable this env data *)
+          | EMatchTuple (e, bind) =>
+            let
+              val e = #visit_expr vtable this env e
+              val bind = visit_bind (visit_list (visit_ebinder this)) (#visit_expr vtable this) env bind
+            in
+              EMatchTuple (e, bind)
+            end
           | EMatchUnfold data => #visit_EMatchUnfold vtable this env data
           (* | EMallocPair data => #visit_EMallocPair vtable this env data *)
           (* | EPairAssign data => #visit_EPairAssign vtable this env data *)
@@ -1180,7 +1187,7 @@ fun default_expr_visitor_vtable
           | EUFold t => EUFold $ on_t t
           | EUUnfold () => EUUnfold ()
           | EUTiML opr => EUTiML opr
-          | EUTupleProj n => EUTupleProj n
+          (* | EUTupleProj n => EUTupleProj n *)
       end
     fun visit_EUnOp this env data = 
       let

@@ -668,7 +668,7 @@ fun int_exp (base, exp) =
   else raise Impossible "int_exp: exp < 0"
 
 fun unzip_many n lss =
-  if n <= 0 then lss
+  if n <= 0 then []
   else
     let
       val (heads, lss) = unzip $ map assert_cons lss

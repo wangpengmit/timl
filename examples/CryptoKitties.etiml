@@ -10,7 +10,7 @@ structure Pervasive = struct
   fun orBy b a = a bit_or b
 fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
                                                                                               
-fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 =
+fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 =
   lets
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
       ifi i #>= eend then waste_time (); acc
@@ -1685,7 +1685,7 @@ contract SaleClockAuction = struct inherit ClockAuction
     end
 
 (* PW: here is a limitation of TiML: it can't parametrize on states. MicroTiML actually supports it (for continuations), so TiML should support it too.  *)                              
-fun for_lastGen0SalePrices ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), funtype {lastGen0SalePrices : st} nat {i} * 'a -- m2, m2' --> 'a) pre {lastGen0SalePrices : st} return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 =
+fun for_lastGen0SalePrices ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), funtype {lastGen0SalePrices : st} nat {i} * 'a -- m2, m2' --> 'a) pre {lastGen0SalePrices : st} return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 =
   lets
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {lastGen0SalePrices : st} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
       ifi i #>= eend then waste_time (); acc

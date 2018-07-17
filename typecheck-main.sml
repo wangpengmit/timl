@@ -308,7 +308,7 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
           let
             val len = length ts
             val () = if len >= 2 then ()
-                     else raise Error (r, ["tuples must have at least 2 components"])
+                     else raise Error (U.get_region_mt c, ["tuples must have at least 2 components"])
           in
 	  (TTuple $ map (curry check_higher_kind_Type ctx) ts,
            HType)
@@ -1499,6 +1499,19 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
         (*   in  *)
         (*     (EUnOp (opr, e, r), choose (t1, t2) proj, d %%+ TN C_EProj, st) *)
 	(*   end *)
+        | U.EUnOp (opr as EUProj proj, e, r) =>
+	  let
+            val (e, t, d, st) = get_mtype ctx_st e
+            val t = whnf_mt true gctx kctx t
+            val ts = case t of
+                         TTuple a => a
+                       | _ => raise Error (r, ["can't determine the tuple type"])
+            val t = case nth_error ts proj of
+                        SOME t => t
+                      | NONE => raise Error (r, ["projector out of bound"])
+          in
+            (EUnOp (opr, e, r), t, d %%+ TN C_EProj, st)
+	  end
         | U.EUnOp (opr as EUPrintc (), e, r) =>
           let
             val (e, d, st) = check_mtype ctx_st (e, TByte r) 
@@ -1566,7 +1579,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	  let
             val len = length es
             val () = if len >= 2 then ()
-                     else raise Error (r, ["tuples must have at least 2 components"])
+                     else raise Error (U.get_region_e e_all, ["tuples must have at least 2 components"])
             val (ls, st) = foldl (fn (e, (acc, st)) =>
                                let
                                  val (e, t, d, st) = get_mtype (ctx, st) e

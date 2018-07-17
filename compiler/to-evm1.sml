@@ -307,6 +307,7 @@ fun impl_expr_un_op opr =
     | EUNatCellGet () => [SLOAD ()]
     | EUAnno _ => []
     (* | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD (), MLOAD ()] *)
+    | EUProj n => impl_tuple_proj n
     | EUField (_, offset) =>
       let
         val offset = assert_SOME offset
@@ -464,6 +465,9 @@ fun compile st_name2int ectx e =
       [MSTORE (), PUSH1 WTT]
     | EUnOp (EUUnfold (), e) =>
       compile e @ [UNFOLD ()]
+    (* | EUnOp (EUTupleProj n, e) => *)
+    (*   compile e @ *)
+    (*   impl_tuple_proj n *)
     | EUnOp (EUTiML opr, e) =>
       let
         val I =
@@ -482,9 +486,6 @@ fun compile st_name2int ectx e =
       in
         I
       end
-    | EUnOp (EUTupleProj n, e) =>
-      compile e @
-      impl_tuple_proj n
     | EBinOp (EBiBool opr, e1, e2) =>
       compile e1 @ 
       compile e2 @
@@ -578,6 +579,7 @@ fun compile st_name2int ectx e =
     | EPackIs _ => err ()
     | EMatchSum _ => err ()
     (* | EMatchPair _ => err () *)
+    | EMatchTuple _ => err ()
     | EMatchUnfold _ => err ()
     | EIfi _ => err ()
     | EHalt _ => err ()
@@ -887,6 +889,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | EPackIs _ => err ()
     | EMatchSum _ => err ()
     (* | EMatchPair _ => err () *)
+    | EMatchTuple _ => err ()
     | EMatchUnfold _ => err ()
     (* | EMallocPair _ => err () *)
     (* | EPairAssign _ => err () *)

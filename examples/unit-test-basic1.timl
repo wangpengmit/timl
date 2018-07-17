@@ -48,8 +48,6 @@ val f = fn y => 1 + y
 val g = fn y => f y
 val a = g 64
           
-datatype t2 'a = C {0 = 0} {1 = 1} of 'a --> t2 'a
-
 val x =
     (let
       val (a, b) = (1, 2)
@@ -57,6 +55,8 @@ val x =
       a
     end) using _
     
+datatype t2 'a = C {0 = 0} {1 = 1} of 'a --> t2 'a
+
 val x =
     (let
       val (_, C (_, x)) = ((), C ((), 2))
@@ -204,7 +204,7 @@ val a = %length_int ls
            
 fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
                                                                                               
-fun for ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 =
+fun for ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 =
   let
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
       ifdec i #>= eend then waste_time (); acc
@@ -217,11 +217,6 @@ fun for ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (s
 val a = %for (#1, #4, 0, fn {i | 1 <= i /\ i < 4} (i : nat {i}, acc) => acc + __&nat2int i)
 (* val () = __&halt a *)
            
-(* fun map ['a 'b] {m1 : Time} {m2 n : Nat} (f : 'a -- m1, m2 --> 'b) (ls : list _ {n}) = *)
-(*   case ls return list _ {n} using (6524.0+m1)*$n+1767.0, (104+m2)*n+17 of *)
-(*       Nil => let val _ = waste_time () in Nil end *)
-(*     | Cons (x, xs) => Cons (f x, map f xs) *)
-
 fun map ['a 'b] {m1 : Time} {m2 n : Nat} (f : 'a -- m1, m2 --> 'b) (ls : list _ {n}) =
   case ls return list _ {n} using (6524.0+m1)*$n+1767.0, (104+m2)*n+17 of
       Nil => waste_time (); Nil

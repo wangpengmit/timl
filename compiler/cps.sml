@@ -885,7 +885,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                        | EUVectorLen _ => (C_EVectorLen, 0)
                        | EUAnno _ => raise Impossible "cps()/EUnOp/EUAnno"
                     )
-                  | EUTupleProj _ => (C_EProj, 0)
+                  (* | EUTupleProj _ => (C_EProj, 0) *)
           in
             cps (e, t_e) (c, mapPair' to_real N cost %%+ j_k)
           end
@@ -1019,6 +1019,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
     | S.EPackIs _ => err ()
     | S.EMatchSum _ => err ()
     (* | S.EMatchPair _ => err () *)
+    | S.EMatchTuple _ => err ()
     | S.EMatchUnfold _ => err ()
     (* | S.EMallocPair _ => err () *)
     (* | S.EPairAssign _ => err () *)
@@ -1301,6 +1302,7 @@ fun check_CPSed_expr e =
     | EPackIs _ => err ()
     | EMatchSum _ => err ()
     (* | EMatchPair _ => err () *)
+    | EMatchTuple _ => err ()
     | EMatchUnfold _ => err ()
     (* | EMallocPair _ => err () *)
     (* | EPairAssign _ => err () *)
@@ -1394,7 +1396,7 @@ and check_value e =
     | ENever _ => ()
     | EBuiltin _ => ()
     | EUnOp (EUUnfold (), _) => err ()
-    | EUnOp (EUTupleProj _, _) => err ()
+    (* | EUnOp (EUTupleProj _, _) => err () *)
     | EBinOp (EBApp (), _, _) => err ()
     | EBinOp (EBNew (), _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
@@ -1424,6 +1426,7 @@ and check_value e =
     | EVarConstr _ => err ()
     | EMatchSum _ => err ()
     (* | EMatchPair _ => err () *)
+    | EMatchTuple _ => err ()
     | EMatchUnfold _ => err ()
     | EIfi _ => err ()
     | EHalt _ => err ()

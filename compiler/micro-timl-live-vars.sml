@@ -146,6 +146,8 @@ fun live_vars_expr_visitor_vtable cast () =
         BindSimp (name, EAnnoLiveVars (e, n))
       end
         
+    fun err name = raise Impossible $ "live_vars/" ^ name
+                                                       
     fun visit_expr this (env as (_, has_k, _)) data =
       let
         val vtable = cast this
@@ -185,6 +187,7 @@ fun live_vars_expr_visitor_vtable cast () =
           | EVarConstr data => #visit_EVarConstr vtable this env data
           | EMatchSum data => #visit_EMatchSum vtable this env data
           (* | EMatchPair data => #visit_EMatchPair vtable this env data *)
+          | EMatchTuple data => err "EMatchTuple"
           | EMatchUnfold data => #visit_EMatchUnfold vtable this env data
           (* | EMallocPair data => #visit_EMallocPair vtable this env data *)
           (* | EPairAssign data => #visit_EPairAssign vtable this env data *)
@@ -247,7 +250,7 @@ fun live_vars_expr_visitor_vtable cast () =
           | EUFold t => EUFold $ on_t t
           | EUUnfold () => EUUnfold ()
           | EUTiML opr => EUTiML opr
-          | EUTupleProj n => EUTupleProj n
+          (* | EUTupleProj n => EUTupleProj n *)
       end
     fun visit_EUnOp this env data = 
       let
@@ -526,9 +529,8 @@ fun live_vars_expr_visitor_vtable cast () =
     (*   in *)
     (*     EProjProtected (proj, e) *)
     (*   end *)
-    fun err name = raise Impossible $ "live_vars/" ^ name
     fun visit_EMatchSum this env data = err "EMatchSum"
-    fun visit_EMatchPair this env data = err "EMatchPair"
+    (* fun visit_EMatchPair this env data = err "EMatchPair" *)
     fun visit_EMatchUnfold this env data = err "EMatchUnfold"
     fun visit_EVarConstr this env data = err "EVarConstr"
     fun visit_EAbsConstr this env data = err "EAbsConstr"

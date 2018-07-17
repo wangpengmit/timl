@@ -656,7 +656,7 @@ and cc_ERec env e_all outer_binds bind =
       (* val def_x = EPack (cc_t t_x, t_env, EV p) *)
                         
       val len_ys = length ys
-      val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), ETupleProj (EV z_env, i))) ys
+      val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), EProj (i, EV z_env))) ys
       val () = println $ "cc(): before ELetManyClose()"
                        
       val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, e)
