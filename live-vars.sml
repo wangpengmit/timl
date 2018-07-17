@@ -277,6 +277,12 @@ fun live_vars_expr_visitor_vtable cast () =
             in
               ERecord (fields, r)
             end
+          | ETuple es =>
+            let
+              val es = visit_es_right this env es
+            in
+              ETuple es
+            end
       in
         ret
       end

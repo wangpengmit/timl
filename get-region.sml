@@ -77,6 +77,7 @@ fun get_region_mt t =
     | TArray (t, i) => combine_region (get_region_mt t) (get_region_i i)
     | TUnit r => r
     (* | TProd (t1, t2) => combine_region (get_region_mt t1) (get_region_mt t2) *)
+    | TTuple ts => get_region_list get_region_mt ts
     | TUniI (_, _, r) => r
     | TVar y => get_region_var y
     | TApp (t1, t2) => combine_region (get_region_mt t1) (get_region_mt t2)
@@ -123,6 +124,7 @@ fun get_region_pn pn =
       PnConstr (_, _, _, r) => r
     | PnVar name => get_region_binder name
     (* | PnPair (pn1, pn2) => combine_region (get_region_pn pn1) (get_region_pn pn2) *)
+    | PnTuple ps => get_region_list get_region_pn ps
     | PnTT r => r
     | PnAlias (_, _, r) => r
     | PnAnno (pn, Outer t) => combine_region (get_region_pn pn) (get_region_mt t)
@@ -133,7 +135,7 @@ fun get_region_bind fp ft bind =
   in
     combine_region (fp p) (ft t)
   end
-    
+
 fun get_region_e e = 
   case e of
       EVar (x, _) => get_region_var x
@@ -147,12 +149,7 @@ fun get_region_e e =
     | EET (_, e, t) => combine_region (get_region_e e) (get_region_mt t)
     | ET (_, _, r) => r
     | ENewArrayValues (_, _, r) => r
-    | ETuple es =>
-      (case es of
-           [] => dummy
-         | [e] => get_region_e e
-         | _ :: _ => combine_region (get_region_e $ hd es) (get_region_e $ List.last es)
-      )
+    | ETuple es => get_region_list get_region_e es
     | EAbs (_, bind, _) => get_region_bind get_region_pn get_region_e bind
     | EAbsI (_, r) => r
     | EAppConstr ((x, _), _, _, e, _) => combine_region (get_region_cvar x) (get_region_e e)

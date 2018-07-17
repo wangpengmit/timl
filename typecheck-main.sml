@@ -304,6 +304,15 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
         | U.TRecord (fields, r) =>
 	  (TRecord (SMap.map (curry check_higher_kind_Type ctx) fields, r),
            HType)
+        | U.TTuple ts =>
+          let
+            val len = length ts
+            val () = if len >= 2 then ()
+                     else raise Error (r, ["tuples must have at least 2 components"])
+          in
+	  (TTuple $ map (curry check_higher_kind_Type ctx) ts,
+           HType)
+          end
         | U.TState (x, r) =>
           let
             val () = if Option.isSome $ !(#1 st_types_ref) @! x then ()
@@ -769,6 +778,7 @@ fun is_value (e : U.expr) : bool =
            | EBNatCellSet () => false
         )
       | ERecord (fields, _) => SMapU.all is_value fields
+      | ETuple es => List.all is_value es
       | ENewArrayValues _ => false
       | ETriOp (opr, _, _, _) =>
         (case opr of
@@ -1054,7 +1064,7 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
           (PnVar ename, TrueC (), ctx_from_typing (name, PTMono t), 0)
         end
       (* | U.PnPair (pn1, pn2) => *)
-      (*   let  *)
+      (*   let *)
       (*     val r = U.get_region_pn pn *)
       (*     val t1 = fresh_mt gctx (sctx, kctx) r *)
       (*     val t2 = fresh_mt gctx (sctx, kctx) r *)
@@ -1068,6 +1078,29 @@ fun match_ptrn gctx (ctx as (sctx : scontext, kctx : kcontext, cctx : ccontext),
       (*   in *)
       (*     (PnPair (pn1, pn2), PairC (cover1, cover2), ctxd, nps1 + nps2) *)
       (*   end *)
+      | U.PnTuple pns =>
+        let
+          val r = U.get_region_pn pn
+          val len = length pns
+          val pts = map (fn pn => (pn, fresh_mt gctx (sctx, kctx) r)) pns
+          val ts = map snd pts
+          val () = unify_mt r gctx (sctx, kctx) (t, TTuple ts)
+          fun f ((pn, t), (ctx, ctxd, nps, acc)) =
+            let
+              val (pn, cover, ctxd', nps') = match_ptrn (ctx, pn, shift_ctx_mt ctxd t)
+              val ctx = add_ctx_skc ctxd' ctx
+              val ctxd = add_ctx ctxd' ctxd
+              val nps = nps' + nps
+            in
+              (ctx, ctxd, nps, (pn, cover) :: acc)
+            end
+          val (ctx, ctxd, nps, pcs) = foldl f (ctx, empty_ctx, 0, []) pts
+          val pcs = rev pcs
+          val pns = map fst pcs
+          val covers = map snd pcs
+        in
+          (PnTuple pns, TupleC covers, ctxd, nps)
+        end
       | U.PnTT r =>
         let
           val () = unify_mt r gctx (sctx, kctx) (t, TUnit dummy)
@@ -1155,6 +1188,14 @@ fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
                             (*        PnPair (loop (* cutoff *) t1 h1, loop (* cutoff *) t2 h2) *)
                             (*      | _ => default () *)
                             (*   ) *)
+                            | TupleH hs =>
+                              (case t of
+                                   TTuple ts =>
+                                   if length hs <> length ts then default ()
+                                   else
+                                     PnTuple $ map2 (loop (* cutoff *)) ts hs
+                                 | _ => default ()
+                              )
                             | TrueH () => PnVar $ str2ebinder "_"
                         end
                     in
@@ -1169,6 +1210,7 @@ fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
                           PnConstr (Outer ((x, ()), _), _, pn, _) => ConstrC (x, ptrn_to_cover pn)
                         | PnVar _ => TrueC ()
                         (* | PnPair (pn1, pn2) => PairC (ptrn_to_cover pn1, ptrn_to_cover pn2) *)
+                        | PnTuple pns => TupleC $ map ptrn_to_cover pns
                         | PnTT _ => TTC ()
                         | PnAlias (_, pn, _) => ptrn_to_cover pn
                         | PnAnno (pn, _) => ptrn_to_cover pn
@@ -1177,6 +1219,7 @@ fun expand_rules gctx (ctx as (sctx, kctx, cctx), rules, t, r) =
                     case pn of
                         PnTT a => U.PnTT a
                       (* | PnPair (pn1, pn2) => U.PnPair (convert_pn pn1, convert_pn pn2) *)
+                      | PnTuple pns => U.PnTuple $ map convert_pn pns
                       | PnConstr (x, inames, opn, r) => U.PnConstr (x, inames, convert_pn opn, r) 
                       | PnVar a => U.PnVar a
                       | PnAlias (name, pn, r) => U.PnAlias (name, convert_pn pn, r)
@@ -1212,55 +1255,58 @@ fun get_rules_cost_adjustments (get_inj : 'cvar -> int * int) (rules : (('cvar, 
       val pns = map fst rules
       datatype fake_expr =
                FEConst of int
-               | FEUnPair of fake_expr
+               (* | FEUnPair of fake_expr *)
+               | FEUnTuple of int * fake_expr
                | FEUnSum of fake_expr list
                | FEUnfold of fake_expr
                | FEUnpackI of fake_expr
       val pns = map (from_TiML_ptrn get_inj) pns
-      val pns = mapi (fn (n, pn) => PnBind (pn, FEConst n)) pns
+      val pns = mapi (fn (n, pn) => (pn, FEConst n)) pns
       val shift_i_e = return3
       val shift_e_e = return3
       val subst_e_e = return4 
       val EV = FEConst
       fun str_e e = "[expr]"
-      fun EMatchPair (matchee, ename1, ename2, e) =
-        FEUnPair e
+      (* fun EMatchPair (matchee, ename1, ename2, e) = *)
+      (*   FEUnPair e *)
+      fun EMatchTuple (matchee, enames, e) =
+        FEUnTuple (length enames, e)
       fun EMatchSum (matchee, cases) =
         FEUnSum $ map snd cases
       fun EMatchUnfold (matchee, ename, e) =
         FEUnfold e
       fun EUnpackI (matchee, iname, ename, e) =
         FEUnpackI e
-      val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, str_e, (EMatchPair, EMatchSum, EMatchUnfold, EUnpackI)) (EV 0) pns
+      val e = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, str_e, (EMatchTuple, EMatchSum, EMatchUnfold, EUnpackI)) (EV 0) pns
       datatype cost =
-               CUnPair
+               CUnTuple of int
                | CUnSum of int * int
-               | CUnfold
-               | CUnpackI
+               | CUnfold of unit
+               | CUnpackI of unit
       fun collect_cost acc e =
         let
           val f = collect_cost
         in
           case e of
               FEConst n => [(n, acc)]
-            | FEUnPair e => f (CUnPair :: acc) e
+            | FEUnTuple (n, e) => f (CUnTuple n :: acc) e
             | FEUnSum es =>
               let
                 val len = length es
               in
                 concatMapi (fn (i, e) => f (CUnSum (len, i) :: acc) e) es
               end
-            | FEUnfold e => f (CUnfold :: acc) e
-            | FEUnpackI e => f (CUnpackI :: acc) e
+            | FEUnfold e => f (CUnfold () :: acc) e
+            | FEUnpackI e => f (CUnpackI () :: acc) e
         end
       fun C_ECaseMany (len, i) =
         (assert_b "C_ECaseMany: len = 2" (len = 2);
          C_Case_BeforeCodeGen + i * C_JUMPDEST)
       fun eval_cost c =
         case c of
-            CUnPair => 2 * C_EProj
-          | CUnfold => C_EUnfold
-          | CUnpackI => C_EUnpack
+            CUnTuple n => n * C_EProj
+          | CUnfold () => C_EUnfold
+          | CUnpackI () => C_EUnpack
           | CUnSum (len, i) => C_ECaseMany (len, i)
       val () = println $ "C_EProj = " ^ str_int C_EProj
       val () = println $ "C_EUnfold = " ^ str_int C_EUnfold
@@ -1272,9 +1318,9 @@ fun get_rules_cost_adjustments (get_inj : 'cvar -> int * int) (rules : (('cvar, 
       val costs = collect_cost [] e
       fun str_cost c =
         case c of
-            CUnPair => "CUnPair"
-          | CUnfold => "CUnfold"
-          | CUnpackI => "CUnpackI"
+            CUnTuple n => "CUnTuple " ^ str_int n
+          | CUnfold () => "CUnfold"
+          | CUnpackI () => "CUnpackI"
           | CUnSum (len, i) => sprintf "CUnSum ($, $)" [str_int len, str_int i]
       val () = println "costs:"
       val () = app println $ map (str_pair (str_int, str_ls str_cost)) costs
@@ -1319,8 +1365,8 @@ fun flatten_tuple_record t =
     val loop = flatten_tuple_record
   in
     case t of
-        (* TTuple (ts, _) => concatMap loop ts *)
-        TProd (t1, t2) => loop t1 @ loop t2
+        TTuple ts => concatMap loop ts
+        (* TProd (t1, t2) => loop t1 @ loop t2 *)
       | TRecord (fields, _) => concatMap loop $ map snd $ sort cmp_str_fst $ listItemsi fields
       | _ => [t]
   end
@@ -1444,15 +1490,15 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           end
         | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), TN C_EConst, st)
         | U.EEnv (name, r) => (EEnv (name, r), get_msg_info_type r name, TN $ C_EEnv name, st)
-        | U.EUnOp (opr as EUProj proj, e, r) =>
-	  let 
-            (* val r = U.get_region_e e *)
-            val t1 = fresh_mt gctx (sctx, kctx) r
-            val t2 = fresh_mt gctx (sctx, kctx) r
-            val (e, d, st) = check_mtype ctx_st (e, TProd (t1, t2)) 
-          in 
-            (EUnOp (opr, e, r), choose (t1, t2) proj, d %%+ TN C_EProj, st)
-	  end
+        (* | U.EUnOp (opr as EUProj proj, e, r) => *)
+	(*   let  *)
+        (*     (* val r = U.get_region_e e *) *)
+        (*     val t1 = fresh_mt gctx (sctx, kctx) r *)
+        (*     val t2 = fresh_mt gctx (sctx, kctx) r *)
+        (*     val (e, d, st) = check_mtype ctx_st (e, TProd (t1, t2))  *)
+        (*   in  *)
+        (*     (EUnOp (opr, e, r), choose (t1, t2) proj, d %%+ TN C_EProj, st) *)
+	(*   end *)
         | U.EUnOp (opr as EUPrintc (), e, r) =>
           let
             val (e, d, st) = check_mtype ctx_st (e, TByte r) 
@@ -1509,12 +1555,28 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EUnOp (opr, e, r), t, i, st)
           end
-	| U.EBinOp (opr as EBPair (), e1, e2) =>
-	  let 
-            val (e1, t1, d1, st) = get_mtype (ctx, st) e1
-	    val (e2, t2, d2, st) = get_mtype (ctx, st) e2
+	(* | U.EBinOp (opr as EBPair (), e1, e2) => *)
+	(*   let  *)
+        (*     val (e1, t1, d1, st) = get_mtype (ctx, st) e1 *)
+	(*     val (e2, t2, d2, st) = get_mtype (ctx, st) e2 *)
+        (*   in *)
+	(*     (EPair (e1, e2), TProd (t1, t2), d1 %%+ d2 %%+ (to_real C_EPair, N 2), st) *)
+	(*   end *)
+	| U.ETuple es =>
+	  let
+            val len = length es
+            val () = if len >= 2 then ()
+                     else raise Error (r, ["tuples must have at least 2 components"])
+            val (ls, st) = foldl (fn (e, (acc, st)) =>
+                               let
+                                 val (e, t, d, st) = get_mtype (ctx, st) e
+                               in
+                                 ((e, t, d) :: acc, st)
+                               end) ([], st) es
+            val ls = rev ls
+            val (es, ts, ds) = unzip3 ls
           in
-	    (EPair (e1, e2), TProd (t1, t2), d1 %%+ d2 %%+ (to_real C_EPair, N 2), st)
+	    (ETuple es, TTuple ts, foldl_nonempty (fn (d, acc) => acc %%+ d) ds %%+ (to_real (C_ETuple len), N len), st)
 	  end
 	| U.EBinOp (opr as EBApp (), e1, e2) =>
 	  let
@@ -1794,7 +1856,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
               let
                 val (ts, n) =
                     case (t, proj) of
-                        (TProd (t1, t2), inl n) => ([t1, t2], n)
+                        (* (TProd (t1, t2), inl n) => ([t1, t2], n) *)
+                        (TTuple ts, inl n) => (ts, n)
                       | (TRecord (fields, _), inr name) =>
                         let
                           val sorted = sort cmp_str_fst $ listItemsi fields
@@ -2565,7 +2628,8 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
                     U.PnAnno (_, Outer t) => t
                   | U.PnAlias (_, pn, _) => type_from_ptrn pn
                   | U.PnTT _ => U.TUnit r
-                  | U.PnPair (pn1, pn2) => U.TProd (type_from_ptrn pn1, type_from_ptrn pn2) 
+                  (* | U.PnPair (pn1, pn2) => U.TProd (type_from_ptrn pn1, type_from_ptrn pn2)  *)
+                  | U.PnTuple pns => U.TTuple $ map type_from_ptrn pns
                   | U.PnVar _ => U.TUVar ((), r)
                   | U.PnConstr _ => U.TUVar ((), r) (* todo: pn mustn't introduce index vars *)
               val IUnderscore2 = (U.IUVar ((), r), U.IUVar ((), r))
@@ -3030,7 +3094,8 @@ fun is_wf_map_val t =
     in
       case t of
           TMap t => loop t
-        | TProd (t1, t2) => loop t1 andalso loop t2
+        (* | TProd (t1, t2) => loop t1 andalso loop t2 *)
+        | TTuple ts => List.all loop ts
         | TRecord (fields, _) => SMapU.all loop fields
         | _ => is_nullable_wordsize_ty t
     end

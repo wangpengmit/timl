@@ -729,8 +729,8 @@ fun test1 dirname =
   let
     val () = println "MicroTiMLVisitor2.UnitTest started"
     fun eq_t a = eq_t_fn (curry op=, Equal.eq_bs, Equal.eq_i, Equal.eq_s) a
-    val t1 = TBinOp (TBProd (), TV 0, TV 1)
-    val t2 = TBinOp (TBProd (), TV 0, TV 2)
+    val t1 = TTuple [TV 0, TV 1]
+    val t2 = TTuple [TV 0, TV 2]
     val () = assert_b "" $ eq_t t1 t1
     val () = assert_b "" $ eq_t t2 t2
     val () = assert_b "" $ not $ eq_t t1 t2

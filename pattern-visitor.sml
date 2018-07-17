@@ -56,6 +56,7 @@ fun default_ptrn_visitor_vtable
             PnVar data => #visit_PnVar vtable this env data
           | PnTT data => #visit_PnTT vtable this env data
           (* | PnPair data => #visit_PnPair vtable this env data *)
+          | PnTuple data => PnTuple $ visit_list (#visit_ptrn vtable this) env data
           | PnAlias data => #visit_PnAlias vtable this env data
           | PnConstr data => #visit_PnConstr vtable this env data
           | PnAnno data => #visit_PnAnno vtable this env data

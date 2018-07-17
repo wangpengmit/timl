@@ -286,6 +286,16 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
           str ")";
           close_box ()
         )
+      | TTuple ts =>
+        (
+          open_hbox ();
+          str "TTuple";
+          space ();
+          str "(";
+          app (fn t => (pp_t t; comma ())) ts;
+          str ")";
+          close_box ()
+        )
       | TState (x, _) =>
         (
           open_hbox ();
@@ -430,6 +440,16 @@ fun pp_pn (params as pp_t) s pn =
       (*     str ")"; *)
       (*     close_box () *)
       (*   ) *)
+      | PnTuple ps =>
+        (
+          open_hbox ();
+          str "PnTuple";
+          space ();
+          str "(";
+          app (fn p => (pp_pn p; comma ())) ps;
+          str ")";
+          close_box ()
+        )
       | PnTT _ => str "PnTT"
       | PnAlias (name, pn, _) =>
         (
@@ -891,6 +911,16 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           strs "ERecord";
           str "(";
           SMap.appi (fn (name, e) => (strs name; strs "="; pp_e e; comma ())) fields;
+          str ")";
+          close_box ()
+        )
+      | ETuple es =>
+        (
+          open_hbox ();
+          str "ETuple";
+          space ();
+          str "(";
+          app (fn e => (pp_e e; comma ())) es;
           str ")";
           close_box ()
         )

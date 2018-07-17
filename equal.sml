@@ -261,6 +261,11 @@ fun eq_mt t t' =
              TRecord (fields', _) => SMapU.equal eq_mt fields fields'
            | _ => false
         )
+      | TTuple ts =>
+        (case t' of
+             TTuple ts' => length ts = length ts' andalso List.all (uncurry eq_mt) (zip (ts, ts'))
+           | _ => false
+        )
       | TState (x, _) =>
         (case t' of
              TState (x', _) => x = x'

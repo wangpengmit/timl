@@ -212,6 +212,7 @@ fun forget_i_mt x n b =
           | TUVar a => b
           | TDatatype _ => raise Unimpl "uvar_forget/forget_i_mt()/TDatatype"
           | TRecord (fields, r) => TRecord (SMap.map (f x n) fields, r)
+          | TTuple ts => TTuple $ map (f x n) ts
           | TState _ => b
           | TMap t => TMap $ f x n t
           | TVector t => TVector $ f x n t

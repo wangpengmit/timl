@@ -69,7 +69,9 @@ fun join_prefix fix ls = (join "" o map (prefix fix)) ls
 fun join_suffix fix ls = (join "" o map (suffix fix)) ls
 fun substr start len s = substring (s, start, min (len, size s - start))
                                                       
-fun str_ls f ls = (surround "[" "]" o join ", " o map f) ls
+fun str_ls_fn pre post f ls = (surround pre post o join ", " o map f) ls
+fun str_ls f ls = str_ls_fn "[" "]" f ls
+fun str_ls_paren f ls = str_ls_fn "(" ")" f ls
 fun str_pair (f, g) (a, b) = sprintf "($, $)" [f a, g b]
 fun str_opt_default def f opt = default def $ Option.map f opt
 fun str_opt a = str_opt_default "" a

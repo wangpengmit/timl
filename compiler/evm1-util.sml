@@ -54,11 +54,6 @@ val N32 = N 32
 
 fun TCell t = TStorageTuplePtr ([t], 0)
                         
-fun assert_TTuple t =
-  case t of
-      TTuple a => a
-    | _ => raise assert_fail $ "assert_TTuple; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
-                                                          
 fun assert_TStorageTuplePtr t =
   case t of
       TTuplePtr (ts, i, true) => (ts, i)

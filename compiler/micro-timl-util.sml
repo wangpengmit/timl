@@ -38,8 +38,10 @@ fun TStorageTuplePtr (ts, i) = TTuplePtr (ts, i, true)
          
 fun EPair (e1, e2) = ETuple [e1, e2]
 fun EProj (proj, e) = EUnOp (EUTiML $ EUProj proj, e)
-fun EFst e = EProj (ProjFst (), e)
-fun ESnd e = EProj (ProjSnd (), e)
+(* fun EFst e = EProj (ProjFst (), e) *)
+(* fun ESnd e = EProj (ProjSnd (), e) *)
+fun EFst e = EProj (0, e)
+fun ESnd e = EProj (1, e)
 fun EInj (inj, t, e) = EUnOp (EUInj (inj, t), e)
 fun EInl (t, e) = EInj (InjInl (), t, e)
 fun EInr (t, e) = EInj (InjInr (), t, e)
@@ -74,12 +76,12 @@ fun MakeTForallI (s, name, i, t) = MakeTQuanI (Forall (), s, name, i, t)
 fun MakeTForall (s, name, i, t) = MakeTQuan (Forall (), s, name, i, t)
 fun EAbsTKind (name, e) = MakeEAbsT (name, KType (), e) 
 fun EAbsTKind_Many (names, e) = foldr EAbsTKind e names
-fun MakeEMatchTuple (e1, names, e2) = EMatchTuple (e1, Bind (map str2ebinder names, e2))
+fun MakeEMatchTuple (e1, names, e2) = EMatchTuple (e1, Bind (map Binder names, e2))
 
-fun choose_update (b1, b2) proj =
-  case proj of
-      ProjFst () => (true, b2)
-    | ProjSnd () => (b1, true)
+(* fun choose_update (b1, b2) proj = *)
+(*   case proj of *)
+(*       ProjFst () => (true, b2) *)
+(*     | ProjSnd () => (b1, true) *)
                    
 fun choose_inj (t1, t2) inj =
   case inj of

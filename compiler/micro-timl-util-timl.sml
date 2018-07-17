@@ -285,4 +285,9 @@ fun assert_wordsize_ty t =
              | BTByte () => ())
     | _ => raise Impossible "not a base storage type"
 
+fun assert_TTuple t =
+  case t of
+      TTuple a => a
+    | _ => raise assert_fail $ "assert_TTuple; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+                                                          
 end

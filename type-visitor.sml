@@ -102,6 +102,7 @@ fun default_type_visitor_vtable
 	  | TBase data => #visit_TBase vtable this env data
           | TUnit data => #visit_TUnit vtable this env data
 	  (* | TProd data => #visit_TProd vtable this env data *)
+          | TTuple data => T.TTuple $ visit_list (#visit_mtype vtable this) env data
 	  | TUniI data => #visit_TUniI vtable this env data
           | TVar data => #visit_TVar vtable this env data
           | TAbs data => #visit_TAbs vtable this env data

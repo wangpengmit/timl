@@ -20,5 +20,11 @@ fun str_error header filename region msg = join_lines $ str_region header filena
 
 fun combine_region (r1 : region) (r2 : region) : region = (#1 r1, #2 r2)
 
+fun get_region_list get_region_e es =
+  case es of
+      [] => dummy
+    | [e] => get_region_e e
+    | _ :: _ => combine_region (get_region_e $ hd es) (get_region_e $ List.last es)
+
 end
 

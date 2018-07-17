@@ -39,6 +39,7 @@ fun str_cover gctx cctx c =
       | OrC (c1, c2) => sprintf "($ \\/ $)" [str_cover cctx c1, str_cover cctx c2]
       | ConstrC (x, c) => sprintf "($ $)" [str_var #3 gctx cctx x, str_cover cctx c]
       (* | PairC (c1, c2) => sprintf "($, $)" [str_cover cctx c1, str_cover cctx c2] *)
+      | TupleC cs => str_ls_fn "(" ")" (str_cover cctx) cs
       | TTC () => "()"
   end
 
@@ -50,6 +51,7 @@ fun str_habitant gctx cctx c =
         TrueH () => "_"
       | ConstrH (x, c) => sprintf "($ $)" [str_var #3 gctx cctx x, str_habitant cctx c]
       (* | PairH (c1, c2) => sprintf "($, $)" [str_habitant cctx c1, str_habitant cctx c2] *)
+      | TupleH cs => str_ls_fn "(" ")" (str_habitant cctx) cs
       | TTH () => "()"
   end
 
@@ -183,6 +185,7 @@ fun find_hab deep gctx (ctx as (sctx, kctx, cctx)) (t : mtype) cs =
             )
           | TTC () => TTC ()
           (* | PairC (c1, c2) => PairC (simp c1, simp c2) *)
+          | TupleC cs => TupleC $ map simp cs
           | ConstrC (x, c) => ConstrC (x, simp c)
           | TrueC () => TrueC ()
           | FalseC () => raise IsFalse ()

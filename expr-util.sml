@@ -170,6 +170,7 @@ fun is_tail_call e =
     | ETriOp _ => false
     | EET _ => false
     | ET _ => false
+    | ETuple _ => false
     | ERecord _ => false
     | ENewArrayValues _ => false
     | EAbs _ => false

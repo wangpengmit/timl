@@ -107,7 +107,7 @@ fun flatten_tuple_record t =
   in
     case t of
         TTuple ts => concatMap loop ts
-      | TBinOp (TBProd (), t1, t2) => loop t1 @ loop t2
+      (* | TBinOp (TBProd (), t1, t2) => loop t1 @ loop t2 *)
       | TRecord fields => concatMap loop $ map snd $ sort cmp_str_fst $ SMap.listItemsi fields
       | _ => [t]
   end
@@ -132,18 +132,18 @@ fun cg_ty_visitor_vtable cast () =
         TArrowEVM (pre, rctx_single (ARG_REG, t1), [], i)
       end
     val vtable = override_visit_TArrow vtable visit_TArrow
-    fun visit_TBinOp this env (data as (opr, t1, t2)) =
-      case opr of
-          TBProd () =>
-          let
-            val cg_t = #visit_ty (cast this) this env
-            val t1 = cg_t t1
-            val t2 = cg_t t2
-          in
-            TProd (t1, t2)
-          end
-        | _ => #visit_TBinOp vtable this env data (* call super *)
-    val vtable = override_visit_TBinOp vtable visit_TBinOp
+    (* fun visit_TBinOp this env (data as (opr, t1, t2)) = *)
+    (*   case opr of *)
+    (*       TBProd () => *)
+    (*       let *)
+    (*         val cg_t = #visit_ty (cast this) this env *)
+    (*         val t1 = cg_t t1 *)
+    (*         val t2 = cg_t t2 *)
+    (*       in *)
+    (*         TProd (t1, t2) *)
+    (*       end *)
+    (*     | _ => #visit_TBinOp vtable this env data (* call super *) *)
+    (* val vtable = override_visit_TBinOp vtable visit_TBinOp *)
     fun visit_ty this env t =
       let
         val super = vtable
@@ -306,7 +306,7 @@ fun impl_expr_un_op opr =
     | EUVectorLen () => [SLOAD ()]
     | EUNatCellGet () => [SLOAD ()]
     | EUAnno _ => []
-    | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD (), MLOAD ()]
+    (* | EUProj proj => [PUSH_tuple_offset $ 32 * choose (0, 1) proj, ADD (), MLOAD ()] *)
     | EUField (_, offset) =>
       let
         val offset = assert_SOME offset
@@ -403,15 +403,15 @@ fun compile st_name2int ectx e =
     | EAscState (e, st) => compile e
     | ENever t => PUSH_value $ VNever $ cg_t t
     | EBuiltin (name, t) => PUSH_value $ VBuiltin (name, cg_t t)
-    | EBinOp (EBPair (), e1, e2) =>
-      let
-        val (e1, t1) = assert_EAscType e1
-        val (e2, t2) = assert_EAscType e2
-        val t1 = cg_t t1
-        val t2 = cg_t t2
-      in
-        compile e1 @ compile e2 @ tuple_malloc [t1, t2] @ [PUSH_tuple_offset (2*32), ADD ()] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB (), SWAP1] @ tuple_assign) @ [MARK_PreTuple2TuplePtr ()]
-      end
+    (* | EBinOp (EBPair (), e1, e2) => *)
+    (*   let *)
+    (*     val (e1, t1) = assert_EAscType e1 *)
+    (*     val (e2, t2) = assert_EAscType e2 *)
+    (*     val t1 = cg_t t1 *)
+    (*     val t2 = cg_t t2 *)
+    (*   in *)
+    (*     compile e1 @ compile e2 @ tuple_malloc [t1, t2] @ [PUSH_tuple_offset (2*32), ADD ()] @ concatRepeat 2 ([PUSH1nat 32, SWAP1, SUB (), SWAP1] @ tuple_assign) @ [MARK_PreTuple2TuplePtr ()] *)
+    (*   end *)
     | ETuple es =>
       let
         val (es, ts) = unzip $ map assert_EAscType es
@@ -577,7 +577,7 @@ fun compile st_name2int ectx e =
     | EVarConstr _ => err ()
     | EPackIs _ => err ()
     | EMatchSum _ => err ()
-    | EMatchPair _ => err ()
+    (* | EMatchPair _ => err () *)
     | EMatchUnfold _ => err ()
     | EIfi _ => err ()
     | EHalt _ => err ()
@@ -845,7 +845,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | EAscState (e, _) => cg_e params e
     | ETuple _ => err ()
     | ERecord _ => err ()
-    | EBinOp (EBPair (), _, _) => err ()
+    (* | EBinOp (EBPair (), _, _) => err () *)
     | EBinOp (EBNew (), _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
@@ -886,7 +886,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | EVarConstr _ => err ()
     | EPackIs _ => err ()
     | EMatchSum _ => err ()
-    | EMatchPair _ => err ()
+    (* | EMatchPair _ => err () *)
     | EMatchUnfold _ => err ()
     (* | EMallocPair _ => err () *)
     (* | EPairAssign _ => err () *)

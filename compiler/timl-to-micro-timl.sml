@@ -197,6 +197,11 @@ fun on_e (e : S.expr) : mtiml_expr =
         val name = default (EName ("__x", dummy)) $ firstSuccess get_pn_alias $ map fst rules
         val pns = map PnBind rules
         val pns = map (shift_e_pn 0 1) pns
+        val pns = map assert_PnTuple pns
+        val pns = map (fn ls =>
+                          case ls of
+                              [pn, PnExpr e] => (pn, unInner e)
+                            | _ => raise Impossible "to-timl/ECase") pns
         (* val shift_i_e = fn x => fn n => fn e => *)
         (*   let *)
         (*     val e' = shift_i_e x n e *)
@@ -220,15 +225,15 @@ fun on_e (e : S.expr) : mtiml_expr =
         (*     e' *)
         (*   end *)
         fun str_e e = ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e
-        fun EMatchPair' (matchee, ename1, ename2, e) =
-          EMatchPair (matchee, BindSimp (ename1, BindSimp (ename2, e)))
+        (* fun EMatchPair' (matchee, ename1, ename2, e) = *)
+        (*   EMatchPair (matchee, BindSimp (ename1, BindSimp (ename2, e))) *)
         fun EMatchSum' (matchee, cases) =
           EMatchSum (matchee, map BindSimp cases)
         fun EMatchUnfold' (matchee, ename, e) =
           EMatchUnfold (matchee, BindSimp (ename, e))
         fun EUnpackI' (matchee, iname, ename, e) =
           EUnpackI (matchee, BindSimp (iname, BindSimp (ename, e)))
-        val e2 = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, str_e, (EMatchPair', EMatchSum', EMatchUnfold', EUnpackI')) (EV 0) pns
+        val e2 = to_expr (shift_i_e, shift_e_e, subst_e_e, EV, str_e, (MakeEMatchTuple, EMatchSum', EMatchUnfold', EUnpackI')) (EV 0) pns
       in
         ELet (e, BindSimp (name, e2))
       end

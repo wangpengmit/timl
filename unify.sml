@@ -573,7 +573,17 @@ fun unify_mt r gctx ctx (t, t') =
           (case t' of
                TRecord (t', _) =>
                ignore $ SMapU.check_equal err (unify_mt ctx) t t'
-             | _ => err ())
+             | _ => err ()
+          )
+        | TTuple ts =>
+          (case t' of
+               TTuple ts' =>
+               if length ts <> length ts' then
+                 err ()
+               else
+                 app2 (unify_mt ctx) (ts, ts')
+             | _ => err ()
+          )
         | TUVar _ => err ()
       end
     fun more_uvar_args (a, b) =

@@ -22,8 +22,8 @@ fun str_ty_const c =
       
 fun str_ty_bin_op opr =
   case opr of
-      TBProd () => "prod"
-    | TBSum () => "sum"
+      TBSum () => "sum"
+    (* | TBProd () => "prod" *)
 
 fun str_k str_b k =
     let
@@ -99,17 +99,17 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str $ str_ty_const c;
           close_box ()
         )
-      | TBinOp (TBProd (), t1, t2) =>
-        let
-          val ts = collect_TProd_left t
-          val (t, ts) = assert_cons ts
-          val pp_t = fn t => (str "("; pp_t t; str ")")
-        in
-          open_hbox ();
-          pp_t t;
-          app (fn t => (space (); str "*"; space (); pp_t t)) ts;
-          close_box ()
-        end
+      (* | TBinOp (TBProd (), t1, t2) => *)
+      (*   let *)
+      (*     val ts = collect_TProd_left t *)
+      (*     val (t, ts) = assert_cons ts *)
+      (*     val pp_t = fn t => (str "("; pp_t t; str ")") *)
+      (*   in *)
+      (*     open_hbox (); *)
+      (*     pp_t t; *)
+      (*     app (fn t => (space (); str "*"; space (); pp_t t)) ts; *)
+      (*     close_box () *)
+      (*   end *)
       | TBinOp (opr, t1, t2) =>
         (
           open_hbox ();
@@ -540,13 +540,13 @@ fun str_e str_var str_i e =
         EVar x => sprintf "EVar $" [str_var x]
       | EAppI (e, i) => sprintf "EAppI ($, $)" [str_e e, str_i i]
       | EMatchSum (e, branches) => sprintf "EMatchSum ($, $)" [str_e e, str_ls (str_pair (id, str_e) o get_bind) branches]
-      | EMatchPair (e, branch) =>
-        let
-          val (name1, branch) = get_bind branch
-          val (name2, branch) = get_bind branch
-        in
-          sprintf "EMatchPair ($, ($, $, $))" [str_e e, name1, name2, str_e branch]
-        end
+      (* | EMatchPair (e, branch) => *)
+      (*   let *)
+      (*     val (name1, branch) = get_bind branch *)
+      (*     val (name2, branch) = get_bind branch *)
+      (*   in *)
+      (*     sprintf "EMatchPair ($, ($, $, $))" [str_e e, name1, name2, str_e branch] *)
+      (*   end *)
       | EMatchUnfold (e, branch) => sprintf "EMatchUnfold ($, $)" [str_e e, str_pair (id, str_e) $ get_bind branch]
       | EUnpackI (e, branch) =>
         let
@@ -652,30 +652,30 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | EMatchPair (e, branch) =>
-        let
-          val (name1, branch) = get_bind branch
-          val (name2, branch) = get_bind branch
-        in
-	  open_vbox ();
-          (* space (); *)
-          open_hbox ();
-          str "EMatchPair";
-          space ();
-          str "(";
-          pp_e e;
-	  close_box ();
-          comma ();
-	  open_hbox ();
-          str name1;
-          comma ();
-          str name2;
-	  close_box ();
-          comma ();
-          pp_e branch;          
-          str ")";
-          close_box ()
-        end
+      (* | EMatchPair (e, branch) => *)
+      (*   let *)
+      (*     val (name1, branch) = get_bind branch *)
+      (*     val (name2, branch) = get_bind branch *)
+      (*   in *)
+      (*     open_vbox (); *)
+      (*     (* space (); *) *)
+      (*     open_hbox (); *)
+      (*     str "EMatchPair"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e; *)
+      (*     close_box (); *)
+      (*     comma (); *)
+      (*     open_hbox (); *)
+      (*     str name1; *)
+      (*     comma (); *)
+      (*     str name2; *)
+      (*     close_box (); *)
+      (*     comma (); *)
+      (*     pp_e branch;           *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   end *)
       | EMatchUnfold (e, branch) =>
         (
           open_hbox ();
@@ -709,26 +709,26 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
       (*     str $ str_int l; *)
       (*     close_box () *)
       (*   ) *)
-      | EUnOp (EUTiML (EUProj (ProjFst ())), e) =>
-        (
-          open_hbox ();
-          str "EFst";
-          space ();
-          str "(";
-          pp_e e;
-          str ")";
-          close_box ()
-        )
-      | EUnOp (EUTiML (EUProj (ProjSnd ())), e) =>
-        (
-          open_hbox ();
-          str "ESnd";
-          space ();
-          str "(";
-          pp_e e;
-          str ")";
-          close_box ()
-        )
+      (* | EUnOp (EUTiML (EUProj (ProjFst ())), e) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EFst"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
+      (* | EUnOp (EUTiML (EUProj (ProjSnd ())), e) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "ESnd"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | EUnOp (EUTiML (EUAnno (EALiveVars (n, b))), e) =>
         (
           open_hbox ();
@@ -803,18 +803,18 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | EBinOp (EBPair (), e1, e2) =>
-        (
-          open_hbox ();
-          str "EPair";
-          space ();
-          str "(";
-          pp_e e1;
-          comma ();
-          pp_e e2;
-          str ")";
-          close_box ()
-        )
+      (* | EBinOp (EBPair (), e1, e2) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EPair"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e1; *)
+      (*     comma (); *)
+      (*     pp_e e2; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | EBinOp (EBPrim (EBPIntAdd ()), e1, e2) =>
         (
           open_hbox ();

@@ -137,7 +137,7 @@ fun collect_TBinOp_left opr t =
       else [t]
     | _ => [t]
              
-fun collect_TProd_left a = collect_TBinOp_left (TBProd ()) a
+(* fun collect_TProd_left a = collect_TBinOp_left (TBProd ()) a *)
                                             
 infixr 0 $
          
@@ -191,7 +191,7 @@ fun is_value e =
       EConst _ => true
     | EState _ => true
     | EEnv _ => true
-    | EBinOp (EBPair (), e1, e2) => is_value e1 andalso is_value e2
+    (* | EBinOp (EBPair (), e1, e2) => is_value e1 andalso is_value e2 *)
     | ERecord fields => SMapU.all is_value fields
     | ETuple es => List.all is_value es
     | EUnOp (EUInj _, e) => is_value e
@@ -266,7 +266,7 @@ fun is_value e =
     | ELetConstr _ => false
     | EAppConstr _ => false
     | EMatchSum _ => false
-    | EMatchPair _ => false
+    (* | EMatchPair _ => false *)
     | EMatchUnfold _ => false
     | EIfi _ => false
     | EHalt _ => false

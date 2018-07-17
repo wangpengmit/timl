@@ -248,18 +248,18 @@ fun get_ty_const_kind c = KType ()
 
 fun get_ty_bin_op_arg1_kind opr =
   case opr of
-      TBProd () => KType ()
-    | TBSum () => KType ()
+      TBSum () => KType ()
+    (* | TBProd () => KType () *)
                  
 fun get_ty_bin_op_arg2_kind opr =
   case opr of
-      TBProd () => KType ()
-    | TBSum () => KType ()
+      TBSum () => KType ()
+    (* | TBProd () => KType () *)
                  
 fun get_ty_bin_op_res_kind opr =
   case opr of
-      TBProd () => KType ()
-    | TBSum () => KType ()
+      TBSum () => KType ()
+    (* | TBProd () => KType () *)
 
 fun nth_error_local ls x =
   case x of
@@ -830,10 +830,7 @@ fun assert_TVector t =
 
 fun proj_ptr proj t =
   case (t, proj) of
-      (TBinOp (TBProd (), t1, t2), inl n) =>
-      if n = 0 then SOME t1
-      else if n = 1 then SOME t2
-      else NONE
+      (TTuple ts, inl n) => nth_error ts n
     | (TRecord fields, inr name) =>
       SMap.find (fields, name)
     | _ => NONE
@@ -1026,18 +1023,18 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         )
       | EConst c => (e_input, get_expr_const_type c, TN C_EConst, st)
       | EEnv name => (EEnv name, get_msg_info_type name, TN $ C_EEnv name, st)
-      | EUnOp (opr as EUTiML (EUProj proj), e) =>
-        let
-          val (e, t_e, i, st) = tc (ctx, st) e
-          val t_e = whnf itctx t_e
-          val (t1, t2) = case t_e of
-                             TBinOp (TBProd (), t1, t2) => (t1, t2)
-                           | _ => raise MTCError "EProj"
-          val e = if !anno_EProj then e %: t_e else e
-          val e = if !anno_EProj_state then e %~ st else e
-        in
-          (EUnOp (opr, e), choose (t1, t2) proj, i %%+ TN C_EProj, st)
-        end
+      (* | EUnOp (opr as EUTiML (EUProj proj), e) => *)
+      (*   let *)
+      (*     val (e, t_e, i, st) = tc (ctx, st) e *)
+      (*     val t_e = whnf itctx t_e *)
+      (*     val (t1, t2) = case t_e of *)
+      (*                        TBinOp (TBProd (), t1, t2) => (t1, t2) *)
+      (*                      | _ => raise MTCError "EProj" *)
+      (*     val e = if !anno_EProj then e %: t_e else e *)
+      (*     val e = if !anno_EProj_state then e %~ st else e *)
+      (*   in *)
+      (*     (EUnOp (opr, e), choose (t1, t2) proj, i %%+ TN C_EProj, st) *)
+      (*   end *)
       | EUnOp (opr as EUTupleProj n, e) =>
         let
           val (e, t_e, i, st) = tc (ctx, st) e
@@ -1568,16 +1565,16 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (MakeERec (name, t, e), t, i, st)
         end
-      | EBinOp (EBPair (), e1, e2) =>
-        let
-          val (e1, t1, i1, st) = tc (ctx, st) e1
-          val st_e1 = st
-          val (e2, t2, i2, st) = tc (ctx, st) e2
-          val (e1, e2) = if !anno_EPair then (e1 %: t1, e2 %: t2) else (e1, e2)
-          val (e1, e2) = if !anno_EPair_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
-        in
-          (EPair (e1, e2), TProd (t1, t2), i1 %%+ i2 %%+ (to_real C_EPair, N 2), st)
-        end
+      (* | EBinOp (EBPair (), e1, e2) => *)
+      (*   let *)
+      (*     val (e1, t1, i1, st) = tc (ctx, st) e1 *)
+      (*     val st_e1 = st *)
+      (*     val (e2, t2, i2, st) = tc (ctx, st) e2 *)
+      (*     val (e1, e2) = if !anno_EPair then (e1 %: t1, e2 %: t2) else (e1, e2) *)
+      (*     val (e1, e2) = if !anno_EPair_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2) *)
+      (*   in *)
+      (*     (EPair (e1, e2), TProd (t1, t2), i1 %%+ i2 %%+ (to_real C_EPair, N 2), st) *)
+      (*   end *)
       | ETuple es =>
         let
           val (ls, st) = mapFst rev $ foldl (fn (e, (acc, st)) =>
@@ -2192,7 +2189,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       | EAppConstr _ => err ()
       | EVarConstr _ => err ()
       | EMatchSum _ => err ()
-      | EMatchPair _ => err ()
+      (* | EMatchPair _ => err () *)
       | EMatchUnfold _ => err ()
     fun extra_msg () = "\nwhen typechecking\n" ^ ((* substr 0 300 $  *)ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, SOME 5) (ctx_names ctx) e_input)
     val (e_output, t, i, st) = main ()

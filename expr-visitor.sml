@@ -167,6 +167,7 @@ fun default_expr_visitor_vtable
           | EGet (x, es, r) => T.EGet (x, visit_list (visit_pair (#visit_expr vtable this) return2) env es, r)
           | EEnv (name, r) => T.EEnv (name, r)
           | ERecord (fields, r) => T.ERecord (SMap.map (#visit_expr vtable this env) fields, r)
+          | ETuple data => T.ETuple $ visit_list (#visit_expr vtable this) env data
       end
     fun visit_EVar this env data =
       let

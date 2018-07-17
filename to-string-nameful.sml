@@ -232,6 +232,7 @@ fun strn_mt t =
       | TArray (t, i) => sprintf "(array $ $)" [strn_mt t, strn_i i]
       | TUnit _ => "unit"
       (* | TProd (t1, t2) => sprintf "($ * $)" [strn_mt t1, strn_mt t2] *)
+      | TTuple ts => str_ls_fn "(" ")" strn_mt ts
       | TUniI _ =>
         let
           val (binds, t) = collect_TUniI t
@@ -315,6 +316,7 @@ fun strn_pn pn =
       PnConstr (Outer ((x, _), eia), inames, pn, _) => sprintf "$$$" [decorate_var eia x, join_prefix " " $ map (surround "{" "}" o binder2str) inames, " " ^ strn_pn pn]
     | PnVar name => binder2str name
     (* | PnPair (pn1, pn2) => sprintf "($, $)" [strn_pn pn1, strn_pn pn2] *)
+    | PnTuple ps => str_ls_fn "(" ")" strn_pn ps
     | PnTT _ => "()"
     | PnAlias (name, pn, _) => sprintf "$ as $" [binder2str name, strn_pn pn]
     | PnAnno (pn, Outer t) => sprintf "($ : $)" [strn_pn pn, strn_mt t]
@@ -418,6 +420,7 @@ fun strn_e e =
     | EGet (x, es, _) => sprintf "$$" [x, join "" $ map (surround "[" "]" o strn_offset) es]
     | EEnv (name, _) => "msg." ^ str_env_info name
     | ERecord (fields, _) => sprintf "(record $)" [SMapU.str_map (id, strn_e) fields]
+    | ETuple es => str_ls_fn "(" ")" strn_e es
 
 and strn_offset (e, path) = strn_e e ^ (join_prefix "." $ map (str_sum str_int id o fst) path)
   
