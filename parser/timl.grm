@@ -208,6 +208,7 @@ open Ast
        | fun_modifier of fun_modifier list
        | fun_modifiers of fun_modifier list
        | idx_1or2 of idx * idx option
+       | ty_tuple of ty list
 
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
@@ -332,12 +333,16 @@ datatype_def : id_plus bsorting_star datatype_def_kind EQ constr_bar_star (case 
 datatype_def_kind : COLON cur_bsort_plus (cur_bsort_plus)
                   | ([])
                     
-ty : ty_term (ty_term)
+ty (* : ty_term (ty_term) *)
+   : ty_tuple (MakeTTuple (ty_tuple, (ty_tupleleft, ty_tupleright)))
    | ty DDASH idx LARROW ty (TPureArrow (ty1, (idx, INat ("0", (idxleft, idxright))), ty2, (ty1left, ty2right)))
    | ty DDASH idx COMMA idx LARROW ty (TPureArrow (ty1, (idx1, idx2), ty2, (ty1left, ty2right)))
    | ty ARROW ty (TPureArrow (ty1, (IVar (underscore (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
    | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
-   | ty MULT ty (TProd (ty1, ty2, (ty1left, ty2right)))
+   (* | ty MULT ty (TProd (ty1, ty2, (ty1left, ty2right))) *)
+
+ty_tuple : ty_term ([ty_term])
+         | ty_tuple MULT ty_tuple (ty_tuple1 @ ty_tuple2)
 
 ty_term : ty_atom (ty_atom)
         | ty_term ty_atom (TAppT (ty_term, ty_atom, (ty_termleft, ty_atomright)))

@@ -4,9 +4,9 @@
 (* Token.etiml *)
 (* Crowdsale.etiml *)
 (* EtherDelta.etiml *)
-(* Congress.etiml *)
+Congress.etiml
 (* MultiSig.etiml *)
-CryptoKitties.etiml
+(* CryptoKitties.etiml *)
 
 (* pervasive.timl *)
 (* basic.timl *)

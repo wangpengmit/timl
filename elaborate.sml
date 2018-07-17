@@ -253,7 +253,14 @@ local
             | SOME _ => def ()
         end
       | S.TArrow ((st1, t1), (j, i), (st2, t2), r) => TArrow ((elab_state r st1, elab_mt t1), (elab_i j, elab_i i), (elab_state r st1, elab_mt t2))
-      | S.TProd (t1, t2, _) => TProd (elab_mt t1, elab_mt t2)
+      (* | S.TProd (t1, t2, _) => TProd (elab_mt t1, elab_mt t2) *)
+      | S.TTuple (ts, r) =>
+	(case ts of
+	     [] => raise Error (r, "TTuple must have components")
+           (* | [t] => elab_mt t *)
+           | [t] => raise Error (r, "TTuple must have at least two components")
+	   | _ :: _ => TTuple $ map elab_mt ts
+        )
       | S.TQuan (quan, binds, t, r) =>
 	let
           fun f (((x, s, r1), (i, j)), t) =

@@ -317,15 +317,25 @@ fun pp_t s t =
           str ")";
           close_box ()
         )
-      | TProd (t1, t2, _) =>
+      (* | TProd (t1, t2, _) => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "TProd"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_t t1; *)
+      (*     comma (); *)
+      (*     pp_t t2; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
+      | TTuple (ts, _) =>
         (
           open_hbox ();
-          str "TProd";
+          str "TTuple";
           space ();
           str "(";
-          pp_t t1;
-          comma ();
-          pp_t t2;
+          app (fn t => (pp_t t; comma ())) ts;
           str ")";
           close_box ()
         )

@@ -52,7 +52,8 @@ type sort_bind_idx2 = sort_bind * (idx * idx)
 datatype ty =
 	 TVar of long_id
 	 | TArrow of (state * ty) * (idx * idx) * (state * ty) * region
-	 | TProd of ty * ty * region
+	 (* | TProd of ty * ty * region *)
+         | TTuple of ty list * region
 	 | TQuan of quan * sort_bind_idx2 list * ty * region
 	 | TAppT of ty * ty * region
 	 | TAppI of ty * idx * region
@@ -241,7 +242,8 @@ fun get_region_t t =
     case t of
         TVar x => get_region_long_id x
       | TArrow (_, _, _, r) => r
-      | TProd (_, _, r) => r
+      (* | TProd (_, _, r) => r *)
+      | TTuple (_, r) => r
       | TQuan (_, _, _, r) => r
       | TAppT (_, _, r) => r
       | TAppI (_, _, r) => r
@@ -264,7 +266,11 @@ fun IUnOp (opr, i, r) = IBinOp (IBApp (), IVar (NONE, (str_idx_un_op opr, r)), i
 
 fun TPureArrow (t1, i, t2, r) = TArrow ((empty_state, t1), i, (empty_state, t2), r)
 fun TArrowWithPre ((t1, pre), i, t2, r) = TArrow ((pre, t1), i, (pre, t2), r)
-fun TTuple (ts, r) = foldl_nonempty (fn (t, acc) => TProd (acc, t, r)) ts
+(* fun TTuple (ts, r) = foldl_nonempty (fn (t, acc) => TProd (acc, t, r)) ts *)
+fun MakeTTuple (ts, r) =
+  case ts of
+      [t] => t
+    | _ => TTuple (ts, r)
                                
 fun EUnOp' (opr, e, r) = EUnOp (EUTiML opr, e, r)
 fun EBinOp' (opr, e1, e2, r) = EBinOp (EBTiML opr, e1, e2, r)
