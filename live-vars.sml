@@ -136,7 +136,8 @@ fun live_vars_expr_visitor_vtable cast () =
               let
                 val () = Option.app (fn x => unop_ref (fn s => Set.add (s, x)) lvars) x
                 val e2 = #visit_expr vtable this env e2
-                val () = Option.app (fn x => unop_ref (fn s => SetU.delete (s, x)) lvars) x
+                (* x will be used in the end, so it shouldn't be deleted *)
+                (* val () = Option.app (fn x => unop_ref (fn s => SetU.delete (s, x)) lvars) x *)
                 val e1 = #visit_expr vtable this env e1
               in
                 (e1, e2)

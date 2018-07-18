@@ -194,6 +194,8 @@ open Ast
        | exp_comma_star_trailing of exp list
        | exp_comma_star of exp list
        | comma_exp_star of exp list
+       | exps_comma_star of exp list
+       | comma_exps_star of exp list
        | aexp_comma_star of exp list
        | comma_aexp_star of exp list
        | exp_term_comma_plus of exp list
@@ -455,7 +457,7 @@ indexed_typing : optional_indexed id COLON ty ((id, (ty, optional_indexed)))
 optional_indexed : INDEXED (true)
                  | (false)
 
-decl : optional_visi VAL tnames ptrn EQ exp (DVal (tnames, ptrn, exp, (VALleft, expright)))
+decl : optional_visi VAL tnames ptrn EQ exps (DVal (tnames, ptrn, exps, (VALleft, expsright)))
      | optional_visi FUN id tnames bind_star fun_modifiers EQ exps (DRec (tnames, id, bind_star, fun_modifiers, exps, (FUNleft, expsright)))
      | DATATYPE datatype_def (DDatatype datatype_def)
      | IDX id optional_colon_sort EQ idx (DIdxDef (id, optional_colon_sort, idx))
@@ -565,7 +567,7 @@ exp_term : aexp (aexp)
          | ECREC aexp (EUnOp (EUECREC (), aexp, (ECRECleft, ECRECright)))
 
 aexp : decorated_eid (EVar decorated_eid)
-     | LPAREN exp_comma_star RPAREN (ETuple (exp_comma_star, (LPARENleft, RPARENright)))
+     | LPAREN exps_comma_star RPAREN (ETuple (exps_comma_star, (LPARENleft, RPARENright)))
      | FN bind_plus fun_modifiers DARROW exps (EAbs (bind_plus, fun_modifiers, exps, (FNleft, expsright)))
      | CASE exp return OF bar_rule_star END (ECase (exp, return, bar_rule_star, (CASEleft, bar_rule_starright)))
      (* | IF exp THEN exps ELSE exps END (EIte (exp, exps1, exps2, (IFleft, ENDright))) *)
@@ -765,6 +767,12 @@ id : ID ((ID, (IDleft, IDright)))
 
 assign_comma_star_trailing : id EQ exp COMMA assign_comma_star_trailing ((id, exp) :: assign_comma_star_trailing)
 	                   | ([])
+
+exps_comma_star : exps comma_exps_star (exps :: comma_exps_star)
+	       | ([])
+
+comma_exps_star : COMMA exps comma_exps_star (exps :: comma_exps_star)
+	       | ([])
 
 exp_comma_star : exp comma_exp_star (exp :: comma_exp_star)
 	       | ([])

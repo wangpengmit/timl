@@ -1,0 +1,26 @@
+val name : vector char
+
+structure TestFor = struct
+
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+                                                                                              
+fun for_name ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {j : Nat | start <= j /\ j < eend} using (m1, m1'), funtype pre {name : j} post {name : j+1} nat {j} * 'a -- m2, m2' --> 'a) pre {name : start} post {name : eend} return 'a (* using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 *) =
+  let
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {name : i} post {name : eend} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then waste_time (); acc state {name : eend}
+      else
+        %loop (i #+ #1, @f {i} (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+  in
+    %loop (start, init)
+  end
+  
+  fun copy_name {old len : Nat} (s : string {len}) pre {name : old} post {name : len} =
+    vector_clear name;
+    %for_name (#0, array_len s, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) pre {name : i} post {name : i+1} =>
+      push_back (name, array_get(s, i))
+    )
+
+val () = %copy_name "my_name"     
+     
+end
+

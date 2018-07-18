@@ -19,6 +19,7 @@ fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (
   
   fun require b = if b then waste_time (); () else (throw using _) end
   val assert = require
+  val assert2 = require
 end
 
 interface tokenRecipient = sig
@@ -100,20 +101,23 @@ fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= e
   (*  *)
   internal fun _transfer (_from : address, _to : address, _value : uint) using _ =
     (* Prevent transfer to 0x0 address. Use burn() instead *)
-    require(_to <> 0x0);
-    (* Check if the sender has enough *)
-    require(balanceOf[_from] >= _value);
-    (* Check for overflows *)
-    require(balanceOf[_to] + _value > balanceOf[_to]);
-    (* Save this for an assertion in the future *)
-    let previousBalances = balanceOf[_from] + balanceOf[_to];
-    (* Subtract from the sender *)
-    modify balanceOf[_from] -= _value;
-    (* Add the same to the recipient *)
-    modify balanceOf[_to] += _value;
-    fire Transfer(_from, _to, _value);
-    (* Asserts are used to use static analysis to find bugs in your code. They should never fail *)
-    assert(balanceOf[_from] + balanceOf[_to] = previousBalances)
+    require(1=1);
+    (* require(_to <> 0x0); *)
+    (* (* Check if the sender has enough *) *)
+    (* require(balanceOf[_from] >= _value); *)
+    (* (* Check for overflows *) *)
+    (* require(balanceOf[_to] + _value > balanceOf[_to]); *)
+    (* (* Save this for an assertion in the future *) *)
+    (* let previousBalances = balanceOf[_from] + balanceOf[_to]; *)
+    (* (* Subtract from the sender *) *)
+    (* modify balanceOf[_from] -= _value; *)
+    (* (* Add the same to the recipient *) *)
+    (* modify balanceOf[_to] += _value; *)
+    (* fire Transfer(_from, _to, _value); *)
+    (* (* Asserts are used to use static analysis to find bugs in your code. They should never fail *) *)
+    (* (* require(balanceOf[_from] + balanceOf[_to] = previousBalances) *) *)
+    (* (* assert2(balanceOf[_from] + balanceOf[_to] = previousBalances) *) *)
+    assert2(1=1)
 
   (*  * Transfer tokens *)
   (*  * *)
