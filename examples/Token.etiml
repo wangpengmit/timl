@@ -18,8 +18,7 @@ fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (
   end
   
   fun require b = if b then waste_time (); () else (throw using _) end
-  val assert = require
-  val assert2 = require
+  val require = require
 end
 
 interface tokenRecipient = sig
@@ -50,7 +49,7 @@ contract TokenERC20 = struct
 fun for_name ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {j : Nat | start <= j /\ j < eend} using (m1, m1'), funtype pre {name : j} post {name : j+1} nat {j} * 'a -- m2, m2' --> 'a) pre {name : start} post {name : eend} return 'a (* using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 *) =
   lets
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {name : i} post {name : eend} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
-      ifi i #>= eend then waste_time (); acc state {name : eend}
+      ifi i #>= eend then waste_time (); acc asc_state {name : eend}
       else
         @loop {i+1} (i #+ #1, @f {i} (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
       end
@@ -67,7 +66,7 @@ fun for_name ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= een
 fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {j : Nat | start <= j /\ j < eend} using (m1, m1'), funtype pre {symbol : j} post {symbol : j+1} nat {j} * 'a -- m2, m2' --> 'a) pre {symbol : start} post {symbol : eend} return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 =
   lets
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {symbol : i} post {symbol : eend} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
-      ifi i #>= eend then waste_time (); acc state {symbol : eend}
+      ifi i #>= eend then waste_time (); acc asc_state {symbol : eend}
       else
         @loop {i+1} (i #+ #1, @f {i} (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
       end
@@ -102,22 +101,23 @@ fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= e
   internal fun _transfer (_from : address, _to : address, _value : uint) using _ =
     (* Prevent transfer to 0x0 address. Use burn() instead *)
     require(1=1);
-    (* require(_to <> 0x0); *)
-    (* (* Check if the sender has enough *) *)
-    (* require(balanceOf[_from] >= _value); *)
-    (* (* Check for overflows *) *)
-    (* require(balanceOf[_to] + _value > balanceOf[_to]); *)
-    (* (* Save this for an assertion in the future *) *)
-    (* let previousBalances = balanceOf[_from] + balanceOf[_to]; *)
-    (* (* Subtract from the sender *) *)
-    (* modify balanceOf[_from] -= _value; *)
-    (* (* Add the same to the recipient *) *)
-    (* modify balanceOf[_to] += _value; *)
-    (* fire Transfer(_from, _to, _value); *)
-    (* (* Asserts are used to use static analysis to find bugs in your code. They should never fail *) *)
-    (* (* require(balanceOf[_from] + balanceOf[_to] = previousBalances) *) *)
-    (* (* assert2(balanceOf[_from] + balanceOf[_to] = previousBalances) *) *)
-    assert2(1=1)
+    require(_to <> 0x0);
+    (* Check if the sender has enough *)
+    require(balanceOf[_from] >= _value);
+    (* Check for overflows *)
+    require(balanceOf[_to] + _value > balanceOf[_to]);
+    (* Save this for an assertion in the future *)
+    let previousBalances = balanceOf[_from] + balanceOf[_to];
+    (* Subtract from the sender *)
+    modify balanceOf[_from] -= _value;
+    (* Add the same to the recipient *)
+    modify balanceOf[_to] += _value;
+    fire Transfer(_from, _to, _value);
+    (* Asserts are used to use static analysis to find bugs in your code. They should never fail *)
+    require(balanceOf[_from] + balanceOf[_to] = previousBalances)
+    
+    (* (* (* assert2(balanceOf[_from] + balanceOf[_to] = previousBalances) *) *) *)
+    (* assert2(1=1) *)
 
   (*  * Transfer tokens *)
   (*  * *)

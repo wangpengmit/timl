@@ -102,6 +102,7 @@ val keywords = [
     ("internal", T.INTERNAL),
     ("inherit", T.INHERIT),
     ("state", T.STATE),
+    ("asc_state", T.ASC_STATE),
     ("for", T.FOR),
     ("while", T.WHILE),
     ("as", T.AS),

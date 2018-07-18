@@ -146,6 +146,7 @@ open Ast
     | INTERNAL
     | INHERIT
     | STATE
+    | ASC_STATE
     | MEMORY
     | STORAGE
     | INDEXED
@@ -316,7 +317,7 @@ open Ast
 %pos pos
 
 		(* %nonassoc LET *)
-%left RTRI COLON COLON_GT STATE
+%left RTRI COLON COLON_GT ASC_STATE
 %nonassoc LSQ LCUR
 %left COMMA
 %right SEMI
@@ -556,7 +557,7 @@ exp : exp_term (exp_term)
      | exp_term COLON ty (EAsc (exp_term, ty, (exp_termleft, tyright)))
      | exp_term RTRI idx (EAscTime (exp_term, idx, (exp_termleft, idxright)))
      | exp_term RTRI idx COMMA idx (EAscTimeSpace (exp_term, (idx1, idx2), (exp_termleft, idx2right)))
-     | exp_term STATE state (EAscState (exp_term, state, (exp_termleft, stateright)))
+     | exp_term ASC_STATE state (EAscState (exp_term, state, (exp_termleft, stateright)))
 
 exp_term : aexp (aexp)
          | exp_term aexp (EApp (exp_term, aexp, (exp_termleft, aexpright)))

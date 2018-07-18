@@ -6,7 +6,6 @@ structure Pervasive = struct
   fun orBy b a = a || b
   fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
   fun require b = if b then waste_time (); () else (throw using _) end
-  val assert = require
   val ether = 1000000000000000000
   val minute = 60
 end
@@ -15,16 +14,16 @@ structure SafeMath = struct
 
   internal fun safeMul (a : uint, b : uint) return uint =
     let c : uint = a * b;
-    assert(a == 0 || c / a == b);
+    require(a == 0 || c / a == b);
     c
 
   internal fun safeSub (a : uint, b : uint) return uint =
-    assert(b <= a);
+    require(b <= a);
     a - b
 
   internal fun safeAdd (a : uint, b : uint) return uint =
     let c : uint = a + b;
-    assert(c>=a && c>=b);
+    require(c>=a && c>=b);
     c
 
 end

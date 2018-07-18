@@ -6,7 +6,6 @@ structure Pervasive = struct
   fun orBy b a = a || b
   fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
   fun require b = if b then waste_time (); () else (throw using _) end
-  val assert = require
   val ether = 1000000000000000000
   val minute = 60
 end

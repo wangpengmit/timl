@@ -22,7 +22,6 @@ fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (
   end
   
   fun require b = if b then waste_time (); () else (throw using _) end
-  val assert = require
   val ether = 1000000000000000000
   val minute = 60
 end
