@@ -46,6 +46,7 @@ signature EXPR = sig
            | EGet of string * (expr * proj_path) list * Region.region
            | ESet of string * (expr * proj_path) list * expr * Region.region
            | EEnv of Operators.env_info * Region.region
+           | EAscState of expr * idx StMap.map
            (* these constructs won't show up in source program *)
            (* | EAbsT of (sort, expr) tbind_anno * region *)
 

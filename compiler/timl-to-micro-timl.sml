@@ -151,6 +151,7 @@ fun on_e (e : S.expr) : mtiml_expr =
          | Op.EEIAscTime () => EAscTime (on_e e, i)
          | Op.EEIAscSpace () => EAscSpace (on_e e, i)
       )
+    | S.EAscState (e, st) => EAscState (on_e e, IState st)
     | S.EET (opr, e, t) =>
       (case opr of
            EETAsc () => EAscType (on_e e, on_mt t)

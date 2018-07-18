@@ -364,6 +364,7 @@ fun strn_e e =
          | EETAsc () => sprintf "($ : $)" [strn_e e, strn_mt t]
          | EETHalt () => sprintf "(halt $ [$])" [strn_e e, strn_mt t]
       )
+    | EAscState (e, st) => sprintf "($ state $)" [strn_e e, strn_state st]
     | ENewArrayValues (t, es, _) => sprintf "array [$] {$}" [strn_mt t, join ", " $ map strn_e es]
     | ET (opr, t, _) =>
       (case opr of

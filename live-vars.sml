@@ -210,6 +210,13 @@ fun live_vars_expr_visitor_vtable cast () =
           | EEI data => #visit_EEI vtable this env data
           | EET data => #visit_EET vtable this env data
           | ET data => #visit_ET vtable this env data
+          | EAscState (e, st) =>
+            let
+              val st = StMap.map (#visit_idx vtable this env) st
+              val e = #visit_expr vtable this env e
+            in
+              T.EAscState (e, st)
+            end
           | ENewArrayValues (t, es, r) => ENewArrayValues (#visit_mtype vtable this env t, visit_es_right this env es, r)
 	  | EAbs data => #visit_EAbs vtable this env data
 	  | EAbsI data => #visit_EAbsI vtable this env data

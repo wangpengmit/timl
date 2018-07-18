@@ -730,6 +730,17 @@ fun pp_e s e =
           str ")";
           close_box ()
         )
+      | EAscState (e, st, _) =>
+        (
+          open_hbox ();
+          strs "EAscState";
+          str "(";
+          pp_e e;
+          comma ();
+          pp_st st;
+          str ")";
+          close_box ()
+        )
       | ELet (return, decls, e, _) =>
         (
 	  open_vbox_noindent ();

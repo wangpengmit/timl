@@ -691,6 +691,17 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           close_box ()
         )
       (* pp_e e *)
+      | EAscState (e, st) =>
+        (
+          open_hbox ();
+          strs "EAscState";
+          str "(";
+          pp_e e;
+          comma ();
+          pp_st st;
+          str ")";
+          close_box ()
+        )
       | EET (EETAppT (), e, t) =>
         (
           open_hbox ();

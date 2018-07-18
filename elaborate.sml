@@ -244,6 +244,8 @@ local
                 TBool r
               else if x = "byte" then
                 TByte r
+              else if x = "char" then
+                TByte r
                       (* else if x = "string" then *)
                       (*   BaseType (String, r) *)
               else if x = "_" then
@@ -252,7 +254,7 @@ local
                 def ()
             | SOME _ => def ()
         end
-      | S.TArrow ((st1, t1), (j, i), (st2, t2), r) => TArrow ((elab_state r st1, elab_mt t1), (elab_i j, elab_i i), (elab_state r st1, elab_mt t2))
+      | S.TArrow ((st1, t1), (j, i), (st2, t2), r) => TArrow ((elab_state r st1, elab_mt t1), (elab_i j, elab_i i), (elab_state r st2, elab_mt t2))
       (* | S.TProd (t1, t2, _) => TProd (elab_mt t1, elab_mt t2) *)
       | S.TTuple (ts, r) =>
 	(case ts of
@@ -479,6 +481,8 @@ local
 	EAscTime (elab e, elab_i i)
       | S.EAscSpace (e, i, _) =>
 	EAscSpace (elab e, elab_i i)
+      | S.EAscState (e, st, r) =>
+	EAscState (elab e, elab_state r st)
       | S.ELet (return, decs, e, r) =>
         ELet (elab_return return, Unbound.Bind (Teles $ concatMap elab_decl decs, elab e), r)
       | S.EConst (c, r) =>

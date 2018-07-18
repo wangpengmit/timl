@@ -545,7 +545,7 @@ fun close_ctx (ctx as (sctx, _, _, _)) = close_n $ length sctx
 
 fun write_prop (p, r) =
   let
-    (* val () = println $ "Writing Prop: " ^ str_p empty [] p *)
+    val () = println $ "Writing Prop: " ^ str_p Gctx.empty [] p
   in
     write (PropVC (p, r))
   end

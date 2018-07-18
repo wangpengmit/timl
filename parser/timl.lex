@@ -48,6 +48,7 @@ fun eof reporter =
 val keywords = [
     ("fn", T.FN),
     ("fun", T.FUN),
+    ("funtype", T.FUNTYPE),
     ("case", T.CASE),
     ("unpack", T.UNPACK),
     ("of", T.OF),
@@ -83,8 +84,10 @@ val keywords = [
     ("post", T.POST),
     ("not", T.NOT),
     ("inot", T.IBOOL_NOT),
-    ("as", T.AS),
-    ("ifdec", T.IFDEC)
+    ("ifdec", T.IFDEC),
+    ("ifi", T.IFI),
+    ("state", T.STATE),
+    ("as", T.AS)
 ]
  
 fun find (m, k : string) = Option.map #2 (List.find (fn (k', _) => k' = k) m)

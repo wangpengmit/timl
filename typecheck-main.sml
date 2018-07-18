@@ -800,6 +800,7 @@ fun is_value (e : U.expr) : bool =
            | EETAsc () => is_value e
            | EETHalt () => false
         )
+      | EAscState (e, _) => is_value e
       | ET (opr, t, _) =>
         (case opr of
              ETNever () => true
@@ -1370,6 +1371,14 @@ fun flatten_tuple_record t =
       | TRecord (fields, _) => concatMap loop $ map snd $ sort cmp_str_fst $ listItemsi fields
       | _ => [t]
   end
+
+fun check_submap r1 pre_st st =
+  let
+    val pre_st_minus_st = pre_st @-- st
+  in
+    if StMap.numItems pre_st_minus_st = 0 then ()
+    else raise Error (r1, ["these state fields are required by the function but missing in current state:", str_ls str_st_key $ StMapU.domain pre_st_minus_st])
+  end
     
 fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (idx * idx) * idx StMap.map =
   let
@@ -1389,7 +1398,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     val gctxn = gctx_names gctx
     val ctxn as (sctxn, kctxn, cctxn, tctxn) = ctx_names (sctx, kctx, cctx, tctx)
     val skctxn = (sctxn, kctxn)
-    (* val () = print $ sprintf "Typing $\n" [US.str_e gctxn ctxn e_all] *)
+    (* val () = print $ sprintf "Typing: $\n" [US.str_e gctxn ctxn e_all] *)
+    (* val () = println $       "   Pre: " ^ StMapU.str_map (id, str_i gctxn sctxn) st *)
     (* val () = print $ sprintf "  Typing $\n" [U.str_raw_e e_all] *)
     (* fun print_ctx gctx (ctx as (sctx, kctx, _, tctx)) = *)
     (*   let *)
@@ -1595,6 +1605,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	  let
             val r1 = U.get_region_e e1
             val (e1, t1, d1, st) = get_mtype (ctx, st) e1
+            val (e2, t2', d2, st) = get_mtype (ctx, st) e2
             val (is_constr, e1) = is_constr e1
             val t1 = whnf_mt true gctx kctx t1
             val ((pre_st, t2), d, (post_st, t)) =
@@ -1617,20 +1628,16 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                         raise Error (r1, "type mismatch:" ::
                                          indent ["expect: _ -- _ --> _",
                                                  "got: " ^ str_mt gctxn skctxn t1])
-            val (e2, t2', d2, st) = get_mtype (ctx, st) e2
             (* todo: if I swap (t2, t2'), unify_mt() has a bug that it unifies the index arguments too eagerly *)
             val r2 = get_region_e e2
             val () = unify_mt r2 gctx (sctx, kctx) (t2, t2')
-            fun check_submap pre_st st =
-              let
-                val pre_st_minus_st = pre_st @-- st
-              in
-                if StMap.numItems pre_st_minus_st = 0 then ()
-                else raise Error (r1, ["these state fields are required by the function but missing in current state:", str_ls str_st_key $ StMapU.domain pre_st_minus_st])
-              end
-            val () = check_submap pre_st st
+            val () = check_submap r1 pre_st st
+            (* val () = println "before unify state" *)
             val () = StMap.appi (fn (k, v) => unify_i r1 gctxn sctxn (st @!! k, v)) pre_st
+            (* val () = println "after unify state" *)
+            (* val () = println $ "post_st: " ^ StMapU.str_map (id, str_i gctxn sctxn) post_st *)
             val st = st @++ post_st
+            (* val () = println $ "st: " ^ StMapU.str_map (id, str_i gctxn sctxn) st *)
             val (e2, (n_live_vars, has_k)) = assert_EAnnoLiveVars (fn () => raise Error (r2, ["Should be EAnnoLiveVars"])) e2
             val cost = if has_k then
                          (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
@@ -1640,6 +1647,17 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EApp (e1, e2), t, if is_constr then d2 else d1 %%+ d2 %%+ mapPair' to_real N cost %%+ d, st) 
 	  end
+        | U.EAscState (e, spec) =>
+          let
+            val (e, t, d, st) = get_mtype (ctx, st) e
+            val spec = StMap.map (fn i => check_basic_sort gctx (sctx, i, BSNat)) spec
+            val r = get_region_e e
+            val () = check_submap r spec st
+            val () = StMap.appi (fn (k, v) => unify_i r gctxn sctxn (st @!! k, v)) spec
+            val st = st @++ spec
+          in
+            (EAscState (e, spec), t, d, st)
+          end
 	| U.EBinOp (opr as EBNew (), e1, e2) =>
           let
             val r = U.get_region_e e_all
@@ -2115,14 +2133,16 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	             end
                end
 	     | EEIAscTime () => 
-	       let val i = check_basic_sort gctx (sctx, i, BSTime)
-	           val (e, t, j, st) = check_time (ctx, st) (e, i)
+	       let
+                 val i = check_basic_sort gctx (sctx, i, BSTime)
+	         val (e, t, j, st) = check_time (ctx, st) (e, i)
                in
 	         (EAscTime (e, i), t, (i, j), st)
 	       end
 	     | EEIAscSpace () => 
-	       let val i = check_basic_sort gctx (sctx, i, BSNat)
-	           val (e, t, j, st) = check_space (ctx, st) (e, i)
+	       let
+                 val i = check_basic_sort gctx (sctx, i, BSNat)
+	         val (e, t, j, st) = check_space (ctx, st) (e, i)
                in
 	         (EAscSpace (e, i), t, (j, i), st)
 	       end
@@ -2441,6 +2461,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
     (* val () = println $ " Typed: " ^ str_e gctxn ctxn e *)
     (* val () = println $ "  Time: " ^ str_i gctxn sctxn (fst d) *)
     (* val () = println $ "  Type: " ^ str_mt gctxn skctxn t *)
+    (* val () = println $ "  Post: " ^ StMapU.str_map (id, str_i gctxn sctxn) st *)
     (* val () = print (sprintf " Typed $: \n        $\n" [str_e gctxn ctxn e, str_mt gctxn skctxn t]) *)
     (* val () = print (sprintf "  type: $ [for $]\n  time: $\n" [str_mt gctxn skctxn t, str_e gctxn ctxn e, str_i gctxn sctxn d]) *)
   in

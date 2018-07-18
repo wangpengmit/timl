@@ -138,6 +138,7 @@ datatype exp =
          | EAsc of exp * ty * region
          | EAscTime of exp * idx * region
          | EAscSpace of exp * idx * region
+         | EAscState of exp * state * region
          | ELet of return * decl list * exp * region
          | EConst of expr_const * region
          | EUnOp of ast_expr_unop * exp * region
@@ -259,13 +260,31 @@ fun get_region_pn pn =
       | PnAnno (_, _, r) => r
 
 fun underscore r = (NONE, ("_", r))
+fun IUnder r = IVar (underscore r)
 
 fun chop_first_last s = String.extract (s, 1, SOME (String.size s - 2))
 
 fun IUnOp (opr, i, r) = IBinOp (IBApp (), IVar (NONE, (str_idx_un_op opr, r)), i, r)
 
-fun TPureArrow (t1, i, t2, r) = TArrow ((empty_state, t1), i, (empty_state, t2), r)
-fun TArrowWithPre ((t1, pre), i, t2, r) = TArrow ((pre, t1), i, (pre, t2), r)
+fun fill_in_space (i, j, r) = (i, default (INat ("0", r)) j)
+fun TPureArrow (t1, i, t2, r) = TArrow ((empty_state, t1), fill_in_space i, (empty_state, t2), r)
+fun TArrowWithPrePost (ls, t1, i, t2, r) =
+  let
+      val pre = ref NONE
+      val post = ref NONE
+      val guards = ref []
+      fun f m =
+        case m of
+            inl v => pre := SOME v
+          | inr v => post := SOME v
+      val () = app f ls
+      val pre = !pre
+      val post = !post
+      val pre = default empty_state pre
+      val post = default pre post
+  in
+    TArrow ((pre, t1), fill_in_space i, (post, t2), r)
+  end
 (* fun TTuple (ts, r) = foldl_nonempty (fn (t, acc) => TProd (acc, t, r)) ts *)
 fun MakeTTuple (ts, r) =
   case ts of

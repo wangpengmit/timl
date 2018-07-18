@@ -23,7 +23,7 @@ fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (
   
   fun require b = if b then waste_time (); () else (throw using _) end
   val assert = require
-  fun unop_ref ['a] {m : Time} {m' : Nat} r (f : 'a -- m, m' --> 'a) = r := f !r
+  fun unop_ref ['a] {m : Time} {m' : Nat} (r : ref 'a) (f : 'a -- m, m' --> 'a) = r := f !r
   val ether = 1000000000000000000
   val finney = 1000000000000000
   val minute = 60
@@ -35,31 +35,29 @@ fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (
     ifi a #<= b then a : nat {a min b} else b : nat {a min b} end
 end
 
-(**
- * @title Ownable
- * @dev The Ownable contract has an owner address, and provides basic authorization control
- * functions, this simplifies the implementation of "user permissions".
- *)
+(*  * @title Ownable *)
+(*  * @dev The Ownable contract has an owner address, and provides basic authorization control *)
+(*  * functions, this simplifies the implementation of "user permissions". *)
 contract Ownable = struct
-  public state owner : cell address 
+  public state owner : cell address
 
-  (**
-   * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-   * account.
-   *)
+  (** *)
+(*    * @dev The Ownable constructor sets the original `owner` of the contract to the sender *)
+(*    * account. *)
+(*    *)
   fun init () =
     owner ::= msg.sender
 
-  (**
-   * @dev Throws if called by any account other than the owner.
-   *)
+  (** *)
+(*    * @dev Throws if called by any account other than the owner. *)
+(*    *)
   fun onlyOwner () =
     require(msg.sender == !!owner)
 
-  (**
-   * @dev Allows the current owner to transfer control of the contract to a newOwner.
-   * @param newOwner The address to transfer ownership to.
-   *)
+  (** *)
+(*    * @dev Allows the current owner to transfer control of the contract to a newOwner. *)
+(*    * @param newOwner The address to transfer ownership to. *)
+(*    *)
   fun transferOwnership (newOwner : address) =
     onlyOwner ();
     if (newOwner != 0) then
@@ -134,9 +132,9 @@ contract KittyAccessControl = struct
   event ContractUpgrade(newContract : address)
 
   (* The addresses of the accounts (or contracts) that can execute actions within each roles.*)
-  public state ceoAddress : cell address 
-  public state cfoAddress : cell address 
-  public state cooAddress : cell address 
+  public state ceoAddress : cell address
+  public state cfoAddress : cell address
+  public state cooAddress : cell address
 
   (* @dev Keeps track whether the contract is paused. When that is true, most actions are blocked*)
   public state paused : cell bool = false
@@ -163,7 +161,7 @@ contract KittyAccessControl = struct
   (* @dev Assigns a new address to act as the CEO. Only available to the current CEO.*)
   (* @param _newCEO The address of the new CEO*)
   external fun setCEO (_newCEO : address) =
-    onlyCEO ();             
+    onlyCEO ();
     require(_newCEO != 0);
     ceoAddress ::= _newCEO
 
@@ -188,7 +186,7 @@ contract KittyAccessControl = struct
     require(!!paused)
 
   (* @dev Modifier to allow actions only when the contract IS paused*)
-  fun whenPaused () = 
+  fun whenPaused () =
     require(!!paused)
 
   (* @dev Called by any "C-level" role to pause the contract. Used only when*)
@@ -216,7 +214,7 @@ end
 (* @dev See the KittyCore contract documentation to understand how the various contract facets are arranged.*)
 contract KittyBase = struct
 
-  open KittyAccessControl 
+  open KittyAccessControl
 
   (*** EVENTS ***)
 
@@ -561,8 +559,8 @@ contract KittyOwnership = struct inherit KittyBase
   (* @dev Required for ERC-721 compliance.*)
   external fun transfer (
     _to : address,
-    _tokenId : uint256 
-  )    
+    _tokenId : uint256
+  )
   =
     whenNotPaused ();
     (* Safety check to prevent against an unexpected 0x0 default.*)
@@ -678,7 +676,7 @@ contract KittyOwnership = struct inherit KittyBase
         (*     modify resultIndex ++ *)
         (*   end *)
         (* end; *)
-        %for_ (#1, totalCats #+ #1, (), fn {i | 1 <= i /\ i < len} (catId : nat {i}, ()) => 
+        %for_ (#1, totalCats #+ #1, (), fn {i | 1 <= i /\ i < len} (catId : nat {i}, ()) =>
           let catId = nat2int catId;
           if (kittyIndexToOwner[catId] == _owner) then
             lets
@@ -694,28 +692,31 @@ contract KittyOwnership = struct inherit KittyBase
       end
     end
 
-  (* (* @dev Adapted from memcpy() by @arachnid (Nick Johnson <arachnid@notdot.net>)*) *)
-  (* (*  This method is licenced under the Apache License.*) *)
-  (* (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*) *)
-  (* fun _memcpy {_len : Nat} (_dest : uint, _src : uint, _len : nat {_len}) private view = *)
-  (*   () *)
-  (*   (* Copy word-length chunks while possible*) *)
-  (*   (* for (_len = _len; _len >= 32; -= 32) *) *)
-  (*   (*   assembly { *) *)
-  (*   (*     mstore(_dest, mload(_src)) *) *)
-  (*   (*   }; *) *)
-  (*   (*   modify _dest += 32; *) *)
-  (*   (*   modify _src += 32 *) *)
-  (*   (* end; *) *)
+  (* @dev Adapted from memcpy() by @arachnid (Nick Johnson <arachnid@notdot.net>)*)
+  (*  This method is licenced under the Apache License.*)
+  (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*)
+  fun _memcpy {_len : Nat} (_dest : uint, _src : uint, _len : nat {_len}) private view =
+    ()
+    (* Copy word-length chunks while possible*)
+    (* for (_len = _len; _len >= 32; -= 32) *)
+    (*   assembly { *)
+    (*     mstore(_dest, mload(_src)) *)
+    (*   }; *)
+    (*   modify _dest += 32; *)
+    (*   modify _src += 32 *)
+    (* end; *)
 
-  (*   (* Copy remaining bytes*) *)
-  (*   (* let mask : uint256 = 256 ** (32 - _len) - 1 *) *)
-  (*   (* assembly { *) *)
-  (*   (*   srcpart := and(mload(_src), not(mask)); *) *)
-  (*   (*   destpart := and(mload(_dest), mask); *) *)
-  (*   (*   mstore(_dest, or(destpart, srcpart)) *) *)
-  (*   (* } *) *)
+    (* Copy remaining bytes*)
+    (* let mask : uint256 = 256 ** (32 - _len) - 1 *)
+    (* assembly { *)
+    (*   srcpart := and(mload(_src), not(mask)); *)
+    (*   destpart := and(mload(_dest), mask); *)
+    (*   mstore(_dest, or(destpart, srcpart)) *)
+    (* } *)
 
+  (* fun new_string {n : Nat} (len : nat {n}) return string {n} = new_array (len, int2byte 0) *)
+  (* datatype some_string = SomeString {n : Nat} of string {n} --> some_string *)
+      
   (* (* @dev Adapted from toString(slice) by @arachnid (Nick Johnson <arachnid@notdot.net>)*) *)
   (* (*  This method is licenced under the Apache License.*) *)
   (* (*  Ref: https://github.com/Arachnid/solidity-stringutils/blob/2f6ca9accb48ae14c66f1437ec50ed19a0616f78/strings.sol*) *)
@@ -733,9 +734,6 @@ contract KittyOwnership = struct inherit KittyBase
 
   (*   outputString *)
 
-  (* fun new_string {n : Nat} (len : nat {n}) return string {n} = new_array (len, int2byte 0) *)
-  (* datatype some_string = SomeString {n : Nat} of string {n} --> some_string *)
-      
   (* @notice Returns a URI pointing to a metadata package for this token conforming to*)
   (*  ERC-721 (https://github.com/ethereum/EIPs/issues/721)*)
   (* @param _tokenId The ID number of the Kitty whose metadata should be returned.*)
@@ -879,7 +877,7 @@ contract KittyBreeding = struct inherit KittyOwnership
     _matron : storage Kitty,
     _matronId : uint256,
     _sire : storage Kitty,
-    _sireId : uint256 
+    _sireId : uint256
   )
     private
     view
@@ -1685,7 +1683,7 @@ contract SaleClockAuction = struct inherit ClockAuction
     end
 
 (* PW: here is a limitation of TiML: it can't parametrize on states. MicroTiML actually supports it (for continuations), so TiML should support it too.  *)                              
-fun for_lastGen0SalePrices ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), funtype {lastGen0SalePrices : st} nat {i} * 'a -- m2, m2' --> 'a) pre {lastGen0SalePrices : st} return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 =
+fun for_lastGen0SalePrices ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), funtype pre {lastGen0SalePrices : st} nat {i} * 'a -- m2, m2' --> 'a) pre {lastGen0SalePrices : st} return 'a (* using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 *) =
   lets
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {lastGen0SalePrices : st} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
       ifi i #>= eend then waste_time (); acc
@@ -1701,7 +1699,7 @@ fun for_lastGen0SalePrices ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : N
     (* for (i : uint256 = 0; i < 5; ++) *)
     (*   modify sum += lastGen0SalePrices[i] *)
     (* end; *)
-    %for_lastGen0SalePrices (#0, #5, (), fn {i | 0 <= i /\ i < 5} (i : nat {i}, ()) pre {lastGen0SalePrices : 5} => 
+    %for_lastGen0SalePrices (#0, #5, (), fn {i | 0 <= i /\ i < 5} (i : nat {i}, ()) pre {lastGen0SalePrices : 5} =>
       %unop_ref sum (+= lastGen0SalePrices[i])
     );
     !sum / 5

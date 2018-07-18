@@ -10,6 +10,7 @@ open Ast
     | DARROW
     | FN
     | FUN
+    | FUNTYPE
     | LSQ
     | RSQ
     | LSQSQ
@@ -105,6 +106,7 @@ open Ast
     | SEMI_COLON
     | NEVER
     | IFDEC
+    | IFI
     | MOD
     | SET
     | MODIFY
@@ -116,6 +118,7 @@ open Ast
     | NOT
     | IBOOL_NOT
     | BANG
+    | STATE
 
 %nonterm start of prog
        | exp of exp
@@ -207,8 +210,10 @@ open Ast
        | proj_path of proj_path
        | fun_modifier of fun_modifier list
        | fun_modifiers of fun_modifier list
-       | idx_1or2 of idx * idx option
        | ty_tuple of ty list
+       | idx_1or2 of idx * idx option * region
+       | pre_post of (state, state) sum
+       | pre_post_star of (state, state) sum list
 
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
@@ -216,7 +221,7 @@ open Ast
 %pos pos
 
 		(* %nonassoc LET *)
-%left RTRI COLON COLON_GT
+%left RTRI COLON COLON_GT STATE
 %nonassoc LSQ LCUR
 %left COMMA
 %right SEMI_COLON
@@ -297,10 +302,10 @@ fun_modifiers : fun_modifier fun_modifiers (fun_modifier @ fun_modifiers)
 fun_modifier : PRE state ([FmPre state])
              | POST state ([FmPost state])
              | RETURN ty ([FmReturn ty])
-             | RTRI idx_1or2 (FmUsing idx_1or2)
+             | RTRI idx_1or2 (FmUsing ((fn (a, b, _) => (a, b)) idx_1or2))
 
-idx_1or2 : idx ((idx, NONE))
-         | idx COMMA idx ((idx1, SOME idx2))
+idx_1or2 : idx ((idx, NONE, (idxleft, idxright)))
+         | idx COMMA idx ((idx1, SOME idx2, (idx1left, idx2right)))
                     
 return : RETURN ty RTRI idx ((SOME ty, SOME idx, NONE))
        | RETURN ty RTRI idx COMMA idx ((SOME ty, SOME idx1, SOME idx2))
@@ -333,12 +338,18 @@ datatype_def : id_plus bsorting_star datatype_def_kind EQ constr_bar_star (case 
 datatype_def_kind : COLON cur_bsort_plus (cur_bsort_plus)
                   | ([])
                     
+pre_post : PRE state (inl state)
+         | POST state (inr state)
+
+pre_post_star : pre_post pre_post_star (pre_post :: pre_post_star)
+              | ([])
+                    
 ty (* : ty_term (ty_term) *)
    : ty_tuple (MakeTTuple (ty_tuple, (ty_tupleleft, ty_tupleright)))
-   | ty DDASH idx LARROW ty (TPureArrow (ty1, (idx, INat ("0", (idxleft, idxright))), ty2, (ty1left, ty2right)))
-   | ty DDASH idx COMMA idx LARROW ty (TPureArrow (ty1, (idx1, idx2), ty2, (ty1left, ty2right)))
-   | ty ARROW ty (TPureArrow (ty1, (IVar (underscore (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
-   | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
+   | ty DDASH idx_1or2 LARROW ty (TPureArrow (ty1, idx_1or2, ty2, (ty1left, ty2right)))
+   | ty ARROW ty (TPureArrow (ty1, (IUnder (ty1left, ty2right), NONE, (ty1left, ty2right)), ty2, (ty1left, ty2right)))
+   | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), NONE, (ty1left, ty2right)), ty2, (ty1left, ty2right)))
+   | FUNTYPE pre_post_star ty DDASH idx_1or2 LARROW ty (TArrowWithPrePost (pre_post_star, ty1, idx_1or2, ty2, (FUNTYPEleft, ty2right)))
    (* | ty MULT ty (TProd (ty1, ty2, (ty1left, ty2right))) *)
 
 ty_tuple : ty_term ([ty_term])
@@ -385,6 +396,7 @@ exp : aexp (aexp)
      | exp COLON ty (EAsc (exp, ty, (expleft, tyright)))
      | exp RTRI idx (EAscTime (exp, idx, (expleft, idxright)))
      | exp RTRI idx COMMA idx (EAscTimeSpace (exp, (idx1, idx2), (expleft, idx2right)))
+     | exp STATE state (EAscState (exp, state, (expleft, stateright)))
      | exp LCUR idx RCUR (EAppI (exp, idx, (expleft, idxright)))
      | exp LCUR RCUR (EAppI (exp, IVar (underscore (LCURleft, RCURright)), (expleft, RCURright)))
      | set_modify id square_star exp (ESetModify (set_modify, id, square_star, exp, (set_modifyleft, expright)))
@@ -395,7 +407,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | FN bind_plus fun_modifiers DARROW exp (EAbs (bind_plus, fun_modifiers, exp, (FNleft, expright)))
      | CASE exp return OF rule_bar_star (ECase (exp, return, rule_bar_star, (CASEleft, rule_bar_starright)))
      | IF exp THEN exp ELSE exp (EIte (exp1, exp2, exp3, (IFleft, exp3right)))
-     | IFDEC exp THEN exp ELSE exp (EIfi (exp1, exp2, exp3, (IFDECleft, exp3right)))
+     | IFI exp THEN exp ELSE exp (EIfi (exp1, exp2, exp3, (IFIleft, exp3right)))
      | LET return decl_star IN exp END (ELet (return, decl_star, exp, (LETleft, ENDright)))
      | SHARP INT (EConst (ECNat INT, (SHARPleft, INTright)))
      | INT (EConst (ECInt INT, (INTleft, INTright)))

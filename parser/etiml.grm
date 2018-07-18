@@ -289,7 +289,7 @@ open Ast
        | fun_modifier of fun_modifier list
        | fun_modifiers of fun_modifier list
        | named_ty of ty
-       | idx_1or2 of idx * idx option
+       | idx_1or2 of idx * idx option * region
        | optional_init of exp option
        | optional_inherit of id list
        (* | init of exp *)
@@ -306,13 +306,15 @@ open Ast
        | stmt of exp
        | stmts of exp list
        | ty_tuple of ty list
+       | pre_post of (state, state) sum
+       | pre_post_star of (state, state) sum list
 
 %keyword FN CASE UNPACK OF LET IN END RETURN VAL DATATYPE AS TYPE STRUCTURE STRUCT FUNCTOR SIG OPEN IDX IF THEN ELSE
 
 %pos pos
 
 		(* %nonassoc LET *)
-%left RTRI COLON COLON_GT
+%left RTRI COLON COLON_GT STATE
 %nonassoc LSQ LCUR
 %left COMMA
 %right SEMI
@@ -393,13 +395,13 @@ fun_modifier : VIEW ([FmView ()])
              | PRE state ([FmPre state])
              | POST state ([FmPost state])
              | RETURN named_ty ([FmReturn named_ty])
-             | RTRI idx_1or2 (FmUsing idx_1or2)
+             | RTRI idx_1or2 (FmUsing ((fn (a, b, _) => (a, b)) idx_1or2))
 
 named_ty : ty (ty)
          | LPAREN typing_comma_plus RPAREN (MakeTTuple (map snd typing_comma_plus, (LPARENleft, RPARENright)))
            
-idx_1or2 : idx ((idx, NONE))
-         | idx COMMA idx ((idx1, SOME idx2))
+idx_1or2 : idx ((idx, NONE, (idxleft, idxright)))
+         | idx COMMA idx ((idx1, SOME idx2, (idx1left, idx2right)))
                     
 return : RETURN named_ty RTRI idx ((SOME named_ty, SOME idx, NONE))
        | RETURN named_ty RTRI idx COMMA idx ((SOME named_ty, SOME idx1, SOME idx2))
@@ -552,6 +554,7 @@ exp : exp_term (exp_term)
      | exp_term COLON ty (EAsc (exp_term, ty, (exp_termleft, tyright)))
      | exp_term RTRI idx (EAscTime (exp_term, idx, (exp_termleft, idxright)))
      | exp_term RTRI idx COMMA idx (EAscTimeSpace (exp_term, (idx1, idx2), (exp_termleft, idx2right)))
+     | exp_term STATE state (EAscState (exp_term, state, (exp_termleft, stateright)))
 
 exp_term : aexp (aexp)
          | exp_term aexp (EApp (exp_term, aexp, (exp_termleft, aexpright)))
@@ -611,14 +614,19 @@ optional_colon_ty : COLON ty (SOME ty)
 
 optional_eq_exp : EQ exp (SOME exp)
                 | (NONE)
-              
+
+pre_post : PRE state (inl state)
+         | POST state (inr state)
+
+pre_post_star : pre_post pre_post_star (pre_post :: pre_post_star)
+              | ([])
+                    
 ty (* : ty_term (ty_term) *)
    : ty_tuple (MakeTTuple (ty_tuple, (ty_tupleleft, ty_tupleright)))
-   | ty DDASH idx LARROW ty (TPureArrow (ty1, (idx, INat ("0", (idxleft, idxright))), ty2, (ty1left, ty2right)))
-   | ty DDASH idx COMMA idx LARROW ty (TPureArrow (ty1, (idx1, idx2), ty2, (ty1left, ty2right)))
-   | FUNTYPE state ty DDASH idx COMMA idx LARROW ty (TArrowWithPre ((ty1, state), (idx1, idx2), ty2, (ty1left, ty2right)))
-   | ty ARROW ty (TPureArrow (ty1, (IVar (underscore (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
-   | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), INat ("0", (ty1left, ty2right))), ty2, (ty1left, ty2right)))
+   | ty DDASH idx_1or2 LARROW ty (TPureArrow (ty1, idx_1or2, ty2, (ty1left, ty2right)))
+   | FUNTYPE pre_post_star ty DDASH idx_1or2 LARROW ty (TArrowWithPrePost (pre_post_star, ty1, idx_1or2, ty2, (FUNTYPEleft, ty2right)))
+   | ty ARROW ty (TPureArrow (ty1, (IUnder (ty1left, ty2right), NONE, (ty1left, ty2right)), ty2, (ty1left, ty2right)))
+   | ty ZERO_ARROW ty (TPureArrow (ty1, (ITime ("0.0", (ty1left, ty2right)), NONE, (ty1left, ty2right)), ty2, (ty1left, ty2right)))
 
 ty_tuple : ty_term ([ty_term])
          | ty_tuple MULT ty_tuple (ty_tuple1 @ ty_tuple2)

@@ -131,7 +131,7 @@ fun do_process_file is_library gctx (pos_or_neg, filename) =
         let
           val prog = ParserFactory.parse_file filename
           val () = curry write_file (filename ^ ".parsed.tmp") $ AstPP.pp_prog_to_string prog
-          (* val () = TypeCheck.debug_dir_name := (SOME $ fst $ split_dir_file filename) *)
+          val () = TypeCheck.debug_dir_name := (SOME $ fst $ split_dir_file filename)
           val prog = elaborate_prog prog
           val () = curry write_file (filename ^ ".elabed.tmp") $ NamefulPrettyPrint.pp_prog_to_string prog
           (* val () = (app println o map (suffix "\n") o fst o E.str_decls ctxn) decls *)

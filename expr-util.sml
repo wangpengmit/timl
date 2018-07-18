@@ -41,6 +41,7 @@ fun EAppTs (f, args) = foldl (swap EAppT) f args
 fun EAsc (e, t) = EET (EETAsc (), e, t)
 fun EAscTime (e, i) = EEI (EEIAscTime (), e, i)
 fun EAscSpace (e, i) = EEI (EEIAscSpace (), e, i)
+fun EAscTime (e, i) = EEI (EEIAscTime (), e, i)
 fun ENever (t, r) = ET (ETNever (), t, r)
 fun EBuiltin (name, t, r) = ET (ETBuiltin name, t, r)
 fun ENew (e1, e2) = EBinOp (EBNew (), e1, e2)
@@ -160,6 +161,7 @@ fun is_tail_call e =
     | EEI (EEIAscTime (), e, _) => is_tail_call e
     | EEI (EEIAscSpace (), e, _) => is_tail_call e
     | EET (EETAsc (), e, _) => is_tail_call e
+    | EAscState (e, _) => is_tail_call e
     | ELet (_, bind, _) => is_tail_call $ snd $ Unbound.unBind bind
     (* todo: how about EHalt? *)
     | EVar _ => false
