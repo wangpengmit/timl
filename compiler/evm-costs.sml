@@ -99,5 +99,7 @@ val C_exp = 10
 val C_expbyte = 50
                                   
 val C_EXP_max = C_exp + C_expbyte * 8
+
+(* val self_destruct_cost = C_selfdestruct + C_newaccount? *)
                                       
 end

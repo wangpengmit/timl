@@ -28,7 +28,8 @@ fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (
   val minute = 60
   val hour = 60 * minute
   val day = 24 * hour
-  fun truncate n v = v bit_and (((2 ** (8*n)) (* using _, _ *)) - 1)
+  fun truncate {n : Nat} (n : nat {n}) v = v bit_and (((2 #** (#8 #* n)) (* using _, _ *)) - 1)
+  fun truncate4 v = %truncate #4 v
   datatype some_nat = SomeNat {n : Nat | n < 2 ** 256} of nat {n} --> some_nat
   fun imin {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a min b} =
     ifi a #<= b then a : nat {a min b} else b : nat {a min b} end
@@ -427,7 +428,7 @@ contract KittyBase = struct
         
     (* It's probably never going to happen, 4 billion cats is A LOT, but*)
     (* let's just be 100% sure we never let this happen.*)
-    require(newKittenId == truncate 4 newKittenId);
+    require(newKittenId == truncate4 newKittenId);
 
     (* emit the birth event*)
     fire Birth(
@@ -491,19 +492,19 @@ contract KittyOwnership = struct inherit KittyBase
   public state erc721Metadata : cell address
 
   val InterfaceSignature_ERC165 : bytes4 =
-    truncate 4 (keccak256("supportsInterface(bytes4)"))
+    truncate4 (keccak256("supportsInterface(bytes4)"))
 
   val InterfaceSignature_ERC721 : bytes4 =
-    truncate 4 (keccak256("name()")) bit_xor
-    truncate 4 (keccak256("symbol()")) bit_xor
-    truncate 4 (keccak256("totalSupply()")) bit_xor
-    truncate 4 (keccak256("balanceOf(address)")) bit_xor
-    truncate 4 (keccak256("ownerOf(uint256)")) bit_xor
-    truncate 4 (keccak256("approve(address,uint256)")) bit_xor
-    truncate 4 (keccak256("transfer(address,uint256)")) bit_xor
-    truncate 4 (keccak256("transferFrom(address,address,uint256)")) bit_xor
-    truncate 4 (keccak256("tokensOfOwner(address)")) bit_xor
-    truncate 4 (keccak256("tokenMetadata(uint256,string)"))
+    truncate4 (keccak256("name()")) bit_xor
+    truncate4 (keccak256("symbol()")) bit_xor
+    truncate4 (keccak256("totalSupply()")) bit_xor
+    truncate4 (keccak256("balanceOf(address)")) bit_xor
+    truncate4 (keccak256("ownerOf(uint256)")) bit_xor
+    truncate4 (keccak256("approve(address,uint256)")) bit_xor
+    truncate4 (keccak256("transfer(address,uint256)")) bit_xor
+    truncate4 (keccak256("transferFrom(address,address,uint256)")) bit_xor
+    truncate4 (keccak256("tokensOfOwner(address)")) bit_xor
+    truncate4 (keccak256("tokenMetadata(uint256,string)"))
 
   (* @notice Introspection interface as per ERC-165 (https://github.com/ethereum/EIPs/issues/165).*)
   (*  Returns true for any standardized interfaces implemented by this contract. We implement*)
@@ -1681,7 +1682,7 @@ contract SaleClockAuction = struct inherit ClockAuction
       modify gen0SaleCount ++
     end
 
-(* PW: here is a limitation of TiML: it can't parametrize on states. MicroTiML actually supports it (for continuations), so TiML should support it too.  *)                              
+(* PW: here is a limitation of TiML: it can't parametrize on states. MicroTiML actually supports it (for continuations), so TiML should support it too.  *)
 fun for_lastGen0SalePrices ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), funtype pre {lastGen0SalePrices : st} nat {i} * 'a -- m2, m2' --> 'a) pre {lastGen0SalePrices : st} return 'a (* using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 *) =
   lets
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {lastGen0SalePrices : st} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
