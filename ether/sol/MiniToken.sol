@@ -15,7 +15,8 @@ contract MyToken {
     function transfer(address _to, uint256 _value) public {
         require(balanceOf[msg.sender] >= _value);           // Check if the sender has enough
         require(balanceOf[_to] + _value >= balanceOf[_to]); // Check for overflows
+        /* uint8 a = 100; */
         balanceOf[msg.sender] -= _value;                    // Subtract from the sender
-        balanceOf[_to] += _value;                           // Add the same to the recipient
+        balanceOf[_to] += _value /* + a */;                           // Add the same to the recipient
     }
 }
