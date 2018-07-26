@@ -110,7 +110,7 @@ fun tc_w (hctx, st_int2name, st_name2ty) (ctx as (itctx as (ictx, tctx))) w =
       WConst c => get_word_const_type (hctx, st_int2name, st_name2ty) c
     | WUninit t => kc_against_kind itctx (t, KType ())
     | WBuiltin (name, t) => kc_against_kind itctx (t, KType ())
-    | WNever t => kc_against_kind itctx (t, KType ())
+    | WNever t => (check_prop (PFalse dummy); kc_against_kind itctx (t, KType ()))
 
 fun is_mult32 n =
   if n mod 32 = 0 then SOME $ n div 32
@@ -614,7 +614,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, TByte :: sctx, st))
       end
-    | MACRO_init_free_ptr _ => (ctx)
+    | MACRO_init_free_ptr _ => ctx
     | MACRO_array_malloc (t, is_upward) =>
       let
         val t = kc_against_kind itctx (unInner t, KType ())
@@ -947,9 +947,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
                     val make_exists = make_exists "__p"
                     val t1 = make_exists (SSubset_from_prop dummy $ i %= Ifalse)
                     val t2 = make_exists (SSubset_from_prop dummy $ i %= Itrue)
-                    val () = println "before is_eq_stack"
                     val () = is_eq_stack itctx (t2 :: sctx, sctx')
-                    val () = println "after is_eq_stack"
                     val () = is_eq_st ictx (st, st')
                     val (i1, ni) = tc_insts (itctx, rctx, t1 :: sctx, st) I
                   in

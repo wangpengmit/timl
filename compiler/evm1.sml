@@ -10,18 +10,18 @@ type label = int
 
 datatype word_const =
          WCTT of unit
-         | WCNat of nat
          | WCInt of LargeInt.int
+         | WCNat of nat
          | WCBool of bool
-         | WCByte of Char.char
          | WCiBool of bool
+         | WCByte of Char.char
          | WCLabel of label
          | WCState of int
 
 (* atomic word values *)
 datatype 'ty word =
          WConst of word_const
-         | WUninit of 'ty
+         | WUninit of 'ty (* todo: no longer needed? *)
          | WBuiltin of string * 'ty
          | WNever of 'ty
            
