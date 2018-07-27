@@ -551,6 +551,16 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         ((itctx, rctx, t_fold :: sctx, st))
       end
+    | UNFOLD () =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val t0 = whnf itctx t0
+        val (t, args) = collect_TAppIT t0
+        val ((_, k), t1) = assert_TRec t
+        val t = TAppITs (subst0_t_t t t1) args
+      in
+        ((itctx, rctx, t :: sctx, st))
+      end
     | VALUE_AscType t =>
       let
         val t = kc_against_kind itctx (unInner t, KType ())
@@ -576,16 +586,6 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val () = open_with new
       in
         (add_stack t $ add_sorting_full new (itctx, rctx, sctx, st))
-      end
-    | UNFOLD () =>
-      let
-        val (t0, sctx) = assert_cons sctx
-        val t0 = whnf itctx t0
-        val (t, args) = collect_TAppIT t0
-        val ((_, k), t1) = assert_TRec t
-        val t = TAppITs (subst0_t_t t t1) args
-      in
-        ((itctx, rctx, t :: sctx, st))
       end
     | NAT2INT () =>
       let
