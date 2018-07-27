@@ -116,11 +116,19 @@ fun is_mult32 n =
   if n mod 32 = 0 then SOME $ n div 32
   else NONE
          
+(* fun is_reg_addr num_regs n = *)
+(*   case is_mult32 n of *)
+(*       SOME n => *)
+(*       (* r0 (n=1) is for scratch space of builtin macros and can't be explicitly accessed as a register *) *)
+(*       if (* 1 *)2 <= n andalso n <= num_regs then SOME $ n-1 *)
+(*       else NONE *)
+(*     | NONE => NONE *)
+         
 fun is_reg_addr num_regs n =
   case is_mult32 n of
       SOME n =>
-      (* r0 (n=1) is for scratch space of builtin macros and can't be explicitly accessed as a register *)
-      if (* 1 *)2 <= n andalso n <= num_regs then SOME $ n-1
+      (* r_m (m<FIRST_GENERAL_REG) is for scratch space of builtin macros and can't be explicitly accessed as a register *)
+      if FIRST_GENERAL_REG (*todo: +1?*) <= n andalso n <= num_regs then SOME $ n-1
       else NONE
     | NONE => NONE
          
@@ -635,6 +643,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         (* val () = println $ "offset = " ^ (ExportPP.str_i $ ExportPP.export_i (fst $ itctxn ()) offset) *)
         (* val () = println $ "lowest = " ^ (ExportPP.str_i $ ExportPP.export_i (fst $ itctxn ()) lowest) *)
       in
+        (* todo: offset shouldn't be left on the result stack *)
         if is_upward then
           (check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %= lowest);
            ((itctx, rctx, TNat offset :: TPreArray (t, len, lowest %+ N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
@@ -656,13 +665,13 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val (t0, sctx) = assert_cons sctx
         val (t, len, lowest, (len_inited, is_upward)) = assert_TPreArray $ whnf itctx t0
         val () = assert_b "len_inited = true" (len_inited = true)
+        val () =
+            if is_upward then
+              check_prop (lowest %= len)
+            else
+              check_prop (lowest %= N0)
       in
-        if is_upward then
-          (check_prop (lowest %= len);
-           ((itctx, rctx, TArrayPtr (t, len, N32) :: sctx, st)))
-        else
-          (check_prop (lowest %= N0);
-           ((itctx, rctx, TArrayPtr (t, len, N32) :: sctx, st)))
+        (itctx, rctx, TArrayPtr (t, len, N32) :: sctx, st)
       end
     | MACRO_tuple_malloc ts =>
       let
@@ -891,9 +900,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
         val (st', rctx', sctx', i) = assert_TArrowEVM t0
         val () = is_sub_rctx itctx (rctx, rctx')
         val () = is_eq_stack itctx (sctx, sctx')
-        val () = println "before is_eq_st"
         val () = is_eq_st ictx (st, st')
-        val () = println "after is_eq_st"
       in
         (TN (C_insts insts) %%+ i, 0)
       end
