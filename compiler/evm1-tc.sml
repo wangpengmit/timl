@@ -128,7 +128,7 @@ fun is_reg_addr num_regs n =
   case is_mult32 n of
       SOME n =>
       (* r_m (m<FIRST_GENERAL_REG) is for scratch space of builtin macros and can't be explicitly accessed as a register *)
-      if FIRST_GENERAL_REG (*todo: +1?*) <= n andalso n <= num_regs then SOME $ n-1
+      if FIRST_GENERAL_REG + 1 <= n andalso n <= num_regs then SOME $ n-1
       else NONE
     | NONE => NONE
          

@@ -87,14 +87,6 @@ fun shift01_t_insts a = shift_t_insts 0 1 a
 
 fun shift01_i_block ((st, rctx, ts, (j, i)), I) = ((shift_i_i st, Rctx.map shift01_i_t rctx, map shift01_i_t ts, (shift_i_i j, shift_i_i i)), shift01_i_insts I)
 
-(* todo: the free pointer can be seen as part of the scratch space, since scratch space is a space for pseudo-instructions *)
-fun reg_addr r = 32 * (r + 1)
-(* use r0 as scratch space *)
-(* val scratch = 32 *)
-val scratch = reg_addr 0
-val FIRST_GENERAL_REG = 2
-val ARG_REG = FIRST_GENERAL_REG
-               
 fun assert_EState e =
   case e of
       EState a => a

@@ -59,4 +59,12 @@ fun assert_TStorageTuplePtr t =
       TTuplePtr (ts, i, true) => (ts, i)
     | _ => raise assert_fail $ "assert_TStorageTuplePtr; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
                                                           
+(* todo: the free pointer can be seen as part of the scratch space, since scratch space is a space for pseudo-instructions *)
+fun reg_addr r = 32 * (r + 1)
+(* use r0 as scratch space *)
+(* val scratch = 32 *)
+val scratch = reg_addr 0
+val FIRST_GENERAL_REG = 2
+val ARG_REG = FIRST_GENERAL_REG
+               
 end
