@@ -1611,7 +1611,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (ERecord $ SMapU.fromList $ zip (names, es), TRecord $ SMapU.fromList $ zip (names, ts), i %%+ (to_real $ C_ETuple len, N len), st)
         end
-      | EBinOp (EBNew (), e1, e2) =>
+      | EBinOp (EBNew width, e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
@@ -1620,11 +1620,11 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val (e1, e2) = if !anno_ENew then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ENew_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
-          val cost = N C_ENew_order0 %+ N C_ENew_order1 %* len
+          val cost = N C_ENew_order0 %+ N (C_ENew_order1)b width %* len
         in
-          (ENew (e1, e2), TArr (t2, len), j1 %%+ j2 %%+ (IToReal (cost, dummy), len %+ N1), st)
+          (ENew (e1, e2), TArr (t2, len), j1 %%+ j2 %%+ (IToReal (cost, dummy), len %* N width %+ N 32), st)
         end
-      | ENewArrayValues (t, es) =>
+      | ENewArrayValues (width, t, es) =>
         let
           val t = kc_against_kind itctx (t, KType ())
           val (eis, st) =
@@ -1639,7 +1639,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i = combine_IBAdd_Time_Nat is
           val len = length es
         in
-          (ENewArrayValues (t, es), TArr (t, INat len), i %%+ (to_real $ C_ENewArrayValues len, N $ len + 1), st)
+          (ENewArrayValues (t, es), TArr (t, INat len), i %%+ (to_real $ C_ENewArrayValues width len, N $ width * len + 32), st)
         end
       | EBinOp (EBRead (), e1, e2) =>
         let

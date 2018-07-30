@@ -38,7 +38,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TQuanI of unit Operators.quan * ('sort, ('idx * 'idx) * ('var, 'bsort, 'idx, 'sort) ty) ibind_anno
          | TRec of ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
          | TNat of 'idx
-         | TArr of ('var, 'bsort, 'idx, 'sort) ty * 'idx
+         | TArray of int * ('var, 'bsort, 'idx, 'sort) ty * 'idx
          | TAbsT of ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno
          | TAppT of ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty
          | TiBool of 'idx
@@ -58,7 +58,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TPreTuple of ('var, 'bsort, 'idx, 'sort) ty list * int(*offset*) * int(*lowest inited pos*)
          | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * int(*offset*) * bool(*is storage?*)
          | TPreArray of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*lowest inited/uninited pos*) * (bool(*is length inited?*) * bool(*init direction; false: downward; true: upward *))
-         | TArrayPtr of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*offset*)
+         | TArrayPtr of int(*width*) * ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*offset*)
          | TVectorPtr of string * 'idx(*offset*)
 
 type loc = int

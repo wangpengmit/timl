@@ -87,10 +87,16 @@ fun C_LOG n = 375 + n * C_logtopic
                          
 val C_get_reg = C_PUSH + C_MLOAD
 val C_set_reg = C_PUSH + C_MSTORE
-val C_array_init_assign = 3 * C_DUP + C_ADD + C_MSTORE
+fun C_MSTORE_n w =
+  if w = 32 then
+    C_MSTORE
+  else if w = 8 then
+    C_MSTORE8
+  else raise Impossible "C_MSTORE_n(): w <> 32 or 8"
+fun C_array_init_assign w = 3 * C_DUP + C_ADD + C_MSTORE_n w
                                                 
 val C_New_loop_test = C_JUMPDEST + 2 * C_PUSH + C_DUP + C_ISZERO + C_JUMPI
-val C_New_loop = C_New_loop_test + 2 * C_PUSH + C_UNPACKI + C_POP + C_SWAP + C_SUB + C_array_init_assign + C_JUMP
+fun C_New_loop w = C_New_loop_test + 2 * C_PUSH + C_UNPACKI + C_POP + C_SWAP + C_SUB + C_array_init_assign w + C_JUMP
 val C_New_post_loop = C_JUMPDEST + C_UNPACKI + 3 * C_POP + C_SWAP + C_MARK_PreArray2ArrayPtr + C_set_reg
 
 val C_Ifi_branch_prelude = C_set_reg

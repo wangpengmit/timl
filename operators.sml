@@ -372,7 +372,7 @@ fun pretty_str_nat_cmp opr =
 datatype expr_bin_op =
          EBApp of unit
          (* | EBPair of unit *)
-         | EBNew of unit
+         | EBNew of int
          | EBRead of unit
          | EBVectorGet of unit
          | EBVectorPushBack of unit

@@ -431,7 +431,7 @@ fun compile st_name2int ectx e =
         [PUSH1 $ WiBool b] @
         make_inj t_other
       end
-    | ENewArrayValues (t, es) =>
+    | ENewArrayValues (width, t, es) =>
       let
         val t = cg_t t
         val n = length es
@@ -441,7 +441,7 @@ fun compile st_name2int ectx e =
         [SWAP1] @
         array_init_len @
         [PUSH1nat 0] @
-        concatMap (fn e => compile e @ [SWAP2, SWAP1] @ array_init_assign @ [SWAP2, POP (), SWAP1, PUSH1nat 32, ADD ()]) es @
+        concatMap (fn e => compile e @ [SWAP2, SWAP1] @ array_init_assign width @ [SWAP2, POP (), SWAP1, PUSH1nat width, ADD ()]) es @
         [POP (), MARK_PreArray2ArrayPtr ()]
       end
     | EBinOp (EBRead (), e1, e2) =>
@@ -630,7 +630,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
         val r = fresh_reg ()
       in        
         case e1 of
-            EBinOp (EBNew (), e1, e2) =>
+            EBinOp (EBNew width, e1, e2) =>
             let
               open EVMCosts
               val (I_e1, st) = compile (e1, st) 
@@ -643,10 +643,10 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
               val loop_label = fresh_label ()
               val pre_loop_code =
                   [SWAP1, DUP1] @@
-                  array_malloc t false @@
+                  array_malloc width t false @@
                   [DUP2] @@
                   array_init_len @@
-                  [SWAP1, PUSH1nat 32, MUL ()] @@
+                  [SWAP1, PUSH1nat width, MUL ()] @@
                   PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl len])) @@
                   JUMP ()
               (* val pre_loop_label = fresh_label () *)
@@ -668,11 +668,11 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         (shift01_i_insts $
                         [ASCTIME $ Inner $ IToReal (FIV i %* INat C_New_loop) %+ to_real C_New_post_loop %+ i_e] @@                 
                         [ASCSPACE $ Inner space_e] @@                 
-                        [POP (), PUSH1nat 32, SWAP1, SUB ()] @@
-                        array_init_assign @@
+                        [POP (), PUSH1nat width, SWAP1, SUB ()] @@
+                        array_init_assign width @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
                         JUMP ())
-                    val block = ((st, rctx, [TNat (INat 32 %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], (IToReal (FIV i %* INat C_New_loop) %+ to_real (C_New_loop_test + C_New_post_loop) %+ i_e, space_e)), loop_code)
+                    val block = ((st, rctx, [TNat (INat width %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], (IToReal (FIV i %* INat C_New_loop) %+ to_real (C_New_loop_test + C_New_post_loop) %+ i_e, space_e)), loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -688,8 +688,8 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         [POP (), POP (), SWAP1, POP (), MARK_PreArray2ArrayPtr ()] @@
                         set_reg r @@
                         cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArrayPtr (t, len, INat 32)), st) e)
-                    val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N32 =? N0) %= Itrue
-                    val block = ((st, rctx, [t_ex, TNat $ FIV i %* N32, TPreArray (t, len, FIV i, (true, false)), t], (to_real C_New_post_loop %+ i_e, space_e)), post_loop_code)
+                    val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N width =? N0) %= Itrue
+                    val block = ((st, rctx, [t_ex, TNat $ FIV i %* N width, TPreArray (t, len, FIV i, (true, false)), t], (to_real C_New_post_loop %+ i_e, space_e)), post_loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -1177,7 +1177,7 @@ fun test1 dirname =
     (*            | _ => () *)
     val () = 
         let
-          val total_mem = j %+ N (num_regs + 1)
+          val total_mem = ICeil (j %/ N 32) %+ N (num_regs + 1)
           infix 7 %/
           fun a %/ b = IDiv (a, (b, dummy))
           fun C_mem a = N C_memory %* a %+ (a %* a) %/ 512

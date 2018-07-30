@@ -433,9 +433,15 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                      SOME n => List.nth (ts, n)
                    | NONE => raise Impossible $ sprintf "MLOAD: bad offset in type ($)" [str_t t0]
                 )
-              | TArrayPtr (t, len, offset) =>
+              | TArrayPtr (w, t, len, offset) =>
                 let
-                  fun read () = (check_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); t)
+                  fun read () =
+                    if w = 32 then
+                      (check_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len);
+                       t)
+                    else if w = 8 then
+                      (check_prop (offset %+ N32 %<= len);
+                       TInt)
                 in
                   case simp_i offset of
                      IConst (ICNat n, _) =>
@@ -465,6 +471,18 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                 end
               | TArrayPtr (t, len, offset) =>
                 (is_eq_ty itctx (t1, t); check_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); rctx)
+              | _ => def ()
+      in
+        ((itctx, rctx, sctx, st))
+      end
+    | MSTORE8 () => 
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        fun def () = raise Impossible $ sprintf "MSTORE8: can't write to address of type ($)" [str_t t0]
+        val rctx =
+            case t0 of
+                TArrayPtr (8, t, len, offset) =>
+                (is_eq_ty itctx (t1, t); check_prop (offset %< len); rctx)
               | _ => def ()
       in
         ((itctx, rctx, sctx, st))
@@ -623,21 +641,23 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         ((itctx, rctx, TByte :: sctx, st))
       end
     | MACRO_init_free_ptr _ => ctx
-    | MACRO_array_malloc (t, is_upward) =>
+    | MACRO_array_malloc (width, t, is_upward) =>
       let
         val t = kc_against_kind itctx (unInner t, KType ())
+        val () = if width = 8 then t == TByte (*here*)
         val (t0, sctx) = assert_cons sctx
         val len = assert_TNat $ whnf itctx t0
         val lowest = if is_upward then N0 else len
-        val () = add_space $ len %+ N1
+        val () = add_space $ len %* N width %+ N 32
       in
-        ((itctx, rctx, TPreArray (t, len, lowest, (false, is_upward)) :: sctx, st))
+        ((itctx, rctx, TPreArray (width, t, len, lowest, (false, is_upward)) :: sctx, st))
       end
-    | MACRO_array_init_assign () =>
+    | MACRO_array_init_assign width =>
       let
         val (t0, t1, t2, sctx) = assert_cons3 sctx
         val offset = assert_TNat $ whnf itctx t0
-        val (t, len, lowest, (len_inited, is_upward)) = assert_TPreArray $ whnf itctx t1
+        val (width', t, len, lowest, (len_inited, is_upward)) = assert_TPreArray $ whnf itctx t1
+        val () = assert_b "evm-tc/array_init_assign: width' = width" $ width' = width
         val () = is_eq_ty itctx (t2, t)
         (* val () = println $ "is_upward = " ^ str_bool is_upward *)
         (* val () = println $ "offset = " ^ (ExportPP.str_i $ ExportPP.export_i (fst $ itctxn ()) offset) *)
@@ -645,10 +665,10 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       in
         (* todo: offset shouldn't be left on the result stack *)
         if is_upward then
-          (check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %= lowest);
+          (check_prop (IMod (offset, N width) %= N0 /\ offset %/ N width %= lowest);
            ((itctx, rctx, TNat offset :: TPreArray (t, len, lowest %+ N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
         else
-          (check_prop (IMod (offset, N32) %= N0 /\ offset %/ N32 %+ N1 %= lowest);
+          (check_prop (IMod (offset, N width) %= N0 /\ offset %/ N width %+ N1 %= lowest);
            ((itctx, rctx, TNat offset :: TPreArray (t, len, lowest %- N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
       end
     | MACRO_array_init_len () =>
@@ -677,7 +697,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       let
         val ts = map (kc_against_KType itctx) $ unInner ts
         val len = length ts
-        val () = add_space $ N len
+        val () = add_space $ N $ 32*len
       in
         (add_stack (TPreTuple (ts, 0, len)) ctx)
       end
@@ -706,7 +726,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val b = assert_IBool $ simp_i $ assert_TiBool $ whnf itctx t0
         val inj = if b then InjInr () else InjInl ()
         val ts = choose_pair_inj (t1, t_other) inj
-        val () = add_space $ N 2
+        val () = add_space $ N $ 32*2
       in
         ((itctx, rctx, TSum ts :: sctx, st))
       end
