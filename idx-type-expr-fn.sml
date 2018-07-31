@@ -92,8 +92,8 @@ fun TInt r = TBase (BTInt (), r)
 fun TBool r = TBase (BTBool (), r)
 fun TByte r = TBase (BTByte (), r)
 
-fun TString (i, r) = TArray (TByte r, i)
-fun TBytes (i, r) = TArray (TByte r, i)
+fun TString (i, r) = TArray8 (TByte r, i)
+fun TBytes (i, r) = TArray8 (TByte r, i)
   
 val Type = (0, [])
 

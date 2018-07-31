@@ -87,8 +87,8 @@ fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= e
    *)
   public fun init {old1 old2 len1 len2 : Nat} (
         initialSupply : uint256,
-        tokenName : string {len1},
-        tokenSymbol : string {len2}
+        tokenName : array uint256 {len1},
+        tokenSymbol : array uint256 {len2}
     ) pre {name : old1, symbol : old2} post {name : len1, symbol : len2} using _ = 
            totalSupply ::= initialSupply * ((10 #** decimals) using _);  (* Update total supply with the decimal amount *)
     set balanceOf[msg.sender] !!totalSupply;                (* Give the creator all initial tokens *)

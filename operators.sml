@@ -389,7 +389,7 @@ fun str_expr_bin_op opr =
   case opr of
       EBApp _ => "app"
     (* | EBPair () => "pair" *)
-    | EBNew () => "new"
+    | EBNew w => "new " ^ str_int w
     | EBRead () => "read"
     | EBPrim opr => str_prim_expr_bin_op opr
     | EBNat opr => str_nat_expr_bin_op opr
@@ -406,7 +406,7 @@ fun pretty_str_expr_bin_op opr =
   case opr of
       EBApp _ => "$"
     (* | EBPair () => "pair" *)
-    | EBNew () => "new"
+    | EBNew w => "new " ^ str_int w
     | EBRead () => "read"
     | EBPrim opr => pretty_str_prim_expr_bin_op opr
     | EBNat opr => pretty_str_nat_expr_bin_op opr

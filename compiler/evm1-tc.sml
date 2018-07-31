@@ -440,7 +440,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                       (check_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len);
                        t)
                     else if w = 8 then
-                      (check_prop (offset %+ N32 %<= len);
+                      (check_prop (offset %<= len); (* it's safe to read [offset, offset+32) because there is the length data *)
                        TInt)
                 in
                   case simp_i offset of
@@ -482,7 +482,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val rctx =
             case t0 of
                 TArrayPtr (8, t, len, offset) =>
-                (is_eq_ty itctx (t1, t); check_prop (offset %< len); rctx)
+                (is_eq_ty itctx (t1, t); check_prop (N32 %<= offset /\ offset %< N32 %+ len); rctx)
               | _ => def ()
       in
         ((itctx, rctx, sctx, st))
@@ -644,7 +644,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | MACRO_array_malloc (width, t, is_upward) =>
       let
         val t = kc_against_kind itctx (unInner t, KType ())
-        val () = if width = 8 then t == TByte (*here*)
+        val () = if width = 8 then is_eq_ty itctx (t, TByte)
+                 else assert "evm/tc()/array_malloc: width=32" $ width = 32
         val (t0, sctx) = assert_cons sctx
         val len = assert_TNat $ whnf itctx t0
         val lowest = if is_upward then N0 else len
