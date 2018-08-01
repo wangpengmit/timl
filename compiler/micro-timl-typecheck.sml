@@ -1093,6 +1093,19 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EUnOp (EUTiML (EUArrayLen ()), e), TNat i, j %%+ TN C_EArrayLen, st)
         end
+      | EUnOp (opr as EUTiML (EUArray8LastWord ()), e) =>
+        let
+          val (e, t, j, st) = tc (ctx, st) e
+          val t = whnf itctx t
+          val (width, _, _) = case t of
+                                  TArray data => data
+                                | _ => raise MTCError "EArrayLen"
+          val () = assert_b "tc/Array8LastWord: width=8" $ width = 8
+          val e = if !anno_EArrayLen then e %: t else e
+          val e = if !anno_EArrayLen_state then e %~ st else e
+        in
+          (EUnOp (opr, e), TInt, j %%+ TN C_EArray8LastWord, st)
+        end
       | EUnOp (opr as EUTiML (EUiBoolNeg ()), e) =>
         let
           val (e, t, j, st) = tc (ctx, st) e
@@ -1668,6 +1681,23 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (ERead (e1, e2), t, j1 %%+ j2 %%+ TN C_ERead, st)
         end
+      | EBinOp (opr as EBRead8 (), e1, e2) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val st_e1 = st
+          val (width, t, i1) = case whnf itctx t1 of
+                                   TArray data => data
+                                | _ => raise MTCError "ERead8: not array"
+          val () = assert_b "tc()/ERead8: width=8" $ width = 8
+          val (e2, t2, j2, st) = tc (ctx, st) e2
+          val t2 = whnf itctx t2
+          val i2 = assert_TNat_m t2 (fn s => raise MTCError $ "ERead8: " ^ s)
+          val () = check_prop (i2 %< i1)
+          val (e1, e2) = if !anno_ERead then (e1 %: t1, e2 %: t2) else (e1, e2)
+          val (e1, e2) = if !anno_ERead_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
+        in
+          (EBinOp (opr, e1, e2), t, j1 %%+ j2 %%+ TN C_ERead8, st)
+        end
       | EBinOp (EBPrim opr, e1, e2) =>
         let
           val t1 = get_prim_expr_bin_op_arg1_ty opr
@@ -1918,6 +1948,28 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, e2, e3) = if !anno_EWrite_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
         in
           (EWrite (e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN C_EWrite, st)
+        end
+      | ETriOp (opr as ETWrite8 (), e1, e2, e3) =>
+        let
+          val (e1, t1, j1, st) = tc (ctx, st) e1
+          val st_e1 = st
+          val t1 = whnf itctx t1
+          val (width, t, i1) = case t1 of
+                            TArray data => data
+                          | _ => raise MTCError "EWrite8 1"
+          val () = assert_b "tc()/EWrite8: width=8" $ width = 8
+          val (e2, t2, j2, st) = tc (ctx, st) e2
+          val st_e2 = st
+          val t2 = whnf itctx t2
+          val i2 = case t2 of
+                       TNat i => i
+                     | _ => raise MTCError "EWrite8 2"
+          val () = check_prop (i2 %< i1)
+          val (e3, j3, st) = tc_against_ty (ctx, st) (e3, t)
+          val (e1, e2, e3) = if !anno_EWrite then (e1 %: t1, e2 %: t2, e3 %: t) else (e1, e2, e3)
+          val (e1, e2, e3) = if !anno_EWrite_state then (e1 %~ st_e1, e2 %~ st_e2, e3 %~ st) else (e1, e2, e3)
+        in
+          (ETriOp (opr, e1, e2, e3), TUnit, j1 %%+ j2 %%+ j3 %%+ TN C_EWrite8, st)
         end
       | EPack (t', t1, e) =>
         let

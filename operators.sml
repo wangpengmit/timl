@@ -204,6 +204,7 @@ datatype expr_un_op =
          EUProj of int
          | EUPrim of prim_expr_un_op
          | EUArrayLen of unit
+         | EUArray8LastWord of unit
          | EUiBoolNeg of unit
          | EUNat2Int of unit
          | EUInt2Nat of unit
@@ -374,6 +375,7 @@ datatype expr_bin_op =
          (* | EBPair of unit *)
          | EBNew of int
          | EBRead of unit
+         | EBRead8 of unit
          | EBVectorGet of unit
          | EBVectorPushBack of unit
          | EBMapPtr of unit
@@ -421,6 +423,7 @@ fun pretty_str_expr_bin_op opr =
 
 datatype expr_tri_op =
          ETWrite of unit
+         | ETWrite8 of unit
          | ETIte of unit
          | ETVectorSet of unit
 

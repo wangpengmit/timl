@@ -292,6 +292,7 @@ fun impl_expr_un_op opr =
     | EUNat2Int () => [NAT2INT ()]
     | EUInt2Nat () => [INT2NAT ()]
     | EUArrayLen () => [PUSH1nat 32, SWAP1, SUB (), MLOAD ()]
+    | EUArray8LastWord () => [PUSH1nat 32, SWAP1, SUB (), DUP1, MLOAD (), ADD ()]
     | EUPrintc () => printc
     (* | EUPrint () => [PRINT] *)
     | EUStorageGet () => [SLOAD ()]
@@ -449,6 +450,10 @@ fun compile st_name2int ectx e =
       compile e2 @
       array_ptr @
       [MLOAD ()]
+    | EBinOp (EBRead8 (), e1, e2) =>
+      compile e1 @
+      compile e2 @
+      [ADD (), MLOAD ()]
     | ETriOp (ETWrite (), e1, e2, e3) =>
       compile e1 @
       compile e2 @
@@ -456,6 +461,11 @@ fun compile st_name2int ectx e =
       [SWAP2, SWAP1] @
       array_ptr @
       [MSTORE (), PUSH1 WTT]
+    | ETriOp (ETWrite8 (), e1, e2, e3) =>
+      compile e1 @
+      compile e2 @
+      compile e3 @
+      [SWAP2, ADD (), MSTORE8 (), PUSH1 WTT]
     | EUnOp (EUUnfold (), e) =>
       compile e @ [UNFOLD ()]
     (* | EUnOp (EUTupleProj n, e) => *)
