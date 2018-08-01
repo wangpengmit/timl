@@ -15,7 +15,6 @@ infixr 0 $
 infix 9 %@
 infix 8 %^
 infix 7 %*
-infix 7 %/
 infix 6 %+ 
 infix 4 %<
 infix 4 %>
@@ -1178,10 +1177,12 @@ fun test1 dirname =
     (*            | _ => () *)
     val () = 
         let
-          val total_mem = ICeil (j %/ N 32, dummy) %+ N (num_regs + 1)
           infix 7 %/
           fun a %/ b = IDiv (a, (b, dummy))
-          fun C_mem a = N C_memory %* a %+ (a %* a) %/ 512
+          fun IFloor' i = IFloor (i, dummy)
+          fun ICeil' i = ICeil (i, dummy)
+          val total_mem = Simp.simp_i $ ICeil' (IToReal' j %/ 32) %+ N (num_regs + 1)
+          fun C_mem a = N C_memory %* a %+ IFloor' (IToReal' (a %* a) %/ 512)
           open TimeType
           val total_gas = i %+ IToReal' (C_mem total_mem)
         in

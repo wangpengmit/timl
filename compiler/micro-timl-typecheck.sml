@@ -1598,7 +1598,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val len = length es
           val i = combine_IBAdd_Time_Nat $ map #3 ls
         in
-          (ETuple (map get_e ls), TTuple (map #2 ls), i %%+ (to_real $ C_ETuple len, N len), st)
+          (ETuple (map get_e ls), TTuple (map #2 ls), i %%+ (to_real $ C_ETuple len, N $ len * 32), st)
         end
       | ERecord fields =>
         let
@@ -1617,7 +1617,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val i = combine_IBAdd_Time_Nat is
           val len = length es
         in
-          (ERecord $ SMapU.fromList $ zip (names, es), TRecord $ SMapU.fromList $ zip (names, ts), i %%+ (to_real $ C_ETuple len, N len), st)
+          (ERecord $ SMapU.fromList $ zip (names, es), TRecord $ SMapU.fromList $ zip (names, ts), i %%+ (to_real $ C_ETuple len, N $ len * 32), st)
         end
       | EBinOp (opr as EBNew width, e1, e2) =>
         let

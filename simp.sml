@@ -290,6 +290,7 @@ local
           let
             fun default () = IUnOp (opr, passi i, r)
             fun floor c = SOME (TimeType.floor c) handle _ => NONE
+            fun ceil c = SOME (TimeType.ceil c) handle _ => NONE
             fun log base c =
               let
                 open TimeType
@@ -302,7 +303,13 @@ local
             case opr of
                 IUDiv n =>
                 (case i of
-                     IConst (ICNat c, r) => mark $ IConst (ICNat $ c div n, r)
+                     (* IConst (ICNat c, r) => mark $ IConst (ICNat $ c div n, r) *)
+                     IConst (ICTime c, r) =>
+                     let
+                       open TimeType
+                     in
+                       mark $ IConst (ICTime $ c / (fromInt n), r)
+                     end
                    | _ => default ()
                 )
               (* | IUExp s => ExpI (passi i, (s, r)) *)
@@ -335,6 +342,15 @@ local
                      )
                    | _ => default ()
                 )
+              | IUCeil n =>
+                (case i of
+                     IConst (ICTime c, r) =>
+                     (case ceil c of
+                          SOME c => mark $ IConst (ICNat c, r)
+                        | NONE => default ()
+                     )
+                   | _ => default ()
+                )
               | IULog base =>
                 (case i of
                      IConst (ICTime c, r) =>
@@ -344,7 +360,6 @@ local
                      )
                    | _ => default ()
                 )
-              | _ => default ()
           end
         | IConst _ => i
         | IAbs (b, Bind (name, i), r) =>

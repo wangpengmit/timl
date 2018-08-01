@@ -476,7 +476,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val e = ELetClose ((xk, "k", k), e)
         val t_x2 = cps_t t_e2
         val e = EAbs (st_e2 %++ F, close0_e_e_anno ((x2, "x2", t_x2), e), NONE)
-        val (e, i_e) = cps (e2, t_e2) (e, mapPair' to_real N (C_App_BeforeCC + C_EPair, M_App_BeforeCC + 2) %%+ outer %%+ i %%+ j_k)
+        val (e, i_e) = cps (e2, t_e2) (e, mapPair' to_real N (C_App_BeforeCPS, M_App_BeforeCPS) %%+ outer %%+ i %%+ j_k)
         val t_x1 = cps_t t_e1
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x1, "x1", t_x1), e), NONE)
       in
@@ -775,7 +775,6 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val cost =
             case opr of
                 EBPrim opr => (N $ C_EBPrim opr, N 0)
-              (* | EBPair () => (N C_EPair, N 2) *)
               | EBNatCmp opr => (N $ C_ENatCmp opr, N 0)
               | EBiBool opr => (N $ C_EiBool opr, N 0)
               | EBNat (EBNExp ()) =>
@@ -865,7 +864,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
             val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c), NONE)
             val cost =
                 case opr of
-                    EUInj _ => (C_EInj, 2)
+                    EUInj _ => (C_EInj, M_Inj)
                   | EUFold _ => (C_EFold, 0)
                   | EUUnfold _ => (C_EUnfold, 0)
                   | EUTiML opr =>
