@@ -15,7 +15,7 @@ main: main.mlb $(FILES)
 	mllex parser/timl.lex
 	mlyacc parser/etiml.grm
 	mllex parser/etiml.lex
-	./format-mlton.rb mlton $(MLTON_FLAGS) -default-ann "'nonexhaustiveMatch error'" -default-ann "'redundantMatch error'" main.mlb
+	time ./format-mlton.rb mlton $(MLTON_FLAGS) -default-ann "'nonexhaustiveMatch error'" -default-ann "'redundantMatch error'" main.mlb
 
 main.mlb: generate-file-list.rb
 	ruby generate-file-list.rb mlton > main.mlb
@@ -24,7 +24,7 @@ profile:
 	mlprof -show-line true -raw true main mlmon.out
 
 smlnj: main.cm $(FILES)
-	./format.rb ml-build -Ccontrol.poly-eq-warn=false -Ccompiler-mc.error-non-exhaustive-match=true -Ccompiler-mc.error-non-exhaustive-bind=true main.cm Main.main main-image
+	time ./format.rb ml-build -Ccontrol.poly-eq-warn=false -Ccompiler-mc.error-non-exhaustive-match=true -Ccompiler-mc.error-non-exhaustive-bind=true main.cm Main.main main-image
 
 main.cm: generate-file-list.rb
 	./generate-file-list.rb smlnj > main.cm

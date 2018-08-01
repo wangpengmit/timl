@@ -6,6 +6,10 @@ val TestState_i : icell
 
 structure TestState = struct
 
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+fun assert p = if p then waste_time (); () else __&halt 0x11111111
+fun iassert (p : ibool {true}) = ifi p then waste_time (); () else __&halt 0x11111111
+
 fun inc n = n + 1
 fun addBy b a = a + b
                 
@@ -17,9 +21,8 @@ fun foo (a : int, b : int) using _ =
   TestState_m[[a]]
 
 val a = foo (10, 20)
+val () = assert (a = 20)
 
-(* val () = __&halt a *)
-            
 fun foo {len : Nat} () pre {TestState_v : len} post {TestState_v : len+1} =
   let
     val a = 0
@@ -45,14 +48,14 @@ fun foo {len : Nat} () pre {TestState_v : len} post {TestState_v : len+1} =
   end
 
 val a = %foo ()
-
-(* (* val () = __&halt a *) *)
+val () = assert (a = 2+10+1+20+100+1+200+1+3+44+5)
             
 val a = vector_len TestState_v
 val () = vector_clear TestState_v
 val a = vector_len TestState_v
                    
 val () = set TestState_i #12
+val () = iassert (!TestState_i #= #12)
                    
 val a = new_array (#5, 0x123) using _, _
                                          

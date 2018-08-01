@@ -9,18 +9,20 @@ fun for_name ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= een
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {name : i} post {name : eend} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
       ifi i #>= eend then waste_time (); acc state {name : eend}
       else
-        %loop (i #+ #1, @f {i} (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+        %loop (i #+ #1, @f {i} (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+32*52) * (eend-i)+32*16
   in
     %loop (start, init)
   end
   
-  fun copy_name {old len : Nat} (s : string {len}) pre {name : old} post {name : len} =
+  fun copy_name {old len : Nat} (s : array byte {len}) pre {name : old} post {name : len} =
     vector_clear name;
     %for_name (#0, array_len s, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) pre {name : i} post {name : i+1} =>
       push_back (name, array_get(s, i))
     )
 
-val () = %copy_name "my_name"     
+(* val a = "my_name"      *)
+val a = {#"m", #"y",#"_",}
+val () = %copy_name a
      
 end
 
