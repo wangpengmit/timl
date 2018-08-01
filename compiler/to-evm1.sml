@@ -15,6 +15,7 @@ infixr 0 $
 infix 9 %@
 infix 8 %^
 infix 7 %*
+infix 7 %/
 infix 6 %+ 
 infix 4 %<
 infix 4 %>
@@ -172,14 +173,14 @@ fun cg_ty_visitor_vtable cast () =
         | _ => #visit_ty super this env t (* call super *)
       end
     val vtable = override_visit_ty vtable visit_ty
-    fun visit_TArr this env (data as (t, i)) =
+    fun visit_TArray this env (data as (w, t, i)) =
       let
         val cg_t = #visit_ty (cast this) this env
         val t = cg_t t
       in
-        TArrayPtr (t, i, INat 32)
+        TArrayPtr (w, t, i, INat 32)
       end
-    val vtable = override_visit_TArr vtable visit_TArr
+    val vtable = override_visit_TArray vtable visit_TArray
   in
     vtable
   end
@@ -241,8 +242,8 @@ fun init_free_ptr num_regs = [MACRO_init_free_ptr num_regs]
 fun tuple_malloc ts = [MACRO_tuple_malloc $ Inner ts]
 val tuple_assign = [MACRO_tuple_assign ()]
 val printc = [MACRO_printc ()]
-fun array_malloc t b = [MACRO_array_malloc (Inner t, b)]
-val array_init_assign = [MACRO_array_init_assign ()]
+fun array_malloc w t b = [MACRO_array_malloc (w, Inner t, b)]
+fun array_init_assign w = [MACRO_array_init_assign w]
 val array_init_len = [MACRO_array_init_len ()]
 (* val int2byte = [] (* noop, relying on type discipline *) *)
 val int2byte = [MACRO_int2byte ()]
@@ -437,7 +438,7 @@ fun compile st_name2int ectx e =
         val n = length es
       in
         [PUSH_array_offset n, DUP1] @
-        array_malloc t true @
+        array_malloc width t true @
         [SWAP1] @
         array_init_len @
         [PUSH1nat 0] @
@@ -552,7 +553,7 @@ fun compile st_name2int ectx e =
       end
     | ETriOp (ETIte (), _, _, _) => err ()
     | EBinOp (EBApp (), _, _) => err ()
-    | EBinOp (EBNew (), _, _) => err ()
+    | EBinOp (EBNew _, _, _) => err ()
     | ECase _ => err ()
     | EAbs _ => err ()
     | ERec _ => err ()
@@ -635,7 +636,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
               open EVMCosts
               val (I_e1, st) = compile (e1, st) 
               val (I_e2, st) = compile (e2, st)
-              val (t, len, _) = assert_TArrayPtr t
+              val (_, t, len, _) = assert_TArrayPtr t
               val (name, e) = unBindSimpName bind
               val (e, space_e) = assert_EAscSpace e
               val (e, i_e) = assert_EAscTime e
@@ -666,13 +667,13 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel post_loop_label, itctx), [inl $ FIV i])) @@
                         [JUMPI (), UNPACKI $ IBinder ("__n_neq0", dummy)] @@
                         (shift01_i_insts $
-                        [ASCTIME $ Inner $ IToReal (FIV i %* INat C_New_loop) %+ to_real C_New_post_loop %+ i_e] @@                 
+                        [ASCTIME $ Inner $ IToReal (FIV i %* INat (C_New_loop width)) %+ to_real C_New_post_loop %+ i_e] @@                 
                         [ASCSPACE $ Inner space_e] @@                 
                         [POP (), PUSH1nat width, SWAP1, SUB ()] @@
                         array_init_assign width @@
                         PUSH_value (VAppITs (VAppITs_ctx (VLabel loop_label, itctx), [inl $ FIV i %- N1])) @@
                         JUMP ())
-                    val block = ((st, rctx, [TNat (INat width %* FIV i), TPreArray (t, len, FIV i, (true, false)), t], (IToReal (FIV i %* INat C_New_loop) %+ to_real (C_New_loop_test + C_New_post_loop) %+ i_e, space_e)), loop_code)
+                    val block = ((st, rctx, [TNat (INat width %* FIV i), TPreArray (width, t, len, FIV i, (true, false)), t], (IToReal (FIV i %* INat (C_New_loop width)) %+ to_real (C_New_loop_test + C_New_post_loop) %+ i_e, space_e)), loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -687,9 +688,9 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
                         (shift01_i_insts $
                         [POP (), POP (), SWAP1, POP (), MARK_PreArray2ArrayPtr ()] @@
                         set_reg r @@
-                        cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArrayPtr (t, len, INat 32)), st) e)
+                        cg_e ((name, inl r) :: ectx, itctx, rctx @+ (r, TArrayPtr (width, t, len, INat 32)), st) e)
                     val t_ex = make_exists "__p" $ SSubset_from_prop dummy $ (FIV i %* N width =? N0) %= Itrue
-                    val block = ((st, rctx, [t_ex, TNat $ FIV i %* N width, TPreArray (t, len, FIV i, (true, false)), t], (to_real C_New_post_loop %+ i_e, space_e)), post_loop_code)
+                    val block = ((st, rctx, [t_ex, TNat $ FIV i %* N width, TPreArray (width, t, len, FIV i, (true, false)), t], (to_real C_New_post_loop %+ i_e, space_e)), post_loop_code)
                     val block = close0_i_block i $ shift01_i_block block
                   in
                     HCode' (rev $ inl (("i", dummy), s) :: itctx, block)
@@ -841,7 +842,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | ETuple _ => err ()
     | ERecord _ => err ()
     (* | EBinOp (EBPair (), _, _) => err () *)
-    | EBinOp (EBNew (), _, _) => err ()
+    | EBinOp (EBNew _, _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBiBool _, _, _) => err ()
@@ -1177,7 +1178,7 @@ fun test1 dirname =
     (*            | _ => () *)
     val () = 
         let
-          val total_mem = ICeil (j %/ N 32) %+ N (num_regs + 1)
+          val total_mem = ICeil (j %/ N 32, dummy) %+ N (num_regs + 1)
           infix 7 %/
           fun a %/ b = IDiv (a, (b, dummy))
           fun C_mem a = N C_memory %* a %+ (a %* a) %/ 512

@@ -21,7 +21,7 @@ fun inline_macro_inst (params as (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr
     | MACRO_tuple_malloc ts => [PUSH1nat 0, MLOAD (), DUP1, PUSH_tuple_offset $ 32 * (length $ unInner ts), ADD (), PUSH1 $WNat 0, MSTORE ()]
     | MACRO_tuple_assign () => [DUP2, MSTORE ()]
     | MACRO_printc () => [PUSH_reg scratch, MSTORE (), PUSH1nat 1, PUSH_reg scratch, PUSH1nat 31, ADD (), LOG0, PUSH1 WTT]
-    | MACRO_array_malloc (w, t, b) => [PUSH1nat 0, MLOAD (), PUSH1nat w, ADD (), DUP1, SWAP2, PUSH1nat 32, MUL (), ADD (), PUSH1nat 0, MSTORE ()]
+    | MACRO_array_malloc (w, t, b) => [PUSH1nat 0, MLOAD (), PUSH1nat 32, ADD (), DUP1, SWAP2, PUSH1nat w, MUL (), ADD (), PUSH1nat 0, MSTORE ()]
     | MACRO_array_init_assign w => [DUP3, DUP3, DUP3, ADD ()] @ MSTORE_n w
     | MACRO_array_init_len () => [DUP2, PUSH1nat 32, SWAP1, SUB (), MSTORE ()]
     | MACRO_int2byte () => [PUSH1nat 31, BYTE ()]

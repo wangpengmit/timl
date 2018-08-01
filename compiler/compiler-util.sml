@@ -69,10 +69,10 @@ fun assert_TArrowEVM t =
   case t of
       TArrowEVM a => a
     | _ => raise assert_fail "assert_TArrowEVM"
-fun assert_TArr t =
+fun assert_TArray t =
   case t of
-      TArr a => a
-    | _ => raise assert_fail $ "assert_TArr; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
+      TArray a => a
+    | _ => raise assert_fail $ "assert_TArray; got: " ^ (ExportPP.pp_t_to_string NONE $ ExportPP.export_t NONE ([], []) t)
 fun assert_TPreArray t =
   case t of
       TPreArray a => a

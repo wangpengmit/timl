@@ -40,6 +40,7 @@ fun PEq (a, b) = PBinPred (BPEq (), a, b)
 fun IMax (i1, i2) = IBinOp (IBMax (), i1, i2)
 fun IToReal (i, r) = IUnOp (IUToReal (), i, r)                           
 fun IFloor (i, r) = IUnOp (IUFloor (), i, r)
+fun ICeil (i, r) = IUnOp (IUCeil (), i, r)
 fun ILog (base, i, r) = IUnOp (IULog base, i, r)
 fun INeg (i, r) = IUnOp (IUNeg (), i, r)
 fun IEq (a, b) = IBinOp (IBEq (), a, b)
@@ -50,6 +51,7 @@ fun INeq (a, b) = INeg (IEq (a, b), dummy)
 infix 9 %@
 infix 8 %**
 infix 7 %*
+infix 7 %/
 infix 6 %+ 
 infix 4 %<
 infix 4 %>
@@ -72,6 +74,7 @@ infix 1 <->
 fun a %@ b = IBinOp (IBApp (), a, b)
 fun a %** b = IBinOp (IBExpN (), a, b)
 fun a %* b = IBinOp (IBMult (), a, b)
+fun a %/ b = IDiv (a, b)
 fun a %+ b = IBinOp (IBAdd (), a, b)
 fun a %< b = PBinPred (BPLt (), a, b)
 fun a %> b = PBinPred (BPGt (), a, b)

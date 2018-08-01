@@ -812,7 +812,7 @@ local
               NONE => []
             | SOME e =>
               case e of
-                  S.ENewArrayValues (es, r) => map (fn e => S.EPushBack (x, e, r)) es
+                  S.ENewArrayValues (_, es, r) => map (fn e => S.EPushBack (x, e, r)) es
                 | _ => [S.ESet (name, [], e, r)]
         end
       val es = concatMap f decls

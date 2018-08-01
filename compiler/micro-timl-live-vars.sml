@@ -193,7 +193,7 @@ fun live_vars_expr_visitor_vtable cast () =
           (* | EPairAssign data => #visit_EPairAssign vtable this env data *)
           (* | EProjProtected data => #visit_EProjProtected vtable this env data *)
           | EHalt data => #visit_EHalt vtable this env data
-          | ENewArrayValues (t, es) => ENewArrayValues (#visit_ty vtable this env t, visit_es_right this env es)
+          | ENewArrayValues (w, t, es) => ENewArrayValues (w, #visit_ty vtable this env t, visit_es_right this env es)
           | ETuple es => ETuple (visit_es_right this env es)
           | ERecord fields =>
             let

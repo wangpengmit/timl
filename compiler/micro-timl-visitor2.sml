@@ -27,7 +27,7 @@ type ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var2, 'bsort2, 'idx2, 'sort2, 'va
        visit2_TQuanI : 'this -> 'env -> unit quan * ('sort, ('idx * 'idx) * ('var, 'bsort, 'idx, 'sort) ty) ibind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TRec : 'this -> 'env -> ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TNat : 'this -> 'env -> 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
-       visit2_TArr : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
+       visit2_TArray : 'this -> 'env -> int * ('var, 'bsort, 'idx, 'sort) ty * 'idx -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TAbsT : 'this -> 'env -> ('bsort kind, ('var, 'bsort, 'idx, 'sort) ty) tbind_anno -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        visit2_TAppT : 'this -> 'env -> ('var, 'bsort, 'idx, 'sort) ty * ('var, 'bsort, 'idx, 'sort) ty -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty,
        (* visit2_TProdEx : 'this -> 'env -> (('var, 'bsort, 'idx, 'sort) ty * bool) * (('var, 'bsort, 'idx, 'sort) ty * bool) -> ('var2, 'bsort2, 'idx2, 'sort2) ty -> ('var3, 'bsort3, 'idx3, 'sort3) ty, *)
@@ -161,7 +161,7 @@ fun default_ty_visitor2_vtable
           | TQuanI data => #visit2_TQuanI vtable this env data other
           | TRec data => #visit2_TRec vtable this env data other
           | TNat data => #visit2_TNat vtable this env data other
-          | TArr data => #visit2_TArr vtable this env data other
+          | TArray data => #visit2_TArray vtable this env data other
           | TAbsT data => #visit2_TAbsT vtable this env data other
           | TAppT data => #visit2_TAppT vtable this env data other
           (* | TProdEx data => #visit2_TProdEx vtable this env data other *)
@@ -191,16 +191,16 @@ fun default_ty_visitor2_vtable
                  TiBool i' =>
                  TiBool $ #visit2_idx vtable this env i i'
                | _ => error (TiBool i) other)
-          | TPreArray (t, i1, i2, b) =>
+          | TPreArray (w, t, i1, i2, b) =>
             (case other of
-                 TPreArray (t', i1', i2', b') =>
-                 TPreArray (#visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2', visit_eq "visit_TPreArray/b=b'" b b')
-               | _ => error (TPreArray (t, i1, i2, b)) other)
-          | TArrayPtr (t, i1, i2) =>
+                 TPreArray (w', t', i1', i2', b') =>
+                 TPreArray (visit2_eq op= this env w w', #visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2', visit_eq "visit_TPreArray/b=b'" b b')
+               | _ => error (TPreArray (w, t, i1, i2, b)) other)
+          | TArrayPtr (w, t, i1, i2) =>
             (case other of
-                 TArrayPtr (t', i1', i2') =>
-                 TArrayPtr (#visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2')
-               | _ => error (TArrayPtr (t, i1, i2)) other)
+                 TArrayPtr (w', t', i1', i2') =>
+                 TArrayPtr (visit2_eq op= this env w w', #visit2_ty vtable this env t t', #visit2_idx vtable this env i1 i1', #visit2_idx vtable this env i2 i2')
+               | _ => error (TArrayPtr (w, t, i1, i2)) other)
           | TPreTuple (ts, i, i2) =>
             (case other of
                  TPreTuple (ts', i', i2') =>
@@ -382,20 +382,21 @@ fun default_ty_visitor2_vtable
             TNat $ #visit2_idx vtable this env data data'
           | _ => error (TNat data) other
       end
-    fun visit2_TArr this env data other = 
+    fun visit2_TArray this env data other = 
       let
         val vtable = cast this
-        val (t, i) = data
+        val (w, t, i) = data
       in
         case other of
-            TArr (t', i') =>
+            TArray (w', t', i') =>
             let
+              val w = visit2_eq op= this env w w'
               val t = #visit2_ty vtable this env t t'
               val i = #visit2_idx vtable this env i i'
             in
-              TArr (t, i)
+              TArray (w, t, i)
             end
-          | _ => error (TArr data) other
+          | _ => error (TArray data) other
       end
     fun visit2_TAbsT this env data other =
       let
@@ -478,7 +479,7 @@ fun default_ty_visitor2_vtable
      visit2_TQuanI = visit2_TQuanI,
      visit2_TRec = visit2_TRec,
      visit2_TNat = visit2_TNat,
-     visit2_TArr = visit2_TArr,
+     visit2_TArray = visit2_TArray,
      visit2_TAbsT = visit2_TAbsT,
      visit2_TAppT = visit2_TAppT,
      (* visit2_TProdEx = visit2_TProdEx, *)
@@ -533,7 +534,7 @@ fun override_visit2_TVar (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'var
        visit2_TQuanI = #visit2_TQuanI record,
        visit2_TRec = #visit2_TRec record,
        visit2_TNat = #visit2_TNat record,
-       visit2_TArr = #visit2_TArr record,
+       visit2_TArray = #visit2_TArray record,
        visit2_TAbsT = #visit2_TAbsT record,
        visit2_TAppT = #visit2_TAppT record,
        (* visit2_TProdEx = #visit2_TProdEx record, *)
@@ -569,7 +570,7 @@ fun override_visit2_TAppT (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        visit2_TQuanI = #visit2_TQuanI record,
        visit2_TRec = #visit2_TRec record,
        visit2_TNat = #visit2_TNat record,
-       visit2_TArr = #visit2_TArr record,
+       visit2_TArray = #visit2_TArray record,
        visit2_TAbsT = #visit2_TAbsT record,
        visit2_TAppT = new,
        (* visit2_TProdEx = #visit2_TProdEx record, *)
@@ -605,7 +606,7 @@ fun override_visit2_TAppI (record : ('this, 'env, 'var, 'bsort, 'idx, 'sort, 'va
        visit2_TQuanI = #visit2_TQuanI record,
        visit2_TRec = #visit2_TRec record,
        visit2_TNat = #visit2_TNat record,
-       visit2_TArr = #visit2_TArr record,
+       visit2_TArray = #visit2_TArray record,
        visit2_TAbsT = #visit2_TAbsT record,
        visit2_TAppT = #visit2_TAppT record,
        (* visit2_TProdEx = #visit2_TProdEx record, *)
@@ -641,7 +642,7 @@ fun override_visit2_ibind_anno_sort (record : ('this, 'env, 'var, 'bsort, 'idx, 
        visit2_TQuanI = #visit2_TQuanI record,
        visit2_TRec = #visit2_TRec record,
        visit2_TNat = #visit2_TNat record,
-       visit2_TArr = #visit2_TArr record,
+       visit2_TArray = #visit2_TArray record,
        visit2_TAbsT = #visit2_TAbsT record,
        visit2_TAppT = #visit2_TAppT record,
        (* visit2_TProdEx = #visit2_TProdEx record, *)
@@ -677,7 +678,7 @@ fun override_visit2_ibind_anno_bsort (record : ('this, 'env, 'var, 'bsort, 'idx,
        visit2_TQuanI = #visit2_TQuanI record,
        visit2_TRec = #visit2_TRec record,
        visit2_TNat = #visit2_TNat record,
-       visit2_TArr = #visit2_TArr record,
+       visit2_TArray = #visit2_TArray record,
        visit2_TAbsT = #visit2_TAbsT record,
        visit2_TAppT = #visit2_TAppT record,
        (* visit2_TProdEx = #visit2_TProdEx record, *)

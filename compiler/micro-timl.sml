@@ -57,7 +57,7 @@ datatype ('var, 'bsort, 'idx, 'sort) ty =
          | TArrowEVM of 'idx(*pre-state*) * ('var, 'bsort, 'idx, 'sort) ty Rctx.map (*register typing*) * ('var, 'bsort, 'idx, 'sort) ty list (*stack typing*) * ('idx * 'idx)
          | TPreTuple of ('var, 'bsort, 'idx, 'sort) ty list * int(*offset*) * int(*lowest inited pos*)
          | TTuplePtr of ('var, 'bsort, 'idx, 'sort) ty list * int(*offset*) * bool(*is storage?*)
-         | TPreArray of ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*lowest inited/uninited pos*) * (bool(*is length inited?*) * bool(*init direction; false: downward; true: upward *))
+         | TPreArray of int(*width*) * ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*lowest inited/uninited pos*) * (bool(*is length inited?*) * bool(*init direction; false: downward; true: upward *))
          | TArrayPtr of int(*width*) * ('var, 'bsort, 'idx, 'sort) ty * 'idx(*len*) * 'idx(*offset*)
          | TVectorPtr of string * 'idx(*offset*)
 
@@ -103,7 +103,7 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | ENever of 'ty
          | EBuiltin of string * 'ty
          | ELet of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
-         | ENewArrayValues of 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr list
+         | ENewArrayValues of int * 'ty * ('var, 'idx, 'sort, 'kind, 'ty) expr list
          | ETuple of ('var, 'idx, 'sort, 'kind, 'ty) expr list
          | ERecord of ('var, 'idx, 'sort, 'kind, 'ty) expr SMap.map
          (* extensions from MicroTiML *)
@@ -221,7 +221,7 @@ fun is_value e =
     | EAbsConstr _ => true
     | EVarConstr _ => true
     | EBinOp (EBApp (), _, _) => false
-    | EBinOp (EBNew (), _, _) => false
+    | EBinOp (EBNew _, _, _) => false
     | EBinOp (EBRead (), _, _) => false
     | EBinOp (EBPrim _, _, _) => false
     | EBinOp (EBiBool _, _, _) => false

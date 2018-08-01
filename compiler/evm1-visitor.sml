@@ -22,7 +22,7 @@ type ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_vi
        
 type ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_interface =
      ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_vtable
-                                           
+                                                                         
 datatype ('env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor =
          EVM1Visitor of (('env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_interface
 
@@ -49,7 +49,7 @@ fun visit_sum visit1 visit2 env = map_inl_inr (visit1 env) (visit2 env)
 fun visit_map map visit env = map (visit env)
 fun visit_triple visit1 visit2 visit3 env (a, b, c) = (visit1 env a, visit2 env b, visit3 env c)
 fun visit_tuple_4 visit1 visit2 visit3 visit4 env (a, b, c, d) = (visit1 env a, visit2 env b, visit3 env c, visit4 env d)
-                                  
+                                                                   
 fun default_evm1_visitor_vtable
       (cast : 'this -> ('this, 'env, 'idx, 'sort, 'ty, 'kind, 'idx2, 'sort2, 'ty2, 'kind2) evm1_visitor_interface)
       extend_i
@@ -106,8 +106,8 @@ fun default_evm1_visitor_vtable
           | ASCTIME i => ASCTIME $ visit_inner (#visit_idx vtable this) env i
           | ASCSPACE i => ASCSPACE $ visit_inner (#visit_idx vtable this) env i
           | MACRO_tuple_malloc ts => MACRO_tuple_malloc $ visit_inner (visit_list $ #visit_ty vtable this) env ts
-          | MACRO_array_malloc (t, b) => MACRO_array_malloc (visit_inner (#visit_ty vtable this) env t, b)
-         | MACRO_inj t => MACRO_inj $ visit_inner (#visit_ty vtable this) env t
+          | MACRO_array_malloc (w, t, b) => MACRO_array_malloc (w, visit_inner (#visit_ty vtable this) env t, b)
+          | MACRO_inj t => MACRO_inj $ visit_inner (#visit_ty vtable this) env t
           | ADD () => ADD ()
           | MUL () => MUL ()
           | SUB () => SUB ()
@@ -128,18 +128,18 @@ fun default_evm1_visitor_vtable
           | BYTE () => BYTE ()
           | SHA3 () => SHA3 ()
           | ORIGIN () => ORIGIN ()
-         | ADDRESS () => ADDRESS ()
-         | BALANCE () => BALANCE ()
-         | CALLER () => CALLER ()
-         | CALLVALUE () => CALLVALUE ()
-         | CALLDATASIZE () => CALLDATASIZE ()
-         | CODESIZE () => CODESIZE ()
-         | GASPRICE () => GASPRICE ()
-         | COINBASE () => COINBASE ()
-         | TIMESTAMP () => TIMESTAMP ()
-         | NUMBER () => NUMBER ()
-         | DIFFICULTY () => DIFFICULTY ()
-         | GASLIMIT () => GASLIMIT ()
+          | ADDRESS () => ADDRESS ()
+          | BALANCE () => BALANCE ()
+          | CALLER () => CALLER ()
+          | CALLVALUE () => CALLVALUE ()
+          | CALLDATASIZE () => CALLDATASIZE ()
+          | CODESIZE () => CODESIZE ()
+          | GASPRICE () => GASPRICE ()
+          | COINBASE () => COINBASE ()
+          | TIMESTAMP () => TIMESTAMP ()
+          | NUMBER () => NUMBER ()
+          | DIFFICULTY () => DIFFICULTY ()
+          | GASLIMIT () => GASLIMIT ()
           | POP () => POP ()
           | MLOAD () => MLOAD ()
           | MSTORE () => MSTORE ()
@@ -156,19 +156,19 @@ fun default_evm1_visitor_vtable
           | INT2NAT () => INT2NAT ()
           | BYTE2INT () => BYTE2INT ()
           (* | PRINTC () => PRINTC () *)
-         | InstRestrictPtr len => InstRestrictPtr len
+          | InstRestrictPtr len => InstRestrictPtr len
           | MACRO_init_free_ptr n => MACRO_init_free_ptr n
           | MARK_PreArray2ArrayPtr () => MARK_PreArray2ArrayPtr ()
           | MARK_PreTuple2TuplePtr () => MARK_PreTuple2TuplePtr ()
           | MACRO_tuple_assign () => MACRO_tuple_assign ()
           | MACRO_printc () => MACRO_printc ()
-          | MACRO_array_init_assign () => MACRO_array_init_assign ()
+          | MACRO_array_init_assign w => MACRO_array_init_assign w
           | MACRO_array_init_len () => MACRO_array_init_len ()
           | MACRO_int2byte () => MACRO_int2byte ()
           | MACRO_br_sum () => MACRO_br_sum ()
-         | MACRO_map_ptr () => MACRO_map_ptr ()
-         | MACRO_vector_ptr () => MACRO_vector_ptr ()
-         | MACRO_vector_push_back () => MACRO_vector_push_back ()
+          | MACRO_map_ptr () => MACRO_map_ptr ()
+          | MACRO_vector_ptr () => MACRO_vector_ptr ()
+          | MACRO_vector_push_back () => MACRO_vector_push_back ()
       end
     fun visit_insts this env data =
       let
@@ -313,7 +313,7 @@ fun export_evm1_visitor_vtable cast (omitted, visit_kind, visit_idx, visit_sort,
   end
 
 fun new_export_evm1_visitor params = new_evm1_visitor export_evm1_visitor_vtable params
-                                                        
+                                                      
 fun export_inst_fn params ctx b =
   let
     val visitor as (EVM1Visitor vtable) = new_export_evm1_visitor params
@@ -362,7 +362,7 @@ fun subst_i_evm1_visitor_vtable cast (visit_idx, visit_sort, visit_ty) =
   end
 
 fun new_subst_i_evm1_visitor params = new_evm1_visitor subst_i_evm1_visitor_vtable params
-    
+                                                       
 fun subst_i_insts_fn params b =
   let
     val visitor as (EVM1Visitor vtable) = new_subst_i_evm1_visitor params
@@ -388,7 +388,7 @@ fun subst_t_evm1_visitor_vtable cast visit_ty =
   end
 
 fun new_subst_t_evm1_visitor params = new_evm1_visitor subst_t_evm1_visitor_vtable params
-    
+                                                       
 fun subst_t_insts_fn params b =
   let
     val visitor as (EVM1Visitor vtable) = new_subst_t_evm1_visitor params
@@ -414,7 +414,7 @@ fun shift_i_evm1_visitor_vtable cast ((shift_i, shift_s, shift_t), n) =
   end
 
 fun new_shift_i_evm1_visitor params = new_evm1_visitor shift_i_evm1_visitor_vtable params
-    
+                                                       
 fun shift_i_insts_fn shifts x n b =
   let
     val visitor as (EVM1Visitor vtable) = new_shift_i_evm1_visitor (shifts, n)
@@ -440,7 +440,7 @@ fun shift_t_evm1_visitor_vtable cast (shift_t, n) =
   end
 
 fun new_shift_t_evm1_visitor params = new_evm1_visitor shift_t_evm1_visitor_vtable params
-    
+                                                       
 fun shift_t_insts_fn shift_t x n b =
   let
     val visitor as (EVM1Visitor vtable) = new_shift_t_evm1_visitor (shift_t, n)

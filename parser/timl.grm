@@ -422,7 +422,7 @@ aexp : decorated_eid (EVar decorated_eid)
      | BANG id (EGet (id, [], (BANGleft, idright)))
      | PLUS_PLUS (EInc (PLUS_PLUSleft, PLUS_PLUSright))
      | PLUS_EQ (EAdd (PLUS_EQleft, PLUS_EQright))
-     | LCUR exp_comma_star_trailing RCUR (ENewArrayValues (exp_comma_star_trailing, (LCURleft, RCURright)))
+     | LCUR exp_comma_star_trailing RCUR (ENewArrayValues (32, exp_comma_star_trailing, (LCURleft, RCURright)))
 
 exp_comma_star_trailing : exp COMMA exp_comma_star_trailing (exp :: exp_comma_star_trailing)
 	                     | ([])

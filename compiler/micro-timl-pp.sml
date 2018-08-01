@@ -280,12 +280,14 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str ")";
           close_box ()
         )
-      | TArr (t, i) =>
+      | TArray (w, t, i) =>
         (
           open_hbox ();
-          str "TArr";
+          str "TArray";
           space ();
           str "(";
+          str $ str_int w;
+          comma ();
           pp_t t;
           comma ();
           str $ str_i i;
@@ -312,12 +314,14 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str ")";
           close_box ()
         )
-      | TPreArray (t, i1, i2, (b, b2)) =>
+      | TPreArray (w, t, i1, i2, (b, b2)) =>
         (
           open_hbox ();
           str "TPreArray";
           space ();
           str "(";
+          str $ str_int w;
+          comma ();
           pp_t t;
           comma ();
           str $ str_i i1;
@@ -330,12 +334,14 @@ fun pp_t (params as (str_var, str_b, str_i : 'idx -> string, str_s)) s depth (t 
           str ")";
           close_box ()
         )
-      | TArrayPtr (t, i1, i2) =>
+      | TArrayPtr (w, t, i1, i2) =>
         (
           open_hbox ();
           str "TArrayPtr";
           space ();
           str "(";
+          str $ str_int w;
+          comma ();
           pp_t t;
           comma ();
           str $ str_i i1;
@@ -1301,13 +1307,15 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
-      | ENewArrayValues (t, es) =>
+      | ENewArrayValues (w, t, es) =>
         (
           open_vbox ();
           open_hbox ();
           str "ENewArrayValues";
           space ();
           str "(";
+          str $ str_int w;
+          comma ();
           pp_t t;
           close_box ();
           comma ();

@@ -97,8 +97,8 @@ datatype ('idx, 'ty) inst =
          | MACRO_tuple_malloc of 'ty list inner
          | MACRO_tuple_assign of unit
          | MACRO_printc of unit
-         | MACRO_array_malloc of 'ty inner * bool(* is init direction upward *)
-         | MACRO_array_init_assign of unit
+         | MACRO_array_malloc of int * 'ty inner * bool(* is init direction upward *)
+         | MACRO_array_init_assign of int
          | MACRO_array_init_len of unit
          | MACRO_int2byte of unit
          | MACRO_inj of 'ty inner

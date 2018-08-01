@@ -883,11 +883,13 @@ fun pp_e s e =
           str ")";
           close_box ()
         )
-      | ENewArrayValues (es, _) =>
+      | ENewArrayValues (w, es, _) =>
         (
           open_hbox ();
           strs "ENewArrayValues";
           str "(";
+          pp_int w;
+          comma ();
           app (fn e => (pp_e e; comma ())) es;
           str ")";
           close_box ()

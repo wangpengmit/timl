@@ -308,8 +308,8 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
               | (TTuplePtr (ts, offset, b), TNat i) => TTuplePtr (ts, offset + assert_INat_simp i, b)
               | (TNat i, TPreTuple (ts, offset, inited)) => TPreTuple (ts, offset + assert_INat_simp i, inited)
               | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset + assert_INat_simp i, inited)
-              | (TNat i, TArrayPtr (t, len, offset)) => TArrayPtr (t, len, offset %+ i)
-              | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %+ i)
+              | (TNat i, TArrayPtr (w, t, len, offset)) => TArrayPtr (w, t, len, offset %+ i)
+              | (TArrayPtr (w, t, len, offset), TNat i) => TArrayPtr (w, t, len, offset %+ i)
               | (TVectorPtr (x, offset), TNat i) => TVectorPtr (x, offset %+ i)
               | _ => raise Impossible $ sprintf "ADD: can't add operands of types ($) and ($)" [str_t t0, str_t t1]
       in
@@ -326,7 +326,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
               | (TNat i0, TNat i1) => TNat $ i0 %%- i1
               | (TTuplePtr (ts, offset, b), TNat i) => TTuplePtr (ts, offset %%%- assert_INat_simp i, b)
               | (TPreTuple (ts, offset, inited), TNat i) => TPreTuple (ts, offset %%%- assert_INat_simp i, inited)
-              | (TArrayPtr (t, len, offset), TNat i) => TArrayPtr (t, len, offset %%- i)
+              | (TArrayPtr (w, t, len, offset), TNat i) => TArrayPtr (w, t, len, offset %%- i)
               | (TVectorPtr (x, offset), TNat i) => TVectorPtr (x, offset %%- i)
               | _ => raise Impossible $ sprintf "SUB: can't subtract operands of types ($) and ($)" [str_t t0, str_t t1]
       in
@@ -442,6 +442,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                     else if w = 8 then
                       (check_prop (offset %<= len); (* it's safe to read [offset, offset+32) because there is the length data *)
                        TInt)
+                    else raise Impossible "evm/tc/MLoad: can't read TArrayPtr with width not 32 or 8"
                 in
                   case simp_i offset of
                      IConst (ICNat n, _) =>
@@ -469,7 +470,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                          | NONE => def ())
                     | _ => def ()
                 end
-              | TArrayPtr (t, len, offset) =>
+              | TArrayPtr (32, t, len, offset) =>
                 (is_eq_ty itctx (t1, t); check_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len); rctx)
               | _ => def ()
       in
@@ -644,7 +645,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | MACRO_array_malloc (width, t, is_upward) =>
       let
         val t = kc_against_kind itctx (unInner t, KType ())
-        val () = good_width w t
+        val () = good_width itctx width t
         val (t0, sctx) = assert_cons sctx
         val len = assert_TNat $ whnf itctx t0
         val lowest = if is_upward then N0 else len
@@ -666,24 +667,24 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         (* todo: offset shouldn't be left on the result stack *)
         if is_upward then
           (check_prop (IMod (offset, N width) %= N0 /\ offset %/ N width %= lowest);
-           ((itctx, rctx, TNat offset :: TPreArray (t, len, lowest %+ N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
+           ((itctx, rctx, TNat offset :: TPreArray (width, t, len, lowest %+ N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
         else
           (check_prop (IMod (offset, N width) %= N0 /\ offset %/ N width %+ N1 %= lowest);
-           ((itctx, rctx, TNat offset :: TPreArray (t, len, lowest %- N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
+           ((itctx, rctx, TNat offset :: TPreArray (width, t, len, lowest %- N1, (len_inited, is_upward)) :: t2 :: sctx, st)))
       end
     | MACRO_array_init_len () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val len' = assert_TNat $ whnf itctx t0
-        val (t, len, lowest_inited, (_, dir)) = assert_TPreArray $ whnf itctx t1
+        val (w, t, len, lowest_inited, (_, dir)) = assert_TPreArray $ whnf itctx t1
         val () = check_prop (len' %= len)
       in
-        ((itctx, rctx, TPreArray (t, len, lowest_inited, (true, dir)) :: sctx, st))
+        ((itctx, rctx, TPreArray (w, t, len, lowest_inited, (true, dir)) :: sctx, st))
       end
     | MARK_PreArray2ArrayPtr () =>
       let
         val (t0, sctx) = assert_cons sctx
-        val (t, len, lowest, (len_inited, is_upward)) = assert_TPreArray $ whnf itctx t0
+        val (w, t, len, lowest, (len_inited, is_upward)) = assert_TPreArray $ whnf itctx t0
         val () = assert_b "len_inited = true" (len_inited = true)
         val () =
             if is_upward then
@@ -691,7 +692,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
             else
               check_prop (lowest %= N0)
       in
-        (itctx, rctx, TArrayPtr (t, len, N32) :: sctx, st)
+        (itctx, rctx, TArrayPtr (w, t, len, N32) :: sctx, st)
       end
     | MACRO_tuple_malloc ts =>
       let
@@ -854,7 +855,6 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | BYTE () => err ()
     | SHA3 () => err ()
-    | MSTORE8 () => err ()
     | JUMPI () => err ()
     | LOG _ => err ()
     | ASCTIME _ => err ()

@@ -56,7 +56,11 @@ fun on_mt (t : S.mtype) =
       S.TArrow ((i1, t1), i, (i2, t2)) => TArrow ((IState i1, on_mt t1), i, (IState i2, on_mt t2))
     | S.TNat (i, _) => TNat i
     | S.TiBool (i, _) => TiBool i
-    | S.TArray (t, i) => TArr (on_mt t, i)
+    | S.TArray (w, t, i) =>
+      (case Simp.simp_i w of
+          IConst (ICNat w, _) => TArray (w, on_mt t, i)
+        | _ => raise Impossible "to-micro-timl: unknown array width"
+      )
     | S.TUnit _ => TUnit
     (* | S.TProd (t1, t2) => TProd (on_mt t1, on_mt t2) *)
     | S.TTuple ts => TTuple $ map on_mt ts
@@ -163,7 +167,7 @@ fun on_e (e : S.expr) : mtiml_expr =
            Op.ETNever () => ENever (on_mt t)
          | Op.ETBuiltin name => EBuiltin (name, on_mt t)
       )
-    | S.ENewArrayValues (t, es, r) => ENewArrayValues (on_mt t, map on_e es)
+    | S.ENewArrayValues (w, t, es, r) => ENewArrayValues (w, on_mt t, map on_e es)
     (* | S.ECaseSumbool (e, bind1, bind2, r) => *)
     (*   let *)
     (*     fun on_bind bind = *)

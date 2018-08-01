@@ -724,7 +724,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
             end
         val len = length es
       in
-        foldr f (ek, (to_real $ C_ETuple len, N len) %%+ j_k) xs_names_es
+        foldr f (ek, (to_real $ C_ETuple len, N $ 32 * len) %%+ j_k) xs_names_es
       end
     | S.ERecord fields =>
       let
@@ -747,7 +747,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
             end
         val len = length es
       in
-        foldr f (ek, (to_real $ C_ETuple len, N len) %%+ j_k) xs_names_es
+        foldr f (ek, (to_real $ C_ETuple len, N $ 32 * len) %%+ j_k) xs_names_es
       end
     | S.EBinOp (opr, e1, e2) =>
       (* [[ e1 o e2 ]](k) = [[e1]] (\x1. [[e2]] (\x2. k (x1 o x2))) *)
@@ -786,11 +786,11 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                 end
               | EBNat opr => (N $ C_ENat opr, N 0)
               | EBApp () => raise Impossible "cps/BinOp/App"
-              | EBNew () =>
+              | EBNew w =>
                 let
                   val len = assert_TNat t_e1
                 in
-                  (N C_ENew_order0 %+ N C_ENew_order1 %* len, len %+ N1)
+                  (N C_ENew_order0 %+ N (C_ENew_order1 w) %* len, len %* N w %+ N 32)
                 end
               | EBIntNatExp () =>
                 let
@@ -824,12 +824,12 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         cps (e1, t_e1) (e, i_e)
       end
-    | S.ENewArrayValues (t, es) =>
+    | S.ENewArrayValues (w, t, es) =>
       let
         val t_x = cps_t t
         val xs_names_es = mapi (fn (i, e) => (fresh_evar (), "x" ^ str_int (i+1), assert_EAscState e)) es
         val xs = map (fn (x, _, _) => x) xs_names_es
-        val ek = k $$ ENewArrayValues (t_x, map EV xs)
+        val ek = k $$ ENewArrayValues (w, t_x, map EV xs)
         fun f ((x, name, (e, st_e)), (ek, i_ek)) =
           let
             val ek = EAbs (st_e %++ F, close0_e_e_anno ((x, name, t_x), ek), NONE)
@@ -838,7 +838,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
           end
         val len = length es
       in
-        foldr f (ek, (to_real $ C_ENewArrayValues len, N $ len + 1) %%+ j_k) xs_names_es
+        foldr f (ek, (to_real $ C_ENewArrayValues w len, N $ w * len + 32) %%+ j_k) xs_names_es
       end
     | S.EHalt (e, _) =>
       (* [[ halt e [_] ]](k) = [[e]](\x. halt x [unit]) *)
@@ -1261,7 +1261,7 @@ fun check_CPSed_expr e =
     (* | EBinOp (EBPair (), _, _) => err () *)
     | ETuple _ => err ()
     | ERecord _ => err ()
-    | EBinOp (EBNew (), _, _) => err ()
+    | EBinOp (EBNew _, _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBiBool _, _, _) => err ()
@@ -1320,7 +1320,7 @@ and check_decl e =
         (check_value e1;
          check_value e2;
          check_value e3)
-      | ENewArrayValues (t, es) => app check_value es
+      | ENewArrayValues (_, t, es) => app check_value es
       (* | EMallocPair _ => () *)
       (* | EPairAssign (e1, _, e2) => *)
       (*   (check_value e1; *)
@@ -1398,7 +1398,7 @@ and check_value e =
     | EUnOp (EUUnfold (), _) => err ()
     (* | EUnOp (EUTupleProj _, _) => err () *)
     | EBinOp (EBApp (), _, _) => err ()
-    | EBinOp (EBNew (), _, _) => err ()
+    | EBinOp (EBNew _, _, _) => err ()
     | EBinOp (EBRead (), _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBiBool _, _, _) => err ()

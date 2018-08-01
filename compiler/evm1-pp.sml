@@ -17,87 +17,87 @@ fun str_word_const c =
     | WCiBool b => "#" ^ str_bool b
     | WCLabel l => "l_" ^ str_int l
     | WCState n => "st_" ^ str_int n
-                                
+                                   
 fun str_inst a =
   let
     fun err () = raise Impossible "str_inst()"
   in
-  case a of
-      ADD () => "ADD"
-    | MUL () => "MUL"
-    | SUB () => "SUB"
-    | DIV () => "DIV"
-    | SDIV () => "SDIV"
-    | MOD () => "MOD"
-    | EXP () => "EXP"
-    | LT () => "LT"
-    | GT () => "GT"
-    | SLT () => "SLT"
-    | SGT () => "SGT"
-    | EQ () => "EQ"
-    | ISZERO () => "ISZERO"
-    | AND () => "AND"
-    | OR () => "OR"
-    | XOR () => "XOR"
-    | NOT () => "NOT"
-    | BYTE () => "BYTE"
-    | ORIGIN () => "ORIGIN"
-    | ADDRESS () => "ADDRESS"
-    | BALANCE () => "BALANCE"
-    | CALLER () => "CALLER"
-    | CALLVALUE () => "CALLVALUE"
-    | CALLDATASIZE () => "CALLDATASIZE"
-    | CODESIZE () => "CODESIZE"
-    | GASPRICE () => "GASPRICE"
-    | COINBASE () => "COINBASE"
-    | TIMESTAMP () => "TIMESTAMP"
-    | NUMBER () => "NUMBER"
-    | DIFFICULTY () => "DIFFICULTY"
-    | GASLIMIT () => "GASLIMIT"
-    | POP () => "POP"
-    | MLOAD () => "MLOAD"
-    | MSTORE () => "MSTORE"
-    | MSTORE8 () => "MSTORE8"
-    | JUMPI () => "JUMPI"
-    | JUMPDEST () => "JUMPDEST"
-    | UNFOLD () => "UNFOLD"
-    | NAT2INT () => "NAT2INT"
-    | INT2NAT () => "INT2NAT"
-    | BYTE2INT () => "BYTE2INT"
-    (* | PRINTC () => "PRINTC" *)
-    | MARK_PreArray2ArrayPtr () => "MARK_PreArray2ArrayPtr"
-    | MARK_PreTuple2TuplePtr () => "MARK_PreTuple2TuplePtr"
-    | InstRestrictPtr n => "InstRestrictPtr " ^ str_int n
-    | DUP n => "DUP" ^ str_int n
-    | SWAP n => "SWAP" ^ str_int n
-    | LOG n => "LOG" ^ str_int n
-    | UNPACK name => "UNPACK " ^ binder2str name
-    | UNPACKI name => "UNPACKI " ^ binder2str name
-    | MACRO_init_free_ptr n => "MACRO_init_free_ptr " ^ str_int n
-    | MACRO_tuple_assign () => "MACRO_tuple_assign"
-    | MACRO_printc () => "MACRO_printc"
-    | MACRO_array_init_assign () => "MACRO_array_init_assign"
-    | MACRO_array_init_len () => "MACRO_array_init_len"
-    | MACRO_int2byte () => "MACRO_int2byte"
-    | MACRO_br_sum () => "MACRO_br_sum"
-    | PUSH (n, w) => err ()
-    | VALUE_AppT t => err ()
-    | VALUE_AppI i => err ()
-    | VALUE_Pack (t1, t2) => err ()
-    | VALUE_PackI (t, i) => err ()
-    | VALUE_Fold t => err ()
-    | VALUE_AscType t => err ()
-    | ASCTIME i => err ()
-    | ASCSPACE i => err ()
-    | MACRO_tuple_malloc ts => err ()
-    | MACRO_array_malloc t => err ()
-    | MACRO_inj t => err ()
-         | SHA3 () => "SHA3"
-         | SLOAD () => "SLOAD"
-         | SSTORE () => "SSTORE"
-         | MACRO_map_ptr () => "MACRO_map_ptr"
-         | MACRO_vector_ptr () => "MACRO_vector_ptr"
-         | MACRO_vector_push_back () => "MACRO_vector_push_back"
+    case a of
+        ADD () => "ADD"
+      | MUL () => "MUL"
+      | SUB () => "SUB"
+      | DIV () => "DIV"
+      | SDIV () => "SDIV"
+      | MOD () => "MOD"
+      | EXP () => "EXP"
+      | LT () => "LT"
+      | GT () => "GT"
+      | SLT () => "SLT"
+      | SGT () => "SGT"
+      | EQ () => "EQ"
+      | ISZERO () => "ISZERO"
+      | AND () => "AND"
+      | OR () => "OR"
+      | XOR () => "XOR"
+      | NOT () => "NOT"
+      | BYTE () => "BYTE"
+      | ORIGIN () => "ORIGIN"
+      | ADDRESS () => "ADDRESS"
+      | BALANCE () => "BALANCE"
+      | CALLER () => "CALLER"
+      | CALLVALUE () => "CALLVALUE"
+      | CALLDATASIZE () => "CALLDATASIZE"
+      | CODESIZE () => "CODESIZE"
+      | GASPRICE () => "GASPRICE"
+      | COINBASE () => "COINBASE"
+      | TIMESTAMP () => "TIMESTAMP"
+      | NUMBER () => "NUMBER"
+      | DIFFICULTY () => "DIFFICULTY"
+      | GASLIMIT () => "GASLIMIT"
+      | POP () => "POP"
+      | MLOAD () => "MLOAD"
+      | MSTORE () => "MSTORE"
+      | MSTORE8 () => "MSTORE8"
+      | JUMPI () => "JUMPI"
+      | JUMPDEST () => "JUMPDEST"
+      | UNFOLD () => "UNFOLD"
+      | NAT2INT () => "NAT2INT"
+      | INT2NAT () => "INT2NAT"
+      | BYTE2INT () => "BYTE2INT"
+      (* | PRINTC () => "PRINTC" *)
+      | MARK_PreArray2ArrayPtr () => "MARK_PreArray2ArrayPtr"
+      | MARK_PreTuple2TuplePtr () => "MARK_PreTuple2TuplePtr"
+      | InstRestrictPtr n => "InstRestrictPtr " ^ str_int n
+      | DUP n => "DUP" ^ str_int n
+      | SWAP n => "SWAP" ^ str_int n
+      | LOG n => "LOG" ^ str_int n
+      | UNPACK name => "UNPACK " ^ binder2str name
+      | UNPACKI name => "UNPACKI " ^ binder2str name
+      | MACRO_init_free_ptr n => "MACRO_init_free_ptr " ^ str_int n
+      | MACRO_tuple_assign () => "MACRO_tuple_assign"
+      | MACRO_printc () => "MACRO_printc"
+      | MACRO_array_init_assign w => "MACRO_array_init_assign " ^ str_int w
+      | MACRO_array_init_len () => "MACRO_array_init_len"
+      | MACRO_int2byte () => "MACRO_int2byte"
+      | MACRO_br_sum () => "MACRO_br_sum"
+      | PUSH (n, w) => err ()
+      | VALUE_AppT t => err ()
+      | VALUE_AppI i => err ()
+      | VALUE_Pack (t1, t2) => err ()
+      | VALUE_PackI (t, i) => err ()
+      | VALUE_Fold t => err ()
+      | VALUE_AscType t => err ()
+      | ASCTIME i => err ()
+      | ASCSPACE i => err ()
+      | MACRO_tuple_malloc ts => err ()
+      | MACRO_array_malloc t => err ()
+      | MACRO_inj t => err ()
+      | SHA3 () => "SHA3"
+      | SLOAD () => "SLOAD"
+      | SSTORE () => "SSTORE"
+      | MACRO_map_ptr () => "MACRO_map_ptr"
+      | MACRO_vector_ptr () => "MACRO_vector_ptr"
+      | MACRO_vector_push_back () => "MACRO_vector_push_back"
   end
 
 fun pp_w pp_t s w =
@@ -288,12 +288,14 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           str ")";
           close_box ()
         )
-      | MACRO_array_malloc (t, b) =>
+      | MACRO_array_malloc (w, t, b) =>
         (
           open_hbox ();
           str $ "MACRO_array_malloc";
           space ();
           str "(";
+          str $ str_int w;
+          comma ();
           pp_t t;
           comma ();
           str $ str_bool b;
@@ -332,13 +334,13 @@ fun pp_insts (params as (pp_t, pp_inst)) s insts =
         let
           val (i, is) = unBind bind
         in
-        (
-	  open_vbox_noindent ();
-          pp_inst i;
-          space ();
-          pp_insts is;
-          close_box ()
-        )
+          (
+	    open_vbox_noindent ();
+            pp_inst i;
+            space ();
+            pp_insts is;
+            close_box ()
+          )
         end
       | JUMP () => str "JUMP"
       | RETURN () => str "RETURN"
@@ -378,16 +380,16 @@ fun pp_hval (params as (str_i, str_s, str_b, pp_t, pp_insts)) s bind =
     str "(";
     app (app_inl_inr
            (fn (name, s) =>
-              (str $ name;
-               str ":"; space ();
-               str $ str_s s;
-               comma ()
+               (str $ name;
+                str ":"; space ();
+                str $ str_s s;
+                comma ()
            ))
            (fn (name, k) =>
-              (str $ name;
-               str "::"; space ();
-               str $ str_k k;
-               comma ()
+               (str $ name;
+                str "::"; space ();
+                str $ str_k k;
+                comma ()
            ))
         ) itbinds;
     close_box ();
@@ -397,9 +399,9 @@ fun pp_hval (params as (str_i, str_s, str_b, pp_t, pp_insts)) s bind =
     comma ();
     str "Regs: {";
     Rctx.appi (fn (r, t) =>
-              (str $ str_reg r;
-               str ": "; pp_t t;
-               comma ()
+                  (str $ str_reg r;
+                   str ": "; pp_t t;
+                   comma ()
               )) rctx;
     str "}";
     comma ();
@@ -458,7 +460,7 @@ fun pp_inst_to_fn (str_i, pp_t) s b =
 fun pp_inst_fn params = pp_inst_to_fn params TextIO.stdOut
 fun pp_inst_to_string_fn params b =
   pp_to_string "pp_inst_to_string.tmp" (fn os => pp_inst_to_fn params os b)
-    
+               
 fun pp_insts_to_fn (str_i, pp_t) s b =
   let
     val pp_w = pp_w pp_t
@@ -468,7 +470,7 @@ fun pp_insts_to_fn (str_i, pp_t) s b =
 fun pp_insts_fn params = pp_insts_to_fn params TextIO.stdOut
 fun pp_insts_to_string_fn params b =
   pp_to_string "pp_insts_to_string.tmp" (fn os => pp_insts_to_fn params os b)
-    
+               
 fun pp_prog_to_fn (str_i, str_s, str_bs, pp_t) s b =
   let
     val pp_w = pp_w pp_t
@@ -479,5 +481,5 @@ fun pp_prog_to_fn (str_i, str_s, str_bs, pp_t) s b =
 fun pp_prog_fn params = pp_prog_to_fn params TextIO.stdOut
 fun pp_prog_to_string_fn params b =
   pp_to_string "pp_prog_to_string.tmp" (fn os => pp_prog_to_fn params os b)
-    
+               
 end

@@ -202,6 +202,18 @@ fun unify_higher_kind r (k, k') =
       end
     | _  => raise Error (r, [kind_mismatch (str_hk k) str_hk k'])
 
+fun good_width r gctx skctx width t =
+  let
+    fun err () = raise Error (r, ["array width must be 8 or 32"])
+  in
+    case simp_i width of
+        IConst (ICNat width, _) =>
+        if width = 8 then unify_mt r gctx skctx (t, TByte r)
+        else if width = 32 then ()
+        else err ()
+      | _ => err ()
+  end
+                  
 fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype) : mtype * hkind = 
   let
     val get_higher_kind = get_higher_kind gctx
@@ -214,10 +226,6 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
     fun check_same_domain st st' =
       if StMapU.is_same_domain st st' then ()
       else raise Error (U.get_region_mt c, ["pre- and post-condition must have the same state fields"])
-    fun good_width r width t =
-      if width = 8 then unify_mt r gctx (sctx, kctx) (t, TByte r)
-      else if width = 32 then ()
-      else raise Error (r, ["array width must be 8 or 32"])
     (* val () = print (sprintf "Kinding $\n" [U.str_mt gctxn ctxn c]) *)
     fun main () =
       case c of
@@ -229,10 +237,11 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
             HType))
         | U.TArray (width, t, i) =>
           let
+            val width = check_basic_sort gctx (sctx, width, BSNat)
             val t = check_higher_kind_Type (ctx, t)
             val i = check_basic_sort gctx (sctx, i, BSNat)
             val r = U.get_region_mt c                         
-            val () = good_width r width t
+            val () = good_width r gctx (sctx, kctx) width t
           in
 	  (TArray (width, t, i), HType)
           end
@@ -1552,13 +1561,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	| U.EUnOp (opr as EUArrayLen (), e, r) =>
           let
             val r = U.get_region_e e_all
-            (* val t = fresh_mt gctx (sctx, kctx) r *)
-            (* val i = fresh_i gctx sctx BSNat r *)
-            val (e, t, d, st) = get_mtype ctx_st e
-            val t = whnf_mt true gctx kctx t
-            val (width, t, i) = case t of
-                                    TArray a => a
-                                  | _ => raise Error (r, ["expect array, got " ^ str_mt gctxn skctxn t])
+            val w = fresh_i gctx sctx BSNat r
+            val t = fresh_mt gctx (sctx, kctx) r
+            val i = fresh_i gctx sctx BSNat r
+            val (e, d, st) = check_mtype ctx_st (e, TArray (w, t, i)) 
           in
             (EUnOp (opr, e, r), TNat (i, r), d %%+ TN C_EArrayLen, st)
           end
@@ -1677,10 +1683,11 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val len = fresh_i gctx sctx BSTime r
             val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (len, r))
             val (e2, t, d2, st) = get_mtype (ctx, st) e2
-            val () = good_width r width t
+            val width_i = N width
+            val () = good_width r gctx (sctx, kctx) width_i t
             val cost = N C_ENew_order0 %+ N (C_ENew_order1 width) %* len
           in
-            (EBinOp (opr, e1, e2), TArray (width, t, len), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %* N (width, dummy) %+ N (32, dummy)), st)
+            (EBinOp (opr, e1, e2), TArray (width_i, t, len), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %* width_i %+ N 32), st)
           end
 	| U.EBinOp (opr as EBRead (), e1, e2) =>
           let
@@ -1688,7 +1695,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val t = fresh_mt gctx (sctx, kctx) r
             val i1 = fresh_i gctx sctx BSTime r
             val i2 = fresh_i gctx sctx BSTime r
-            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (t, i1))
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N 32, t, i1)) (* can only read 32-bit arrays; 8-bit arrays need to be read via another command *)
             val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
             val () = write_lt (i2, i1, r)
           in
@@ -2088,7 +2095,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val t = fresh_mt gctx (sctx, kctx) r
             val i1 = fresh_i gctx sctx BSTime r
             val i2 = fresh_i gctx sctx BSTime r
-            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (t, i1))
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N 32, t, i1)) (* can only write 32-bit arrays; 8-bit arrays need to be written via another command *)
             val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
             val () = write_lt (i2, i1, r)
             val (e3, d3, st) = check_mtype (ctx, st) (e3, t)
@@ -2205,10 +2212,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val es = rev es
             val ds = rev ds
             val d = combine_IBAdd_Time_Nat ds
-            val () = good_width r width t
+            val () = good_width r gctx (sctx, kctx) (N width) t
             val len = length es
           in
-            (ENewArrayValues (t, es, r), TArray (width, t, INat (length es, r)), d %%+ (to_real $ C_ENewArrayValues len, N $ len * width + 32), st)
+            (ENewArrayValues (width, t, es, r), TArray (N width, t, INat (length es, r)), d %%+ (to_real $ C_ENewArrayValues width len, N $ len * width + 32), st)
           end
 	| U.ERecord (fields, r) =>
 	  let

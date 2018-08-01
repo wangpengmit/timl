@@ -390,7 +390,7 @@ fun is_sub_rctx ctx (rctx, rctx_abs) =
   
 fun is_eq_tys ctx a = is_eq_list "is_eq_tys()/unequal-lengths" (is_eq_ty ctx) a
 
-fun good_width width t =
+fun good_width itctx width t =
   if width = 8 then is_eq_ty itctx (t, TByte)
   else assert_b "evm/tc()/array_malloc: width=32" $ width = 32
                                  
@@ -505,12 +505,13 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TiBool i, KType ())
       end
-    | TArray (t, i) =>
+    | TArray (width, t, i) =>
       let
         val t = kc_against_kind ctx (t, KType ())
         val i = sc_against_sort ictx (i, SNat)
+        val () = good_width ctx width t
       in
-        (TArray (t, i), KType ())
+        (TArray (width, t, i), KType ())
       end
     | TTuple ts =>
       let
@@ -547,21 +548,23 @@ fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =
       in
         (TArrowEVM (st, rctx, ts, i), KType ())
       end
-    | TPreArray (t, len, i, b) =>
+    | TPreArray (width, t, len, i, b) =>
       let
         val t = kc_against_kind ctx (t, KType ())
         val len = sc_against_sort ictx (len, SNat)
         val i = sc_against_sort ictx (i, SNat)
+        val () = good_width ctx width t
       in
-        (TPreArray (t, len, i, b), KType ())
+        (TPreArray (width, t, len, i, b), KType ())
       end
-    | TArrayPtr (t, len, i) =>
+    | TArrayPtr (width, t, len, i) =>
       let
         val t = kc_against_kind ctx (t, KType ())
         val len = sc_against_sort ictx (len, SNat)
         val i = sc_against_sort ictx (i, SNat)
+        val () = good_width ctx width t
       in
-        (TArrayPtr (t, len, i), KType ())
+        (TArrayPtr (width, t, len, i), KType ())
       end
     | TTuplePtr (ts, i, b) =>
       let
@@ -970,9 +973,10 @@ val anno_ENew_cont = ref false
                               
 val allow_substate_call = ref false
 
+(* ENew may require its continuation to be annotated with time/space info because codegen for ENew needs to create new basic blocks. *)
 fun is_ENew_cont e =
   case fst $ collect_all_anno e of
-      EBinOp (EBNew (), _, _) => !anno_ENew_cont
+      EBinOp (EBNew _, _, _) => !anno_ENew_cont
     | _ => false
              
 datatype phase =
@@ -1081,8 +1085,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         let
           val (e, t, j, st) = tc (ctx, st) e
           val t = whnf itctx t
-          val (_, i) = case t of
-                            TArr data => data
+          val (_, _, i) = case t of
+                            TArray data => data
                           | _ => raise MTCError "EArrayLen"
           val e = if !anno_EArrayLen then e %: t else e
           val e = if !anno_EArrayLen_state then e %~ st else e
@@ -1615,7 +1619,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (ERecord $ SMapU.fromList $ zip (names, es), TRecord $ SMapU.fromList $ zip (names, ts), i %%+ (to_real $ C_ETuple len, N len), st)
         end
-      | EBinOp (EBNew width, e1, e2) =>
+      | EBinOp (opr as EBNew width, e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
@@ -1624,9 +1628,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val (e1, e2) = if !anno_ENew then (e1 %: t1, e2 %: t2) else (e1, e2)
           val (e1, e2) = if !anno_ENew_state then (e1 %~ st_e1, e2 %~ st) else (e1, e2)
-          val cost = N C_ENew_order0 %+ N (C_ENew_order1)b width %* len
+          val () = good_width itctx width t2
+          val cost = N C_ENew_order0 %+ N (C_ENew_order1 width) %* len
         in
-          (ENew (e1, e2), TArr (t2, len), j1 %%+ j2 %%+ (IToReal (cost, dummy), len %* N width %+ N 32), st)
+          (EBinOp (opr, e1, e2), TArray (width, t2, len), j1 %%+ j2 %%+ (IToReal (cost, dummy), len %* N width %+ N 32), st)
         end
       | ENewArrayValues (width, t, es) =>
         let
@@ -1641,17 +1646,19 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                         end) ([], st) es
           val (es, is) = unzip $ rev eis
           val i = combine_IBAdd_Time_Nat is
+          val () = good_width itctx width t
           val len = length es
         in
-          (ENewArrayValues (t, es), TArr (t, INat len), i %%+ (to_real $ C_ENewArrayValues width len, N $ width * len + 32), st)
+          (ENewArrayValues (width, t, es), TArray (width, t, INat len), i %%+ (to_real $ C_ENewArrayValues width len, N $ width * len + 32), st)
         end
       | EBinOp (EBRead (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
-          val (t, i1) = case whnf itctx t1 of
-                            TArr data => data
-                          | _ => raise MTCError "ERead 1"
+          val (width, t, i1) = case whnf itctx t1 of
+                                   TArray data => data
+                                | _ => raise MTCError "ERead 1"
+          val () = assert_b "tc()/ERead: width=32" $ width = 32
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val t2 = whnf itctx t2
           val i2 = assert_TNat_m t2 (fn s => raise MTCError $ "ERead: " ^ s)
@@ -1895,9 +1902,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val (e1, t1, j1, st) = tc (ctx, st) e1
           val st_e1 = st
           val t1 = whnf itctx t1
-          val (t, i1) = case t1 of
-                            TArr data => data
+          val (width, t, i1) = case t1 of
+                            TArray data => data
                           | _ => raise MTCError "EWrite 1"
+          val () = assert_b "tc()/EWrite: width=32" $ width = 32
           val (e2, t2, j2, st) = tc (ctx, st) e2
           val st_e2 = st
           val t2 = whnf itctx t2
