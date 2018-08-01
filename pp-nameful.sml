@@ -114,12 +114,14 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
           str ")";
           close_box ()
         )
-      | TArray (t, i) =>
+      | TArray (w, t, i) =>
         (
           open_hbox ();
           str "TArray";
           space ();
           str "(";
+          str $ str_int w;
+          comma ();
           pp_t t;
           comma ();
           str $ str_i i;

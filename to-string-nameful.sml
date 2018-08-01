@@ -229,7 +229,7 @@ fun strn_mt t =
           sprintf "($$ -- $, $ --> $$)" [strn_state st1, strn_mt t1, strn_i j, strn_i i, strn_state st2, strn_mt t2]
       | TNat (i, _) => sprintf "(nat $)" [strn_i i]
       | TiBool (i, _) => sprintf "(ibool $)" [strn_i i]
-      | TArray (t, i) => sprintf "(array $ $)" [strn_mt t, strn_i i]
+      | TArray (w, t, i) => sprintf "(array $ $ $)" [str_int w, strn_mt t, strn_i i]
       | TUnit _ => "unit"
       (* | TProd (t1, t2) => sprintf "($ * $)" [strn_mt t1, strn_mt t2] *)
       | TTuple ts => str_ls_fn "(" ")" strn_mt ts
@@ -347,7 +347,7 @@ fun strn_e e =
          (*   in *)
          (*     sprintf "($)" [join ", " $ map strn_e es] *)
          (*   end *)
-         | EBNew () => sprintf "(new $ $)" [strn_e e1, strn_e e2]
+         | EBNew w => sprintf "(new $ $ $)" [str_int w, strn_e e1, strn_e e2]
          | EBRead () => sprintf "(read $ $)" [strn_e e1, strn_e e2]
          | _ => sprintf "($ $ $)" [strn_e e1, pretty_str_expr_bin_op opr, strn_e e2]
       )

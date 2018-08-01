@@ -644,8 +644,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | MACRO_array_malloc (width, t, is_upward) =>
       let
         val t = kc_against_kind itctx (unInner t, KType ())
-        val () = if width = 8 then is_eq_ty itctx (t, TByte)
-                 else assert "evm/tc()/array_malloc: width=32" $ width = 32
+        val () = good_width w t
         val (t0, sctx) = assert_cons sctx
         val len = assert_TNat $ whnf itctx t0
         val lowest = if is_upward then N0 else len

@@ -347,7 +347,7 @@ fun live_vars_expr_visitor_vtable cast () =
         case opr of
             EBApp () => #visit_EApp vtable this env data
           (* | EBPair () => #visit_EPair vtable this env data *)
-          | EBNew () => #visit_ENew vtable this env data
+          | EBNew w => #visit_ENew vtable this env (w, data)
           | EBRead () => #visit_ERead vtable this env data
           | EBPrim (EBPIntAdd ()) => #visit_EAdd vtable this env data
           | EBNat (EBNAdd ()) => #visit_ENatAdd vtable this env data
@@ -406,13 +406,12 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         EBinOp (EBNatAdd, e1, e2)
       end
-    fun visit_ENew this env data =
+    fun visit_ENew this env (w, (e1, e2)) =
       let
         val vtable = cast this
-        val (e1, e2) = data
         val (e1, e2) = visit_e2 this env (e1, e2)
       in
-        EBinOp (EBNew (), e1, e2)
+        EBinOp (EBNew w, e1, e2)
       end
     fun visit_ERead this env data =
       let

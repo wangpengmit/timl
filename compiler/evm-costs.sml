@@ -92,7 +92,7 @@ fun C_MSTORE_n w =
     C_MSTORE
   else if w = 8 then
     C_MSTORE8
-  else raise Impossible "C_MSTORE_n(): w <> 32 or 8"
+  else raise Util.Impossible "C_MSTORE_n(): w <> 32 or 8"
 fun C_array_init_assign w = 3 * C_DUP + C_ADD + C_MSTORE_n w
                                                 
 val C_New_loop_test = C_JUMPDEST + 2 * C_PUSH + C_DUP + C_ISZERO + C_JUMPI

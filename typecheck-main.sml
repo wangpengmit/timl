@@ -214,6 +214,10 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
     fun check_same_domain st st' =
       if StMapU.is_same_domain st st' then ()
       else raise Error (U.get_region_mt c, ["pre- and post-condition must have the same state fields"])
+    fun good_width r width t =
+      if width = 8 then unify_mt r gctx (sctx, kctx) (t, TByte r)
+      else if width = 32 then ()
+      else raise Error (r, ["array width must be 8 or 32"])
     (* val () = print (sprintf "Kinding $\n" [U.str_mt gctxn ctxn c]) *)
     fun main () =
       case c of
@@ -223,10 +227,15 @@ fun get_higher_kind gctx (ctx as (sctx : scontext, kctx : kcontext), c : U.mtype
 	            check_Time_Nat gctx sctx i,
 	            (is_wf_state gctx sctx st2, check_higher_kind_Type (ctx, c2))),
             HType))
-        | U.TArray (t, i) =>
-	  (TArray (check_higher_kind_Type (ctx, t),
-	            check_basic_sort gctx (sctx, i, BSNat)),
-           HType)
+        | U.TArray (width, t, i) =>
+          let
+            val t = check_higher_kind_Type (ctx, t)
+            val i = check_basic_sort gctx (sctx, i, BSNat)
+            val r = U.get_region_mt c                         
+            val () = good_width r width t
+          in
+	  (TArray (width, t, i), HType)
+          end
         | U.TNat (i, r) =>
 	  (TNat (check_basic_sort gctx (sctx, i, BSNat), r),
            HType)
@@ -764,7 +773,7 @@ fun is_value (e : U.expr) : bool =
         (case opr of
              EBApp () => false
            (* | EBPair () => is_value e1 andalso is_value e2 *)
-           | EBNew () => false
+           | EBNew _ => false
            | EBRead () => false
            | EBPrim _ => false
            | EBNat _ => false
@@ -1543,9 +1552,13 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	| U.EUnOp (opr as EUArrayLen (), e, r) =>
           let
             val r = U.get_region_e e_all
-            val t = fresh_mt gctx (sctx, kctx) r
-            val i = fresh_i gctx sctx BSNat r
-            val (e, d, st) = check_mtype ctx_st (e, TArray (t, i))
+            (* val t = fresh_mt gctx (sctx, kctx) r *)
+            (* val i = fresh_i gctx sctx BSNat r *)
+            val (e, t, d, st) = get_mtype ctx_st e
+            val t = whnf_mt true gctx kctx t
+            val (width, t, i) = case t of
+                                    TArray a => a
+                                  | _ => raise Error (r, ["expect array, got " ^ str_mt gctxn skctxn t])
           in
             (EUnOp (opr, e, r), TNat (i, r), d %%+ TN C_EArrayLen, st)
           end
@@ -1599,7 +1612,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val ls = rev ls
             val (es, ts, ds) = unzip3 ls
           in
-	    (ETuple es, TTuple ts, foldl_nonempty (fn (d, acc) => acc %%+ d) ds %%+ (to_real (C_ETuple len), N len), st)
+	    (ETuple es, TTuple ts, foldl_nonempty (fn (d, acc) => acc %%+ d) ds %%+ (to_real (C_ETuple len), N $ 32 * len), st)
 	  end
 	| U.EBinOp (opr as EBApp (), e1, e2) =>
 	  let
@@ -1658,15 +1671,16 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EAscState (e, spec), t, d, st)
           end
-	| U.EBinOp (opr as EBNew (), e1, e2) =>
+	| U.EBinOp (opr as EBNew width, e1, e2) =>
           let
             val r = U.get_region_e e_all
             val len = fresh_i gctx sctx BSTime r
             val (e1, d1, st) = check_mtype (ctx, st) (e1, TNat (len, r))
             val (e2, t, d2, st) = get_mtype (ctx, st) e2
-            val cost = N C_ENew_order0 %+ N C_ENew_order1 %* len
+            val () = good_width r width t
+            val cost = N C_ENew_order0 %+ N (C_ENew_order1 width) %* len
           in
-            (EBinOp (opr, e1, e2), TArray (t, len), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %+ N1 dummy), st)
+            (EBinOp (opr, e1, e2), TArray (width, t, len), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %* N (width, dummy) %+ N (32, dummy)), st)
           end
 	| U.EBinOp (opr as EBRead (), e1, e2) =>
           let
@@ -2183,7 +2197,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
 	         (EBuiltin (name, t, r), t, TN C_EBuiltin, st)
                end
           )
-        | U.ENewArrayValues (t, es, r) =>
+        | U.ENewArrayValues (width, t, es, r) =>
           let
 	    val t = check_kind_Type gctx (skctx, t)
             fun ignore2 (a, _, c) = (a, c)
@@ -2191,9 +2205,10 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val es = rev es
             val ds = rev ds
             val d = combine_IBAdd_Time_Nat ds
+            val () = good_width r width t
             val len = length es
           in
-            (ENewArrayValues (t, es, r), TArray (t, INat (length es, r)), d %%+ (to_real $ C_ENewArrayValues len, N $ len + 1), st)
+            (ENewArrayValues (t, es, r), TArray (width, t, INat (length es, r)), d %%+ (to_real $ C_ENewArrayValues len, N $ len * width + 32), st)
           end
 	| U.ERecord (fields, r) =>
 	  let
@@ -2206,7 +2221,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val d = combine_IBAdd_Time_Nat ds
             val len = length es
           in
-	    (ERecord (SMapU.fromList $ zip (names, es), r), TRecord (SMapU.fromList $ zip (names, ts), r), d %%+ (to_real $ C_ETuple len, N len), st)
+	    (ERecord (SMapU.fromList $ zip (names, es), r), TRecord (SMapU.fromList $ zip (names, ts), r), d %%+ (to_real $ C_ETuple len, N $ 32 * len), st)
 	  end
 	| U.EAbsI (bind, r_all) => 
 	  let 

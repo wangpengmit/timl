@@ -551,8 +551,14 @@ local
 		   else if x = "__&array" orelse x = "new_array" then
                      (case e2 of
                           S.ETuple ([e1, e2], _) =>
-                          ENew (elab e1, elab e2)
-                        | _ => raise Error (r, "should be '__&array (_, _)'")
+                          ENew (32, elab e1, elab e2)
+                        | _ => raise Error (r, "arguments should be (_, _)")
+                     )
+		   else if x = "new_array8" then
+                     (case e2 of
+                          S.ETuple ([e1, e2], _) =>
+                          ENew (8, elab e1, elab e2)
+                        | _ => raise Error (r, "arguments should be (_, _)")
                      )
 		   else if x = "__&sub" orelse x = "array_get" then
                      (case e2 of

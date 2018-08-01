@@ -155,9 +155,9 @@ fun eq_mt t t' =
              TiBool (i', _) => eq_i i i'
            | _ => false
         )
-      | TArray (t, i) =>
+      | TArray (w, t, i) =>
         (case t' of
-             TArray (t', i') => eq_mt t t' andalso eq_i i i'
+             TArray (w', t', i') => w = w' andalso eq_mt t t' andalso eq_i i i'
            | _ => false
         )
       | TUnit r =>

@@ -397,10 +397,11 @@ fun unify_mt r gctx ctx (t, t') =
                 unify_state r gctxn sctxn (st2, st2');
                 unify_mt ctx (t2, t2'))
              | _ => err ())
-        | TArray (t, i) =>
+        | TArray (w, t, i) =>
           (case t' of
-               TArray (t', i') =>
-               (unify_mt ctx (t, t');
+               TArray (w', t', i') =>
+               (check_eq r op= (w, w');
+                unify_mt ctx (t, t');
                 unify_i r gctxn sctxn (i, i')
                )
              | _ => err ())
