@@ -55,7 +55,7 @@ fun str_raw_mt (t : mtype) : string =
       TArrow ((st1, t1), (j, i), (st2, t2)) => sprintf "TArrow ($, $, $, $, $)" [str_raw_state st1, str_raw_mt t1, str_raw_i j, str_raw_i i, str_raw_state st2, str_raw_mt t2]
     | TNat (i, _) => sprintf "TNat ($))" [str_raw_i i]
     | TiBool (i, _) => sprintf "TiBool ($))" [str_raw_i i]
-    | TArray (w, t, i) => sprintf "TArray ($, $, $)" [str_int w, str_raw_mt t, str_raw_i i]
+    | TArray (w, t, i) => sprintf "TArray ($, $, $)" [str_raw_i w, str_raw_mt t, str_raw_i i]
     | TUnit _ => "TUnit"
     (* | TProd (t1, t2) => sprintf "TProd ($, $)" [str_raw_mt t1, str_raw_mt t2] *)
     | TUniI (s, bind, _) => sprintf "TUniI ($, $)" ["<sort>", str_raw_bind (fn ((i, j), t) => sprintf "$, $, $" [str_raw_i i, str_raw_i j, str_raw_mt t]) bind]

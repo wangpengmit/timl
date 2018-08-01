@@ -433,7 +433,7 @@ local
                        (* else if no_decorate andalso x = "never" then *)
                        (*   ENever (elab_mt (S.TVar (NONE, ("_", r))), r) *)
               else if no_decorate andalso (x = "__&empty_array" orelse x = "empty_array") then
-                EEmptyArray (elab_mt (S.TVar (NONE, ("_", r))), r)
+                EEmptyArray (32, elab_mt (S.TVar (NONE, ("_", r))), r)
               else if x = "__&builtin" then raise Error (r, "should be '__&builtin \"name\"'")
               else
                 def ()
@@ -504,7 +504,7 @@ local
                    String.implode $ rev $ loop (ls, [])
                  end
                val s = unescape s
-               val e = ENewArrayValues (TByte r, map (fn c => EByte (c, r)) $ String.explode s, r)
+               val e = ENewArrayValues (8, TByte r, map (fn c => EByte (c, r)) $ String.explode s, r)
                                        (* val e = EApp (EVar (QID $ qid_add_r r $ CSTR_STRING_NAMEFUL, false), e) *)
              in
                e
@@ -525,7 +525,7 @@ local
                    NONE =>
 		   if x = "__&fst" then EFst (elab e2, r)
 		   else if x = "__&snd" then ESnd (elab e2, r)
-		   else if x = "ref" then ENewArrayValues (TUVar ((), r), [elab e2], r)
+		   else if x = "ref" then ENewArrayValues (32, TUVar ((), r), [elab e2], r)
 		   else if x = "__&not" then EUnOp (EUPrim (EUPBoolNeg ()), elab e2, r)
 		                                   (* else if x = "__&int2str" then EUnOp (EUInt2Str, elab e2, r) *)
 		   else if x = "__&nat2int" then EUnOp (EUNat2Int (), elab e2, r)
@@ -648,7 +648,7 @@ local
           else
             ESet (x, offsets, e, r)
         end
-      | S.ENewArrayValues (es, r) => ENewArrayValues (TUVar ((), r), map elab es, r)
+      | S.ENewArrayValues (w, es, r) => ENewArrayValues (w, TUVar ((), r), map elab es, r)
       | S.ERecord (fields, r) =>
         ERecord (list2map r $ map (mapSnd elab) fields, r)
       | S.EFor (_, _, _, _, _, _, r) => raise Error (r, "elaborate/EFor")

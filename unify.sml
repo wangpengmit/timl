@@ -400,7 +400,7 @@ fun unify_mt r gctx ctx (t, t') =
         | TArray (w, t, i) =>
           (case t' of
                TArray (w', t', i') =>
-               (check_eq r op= (w, w');
+               (unify_i r gctxn sctxn (w, w');
                 unify_mt ctx (t, t');
                 unify_i r gctxn sctxn (i, i')
                )

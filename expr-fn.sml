@@ -44,7 +44,7 @@ datatype expr =
          | ET of expr_T * mtype * region
          | ERecord of expr SMap.map * region
          | ETuple of expr list
-         | ENewArrayValues of mtype * expr list * region
+         | ENewArrayValues of int * mtype * expr list * region
 	 | EAbs of idx StMap.map * (ptrn, expr) bind * (idx * idx) option
 	 | EAbsI of (sort, expr) ibind_anno * region
 	 | EAppConstr of (cvar * (bool * bool)) * mtype list * idx list * expr * (int * mtype) option

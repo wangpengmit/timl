@@ -157,7 +157,7 @@ fun eq_mt t t' =
         )
       | TArray (w, t, i) =>
         (case t' of
-             TArray (w', t', i') => w = w' andalso eq_mt t t' andalso eq_i i i'
+             TArray (w', t', i') => eq_i w w' andalso eq_mt t t' andalso eq_i i i'
            | _ => false
         )
       | TUnit r =>

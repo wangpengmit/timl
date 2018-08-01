@@ -23,7 +23,7 @@ type ('this, 'env) type_visitor_vtable =
        visit_mtype : 'this -> 'env -> mtype -> T.mtype,
        visit_TArrow : 'this -> 'env -> (idx StMap.map * mtype) * (idx * idx) * (idx StMap.map * mtype) -> T.mtype,
        visit_TNat : 'this -> 'env -> idx * region -> T.mtype,
-       visit_TArray : 'this -> 'env -> int * mtype * idx -> T.mtype,
+       visit_TArray : 'this -> 'env -> idx * mtype * idx -> T.mtype,
        visit_TBase : 'this -> 'env -> base_type * region -> T.mtype,
        visit_TUnit : 'this -> 'env -> region -> T.mtype,
        (* visit_TProd : 'this -> 'env -> mtype * mtype -> T.mtype, *)
@@ -144,6 +144,7 @@ fun default_type_visitor_vtable
       let
         val vtable = cast this
         val (w, t, i) = data
+        val w = #visit_idx vtable this env w
         val t = #visit_mtype vtable this env t
         val i = #visit_idx vtable this env i
       in

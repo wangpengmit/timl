@@ -229,7 +229,7 @@ fun strn_mt t =
           sprintf "($$ -- $, $ --> $$)" [strn_state st1, strn_mt t1, strn_i j, strn_i i, strn_state st2, strn_mt t2]
       | TNat (i, _) => sprintf "(nat $)" [strn_i i]
       | TiBool (i, _) => sprintf "(ibool $)" [strn_i i]
-      | TArray (w, t, i) => sprintf "(array $ $ $)" [str_int w, strn_mt t, strn_i i]
+      | TArray (w, t, i) => sprintf "(array $ $ $)" [strn_i w, strn_mt t, strn_i i]
       | TUnit _ => "unit"
       (* | TProd (t1, t2) => sprintf "($ * $)" [strn_mt t1, strn_mt t2] *)
       | TTuple ts => str_ls_fn "(" ")" strn_mt ts
@@ -365,7 +365,7 @@ fun strn_e e =
          | EETHalt () => sprintf "(halt $ [$])" [strn_e e, strn_mt t]
       )
     | EAscState (e, st) => sprintf "($ state $)" [strn_e e, strn_state st]
-    | ENewArrayValues (t, es, _) => sprintf "array [$] {$}" [strn_mt t, join ", " $ map strn_e es]
+    | ENewArrayValues (w, t, es, _) => sprintf "array $ [$] {$}" [str_int w, strn_mt t, join ", " $ map strn_e es]
     | ET (opr, t, _) =>
       (case opr of
            ETNever () => sprintf "(never [$])" [strn_mt t]

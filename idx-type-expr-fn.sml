@@ -92,6 +92,7 @@ fun TInt r = TBase (BTInt (), r)
 fun TBool r = TBase (BTBool (), r)
 fun TByte r = TBase (BTByte (), r)
 
+fun TArray8 (t, i) = TArray (INat (8, dummy), t, i)
 fun TString (i, r) = TArray8 (TByte r, i)
 fun TBytes (i, r) = TArray8 (TByte r, i)
   

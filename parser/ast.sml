@@ -148,7 +148,7 @@ datatype exp =
          | ESetModify of bool(*is modify?*) * id * (exp * proj_path) list * exp * region
          | EGet of id * (exp * proj_path) list * region
          | ERecord of (id * exp) list * region
-         | ENewArrayValues of exp list * region
+         | ENewArrayValues of int * exp list * region
          | ESemis of exp list * region
          | ELet2 of storage option * ptrn * exp option * region
          | EIfs of ifelse list * region

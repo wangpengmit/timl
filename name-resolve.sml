@@ -188,7 +188,7 @@ fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_vi
               else if SE.eq_var (x, (ID ("ibool", dummy))) andalso length ts = 0 andalso length is = 1 then
                 TiBool (hd is, S.get_region_mt t)
               else if SE.eq_var (x, (ID ("array", dummy))) andalso length ts = 1 andalso length is = 1 then
-                TArray (32, hd ts, hd is)
+                TArray (INat (32, dummy), hd ts, hd is)
               else if SE.eq_var (x, (ID ("string", dummy))) andalso length ts = 0 andalso length is = 1 then
                 TString (hd is, S.get_region_mt t)
               else if SE.eq_var (x, (ID ("bytes", dummy))) andalso length ts = 0 andalso length is = 1 then
@@ -210,7 +210,7 @@ fun on_i_type_visitor_vtable cast gctx : ('this, scontext * kcontext) TV.type_vi
             let
               val ts = map (#visit_mtype vtable this ctx) ts
               val is = map (#visit_idx vtable this ctx) is
-              fun TRef (t, r) = TArray (32, t, INat (1, r))
+              fun TRef (t, r) = TArray (INat (32, dummy), t, INat (1, r))
             in
               if SE.eq_var (x, (ID ("map", dummy))) andalso length ts = 2 andalso length is = 0 then
                 TMap (List.nth(ts, 1))

@@ -26,7 +26,7 @@ datatype mtype =
 	 TArrow of (idx StMap.map * mtype) * (idx * idx) * (idx StMap.map * mtype)
          | TNat of idx * region
          | TiBool of idx * region
-         | TArray of int * mtype * idx
+         | TArray of idx * mtype * idx
 	 | TBase of base_type * region
          | TUnit of region
 	 (* | TProd of mtype * mtype *)

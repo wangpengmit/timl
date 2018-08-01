@@ -158,7 +158,7 @@ fun default_expr_visitor_vtable
             in
               T.EAscState (e, st)
             end
-          | ENewArrayValues (t, es, r) => T.ENewArrayValues (#visit_mtype vtable this env t, visit_list (#visit_expr vtable this) env es, r)
+          | ENewArrayValues (w, t, es, r) => T.ENewArrayValues (w, #visit_mtype vtable this env t, visit_list (#visit_expr vtable this) env es, r)
 	  | EAbs data => #visit_EAbs vtable this env data
 	  | EAbsI data => #visit_EAbsI vtable this env data
 	  | EAppConstr data => #visit_EAppConstr vtable this env data

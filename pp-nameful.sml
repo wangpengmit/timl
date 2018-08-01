@@ -120,7 +120,7 @@ fun pp_t (params as (str_b, str_i : idx -> string, str_s, str_k : kind -> string
           str "TArray";
           space ();
           str "(";
-          str $ str_int w;
+          str $ str_i w;
           comma ();
           pp_t t;
           comma ();
@@ -743,13 +743,15 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           str ")";
           close_box ()
         )
-      | ENewArrayValues (t, es, _) =>
+      | ENewArrayValues (w, t, es, _) =>
         (
           open_vbox ();
           open_hbox ();
           str "ENewArrayValues";
           space ();
           str "(";
+          str $ str_int w;
+          comma ();
           pp_t t;
           close_box ();
           comma ();
