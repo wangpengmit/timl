@@ -455,9 +455,9 @@ fun compile st_name2int ectx e =
       (if width = 32 then
          array_ptr @
          [MLOAD ()]
-       else if width = 8 then
+       else if width = 1 then
          [ADD (), PUSH1nat 31, SWAP1, SUB (), MLOAD ()] @ int2byte
-       else raise Impossible "to-evm/ERead: width <> 32 or 8"
+       else raise Impossible "to-evm/ERead: width <> 32 or 1"
       )
     (* | EBinOp (EBRead8 (), e1, e2) => *)
     (*   compile e1 @ *)
@@ -475,9 +475,9 @@ fun compile st_name2int ectx e =
          [SWAP2, SWAP1] @
          array_ptr @
          [MSTORE (), PUSH1 WTT]
-       else if width = 8 then
+       else if width = 1 then
          [SWAP2, ADD (), MSTORE8 (), PUSH1 WTT]
-       else raise Impossible "to-evm/EWrite: width <> 32 or 8"
+       else raise Impossible "to-evm/EWrite: width <> 32 or 1"
       )
     (* | ETriOp (ETWrite8 (), e1, e2, e3) => *)
     (*   compile e1 @ *)

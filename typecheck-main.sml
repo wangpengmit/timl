@@ -204,11 +204,11 @@ fun unify_higher_kind r (k, k') =
 
 fun good_width r gctx skctx width t =
   let
-    fun err () = raise Error (r, ["array width must be 8 or 32"])
+    fun err () = raise Error (r, ["array width must be 1 or 32"])
   in
     case simp_i width of
         IConst (ICNat width, _) =>
-        if width = 8 then unify_mt r gctx skctx (t, TByte r)
+        if width = 1 then unify_mt r gctx skctx (t, TByte r)
         else if width = 32 then ()
         else err ()
       | _ => err ()
@@ -1695,7 +1695,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val t = fresh_mt gctx (sctx, kctx) r
             val i1 = fresh_i gctx sctx BSTime r
             val i2 = fresh_i gctx sctx BSTime r
-            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N width, t, i1)) (* can only read 32-bit arrays; 8-bit arrays need to be read via another command *)
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N width, t, i1))
             val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
             val () = write_lt (i2, i1, r)
           in
@@ -1703,9 +1703,12 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           end
 	| U.EBinOp (EBPrim opr, e1, e2) =>
 	  let
-            val (e1, d1, st) = check_mtype (ctx, st) (e1, TBase (get_prim_expr_bin_op_arg1_ty opr, dummy))
-	    val (e2, d2, st) = check_mtype (ctx, st) (e2, TBase (get_prim_expr_bin_op_arg2_ty opr, dummy)) in
-	    (EBinOp (EBPrim opr, e1, e2), TBase (get_prim_expr_bin_op_res_ty opr, dummy), d1 %%+ d2 %%+ TN (C_EBPrim opr), st)
+            val t1 = TBase (get_prim_expr_bin_op_arg1_ty opr, dummy)
+            val t2 = TBase (get_prim_expr_bin_op_arg2_ty opr, dummy)
+            val t_r = TBase (get_prim_expr_bin_op_res_ty opr, dummy)
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, t1)
+	    val (e2, d2, st) = check_mtype (ctx, st) (e2, t2) in
+	    (EBinOp (EBPrim opr, e1, e2), t_r, d1 %%+ d2 %%+ TN (C_EBPrim opr), st)
 	  end
 	| U.EBinOp (opr as EBIntNatExp (), e1, e2) =>
           let
@@ -2095,7 +2098,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val t = fresh_mt gctx (sctx, kctx) r
             val i1 = fresh_i gctx sctx BSTime r
             val i2 = fresh_i gctx sctx BSTime r
-            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N width, t, i1)) (* can only write 32-bit arrays; 8-bit arrays need to be written via another command *)
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N width, t, i1))
             val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
             val () = write_lt (i2, i1, r)
             val (e3, d3, st) = check_mtype (ctx, st) (e3, t)

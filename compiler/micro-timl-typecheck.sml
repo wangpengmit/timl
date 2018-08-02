@@ -391,7 +391,7 @@ fun is_sub_rctx ctx (rctx, rctx_abs) =
 fun is_eq_tys ctx a = is_eq_list "is_eq_tys()/unequal-lengths" (is_eq_ty ctx) a
 
 fun good_width itctx width t =
-  if width = 8 then is_eq_ty itctx (t, TByte)
+  if width = 1 then is_eq_ty itctx (t, TByte)
   else assert_b "evm/tc()/array_malloc: width=32" $ width = 32
                                  
 fun kc (* st_types *) (ctx as (ictx, tctx) : icontext * tcontext) t_input =

@@ -59,7 +59,7 @@ fun C_NatCmp opr =
     | NCNEq () => C_EQ + C_ISZERO
 
 val C_ArrayLen = C_PUSH + C_SWAP + C_SUB + C_MLOAD
-val C_Array8LastWord = C_PUSH + C_SWAP + C_SUB + C_DUP + C_MLOAD + C_ADD
+(* val C_Array8LastWord = C_PUSH + C_SWAP + C_SUB + C_DUP + C_MLOAD + C_ADD *)
 val C_Nat2Int = 0
 val C_Int2Nat = 0
 val C_StorageGet = C_SLOAD
@@ -79,9 +79,9 @@ val C_array_ptr = C_PUSH + C_MUL + C_ADD
 fun C_Read w =
   if w = 32 then
     C_array_ptr + C_MLOAD
-  else if w = 8 then
+  else if w = 1 then
     C_ADD + C_PUSH + C_SWAP + C_SUB + C_MLOAD + C_int2byte
-  else raise Util.Impossible "C_Read(): w <> 32 or 8"
+  else raise Util.Impossible "C_Read(): w <> 32 or 1"
 (* val C_Read8 = C_ADD + C_MLOAD *)
 (* val C_Read8 = C_ADD + C_PUSH + C_SWAP + C_SUB + C_MLOAD + C_int2byte *)
 val C_map_ptr = C_PUSH + C_MSTORE + C_PUSH + C_MSTORE + C_PUSH + C_PUSH + C_SHA3 + 2 * C_sha3word
@@ -103,9 +103,9 @@ val C_EState = 0
 fun C_Write w =
   if w = 32 then
     C_SWAP * 2 + C_array_ptr + C_MSTORE + C_PUSH
-  else if w = 8 then
+  else if w = 1 then
     C_SWAP + C_ADD + C_MSTORE8 + C_PUSH
-  else raise Util.Impossible "C_Write(): w <> 32 or 8"
+  else raise Util.Impossible "C_Write(): w <> 32 or 1"
 (* val C_Write8 = C_SWAP + C_ADD + C_MSTORE8 + C_PUSH *)
 val C_br_sum = C_DUP + C_MLOAD + C_SWAP + C_JUMPI
 fun C_NewArrayValues w n = C_PUSH + C_DUP + C_array_malloc + C_SWAP + C_array_init_len + C_PUSH + n * (C_SWAP * 2 + C_array_init_assign w + C_SWAP + C_POP + C_SWAP + C_PUSH + C_ADD) + C_POP + C_MARK_PreArray2ArrayPtr
@@ -162,7 +162,7 @@ val C_EPrintc = C_Printc + C_Var + C_Let
 fun C_EUPrim opr = C_UPrim opr + C_Var + C_Let
 val C_EiBoolNeg = C_EUPrim (EUPBoolNeg ())
 val C_EArrayLen = C_ArrayLen + C_Var + C_Let
-val C_EArray8LastWord = C_Array8LastWord + C_Var + C_Let
+(* val C_EArray8LastWord = C_Array8LastWord + C_Var + C_Let *)
 val C_ENat2Int = C_Nat2Int + C_Var + C_Let
 val C_EInt2Nat = C_Int2Nat + C_Var + C_Let
 val C_EStorageGet = C_StorageGet + C_Var + C_Let

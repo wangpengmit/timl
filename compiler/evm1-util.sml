@@ -8,9 +8,9 @@ infixr 5 @@
 fun MSTORE_n w =
   if w = 32 then
     [MSTORE ()]
-  else if w = 8 then
+  else if w = 1 then
     [MSTORE8 ()]
-  else raise Impossible "MSTORE_n(): w <> 32 or 8"
+  else raise Impossible "MSTORE_n(): w <> 32 or 1"
          
 fun inline_macro_inst (params as (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr, TUnit)) (inst : ('a, 'b) inst) =
   let

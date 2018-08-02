@@ -439,10 +439,10 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
                     if w = 32 then
                       (check_prop (IMod (offset, N32) %= N0 /\ N1 %<= offset %/ N32 /\ offset %/ N32 %<= len);
                        t)
-                    else if w = 8 then
+                    else if w = 1 then
                       (check_prop (offset %<= len); (* it's safe to read [offset, offset+32) because there is the length data *)
                        TInt)
-                    else raise Impossible "evm/tc/MLoad: can't read TArrayPtr with width not 32 or 8"
+                    else raise Impossible "evm/tc/MLoad: can't read TArrayPtr with width not 32 or 1"
                 in
                   case simp_i offset of
                      IConst (ICNat n, _) =>
@@ -482,7 +482,7 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         fun def () = raise Impossible $ sprintf "MSTORE8: can't write to address of type ($)" [str_t t0]
         val rctx =
             case t0 of
-                TArrayPtr (8, t, len, offset) =>
+                TArrayPtr (1, t, len, offset) =>
                 (is_eq_ty itctx (t1, t); check_prop (N32 %<= offset /\ offset %< N32 %+ len); rctx)
               | _ => def ()
       in

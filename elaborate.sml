@@ -504,7 +504,7 @@ local
                    String.implode $ rev $ loop (ls, [])
                  end
                val s = unescape s
-               val e = ENewArrayValues (8, TByte r, map (fn c => EByte (c, r)) $ String.explode s, r)
+               val e = ENewArrayValues (1, TByte r, map (fn c => EByte (c, r)) $ String.explode s, r)
                                        (* val e = EApp (EVar (QID $ qid_add_r r $ CSTR_STRING_NAMEFUL, false), e) *)
              in
                e
@@ -532,7 +532,7 @@ local
 		   else if x = "nat2int" then EUnOp (EUNat2Int (), elab e2, r)
 		   else if x = "__&int2nat" then EUnOp (EUInt2Nat (), elab e2, r)
 		   else if x = "int2nat" then EUnOp (EUInt2Nat (), elab e2, r)
-		   else if x = "__&byte2int" then EUnOp (EUPrim (EUPByte2Int ()), elab e2, r)
+		   else if x = "__&byte2int" orelse x = "byte2int" then EUnOp (EUPrim (EUPByte2Int ()), elab e2, r)
 		   else if x = "__&int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
 		   else if x = "int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
 		   else if x = "__&array_length" then EUnOp (EUArrayLen (), elab e2, r)
@@ -554,10 +554,10 @@ local
                           ENew (32, elab e1, elab e2)
                         | _ => raise Error (r, "arguments should be (_, _)")
                      )
-		   else if x = "new_array8" then
+		   else if x = "new_array1" then
                      (case e2 of
                           S.ETuple ([e1, e2], _) =>
-                          ENew (8, elab e1, elab e2)
+                          ENew (1, elab e1, elab e2)
                         | _ => raise Error (r, "arguments should be (_, _)")
                      )
 		   else if x = "__&sub" orelse x = "array_get" then
@@ -566,10 +566,10 @@ local
                           ERead (32, elab e1, elab e2)
                         | _ => raise Error (r, "should be '__&sub (_, _)'")
                      )
-		   else if x = "array8_get" then
+		   else if x = "array1_get" then
                      (case e2 of
                           S.ETuple ([e1, e2], _) =>
-                          ERead (8, elab e1, elab e2)
+                          ERead (1, elab e1, elab e2)
                         | _ => raise Error (r, "should be '__&sub (_, _)'")
                      )
 		   else if x = "push_back" then
@@ -584,10 +584,10 @@ local
                           EWrite (32, elab e1, elab e2, elab e3)
                         | _ => raise Error (r, "should be '__&update (_, _, _)'")
                      )
-		   else if x = "array8_set" then
+		   else if x = "array1_set" then
                      (case e2 of
                           S.ETuple ([e1, e2, e3], _) =>
-                          EWrite (8, elab e1, elab e2, elab e3)
+                          EWrite (1, elab e1, elab e2, elab e3)
                         | _ => raise Error (r, "should be '__&update (_, _, _)'")
                      )
 		   else default ()

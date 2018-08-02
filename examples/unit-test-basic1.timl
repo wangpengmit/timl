@@ -2,6 +2,7 @@ structure UnitTestBasic1 = struct
 
 fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
 fun assert p = if p then waste_time (); () else __&halt 0x11111111
+fun assert_byte (a, b) = assert (byte2int a = byte2int b)
 
 (* val f = fn y => 1 + y *)
 (* val a = (f 64) using _ *)
@@ -56,8 +57,17 @@ val () = assert (array_get (a, #1) = 0x123)
 val () = array_set (a, #1, 0x333)
 val () = assert (array_get (a, #1) = 0x333)
 
-val a = ""
-val a = "abc" using _, _
+val a : string {0} = ""
+val a : array1 byte {3} = "abc" using _, _
+val () = assert_byte (array1_get (a, #0), #"a")
+val () = assert_byte (array1_get (a, #1), #"b")
+val () = assert_byte (array1_get (a, #2), #"c")
+val a : array1 byte {4} = new_array1 (#4, #"d") using _, _
+val () = assert_byte (array1_get (a, #0), #"d")
+val () = assert_byte (array1_get (a, #1), #"d")
+val () = assert_byte (array1_get (a, #2), #"d")
+val () = assert_byte (array1_get (a, #3), #"d")
+                         
 val () = __&printc #"a"
 val () = __&printc #"b"
 
