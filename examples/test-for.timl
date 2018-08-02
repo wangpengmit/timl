@@ -14,14 +14,14 @@ fun for_name ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= een
     %loop (start, init)
   end
   
-  fun copy_name {old len : Nat} (s : array byte {len}) pre {name : old} post {name : len} =
+  fun copy_name {old len : Nat} (s : string {len}) pre {name : old} post {name : len} =
     vector_clear name;
     %for_name (#0, array_len s, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) pre {name : i} post {name : i+1} =>
-      push_back (name, array_get(s, i))
+      push_back (name, array1_get(s, i))
     )
 
-(* val a = "my_name"      *)
-val a = {#"m", #"y",#"_",}
+val a = "my_name"
+(* val a = {#"m", #"y",#"_",} *)
 val () = %copy_name a
      
 end
