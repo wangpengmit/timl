@@ -9,12 +9,13 @@ val C_Let = C_set_reg
 val C_Proj = C_PUSH + C_ADD + C_MLOAD
 val C_PtrProj = C_PUSH + C_ADD
 val C_Printc = 5 * C_PUSH + C_MSTORE + C_ADD + C_LOG 0 + C_logdata
+val C_int2byte = C_PUSH + C_BYTE                                                           
 fun C_UPrim opr =
   case opr of
       EUPIntNeg () => C_PUSH + C_SUB
     | EUPBitNot () => C_NOT
     | EUPBoolNeg () => C_ISZERO
-    | EUPInt2Byte () => C_PUSH + C_BYTE
+    | EUPInt2Byte () => C_int2byte
     | EUPByte2Int () => 0
 fun C_BPrim opr =
   case opr of
@@ -75,8 +76,14 @@ val C_Pair = C_Tuple 2
 val C_array_malloc = C_PUSH + C_MLOAD + C_PUSH + C_ADD + C_DUP + C_SWAP + C_PUSH + C_MUL + C_ADD + C_PUSH + C_MSTORE
 val C_array_init_len = C_DUP + C_PUSH + C_SWAP + C_SUB + C_MSTORE
 val C_array_ptr = C_PUSH + C_MUL + C_ADD
-val C_Read = C_array_ptr + C_MLOAD
-val C_Read8 = C_ADD + C_MLOAD
+fun C_Read w =
+  if w = 32 then
+    C_array_ptr + C_MLOAD
+  else if w = 8 then
+    C_ADD + C_PUSH + C_SWAP + C_SUB + C_MLOAD + C_int2byte
+  else raise Util.Impossible "C_Read(): w <> 32 or 8"
+(* val C_Read8 = C_ADD + C_MLOAD *)
+(* val C_Read8 = C_ADD + C_PUSH + C_SWAP + C_SUB + C_MLOAD + C_int2byte *)
 val C_map_ptr = C_PUSH + C_MSTORE + C_PUSH + C_MSTORE + C_PUSH + C_PUSH + C_SHA3 + 2 * C_sha3word
 val C_MapPtr = C_map_ptr
 val C_vector_ptr = C_PUSH + C_MSTORE + C_PUSH + C_PUSH + C_SHA3 + C_sha3word + C_ADD
@@ -93,8 +100,13 @@ val C_NatCellSet = C_SWAP + C_PUSH (* the cost of SSTORE will depend on operands
 (* val C_State = C_PUSH *)
 (* val C_EState = C_State + C_Let *)
 val C_EState = 0
-val C_Write = C_SWAP * 2 + C_array_ptr + C_MSTORE + C_PUSH
-val C_Write8 = C_SWAP + C_ADD + C_MSTORE8 + C_PUSH
+fun C_Write w =
+  if w = 32 then
+    C_SWAP * 2 + C_array_ptr + C_MSTORE + C_PUSH
+  else if w = 8 then
+    C_SWAP + C_ADD + C_MSTORE8 + C_PUSH
+  else raise Util.Impossible "C_Write(): w <> 32 or 8"
+(* val C_Write8 = C_SWAP + C_ADD + C_MSTORE8 + C_PUSH *)
 val C_br_sum = C_DUP + C_MLOAD + C_SWAP + C_JUMPI
 fun C_NewArrayValues w n = C_PUSH + C_DUP + C_array_malloc + C_SWAP + C_array_init_len + C_PUSH + n * (C_SWAP * 2 + C_array_init_assign w + C_SWAP + C_POP + C_SWAP + C_PUSH + C_ADD) + C_POP + C_MARK_PreArray2ArrayPtr
 val C_Never = C_PUSH
@@ -160,8 +172,8 @@ val C_EVectorClear = C_VectorClear + C_Var + C_Let
 val C_New_pre_loop = 2 * C_SWAP + 2 * C_DUP + C_array_malloc + C_array_init_len + 2 * C_PUSH + C_MUL + C_JUMP
 val C_ENew_order0 = C_New_pre_loop + C_New_loop_test + C_New_post_loop + 2 * C_Var
 fun C_ENew_order1 w = C_New_loop w
-val C_ERead = C_Read + 2 * C_Var + C_Let
-val C_ERead8 = C_Read8 + 2 * C_Var + C_Let
+fun C_ERead w = C_Read w + 2 * C_Var + C_Let
+(* val C_ERead8 = C_Read8 + 2 * C_Var + C_Let *)
 fun C_ENat opr = C_Nat opr + 2 * C_Var + C_Let
 fun C_EiBool opr = C_iBool opr + 2 * C_Var + C_Let
 fun C_EBPrim opr = C_BPrim opr + 2 * C_Var + C_Let
@@ -172,8 +184,8 @@ val C_EVectorPushBack = C_VectorPushBack + 2 * C_Var + C_Let
 val C_EStorageSet = C_StorageSet + 2 * C_Var + C_Let
 val C_ENatCellSet = C_NatCellSet + 2 * C_Var + C_Let
 val C_EVectorSet = C_VectorSet + 3 * C_Var + C_Let
-val C_EWrite = C_Write + 3 * C_Var + C_Let
-val C_EWrite8 = C_Write8 + 3 * C_Var + C_Let
+fun C_EWrite w = C_Write w + 3 * C_Var + C_Let
+(* val C_EWrite8 = C_Write8 + 3 * C_Var + C_Let *)
 val C_ENever = C_Never + C_Let
 val C_EBuiltin = C_Builtin + C_Let
 fun C_ENewArrayValues w len = C_NewArrayValues w len + len * C_Var + C_Let

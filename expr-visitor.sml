@@ -81,7 +81,7 @@ type ('this, 'env) expr_visitor_vtable =
        visit_EAdd : 'this -> 'env -> expr * expr -> T.expr,
        visit_ENatAdd : 'this -> 'env -> expr * expr -> T.expr,
        visit_ENew : 'this -> 'env -> int * (expr * expr) -> T.expr,
-       visit_ERead : 'this -> 'env -> expr * expr -> T.expr,
+       visit_ERead : 'this -> 'env -> int * (expr * expr) -> T.expr,
        visit_EAppI : 'this -> 'env -> expr * idx -> T.expr,
        visit_EAscTime : 'this -> 'env -> expr * idx -> T.expr,
        visit_EAppT : 'this -> 'env -> expr * mtype -> T.expr,
@@ -208,7 +208,7 @@ fun default_expr_visitor_vtable
             EBApp () => #visit_EApp vtable this env data
           (* | EBPair () => #visit_EPair vtable this env data *)
           | EBNew w => #visit_ENew vtable this env (w, data)
-          | EBRead () => #visit_ERead vtable this env data
+          | EBRead w => #visit_ERead vtable this env (w, data)
           | EBPrim (EBPIntAdd ()) => #visit_EAdd vtable this env data
           | EBNat (EBNAdd ()) => #visit_ENatAdd vtable this env data
           | _ => T.EBinOp (opr, #visit_expr vtable this env e1, #visit_expr vtable this env e2)
@@ -257,14 +257,13 @@ fun default_expr_visitor_vtable
       in
         T.EBinOp (EBNew w, e1, e2)
       end
-    fun visit_ERead this env data =
+    fun visit_ERead this env (w, (e1, e2)) =
       let
         val vtable = cast this
-        val (e1, e2) = data
         val e1 = #visit_expr vtable this env e1
         val e2 = #visit_expr vtable this env e2
       in
-        T.EBinOp (EBRead (), e1, e2)
+        T.EBinOp (EBRead w, e1, e2)
       end
     fun visit_ETriOp this env data =
       let

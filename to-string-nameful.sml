@@ -348,7 +348,7 @@ fun strn_e e =
          (*     sprintf "($)" [join ", " $ map strn_e es] *)
          (*   end *)
          | EBNew w => sprintf "(new $ $ $)" [str_int w, strn_e e1, strn_e e2]
-         | EBRead () => sprintf "(read $ $)" [strn_e e1, strn_e e2]
+         | EBRead w => sprintf "(read $ $ $)" [str_int w, strn_e e1, strn_e e2]
          | _ => sprintf "($ $ $)" [strn_e e1, pretty_str_expr_bin_op opr, strn_e e2]
       )
     | ETriOp (opr, e1, e2, e3) => sprintf "($ $ $ $)" [str_expr_tri_op opr, strn_e e1, strn_e e2, strn_e e3]

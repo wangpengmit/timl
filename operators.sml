@@ -204,7 +204,7 @@ datatype expr_un_op =
          EUProj of int
          | EUPrim of prim_expr_un_op
          | EUArrayLen of unit
-         | EUArray8LastWord of unit
+         (* | EUArray8LastWord of unit *)
          | EUiBoolNeg of unit
          | EUNat2Int of unit
          | EUInt2Nat of unit
@@ -374,8 +374,8 @@ datatype expr_bin_op =
          EBApp of unit
          (* | EBPair of unit *)
          | EBNew of int
-         | EBRead of unit
-         | EBRead8 of unit
+         | EBRead of int
+         (* | EBRead8 of unit *)
          | EBVectorGet of unit
          | EBVectorPushBack of unit
          | EBMapPtr of unit
@@ -392,7 +392,7 @@ fun str_expr_bin_op opr =
       EBApp _ => "app"
     (* | EBPair () => "pair" *)
     | EBNew w => "new " ^ str_int w
-    | EBRead () => "read"
+    | EBRead w => "read " ^ str_int w
     | EBPrim opr => str_prim_expr_bin_op opr
     | EBNat opr => str_nat_expr_bin_op opr
     | EBNatCmp opr => str_nat_cmp opr
@@ -409,7 +409,7 @@ fun pretty_str_expr_bin_op opr =
       EBApp _ => "$"
     (* | EBPair () => "pair" *)
     | EBNew w => "new " ^ str_int w
-    | EBRead () => "read"
+    | EBRead w => "read " ^ str_int w
     | EBPrim opr => pretty_str_prim_expr_bin_op opr
     | EBNat opr => pretty_str_nat_expr_bin_op opr
     | EBNatCmp opr => pretty_str_nat_cmp opr
@@ -422,14 +422,14 @@ fun pretty_str_expr_bin_op opr =
     | EBIntNatExp () => "int_nat_exp"
 
 datatype expr_tri_op =
-         ETWrite of unit
-         | ETWrite8 of unit
+         ETWrite of int
+         (* | ETWrite8 of unit *)
          | ETIte of unit
          | ETVectorSet of unit
 
 fun str_expr_tri_op opr =
   case opr of
-      ETWrite () => "write"
+      ETWrite w => "write " ^ str_int w
     | ETIte _ => "ite"
     | ETVectorSet () => "vector_set"
                   

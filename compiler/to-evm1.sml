@@ -292,7 +292,7 @@ fun impl_expr_un_op opr =
     | EUNat2Int () => [NAT2INT ()]
     | EUInt2Nat () => [INT2NAT ()]
     | EUArrayLen () => [PUSH1nat 32, SWAP1, SUB (), MLOAD ()]
-    | EUArray8LastWord () => [PUSH1nat 32, SWAP1, SUB (), DUP1, MLOAD (), ADD ()]
+    (* | EUArray8LastWord () => [PUSH1nat 32, SWAP1, SUB (), DUP1, MLOAD (), ADD ()] *)
     | EUPrintc () => printc
     (* | EUPrint () => [PRINT] *)
     | EUStorageGet () => [SLOAD ()]
@@ -361,6 +361,9 @@ fun impl_nat_cmp opr =
     | NCNEq () => [EQ (), ISZERO ()]
       
 val st_ref = ref IEmptyState
+
+(* adding noop instructions for costs debugging *)                 
+fun debug_pad n = repeat n $ JUMPDEST ()
                  
 fun compile st_name2int ectx e =
   let
@@ -375,7 +378,8 @@ fun compile st_name2int ectx e =
            SOME (name, v) =>
            (case v of
                 inl r => get_reg r
-              | inr l => PUSH_value (VLabel l) @ repeat C_MLOAD (JUMPDEST ())(*to make gas cost the same as get_reg, for debugging purpose*)
+              | inr l => PUSH_value (VLabel l) @ debug_pad C_MLOAD (*to make gas cost the same as get_reg, for debugging purpose*)                 
+
            )
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
     | EConst c => PUSH_value $ VConst $ cg_c c
@@ -388,7 +392,7 @@ fun compile st_name2int ectx e =
          | EnvBalance () => [BALANCE ()]
          | EnvBlockNumber () => [NUMBER ()]
       )
-    | EState x => (PUSH_value $ VState $ st_name2int @!! x) @ repeat C_MLOAD (JUMPDEST ())(*to make gas cost the same as get_reg, for debugging purpose*)
+    | EState x => (PUSH_value $ VState $ st_name2int @!! x) @ debug_pad C_MLOAD (*to make gas cost the same as get_reg, for debugging purpose*)
     | EAppT (e, t) => compile e @ [VALUE_AppT $ Inner $ cg_t t]
     | EAppI (e, i) => compile e @ [VALUE_AppI $ Inner i]
     | EPack (t_pack, t, e) => compile e @ [VALUE_Pack (Inner $ cg_t t_pack, Inner $ cg_t t)]
@@ -445,27 +449,41 @@ fun compile st_name2int ectx e =
         concatMap (fn e => compile e @ [SWAP2, SWAP1] @ array_init_assign width @ [SWAP2, POP (), SWAP1, PUSH1nat width, ADD ()]) es @
         [POP (), MARK_PreArray2ArrayPtr ()]
       end
-    | EBinOp (EBRead (), e1, e2) =>
+    | EBinOp (EBRead width, e1, e2) =>
       compile e1 @
       compile e2 @
-      array_ptr @
-      [MLOAD ()]
-    | EBinOp (EBRead8 (), e1, e2) =>
-      compile e1 @
-      compile e2 @
-      [ADD (), MLOAD ()]
-    | ETriOp (ETWrite (), e1, e2, e3) =>
+      (if width = 32 then
+         array_ptr @
+         [MLOAD ()]
+       else if width = 8 then
+         [ADD (), PUSH1nat 31, SWAP1, SUB (), MLOAD ()] @ int2byte
+       else raise Impossible "to-evm/ERead: width <> 32 or 8"
+      )
+    (* | EBinOp (EBRead8 (), e1, e2) => *)
+    (*   compile e1 @ *)
+    (*   compile e2 @ *)
+    (*   [ADD (), MLOAD ()] *)
+    (* | EBinOp (EBRead8 (), e1, e2) => *)
+    (*   compile e1 @ *)
+    (*   compile e2 @ *)
+    (*   [ADD (), PUSH1nat 31, SWAP1, SUB (), MLOAD ()] @ int2byte *)
+    | ETriOp (ETWrite width, e1, e2, e3) =>
       compile e1 @
       compile e2 @
       compile e3 @
-      [SWAP2, SWAP1] @
-      array_ptr @
-      [MSTORE (), PUSH1 WTT]
-    | ETriOp (ETWrite8 (), e1, e2, e3) =>
-      compile e1 @
-      compile e2 @
-      compile e3 @
-      [SWAP2, ADD (), MSTORE8 (), PUSH1 WTT]
+      (if width = 32 then
+         [SWAP2, SWAP1] @
+         array_ptr @
+         [MSTORE (), PUSH1 WTT]
+       else if width = 8 then
+         [SWAP2, ADD (), MSTORE8 (), PUSH1 WTT]
+       else raise Impossible "to-evm/EWrite: width <> 32 or 8"
+      )
+    (* | ETriOp (ETWrite8 (), e1, e2, e3) => *)
+    (*   compile e1 @ *)
+    (*   compile e2 @ *)
+    (*   compile e3 @ *)
+    (*   [SWAP2, ADD (), MSTORE8 (), PUSH1 WTT] *)
     | EUnOp (EUUnfold (), e) =>
       compile e @ [UNFOLD ()]
     (* | EUnOp (EUTupleProj n, e) => *)
@@ -852,7 +870,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | ERecord _ => err ()
     (* | EBinOp (EBPair (), _, _) => err () *)
     | EBinOp (EBNew _, _, _) => err ()
-    | EBinOp (EBRead (), _, _) => err ()
+    | EBinOp (EBRead _, _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBiBool _, _, _) => err ()
     | EBinOp (EBNat _, _, _) => err ()
@@ -863,7 +881,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | EBinOp (EBMapPtr (), _, _) => err ()
     | EBinOp (EBStorageSet (), _, _) => err ()
     | EBinOp (EBNatCellSet (), _, _) => err ()
-    | ETriOp (ETWrite (), _, _, _) => err ()
+    | ETriOp (ETWrite _, _, _, _) => err ()
     | ETriOp (ETVectorSet (), _, _, _) => err ()
     | EVar _ => err ()
     | EConst _ => err ()

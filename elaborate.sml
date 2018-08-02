@@ -563,7 +563,13 @@ local
 		   else if x = "__&sub" orelse x = "array_get" then
                      (case e2 of
                           S.ETuple ([e1, e2], _) =>
-                          ERead (elab e1, elab e2)
+                          ERead (32, elab e1, elab e2)
+                        | _ => raise Error (r, "should be '__&sub (_, _)'")
+                     )
+		   else if x = "array8_get" then
+                     (case e2 of
+                          S.ETuple ([e1, e2], _) =>
+                          ERead (8, elab e1, elab e2)
                         | _ => raise Error (r, "should be '__&sub (_, _)'")
                      )
 		   else if x = "push_back" then
@@ -575,7 +581,13 @@ local
 		   else if x = "__&update" orelse x = "array_set" then
                      (case e2 of
                           S.ETuple ([e1, e2, e3], _) =>
-                          EWrite (elab e1, elab e2, elab e3)
+                          EWrite (32, elab e1, elab e2, elab e3)
+                        | _ => raise Error (r, "should be '__&update (_, _, _)'")
+                     )
+		   else if x = "array8_set" then
+                     (case e2 of
+                          S.ETuple ([e1, e2, e3], _) =>
+                          EWrite (8, elab e1, elab e2, elab e3)
                         | _ => raise Error (r, "should be '__&update (_, _, _)'")
                      )
 		   else default ()
@@ -587,7 +599,7 @@ local
       | S.EBinOp (EBStrConcat (), e1, e2, r) =>
         EApp (EVar (QID $ qid_add_r r $ STR_CONCAT_NAMEFUL, (false, false)), EPair (elab e1, elab e2))
       | S.EBinOp (EBSetRef true, e1, e2, r) => EStorageSet (elab e1, elab e2)
-      | S.EBinOp (EBSetRef false, e1, e2, r) => EWrite (elab e1, ENat (0, r), elab e2)
+      | S.EBinOp (EBSetRef false, e1, e2, r) => EWrite (32, elab e1, ENat (0, r), elab e2)
       | S.EUnOp (opr, e, r) =>
         (case opr of
              S.EUTiML opr =>
@@ -615,7 +627,7 @@ local
              )
            | S.EUThrow () => EHalt (elab e, TUVar ((), r))
            | S.EUDeref true => EStorageGet (elab e, r)
-           | S.EUDeref false => ERead (elab e, ENat (0, r))
+           | S.EUDeref false => ERead (32, elab e, ENat (0, r))
            | S.EUAsm _ => raise Error (r, "elaborate/EAsm")
            | S.EUReturn _ => raise Error (r, "elaborate/EReturn")
            | S.EUCall () => elab e

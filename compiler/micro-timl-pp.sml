@@ -534,7 +534,7 @@ fun str_inj opr =
 
 fun str_expr_tri_op opr =
   case opr of
-      ETWrite () => "EWrite"
+      ETWrite w => "EWrite " ^ str_int w
     | ETIte () => "EIte"
     | ETVectorSet () => "EVectorSet"
                                              

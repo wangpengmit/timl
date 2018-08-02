@@ -797,7 +797,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                 in
                   (E_nat_exp_cost i2, N 0)
                 end
-              | EBRead () => (N C_ERead, N 0)
+              | EBRead w => (N $ C_ERead w, N 0)
               | EBVectorGet () => (N C_EVectorGet, N 0)
               | EBVectorPushBack () => (N C_EVectorPushBack, N 0)
               | EBMapPtr () => (N C_EMapPtr, N 0)
@@ -983,7 +983,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val e = EAbs (st_e1 %++ F, close0_e_e_anno ((x3, "x3", t_x3), e), NONE)
         val cost =
             case opr of
-                ETWrite _ => C_EWrite
+                ETWrite w => C_EWrite w
               | ETIte _ => raise Impossible "cps()/ETriOp/Ite"
               | ETVectorSet _ => C_EVectorSet
         val (e, i_e) = cps (e3, t_e3) (e, TN cost %%+ j_k)
@@ -1261,7 +1261,7 @@ fun check_CPSed_expr e =
     | ETuple _ => err ()
     | ERecord _ => err ()
     | EBinOp (EBNew _, _, _) => err ()
-    | EBinOp (EBRead (), _, _) => err ()
+    | EBinOp (EBRead _, _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBiBool _, _, _) => err ()
     | EBinOp (EBNat _, _, _) => err ()
@@ -1272,7 +1272,7 @@ fun check_CPSed_expr e =
     | EBinOp (EBMapPtr (), _, _) => err ()
     | EBinOp (EBStorageSet (), _, _) => err ()
     | EBinOp (EBNatCellSet (), _, _) => err ()
-    | ETriOp (ETWrite (), _, _, _) => err ()
+    | ETriOp (ETWrite _, _, _, _) => err ()
     | ETriOp (ETVectorSet (), _, _, _) => err ()
     | EVar _ => err ()
     | EConst _ => err ()
@@ -1315,7 +1315,7 @@ and check_decl e =
         (assert_b "check_decl/EBinOp/opr <> EBApp" $ opr <> EBApp ();
          check_value e1;
          check_value e2)
-      | ETriOp (ETWrite (), e1, e2, e3) =>
+      | ETriOp (ETWrite _, e1, e2, e3) =>
         (check_value e1;
          check_value e2;
          check_value e3)
@@ -1398,7 +1398,7 @@ and check_value e =
     (* | EUnOp (EUTupleProj _, _) => err () *)
     | EBinOp (EBApp (), _, _) => err ()
     | EBinOp (EBNew _, _, _) => err ()
-    | EBinOp (EBRead (), _, _) => err ()
+    | EBinOp (EBRead _, _, _) => err ()
     | EBinOp (EBPrim _, _, _) => err ()
     | EBinOp (EBiBool _, _, _) => err ()
     | EBinOp (EBNat _, _, _) => err ()

@@ -783,7 +783,7 @@ fun is_value (e : U.expr) : bool =
              EBApp () => false
            (* | EBPair () => is_value e1 andalso is_value e2 *)
            | EBNew _ => false
-           | EBRead () => false
+           | EBRead _ => false
            | EBPrim _ => false
            | EBNat _ => false
            | EBNatCmp _ => false
@@ -800,7 +800,7 @@ fun is_value (e : U.expr) : bool =
       | ENewArrayValues _ => false
       | ETriOp (opr, _, _, _) =>
         (case opr of
-             ETWrite () => false
+             ETWrite _ => false
            | ETIte () => false
            | ETVectorSet () => false
         )                        
@@ -1689,17 +1689,17 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EBinOp (opr, e1, e2), TArray (width_i, t, len), d1 %%+ d2 %%+ (IToReal (cost, dummy), len %* width_i %+ N 32), st)
           end
-	| U.EBinOp (opr as EBRead (), e1, e2) =>
+	| U.EBinOp (opr as EBRead width, e1, e2) =>
           let
             val r = U.get_region_e e_all
             val t = fresh_mt gctx (sctx, kctx) r
             val i1 = fresh_i gctx sctx BSTime r
             val i2 = fresh_i gctx sctx BSTime r
-            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N 32, t, i1)) (* can only read 32-bit arrays; 8-bit arrays need to be read via another command *)
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N width, t, i1)) (* can only read 32-bit arrays; 8-bit arrays need to be read via another command *)
             val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
             val () = write_lt (i2, i1, r)
           in
-            (EBinOp (opr, e1, e2), t, d1 %%+ d2 %%+ TN C_ERead, st)
+            (EBinOp (opr, e1, e2), t, d1 %%+ d2 %%+ TN (C_ERead width), st)
           end
 	| U.EBinOp (EBPrim opr, e1, e2) =>
 	  let
@@ -2089,18 +2089,18 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             get_mtype ctx_st e
           end
-	| U.ETriOp (ETWrite (), e1, e2, e3) =>
+	| U.ETriOp (opr as ETWrite width, e1, e2, e3) =>
           let
             val r = U.get_region_e e_all
             val t = fresh_mt gctx (sctx, kctx) r
             val i1 = fresh_i gctx sctx BSTime r
             val i2 = fresh_i gctx sctx BSTime r
-            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N 32, t, i1)) (* can only write 32-bit arrays; 8-bit arrays need to be written via another command *)
+            val (e1, d1, st) = check_mtype (ctx, st) (e1, TArray (N width, t, i1)) (* can only write 32-bit arrays; 8-bit arrays need to be written via another command *)
             val (e2, d2, st) = check_mtype (ctx, st) (e2, TNat (i2, r))
             val () = write_lt (i2, i1, r)
             val (e3, d3, st) = check_mtype (ctx, st) (e3, t)
           in
-            (ETriOp (ETWrite (), e1, e2, e3), TUnit r, d1 %%+ d2 %%+ d3 %%+ TN C_EWrite, st)
+            (ETriOp (opr, e1, e2, e3), TUnit r, d1 %%+ d2 %%+ d3 %%+ TN (C_EWrite width), st)
           end
 	| U.EEI (opr, e, i) =>
           (case opr of

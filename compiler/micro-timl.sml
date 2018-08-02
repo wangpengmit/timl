@@ -222,7 +222,7 @@ fun is_value e =
     | EVarConstr _ => true
     | EBinOp (EBApp (), _, _) => false
     | EBinOp (EBNew _, _, _) => false
-    | EBinOp (EBRead (), _, _) => false
+    | EBinOp (EBRead _, _, _) => false
     | EBinOp (EBPrim _, _, _) => false
     | EBinOp (EBiBool _, _, _) => false
     | EBinOp (EBNat _, _, _) => false
@@ -253,7 +253,7 @@ fun is_value e =
          | EUField _ => false
       )
     (* | EUnOp (EUTupleProj _, _) => false *)
-    | ETriOp (ETWrite (), _, _, _) => false
+    | ETriOp (ETWrite _, _, _, _) => false
     | ETriOp (ETIte (), _, _, _) => false
     | ETriOp (ETVectorSet (), _, _, _) => false
     | ECase _ => false
