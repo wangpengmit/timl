@@ -363,7 +363,10 @@ fun impl_nat_cmp opr =
 val st_ref = ref IEmptyState
 
 (* adding noop instructions for costs debugging *)                 
-fun debug_pad n = repeat n $ JUMPDEST ()
+fun debug_pad n =
+  if CostDebug.is_debug_cost () then
+    repeat n $ JUMPDEST ()
+  else []
                  
 fun compile st_name2int ectx e =
   let
@@ -1035,7 +1038,7 @@ fun test1 dirname =
               (* concatMap (fn vc => str_vc true filename vc @ [""]) $ map fst vcs *)
               concatMap (VCSolver.print_unsat true filename) vcs
             )
-    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
+    (* val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs *)
     val () = check_vcs vcs
     val () = println "Finished TiML typechecking"
                      
@@ -1074,7 +1077,7 @@ fun test1 dirname =
     val () = write_file (join_dir_file' dirname $ "unit-test-after-translation-before-tc.tmp", e_str)
     val () = phase := PhBeforeCPS ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (Allow_substate_call :: cps_tc_flags, st_name2ty) (([], [], []), init_st) e
-    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
+    (* val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs *)
     val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #_1"
     open ExportPP
@@ -1122,7 +1125,7 @@ fun test1 dirname =
     val () = write_file (join_dir_file' dirname $ "unit-test-after-cps-before-tc.tmp", e_str)
     val () = phase := PhBeforeCC ()
     val ((e, t, i, st), (vcs, admits)) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) e
-    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
+    (* val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs *)
     val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #_2"
     (* val () = println "Type:" *)
@@ -1145,7 +1148,7 @@ fun test1 dirname =
     val () = phase := PhBeforeCodeGen ()
     val () = anno_ENew_cont := true
     val ((e, t, i, st), (vcs, admits)) = typecheck (code_gen_tc_flags, st_name2ty) (([], [], []), init_st) e
-    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
+    (* val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs *)
     val () = check_vcs vcs
     val () = println "Finished MicroTiML typechecking #_3"
     (* val () = println "Type:" *)
@@ -1154,6 +1157,16 @@ fun test1 dirname =
                      
     open EVM1ExportPP
     val e = simp_e e
+    (* some optimizations that are safe to do only after typechecking the microTiML program *)
+    val e =
+        if CostDebug.is_debug_cost () then
+          e
+        else
+          let
+            val e = combine_non_compute false e
+          in
+            e
+          end
     val e_str = ExportPP.pp_e_to_string (NONE, NONE) $ export (NONE, NONE) ToStringUtil.empty_ctx e
     val () = write_file (join_dir_file' dirname $ "unit-test-before-code-gen.tmp", e_str)
     val () = println "Started Code Generation ..."
@@ -1186,7 +1199,7 @@ fun test1 dirname =
     fun invert_map m = StMap.foldli (fn (k, v, acc) => IMap.insert (acc, v, k)) IMap.empty m
     val st_int2name = invert_map st_name2int
     val (i, (vcs, admits)) = evm1_typecheck (num_regs, st_name2ty, st_int2name, init_st) prog
-    val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs
+    (* val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs *)
     val () = println $ "#VCs = " ^ (str_int $ length vcs)
     val () = check_vcs vcs
     val () = println "Finished EVM1 typechecking"

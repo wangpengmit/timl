@@ -890,7 +890,7 @@ fun remove_var_anno_e b =
     #visit_expr vtable visitor () b
   end
 
-fun combine_non_compute_expr_visitor_vtable cast () =
+fun combine_non_compute_expr_visitor_vtable cast is_debug_cost =
   let
     val vtable = 
         default_expr_visitor_vtable
@@ -916,12 +916,19 @@ fun combine_non_compute_expr_visitor_vtable cast () =
             case e of
                 EVar _ => true
               | EState _ => true
-                (* todo: should EAscType (EVar _) in inlined? *)
               | EAscType (e, _) => f e
               | EAppI (e, _) => f e
               | EAppT (e, _) => f e
-              (* | EPackI (_, _, e) => f e *)
-              | _ => false
+              | _ =>
+                if is_debug_cost then
+                  false
+                else
+                  case e of
+                      EPackI (_, _, e) => f e
+                    | EPack (_, _, e) => f e
+                    | EUnOp (EUFold _, e) => f e
+                    | EUnOp (EUUnfold _, e) => f e
+                    | _ => false
           end
       in
         if is_non_compute e1 then
@@ -945,9 +952,9 @@ fun combine_non_compute_expr_visitor_vtable cast () =
 
 fun new_combine_non_compute_expr_visitor params = new_expr_visitor combine_non_compute_expr_visitor_vtable params
     
-fun combine_non_compute b =
+fun combine_non_compute params b =
   let
-    val visitor as (ExprVisitor vtable) = new_combine_non_compute_expr_visitor ()
+    val visitor as (ExprVisitor vtable) = new_combine_non_compute_expr_visitor params
   in
     #visit_expr vtable visitor () b
   end
@@ -963,8 +970,7 @@ val cc =
       val e = ELetManyClose (decls, e)
       val e = remove_var_anno_e e
       val e = ANF.anf e
-      (* val e = MicroTiMLPostProcess.post_process e *)
-      val e = combine_non_compute e
+      val e = combine_non_compute true e (* the 'is_debug_cost' parameter must set to true because inlining Pack/etc increases the estimated cost *)
       val e = ExportPP.uniquefy_e ToStringUtil.empty_ctx e
     in
       e

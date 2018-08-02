@@ -66,7 +66,6 @@ fun post_process_expr_visitor_vtable cast () =
         val vtable = cast this
         val e1 = #visit_expr vtable this env e1
       in
-        (* todo: should EAscType (EVar _) in inlined? *)
         case fst $ collect_EAscType e1 of
             EVar _ =>
             let

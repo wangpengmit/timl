@@ -200,6 +200,7 @@ parse-filename.sml
 vc-solver.sml
 remove-open.sml
 merge-modules.sml
+cost-debug.sml
 compiler/micro-timl.sml
 compiler/micro-timl-visitor.t.sml
 compiler/micro-timl-long-id.sml

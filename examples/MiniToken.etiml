@@ -5,7 +5,7 @@ structure Pervasive = struct
   fun subBy b a = a - b
   fun orBy b a = a || b
   fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
-  fun require b = if b then waste_time (); () else (throw using _) end
+  fun require b = if b then (* waste_time ();  *)() else (throw using _) end
 end
 
 contract MyToken = struct
