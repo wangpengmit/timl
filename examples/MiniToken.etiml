@@ -11,7 +11,7 @@ end
 contract MyToken = struct
 
   (* This creates an array with all balances *)
-  public state balanceOf : map address uint256
+  state balanceOf : map address uint256
   (* public state name : vector int = {10,} *)
 
   (* Initializes contract with initial supply tokens to the creator of the contract *)
@@ -31,8 +31,9 @@ contract MyToken = struct
   (* val () = throw balanceOf[msg.sender] *)
   (* val () = throw (balanceOf[msg.sender] >= 0x20) *)
   (* val () = throw (2 >= 1) *)
-                
-  val () = transfer (0x123, 0x20)
+
+  val () = dispatch {"transfer", transfer}                
+  (* val () = transfer (0x123, 0x20) *)
   (* val () = halt balanceOf[msg.sender] *)
   (* val () = halt balanceOf[0x123] *)
   (* val () = throw msg.sender *)
