@@ -386,6 +386,30 @@ fun compile st_name2int ectx e =
            )
          | NONE => raise Impossible $ "no mapping for variable " ^ str_int x)
     | EConst c => PUSH_value $ VConst $ cg_c c
+    | EDispatch fields =>
+      let
+        (* val fields = SMap.listItemsi $ assert_ERecord e *)
+        fun get_info (name, e, t_arg, t_ret) =
+          let
+            (* val (e, t) = assert_EAscType e *)
+            val (x, _) = assert_ID $ assert_EVar e
+            val (_, v) = assert_SOME $ nth_error ectx x
+            val r = assert_inl v
+            (* (* val (itbinds, t) = collect_TForallIT t *) *)
+            (* (* val () = assert_all_inl itbinds *) *)
+            (* val t = whnf ([], []) t *)
+            (* val (_, t) = assert_TExistsT t *)
+            (* val (t, _) = assert_TProd t *)
+            (* val ((_, t), _, _) = assert_TArrow t *)
+            (* val (_, t) = assert_TProd t *)
+            val sg = get_func_sig (name, t_arg)
+          in
+            (sg, t_arg, t_ret, r)
+          end
+        val fields = map get_info fields
+      in
+        [Dispatch fields]
+      end
     | EEnv name =>
       (case name of
            EnvSender () => [CALLER ()]
@@ -1182,7 +1206,7 @@ fun test1 dirname =
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
     val () = println "before inline_macro_prog()"
-    val inlined_prog = inline_macro_prog prog
+    val inlined_prog = inline_macro_prog $ add_prelude_prog prog
     val () = println "after inline_macro_prog()"
     val inlined_prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) inlined_prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-inline-macro.tmp", inlined_prog_str)

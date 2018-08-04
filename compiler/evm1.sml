@@ -106,6 +106,7 @@ datatype ('idx, 'ty) inst =
          | MACRO_map_ptr of unit
          | MACRO_vector_ptr of unit
          | MACRO_vector_push_back of unit
+         | Dispatch of (int(*function signature*) * 'ty(*argument type*) * 'ty(*return type*) * int(*reg for function closure*)) list
 
 datatype ('idx, 'ty) insts =
          ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind

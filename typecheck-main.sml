@@ -1517,6 +1517,25 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
               end
           end
         | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), TN C_EConst, st)
+        | U.EDispatch (e, _) =>
+          let
+            val (e, t, _, _) = get_mtype ctx_st e
+            val e_fields = assert_ERecord e
+            val t_fields = assert_TRecord t
+            val fields = SMap.intersectWith id (e_fields, t_fields)
+            val fields = SMap.listItemsi fields
+            fun get_info (name, (e, t)) =
+              let
+                val ((_, t_arg), _, (_, t_ret)) = assert_TArrow t
+                val () = check_good_arg_ty t_arg
+                val () = check_good_ret_ty t_ret
+              in
+                (name, e, t_arg, t_ret)
+              end
+            val fields = map get_info fields
+          in
+            (EDispatch (e, SOME fields), TUnit dummy, TN C_EConst, st)
+          end
         | U.EEnv (name, r) => (EEnv (name, r), get_msg_info_type r name, TN $ C_EEnv name, st)
         (* | U.EUnOp (opr as EUProj proj, e, r) => *)
 	(*   let  *)

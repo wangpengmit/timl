@@ -1,5 +1,18 @@
 structure EVMPrelude = struct
 
+open Util
+
+infixr 0 $
+       
+fun is_Int_Byte_Unit t =
+  case whnf ([], []) t of
+      TConst (TCTiML (TCInt ())) => true
+    | TConst (TCTiML (TCByte ())) => true
+    | TConst (TCUnit ()) => true
+    | _ => false
+
+fun assert_Int_Byte_Unit t = assert_b "assert_Int_Byte_Unit" $ is_Int_Byte_Unit t = true
+
 fun try_fun (sg, t_arg, t_ret, func) =
   let
     val () = assert_b "try_fun: len sg = 4" $ length sg = 4
@@ -137,7 +150,27 @@ fun try_fun (sg, t_arg, t_ret, func) =
            []
         )
       end
-        
+
+    fun untuple_save n =
+      (* [ptr_to_tuple] *)
+      int_concatMap (fn i => [Dup1, Push i*32, Add, MLoad, Swap1]) n @
+    (* [ptr_to_tuple, v_(n-1), ..., v_0] *)
+    fun untuple n = untuple_save n @ [Pop]
+
+    fun make_tuple n =
+      (* [v_(n-1), ..., v_0] *)
+      [TupleMalloc (repeat n $ TUint)] @
+      int_concatMap_rev
+        (fn i => [
+           (* [ptr, v_i, v_(i-1)] *)
+           Swap1, (* [v_i, ptr, v_(i-1)] *)
+           Dup2, (* [ptr, v_i, ptr, v_(i-1)] *)
+           Push i*32,
+           Add, (* [ptr+32*i, v_i, ptr, v_(i-1)] *)
+           MStore, (* [ptr, v_(i-1)] *)
+        ]) n
+    (* [ptr] *)
+      
     fun encode t =
       case t of
           TTuple ts =>
@@ -155,8 +188,8 @@ fun try_fun (sg, t_arg, t_ret, func) =
                    val len = length ts
                  in
                    (* [ptr_to_tuple] *)
-                   concatMapi (fn (i, _) => [Dup1, Push (len-1-i)*32, Add, MLoad, Swap1]) ts @
-                   [ (* [ptr_to_tuple, v_0, ..., v_(len-1)] *)
+                   untuple_save (length ts) @
+                   [ (* [ptr_to_tuple, v_(len-1), ..., v_0] *)
                      Push 32*p,
                      Add,
                      MLoad, (* [ptr_to_array, vs] *)
@@ -165,19 +198,22 @@ fun try_fun (sg, t_arg, t_ret, func) =
                    (* [ptr_to_array_len-n, array_len*w+32+n, vs] *)
                    concatMapi
                      (fn (i, _) =>
-                         (* [ptr_to_array_len-n, array_len*w+32+n, v_i, v_(i+1)] *)
-                         [Swap2] @ (* [v_i, array_len*w+32+n, ptr_to_array_len-n, v_(i+1)] *)
+                         let
+                           val i = len-1-i
+                         in
+                         (* [ptr_to_array_len-n, array_len*w+32+n, v_i, v_(i-1)] *)
+                         [Swap2] @ (* [v_i, array_len*w+32+n, ptr_to_array_len-n, v_(i-1)] *)
                          (if i = p then
                             [Pop]
                           else
                             [
-                              Dup3, (* [ptr_to_array_len-n, v_i, array_len*w+32+n, ptr_to_array_len-n, v_(i+1)] *)
+                              Dup3, (* [ptr_to_array_len-n, v_i, array_len*w+32+n, ptr_to_array_len-n, v_(i-1)] *)
                               Push i*32,
-                              Add, (* [ptr_to_array_len-n+i*32, v_i, array_len*w+32+n, ptr_to_array_len-n, v_(i+1)] *)
-                              MStore, (* [array_len*w+32+n, ptr_to_array_len-n, v_(i+1)] *)
+                              Add, (* [ptr_to_array_len-n+i*32, v_i, array_len*w+32+n, ptr_to_array_len-n, v_(i-1)] *)
+                              MStore, (* [array_len*w+32+n, ptr_to_array_len-n, v_(i-1)] *)
                             ]
                          ) @
-                         [Swap1] (* [ptr_to_array_len-n, array_len*w+32+n, v_(i+1)] *)
+                         [Swap1] (* [ptr_to_array_len-n, array_len*w+32+n, v_(i-1)] *)
                      ) ts
                    (* [ptr_to_array_len-n, array_len*w+32+n] *)
                  end
@@ -218,7 +254,8 @@ fun try_fun (sg, t_arg, t_ret, func) =
       make_tuple 2
 
     fun call_func r =
-      get_reg r @
+      (* [reg] *)
+      get_reg r @ (* [f_closure] *)
       untuple 2 @ (* [env, l, arg] *)
       [Swap1, Swap2] @ (* [arg, env, l] *)
       make_tuple 2 @
@@ -234,6 +271,18 @@ fun try_fun (sg, t_arg, t_ret, func) =
 
     concatMapi cmp_and sg
   end
+
+fun get_func_sig (name, t) =
+  let
+    fun str_t t =
+      case t of
+          TConst (TCTiML (TCInt ())) => "int256"
+        | TConst (TCTiML (TCByte ())) => "uint8"
+        | TConst (TCUnit ()) => "uint8"
+                              | TTuple 
+  in
+  end
+    
 fun prelude funs =
     [
       Push 4,
@@ -244,5 +293,44 @@ fun prelude funs =
     ]
     @ concatMap try_fun funs
     @ no_match
+
+fun add_prelude_inst (params as (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr, TUnit)) (inst : ('a, 'b) inst) =
+  let
+    val add_prelude_inst = add_prelude_inst params
+  in
+    case inst of
+        Dispatch funs =>
+        if !add_prelude_flag then
+          prelude funs
+        else
+          PUSH_value $ VConst WCUnit
+      | _ => [inst]
+  end
+
+fun add_prelude_insts (params as (add_prelude_inst, PUSH_reg, scratch)) insts =
+  let
+    val add_prelude_insts = add_prelude_insts params
+  in
+    case insts of
+        ISCons bind =>
+        let
+          val (inst, I) = unBind bind
+        in
+          add_prelude_inst inst @@ add_prelude_insts I
+        end
+      | MACRO_halt t => [PUSH_reg scratch, SWAP1, DUP2, MSTORE (), PUSH1nat 32, SWAP1] @@ RETURN ()(* t *)
+      | _ => insts
+  end
+                                                                     
+fun add_prelude_hval code =
+  let
+    val (binds, (spec, I)) = unBind code
+    val I = add_prelude_insts I
+  in
+    Bind (binds, (spec, I))
+  end
+
+fun add_prelude_prog (H, I) =
+  (map (mapSnd add_prelude_hval) H, add_prelude_insts I)
 
 end
