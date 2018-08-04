@@ -238,6 +238,7 @@ compiler/evm1-util.sml
 compiler/evm1-tc.sml
 compiler/evm1-assemble.sml
 compiler/evm1-simp.sml
+compiler/evm-prelude.sml
 compiler/to-evm1.sml
 unit-test.sml
 main.sml

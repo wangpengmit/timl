@@ -38,9 +38,8 @@ fun try_fun (sg, t_arg, t_ret, func) =
           TTuple ts =>
           concatMapi (fn (i, t) => decode (pos + i * 32) t) ts @
           make_tuple (length ts)
-        | TArrayPtr (w, t, len, offset) =>
+        | TArray (w, t, len) =>
           let
-            val () = assert_b "encode: offset = 32" $ (assert_INat $ simp_i offset) = 32
             val () = assert_Int_Byte_Unit t
           in
             [
@@ -66,8 +65,10 @@ fun try_fun (sg, t_arg, t_ret, func) =
               CallDataCopy (* [ptr_to_array] *)
             ]
           end
+        | TConst (TCUnit ()) =>
+          [ Push 0 ]
         | _ =>
-          if is_Int_Byte_Unit t then
+          if is_Int_Byte t then
           [
             Push pos,
             CallDataLoad
@@ -219,9 +220,8 @@ fun try_fun (sg, t_arg, t_ret, func) =
                  end
                | NONE => raise Impossible "Can't encode tuple"
             )
-        | TArrayPtr (w, t, len, offset) =>
+        | TArray (w, t, len) =>
           let
-            val () = assert_b "" $ (assert_INat $ simp_i offset) = 32
             val () = assert_Int_Byte_Unit t
           in
             encode_array w 1 0
@@ -272,6 +272,21 @@ fun try_fun (sg, t_arg, t_ret, func) =
     concatMapi cmp_and sg
   end
 
+fun keccak256 s =
+  let
+    (* val filename = "keccak256.in.tmp" *)
+    (* val () = write_bin_file (filename, s) *)
+    val out_filename = "keccak256.out.tmp"
+    val cmd = "keccak-256sum -l"
+    val cmd = sprintf "echo -n '' | $ > $" [s, cmd, out_filename]
+    val () = println $ "Running cmd: " ^ cmd
+    val _ = system cmd
+    val r = read_file out_filename
+    val () = println $ "keccak256 result: " ^ r
+  in
+    r
+  end
+    
 fun get_func_sig (name, t) =
   let
     fun str_t t =
@@ -279,8 +294,22 @@ fun get_func_sig (name, t) =
           TConst (TCTiML (TCInt ())) => "int256"
         | TConst (TCTiML (TCByte ())) => "uint8"
         | TConst (TCUnit ()) => "uint8"
-                              | TTuple 
+        | TTuple ts => surround "(" ")" $ joint "," $ map str_t ts
+        | TArray (1, t, _) => "bytes" (* or "string"? *)
+        | TArray (32, t, _) => str_t t ^ "[]"
+        | _ => raise Impossible "get_func_sig: unknown type"
+    fun str_arg t =
+      case t of
+          TConst (TCUnit ()) => "()"
+        | TTuple _ => str_t t
+        | _ => surround "(" ")" $ str_t
+    val sg = name ^ str_arg t
+    val sg = keccak256 sg
+    val sg = String.substring (sg, 0, 8)
+    val sg = str2int $ "0x" ^ sg
+    val () = println $ "fun sig: " ^ hex 4 sg
   in
+    sg
   end
     
 fun prelude funs =

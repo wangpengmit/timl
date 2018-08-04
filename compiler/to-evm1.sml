@@ -402,6 +402,8 @@ fun compile st_name2int ectx e =
             (* val (t, _) = assert_TProd t *)
             (* val ((_, t), _, _) = assert_TArrow t *)
             (* val (_, t) = assert_TProd t *)
+            val t_arg = TRecord2Tuple t_arg
+            val t_ret = TRecord2Tuple t_ret
             val sg = get_func_sig (name, t_arg)
           in
             (sg, t_arg, t_ret, r)
