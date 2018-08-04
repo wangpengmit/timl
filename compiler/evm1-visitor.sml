@@ -179,7 +179,7 @@ fun default_evm1_visitor_vtable
           | JUMP () => JUMP ()
           | RETURN () => RETURN ()
           | ISDummy a => ISDummy a
-          | MACRO_halt t => MACRO_halt $ #visit_ty vtable this env t
+          | MACRO_halt (b, t) => MACRO_halt (b, #visit_ty vtable this env t)
       end
     fun visit_hval this env data =
       let

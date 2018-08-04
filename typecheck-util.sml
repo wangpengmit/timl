@@ -544,11 +544,10 @@ fun close_ctx (ctx as (sctx, _, _, _)) = close_n $ length sctx
 (* fun write_anchor anchor = write (AnchorVC anchor) *)
 
 fun write_prop (p, r) =
-  let
-    (* val () = println $ "Writing Prop: " ^ str_p Gctx.empty [] p *)
-  in
+  (
+    println $ "Writing Prop: " ^ str_p Gctx.empty [] p;
     write (PropVC (p, r))
-  end
+  )
 
 infixr 0 @@
          

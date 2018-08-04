@@ -120,8 +120,9 @@ datatype ('var, 'idx, 'sort, 'kind, 'ty) expr =
          | EMatchUnfold of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          | EIfi of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind * ('var, 'idx, 'sort, 'kind, 'ty) expr ebind
          (* introduced by compiler/CPS *)
-         | EHalt of ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty
+         | EHalt of bool(*successful?*) * ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty
          | EEnv of env_info
+         | EDispatch of (string * ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty * 'ty) list
          (* introduced by compiler/pair-alloc *)
          (* | EMallocPair of ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr (* These two expressions are only here to determine the types. They have no runtime behavior and should always be values. They are used to avoid type annotations here which could be large. *) *)
          (* | EPairAssign of ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr *)

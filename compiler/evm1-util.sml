@@ -35,6 +35,10 @@ fun inline_macro_inst (params as (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr
     | _ => [inst]
   end
 
+fun RETURN_b successful =
+  if successful then RETURN ()
+  else REVERT ()
+              
 fun inline_macro_insts (params as (inline_macro_inst, PUSH_reg, scratch)) insts =
   let
     val inline_macro_insts = inline_macro_insts params
@@ -46,7 +50,7 @@ fun inline_macro_insts (params as (inline_macro_inst, PUSH_reg, scratch)) insts 
         in
           inline_macro_inst inst @@ inline_macro_insts I
         end
-      | MACRO_halt t => [PUSH_reg scratch, SWAP1, DUP2, MSTORE (), PUSH1nat 32, SWAP1] @@ RETURN ()(* t *)
+      | MACRO_halt (b, t) => [PUSH_reg scratch, SWAP1, DUP2, MSTORE (), PUSH1nat 32, SWAP1] @@ RETURN_b b(* t *)
       | _ => insts
   end
                                                                      

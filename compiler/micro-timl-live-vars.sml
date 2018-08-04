@@ -496,7 +496,7 @@ fun live_vars_expr_visitor_vtable cast () =
       in
         #visit_expr (cast this) this env e
       end
-    fun visit_EHalt this env (e, t) =
+    fun visit_EHalt this env (b, e, t) =
       let
         val vtable = cast this
         val lvars = #1 env
@@ -505,7 +505,7 @@ fun live_vars_expr_visitor_vtable cast () =
         val e = #visit_expr vtable this env e
         val t = #visit_ty vtable this env t
       in
-        EHalt (e, t)
+        EHalt (b, e, t)
       end
     (* fun visit_EMallocPair this env (e1, e2) = *)
     (*   let *)

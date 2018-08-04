@@ -72,6 +72,7 @@ region.sml
 time.sml
 operators.sml
 pp-util.sml
+error-code.sml
 parser/ast.sml
 parser/ast-pp.sml
 parser/parser-util.sml

@@ -931,7 +931,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
     (*   in *)
     (*     T1 *)
     (*   end *)
-    | MACRO_halt t =>
+    | MACRO_halt (b, t) =>
       let
         val t = kc_against_KType itctx t
         val () = is_eq_stack itctx (sctx, [t])

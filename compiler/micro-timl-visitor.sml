@@ -1058,7 +1058,7 @@ type ('this, 'env, 'var, 'idx, 'sort, 'kind, 'ty, 'var2, 'idx2, 'sort2, 'kind2, 
        (* visit_EMallocPair : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr, *)
        (* visit_EPairAssign : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr, *)
        (* visit_EProjProtected : 'this -> 'env -> projector * ('var, 'idx, 'sort, 'kind, 'ty) expr -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr, *)
-       visit_EHalt : 'this -> 'env -> ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
+       visit_EHalt : 'this -> 'env -> bool * ('var, 'idx, 'sort, 'kind, 'ty) expr * 'ty -> ('var2, 'idx2, 'sort2, 'kind2, 'ty2) expr,
        visit_var : 'this -> 'env -> 'var -> 'var2,
        visit_cvar : 'this -> 'env -> 'var -> 'var2,
        visit_idx : 'this -> 'env -> 'idx -> 'idx2,
@@ -1458,13 +1458,13 @@ fun default_expr_visitor_vtable
     (*   in *)
     (*     EProjProtected (proj, e) *)
     (*   end *)
-    fun visit_EHalt this env (e, t) =
+    fun visit_EHalt this env (b, e, t) =
       let
         val vtable = cast this
         val e = #visit_expr vtable this env e
         val t = #visit_ty vtable this env t
       in
-        EHalt (e, t)
+        EHalt (b, e, t)
       end
   in
     {

@@ -558,6 +558,8 @@ fun assert_last es =
     
 fun assert_SOME a = case a of SOME v => v | NONE => raise Impossible "assert_SOME()"
 fun assert_SOME_m err a = case a of SOME v => v | NONE => err ()
+val assert_some = assert_SOME
+val assert_some_m = assert_SOME_m
 
 fun find_unique ls name =
   if not (mem op= name ls) then

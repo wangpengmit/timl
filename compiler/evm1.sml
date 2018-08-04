@@ -112,9 +112,10 @@ datatype ('idx, 'ty) insts =
          ISCons of (('idx, 'ty) inst, ('idx, 'ty) insts) bind
          | JUMP of unit
          | RETURN of unit
+         | REVERT of unit
          (* only for debug/printing purpose *)
          | ISDummy of string
-         | MACRO_halt of 'ty
+         | MACRO_halt of bool(*successful?*) * 'ty
 
 type 'v rctx = 'v IntBinaryMap.map
                   

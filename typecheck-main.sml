@@ -816,7 +816,7 @@ fun is_value (e : U.expr) : bool =
              EETAppT () => false
            (* | EETAsc () => false *)
            | EETAsc () => is_value e
-           | EETHalt () => false
+           | EETHalt _ => false
         )
       | EAscState (e, _) => is_value e
       | ET (opr, t, _) =>
@@ -1520,13 +1520,88 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
         | U.EDispatch (e, _) =>
           let
             val (e, t, _, _) = get_mtype ctx_st e
-            val e_fields = assert_ERecord e
-            val t_fields = assert_TRecord t
+            fun r () = get_region_e e
+            val e_fields = case e of
+                               ERecord (a, _) => a
+                             | _ => raise Error (r (), ["must be record"])
+            (* val t = whnf_mt true gctx kctx t *)
+            val t = normalize_mt true gctx kctx t
+            val t_fields = case t of
+                               TRecord (a, _) => a
+                             | _ => raise Error (r (), ["type must be record"])
             val fields = SMap.intersectWith id (e_fields, t_fields)
             val fields = SMap.listItemsi fields
             fun get_info (name, (e, t)) =
               let
-                val ((_, t_arg), _, (_, t_ret)) = assert_TArrow t
+                val () = case e of
+                             EVar (ID _, _) => ()
+                           | _ => raise Error (r (), ["must be variable"])
+                val ((_, t_arg), _, (_, t_ret)) =
+                    case t of
+                        TArrow a => a
+                      | _ => raise Error (r (), ["must be function (arrow) type"])
+                fun is_Int_Byte_Unit t =
+                  case t of
+                      TBase (BTInt (), _) => true
+                    | TBase (BTByte (), _) => true
+                    | TUnit r => true
+                    | _ => false
+                fun assert_Int_Byte_Unit t =
+                  if is_Int_Byte_Unit t = true then ()
+                  else raise Error (r (), ["can only be int/byte/unit"])
+                fun check_good_arg_ty t =
+                  let
+                    val loop = check_good_arg_ty
+                  in
+                    case t of
+                        TTuple ts => app loop ts
+                      | TRecord (fields, _) => SMap.app loop fields
+                      | TArray (w, t, _) => assert_Int_Byte_Unit t
+                      | _ => assert_Int_Byte_Unit t
+                  end
+                fun at_most_one_some_other_true fo fb ls =
+                  let
+                    exception Fail of string
+                    fun f (x, (i, acc)) =
+                      let
+                        val acc = 
+                            case fo x of
+                                SOME a =>
+                                (case acc of
+                                     SOME _ => raise Fail "two some"
+                                   | NONE => SOME (i, a)
+                                )
+                              | NONE => if fb x then acc else raise Fail "false"
+                      in
+                        (i+1, acc)
+                      end
+                    val r = SOME (snd $ foldl f (0, NONE) ls) handle Fail _ => NONE
+                  in
+                    case r of
+                        NONE => inr false
+                      | SOME NONE => inr true
+                      | SOME (SOME a) => inl a
+                  end
+                fun is_TArray t =
+                  case t of
+                      TArray a => SOME a
+                    | _ => NONE
+                fun at_most_one_Array_other_Int_Byte_Unit ts =
+                  at_most_one_some_other_true is_TArray is_Int_Byte_Unit ts
+                fun check_good_ret_ty t =
+                  let
+                    val loop = check_good_ret_ty
+                  in
+                    case t of
+                        TTuple ts =>
+                        (case at_most_one_Array_other_Int_Byte_Unit ts of
+                             inl (_, (_, t, _)) => assert_Int_Byte_Unit t
+                           | inr true => ()
+                           | inr false => raise Error (r (), ["tuple can only have one array; others can be int/byte/unit"])
+                        )
+                      | TArray (w, t, _) => assert_Int_Byte_Unit t
+                      | _ => assert_Int_Byte_Unit t
+                  end
                 val () = check_good_arg_ty t_arg
                 val () = check_good_ret_ty t_ret
               in
@@ -1534,7 +1609,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
               end
             val fields = map get_info fields
           in
-            (EDispatch (e, SOME fields), TUnit dummy, TN C_EConst, st)
+            (EDispatch (e, fields), TUnit dummy, TN C_EConst, st)
           end
         | U.EEnv (name, r) => (EEnv (name, r), get_msg_info_type r name, TN $ C_EEnv name, st)
         (* | U.EUnOp (opr as EUProj proj, e, r) => *)
@@ -2200,7 +2275,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                in
 	         (EAsc (e, t), t, d, st)
 	       end
-             | EETHalt () => 
+             | EETHalt _ => 
 	       let
                  val t = check_kind_Type gctx (skctx, t)
 	         val (e, _, d, st) = get_mtype (ctx, st) e

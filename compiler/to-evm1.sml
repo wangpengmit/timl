@@ -883,13 +883,13 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
         branch_prelude @@
         I1
       end
-    | EHalt (e, _) =>
+    | EHalt (b, e, _) =>
       let
         val (e, t) = assert_EAscType e
         val (I_e, st) = compile (e, st)
         val t = cg_t t
       in
-        I_e @@ halt t
+        I_e @@ halt b t
       end
     | EAscTime (e, i) => ASCTIME (Inner i) @:: cg_e params e
     | EAscSpace (e, i) => ASCSPACE (Inner i) @:: cg_e params e
@@ -1133,7 +1133,7 @@ fun test1 dirname =
     val () = println "Started CPS conversion ..."
     val () = CPS.debug_dir_name := SOME dirname
     open MicroTiMLUtil
-    val k = EHaltFun TUnit TUnit
+    val k = EHaltFun true TUnit TUnit
     (* val () = phase := PhBeforeCC () *)
     (* val ((_, t, _, _), _) = typecheck (cc_tc_flags, st_name2ty) (([], [], []), init_st) k *)
     (* val (_, j_k, _) = assert_TArrow t *)
@@ -1208,7 +1208,7 @@ fun test1 dirname =
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
     val () = println "before inline_macro_prog()"
-    val inlined_prog = inline_macro_prog $ add_prelude_prog prog
+    val inlined_prog = inline_macro_prog $ add_prelude_prog fresh_label prog
     val () = println "after inline_macro_prog()"
     val inlined_prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) inlined_prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-inline-macro.tmp", inlined_prog_str)

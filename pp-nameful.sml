@@ -731,12 +731,14 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           close_box ()
         )
       (* pp_e e *)
-      | EET (EETHalt (), e, t) =>
+      | EET (EETHalt b, e, t) =>
         (
           open_hbox ();
           str "EHalt";
           space ();
           str "(";
+          str $ str_bool b;
+          comma ();
           pp_e e;
           comma ();
           pp_t t;

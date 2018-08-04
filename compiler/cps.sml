@@ -63,7 +63,7 @@ fun ELetConstrClose ((x, name), e1, e2) = MakeELetConstr (e1, (name, dummy), clo
 fun EAppIPair (e, (i, j)) = EAppIs (e, [i, j])
   
 fun Eid t = EAbs (IEmptyState, EBindAnno ((("x", dummy), t), EVar $ Bound 0), NONE)
-fun EHaltFun t_arg t_result = EAbs (IEmptyState, EBindAnno ((("x", dummy), t_arg), EHalt (EVar $ Bound 0, t_result)), NONE)
+fun EHaltFun b t_arg t_result = EAbs (IEmptyState, EBindAnno ((("x", dummy), t_arg), EHalt (b, EVar $ Bound 0, t_result)), NONE)
 
 infix 0 %:
 infix 0 |>
@@ -839,13 +839,13 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       in
         foldr f (ek, (to_real $ C_ENewArrayValues w len, N $ w * len + 32) %%+ j_k) xs_names_es
       end
-    | S.EHalt (e, _) =>
+    | S.EHalt (b, e, _) =>
       (* [[ halt e [_] ]](k) = [[e]](\x. halt x [unit]) *)
       let
         val (e, st_e) = assert_EAscState e
         val (e, t_e) = assert_EAscType e
         val x = fresh_evar ()
-        val c = (* k $$  *)EHalt (EV x, TUnit)
+        val c = (* k $$  *)EHalt (b, EV x, TUnit)
         val t_x = cps_t t_e
         val c = EAbs (st_e %++ F, close0_e_e_anno ((x, "x", t_x), c), NONE)
       in
@@ -1254,7 +1254,7 @@ fun check_CPSed_expr e =
         (loop e1;
          loop e2)
       end
-    | EHalt (e, _) => check_value e
+    | EHalt (_, e, _) => check_value e
     | EAscTime (e, _) => loop e
     | EAscSpace (e, _) => loop e
     (* | EBinOp (EBPair (), _, _) => err () *)
@@ -1526,7 +1526,7 @@ fun test1 dirname =
                      
     val () = println "Started CPS conversion ..."
     open MicroTiMLUtil
-    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, TN0)
+    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun true TUnit TUnit, TN0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion ..."
     val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx e

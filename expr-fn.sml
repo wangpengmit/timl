@@ -56,6 +56,7 @@ datatype expr =
          | ESet of string * (expr * proj_path) list * expr * Region.region
          | EEnv of env_info * region
          | EAscState of expr * idx StMap.map
+         | EDispatch of expr * (string * expr * mtype * mtype) list
 
      and decl =
          DVal of ebinder * ((tbinder * (idx * idx) outer) list, expr) bind outer * region

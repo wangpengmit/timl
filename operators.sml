@@ -447,13 +447,13 @@ fun str_expr_EI opr =
 datatype expr_ET =
          EETAppT of unit
          | EETAsc of unit
-         | EETHalt of unit
+         | EETHalt of bool
 
 fun str_expr_ET opr =
   case opr of
       EETAppT () => "EETAppT"
     | EETAsc () => "EETAsc"
-    | EETHalt () => "EETHalt"
+    | EETHalt b => "EETHalt " ^ str_bool b
 
 datatype expr_T =
          ETNever of unit

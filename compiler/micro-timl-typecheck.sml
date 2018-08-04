@@ -2240,14 +2240,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       (*   in *)
       (*     (e, t, i_e, st) *)
       (*   end *)
-      | EHalt (e, t) =>
+      | EHalt (b, e, t) =>
         let
           val t = kc_against_kind itctx (t, KType ())
           val (e, t_e, i_e, st) = tc (ctx, st) e
           val e = if !anno_EHalt then e %: t_e else e
           val e = if !anno_EHalt_state then e %~ st else e
         in
-          (EHalt (e, t), t, i_e %%+ TN C_EHalt, IEmptyState (* st *))
+          (EHalt (b, e, t), t, i_e %%+ TN C_EHalt, IEmptyState (* st *))
         end
       | EAbsConstr _ => err ()
       | EAppConstr _ => err ()

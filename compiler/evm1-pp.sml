@@ -345,12 +345,14 @@ fun pp_insts (params as (pp_t, pp_inst)) s insts =
       | JUMP () => str "JUMP"
       | RETURN () => str "RETURN"
       | ISDummy s => str s
-      | MACRO_halt t =>
+      | MACRO_halt (b, t) =>
         (
           open_hbox ();
           str $ "MACRO_halt";
           space ();
           str "(";
+          str $ str_bool b;
+          comma ();
           pp_t t;
           str ")";
           close_box ()

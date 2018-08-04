@@ -160,7 +160,7 @@ fun on_e (e : S.expr) : mtiml_expr =
       (case opr of
            EETAsc () => EAscType (on_e e, on_mt t)
          | EETAppT () => EAppT (on_e e, on_mt t)
-         | EETHalt () => EHalt (on_e e, on_mt t)
+         | EETHalt b => EHalt (b, on_e e, on_mt t)
       )
     | S.ET (opr, t, r) =>
       (case opr of
@@ -305,6 +305,7 @@ fun on_e (e : S.expr) : mtiml_expr =
     | S.EGet _ => err ()
     | S.ERecord (fields, _) => ERecord $ SMap.map on_e fields
     | S.ETuple es => ETuple $ map on_e es
+    | S.EDispatch (_, ls) => EDispatch $ map (fn (name, e, t1, t2) => (name, on_e e, on_mt t1, on_mt t2)) ls
     fun extra_msg () = "\nwhen translating\n" ^ ToString.str_e Gctx.empty ToStringUtil.empty_ctx e
     val ret = main ()
               handle

@@ -1135,7 +1135,7 @@ fun test1 dirname =
                      
     val () = println "Started CPS conversion ..."
     open MicroTiMLUtil
-    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun TUnit TUnit, TN0)
+    val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun true TUnit TUnit, TN0)
     (* val (e, _) = cps (e, TUnit) (Eid TUnit, T_0) *)
     val () = println "Finished CPS conversion"
     (* val () = pp_e $ export empty_ctx e *)

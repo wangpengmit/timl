@@ -314,7 +314,7 @@ fun default_expr_visitor_vtable
         case opr of
 	    EETAppT () => #visit_EAppT vtable this env data
 	  | EETAsc () => #visit_EAsc vtable this env data
-          | EETHalt () => T.EET (opr, #visit_expr vtable this env e, #visit_mtype vtable this env t)
+          | EETHalt _ => T.EET (opr, #visit_expr vtable this env e, #visit_mtype vtable this env t)
       end
     fun visit_EAppT this env data = 
       let

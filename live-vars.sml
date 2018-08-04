@@ -476,7 +476,7 @@ fun live_vars_expr_visitor_vtable cast () =
         case opr of
 	    EETAppT () => #visit_EAppT vtable this env data
 	  | EETAsc () => #visit_EAsc vtable this env data
-          | EETHalt () =>
+          | EETHalt _ =>
             let
               val lvars = #1 env
               val () = lvars := Set.empty

@@ -117,6 +117,7 @@ fun enc_insts out insts =
         end
       | JUMP () => out "56"
       | RETURN () => out "f3"
+      | REVERT () => out "fd"
       | ISDummy _ => out ""
       | MACRO_halt _ => macro "MACRO_halt"
   end

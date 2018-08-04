@@ -528,21 +528,20 @@ local
 		   else if x = "ref" then ENewArrayValues (32, TUVar ((), r), [elab e2], r)
 		   else if x = "__&not" then EUnOp (EUPrim (EUPBoolNeg ()), elab e2, r)
 		                                   (* else if x = "__&int2str" then EUnOp (EUInt2Str, elab e2, r) *)
-		   else if x = "__&nat2int" then EUnOp (EUNat2Int (), elab e2, r)
-		   else if x = "nat2int" then EUnOp (EUNat2Int (), elab e2, r)
-		   else if x = "__&int2nat" then EUnOp (EUInt2Nat (), elab e2, r)
-		   else if x = "int2nat" then EUnOp (EUInt2Nat (), elab e2, r)
+		   else if x = "__&nat2int" orelse x = "nat2int" then EUnOp (EUNat2Int (), elab e2, r)
+		   else if x = "__&int2nat" orelse x = "int2nat" then EUnOp (EUInt2Nat (), elab e2, r)
 		   else if x = "__&byte2int" orelse x = "byte2int" then EUnOp (EUPrim (EUPByte2Int ()), elab e2, r)
-		   else if x = "__&int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
-		   else if x = "int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
-		   else if x = "__&array_length" then EUnOp (EUArrayLen (), elab e2, r)
-		   else if x = "array_len" then EUnOp (EUArrayLen (), elab e2, r)
+		   else if x = "__&int2byte" orelse x = "int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
+		   else if x = "__&array_length" orelse x = "array_len" then EUnOp (EUArrayLen (), elab e2, r)
+		   else if x = "dispatch" then EDispatch (elab e2, [])
 		   else if x = "vector_len" then EUnOp (EUVectorLen (), elab e2, r)
 		   else if x = "vector_clear" then EUnOp (EUVectorClear (), elab e2, r)
 		                                         (* else if x = "__&print" then EUnOp (EUPrint, elab e2, r) *)
 		   else if x = "__&printc" then EUnOp (EUPrintc (), elab e2, r)
-		   else if x = "__&halt" then EET (EETHalt (), elab e2, elab_mt (S.TVar (NONE, ("_", r))))
-		   else if x = "halt" then EET (EETHalt (), elab e2, elab_mt (S.TVar (NONE, ("_", r))))
+		   else if x = "__&halt" orelse x = "halt" then
+                     EET (EETHalt true, elab e2, elab_mt (S.TVar (NONE, ("_", r))))
+		   else if x = "error" then
+                     EET (EETHalt false, elab e2, elab_mt (S.TVar (NONE, ("_", r))))
                    else if x = "__&builtin" then
                      (case e2 of
                           S.EConst (S.ECString s, _) =>
@@ -625,7 +624,7 @@ local
                   end
                 | _ => EUnOp (opr, elab e, r)
              )
-           | S.EUThrow () => EHalt (elab e, TUVar ((), r))
+           | S.EUThrow () => EHalt (false, elab e, TUVar ((), r))
            | S.EUDeref true => EStorageGet (elab e, r)
            | S.EUDeref false => ERead (32, elab e, ENat (0, r))
            | S.EUAsm _ => raise Error (r, "elaborate/EAsm")
