@@ -961,6 +961,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | ETriOp (ETVectorSet (), _, _, _) => err ()
     | EVar _ => err ()
     | EConst _ => err ()
+    | EDispatch _ => err ()
     | EEnv _ => err ()
     | EState _ => err ()
     | EUnOp _ => err ()

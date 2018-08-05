@@ -499,7 +499,16 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | JUMPDEST () => ctx
     | PUSH (n, w) =>
-      (assert_b "tc/PUSH/n" (1 <= n andalso n <= 32); ((itctx, rctx, tc_w (hctx, st_int2name, st_name2ty) itctx (unInner w) :: sctx, st)))
+      (assert_b "tc/PUSH/n" (1 <= n andalso n <= 32);
+       (itctx, rctx, tc_w (hctx, st_int2name, st_name2ty) itctx (unInner w) :: sctx, st))
+    | Dispatch ls =>
+      let
+        val () = app (fn (name, t1, t2, n) =>
+                         (kc_against_KType itctx $ unInner t1;
+                          kc_against_KType itctx $ unInner t2; ())) ls
+      in
+        add_stack TUnit ctx
+      end
     | DUP n => 
       let
         val () = assert_b "tc/DUP/n" (1 <= n andalso n <= 16)
@@ -869,6 +878,11 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | ASCTIME _ => err ()
     | ASCSPACE _ => err ()
     | MACRO_br_sum () => err ()
+         | CALLDATALOAD () => err ()
+         | CALLDATACOPY () => err ()
+         | InstJUMP () => err ()
+         | InstRETURN () => err ()
+         | InstREVERT () => err ()
     (* val () = println $ "before time_ref = " ^ (ExportPP.str_i $ ExportPP.export_i [] $ !time_ref) *)
     val ret = (ctx, (!time_ref, !space_ref), !ishift_ref)
     (* val () = println "tc() finished:" *)
@@ -949,6 +963,7 @@ fun tc_insts (params as (hctx, num_regs, st_name2ty, st_int2name)) (ctx as (itct
       end
     | ISDummy _ => (TN $ C_insts insts, 0)
     | RETURN () => err ()
+    | REVERT () => err ()
     | ISCons bind =>
       let
         val (inst, I) = unBind bind

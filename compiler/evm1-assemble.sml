@@ -107,6 +107,7 @@ fun enc inst =
       | InstJUMP () => macro "InstJUMP"
       | InstRETURN () => macro "InstRETURN"
       | InstREVERT () => macro "InstREVERT"
+      | Dispatch _ => macro "Dispatch"
   end
     
 fun enc_insts out insts =
@@ -157,6 +158,8 @@ fun size_inst inst =
       | CALLER () => 1
       | CALLVALUE () => 1
       | CALLDATASIZE () => 1
+         | CALLDATALOAD () => 1
+         | CALLDATACOPY () => 1
       | CODESIZE () => 1
       | GASPRICE () => 1
       | COINBASE () => 1
@@ -206,6 +209,10 @@ fun size_inst inst =
       | MACRO_map_ptr () => macro "MACRO_map_ptr"
       | MACRO_vector_ptr () => macro "MACRO_vector_ptr"
       | MACRO_vector_push_back () => macro "MACRO_vector_push_back"
+         | Dispatch _ => macro "Dispatch"
+         | InstJUMP _ => macro "InstJUMP"
+         | InstRETURN _ => macro "InstRETURN"
+         | InstREVERT _ => macro "InstREVERT"
   end
 
 fun size_insts insts =
@@ -221,6 +228,7 @@ fun size_insts insts =
         end
       | JUMP () => 1
       | RETURN () => 1
+         | REVERT () => 1
       | ISDummy _ => 0
       | MACRO_halt _ => macro "MACRO_halt"
   end
