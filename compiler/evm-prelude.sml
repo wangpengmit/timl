@@ -9,7 +9,9 @@ open EVM1OtherNames
 open MicroTiMLUtil
 
 infixr 0 $
-       
+
+infixr 5 @@
+         
 fun keccak256 s =
   let
     (* val filename = "keccak256.in.tmp" *)
@@ -339,18 +341,14 @@ fun prelude (params as (fresh_label, output_heap)) funs =
 
 val add_prelude_flag = ref false
                            
-fun add_prelude_inst params (inst : ('a, 'b) inst) =
-  let
-    val add_prelude_inst = add_prelude_inst params
-  in
-    case inst of
-        Dispatch funs =>
-        if !add_prelude_flag then
-          prelude params funs
-        else
-          PUSH_value $ VConst $ WCTT ()
-      | _ => [inst]
-  end
+fun add_prelude_inst params inst =
+  case inst of
+      Dispatch funs =>
+      if !add_prelude_flag then
+        prelude params $ map (fn (name, t1, t2, n) => (name, unInner t1, unInner t2, n)) funs
+      else
+        PUSH_value $ VConst $ WCTT ()
+    | _ => [inst]
 
 fun add_prelude_insts params insts =
   let
@@ -366,13 +364,43 @@ fun add_prelude_insts params insts =
         end
       | _ => insts
   end
-                                                                     
+
+fun is_block_end inst =
+  case inst of
+      InstJUMP () => SOME $ JUMP ()
+    | InstRETURN () => SOME $ RETURN ()
+    | InstREVERT () => SOME $ REVERT ()
+    | _ => NONE
+
+fun early_end I =
+  case I of
+      ISCons bind => 
+      let
+        val (inst, I) = unBind bind
+      in
+        case is_block_end inst of
+            SOME a => a
+          | NONE => [inst] @@ early_end I
+      end
+    | _ => I
+
+fun list2insts ls =
+  let
+    exception Done of ('idx, 'ty) insts
+    fun f (inst, acc) =
+      case is_block_end inst of
+          SOME last => raise Done $ rev acc @@ last
+        | NONE => inst :: acc
+  in
+    (foldl f [] ls; raise Impossible "list2insts: didn't find block ender") handle Done I => I
+  end
+             
 fun add_prelude_hval params code =
   let
     val (binds, (spec, I)) = unBind code
     val I = add_prelude_insts params I
   in
-    Bind (binds, (spec, remove_early_end I))
+    Bind (binds, (spec, early_end I))
   end
 
 fun add_prelude_prog fresh_label (H, I) =
@@ -381,7 +409,7 @@ fun add_prelude_prog fresh_label (H, I) =
     fun output_heap a = push_ref r a
     val params = (fresh_label, output_heap)
     val (H, I) = (map (mapSnd $ add_prelude_hval params) H, add_prelude_insts params I)
-    fun inst22hval I = Bind ([], ((IEmptyState (), Rctx.empty, [], TN0), list2insts I))
+    fun insts2hval I = Bind (TeleNil, ((IEmptyState, Rctx.empty, [], TN0 dummy), list2insts I))
     val H' = map (mapSnd insts2hval) $ !r
   in
     (H @ H', I)

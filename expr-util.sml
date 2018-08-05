@@ -139,6 +139,45 @@ fun collect_EAbsI e =
       end
     | _ => ([], e)
              
+fun collect_all_anno_rev e =
+  let
+    val self = collect_all_anno_rev
+  in
+    case e of
+        EET (EETAsc (), e, t) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoType t :: args)
+        end
+      | EEI (EEIAscTime (), e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoTime i :: args)
+        end
+      | EEI (EEIAscSpace (), e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoSpace i :: args)
+        end
+      | EAscState (e, i) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoState i :: args)
+        end
+      | EUnOp (EUAnno anno, e, r) =>
+        let
+          val (e, args) = self e
+        in
+          (e, AnnoEA anno :: args)
+        end
+      | _ => (e, [])
+  end
+fun collect_all_anno e = mapSnd rev $ collect_all_anno_rev e
+
 fun is_tail_call e =
   case e of
       EBinOp (EBApp (), _, _) => true
@@ -166,6 +205,7 @@ fun is_tail_call e =
     (* todo: how about EHalt? *)
     | EVar _ => false
     | EConst _ => false
+    | EDispatch _ => false (* pretend to be an EConst *)
     | EState _ => false
     | EUnOp _ => false
     | EBinOp _ => false

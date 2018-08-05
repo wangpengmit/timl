@@ -439,6 +439,14 @@ datatype ('a, 'b) sum =
          | inr of 'b
 fun is_inl x = case x of inl a => SOME a | inr _ => NONE
 fun is_inr x = case x of inr a => SOME a | inl _ => NONE
+fun assert_inl x =
+  case x of
+      inl a => a
+    | _ => raise Impossible "assert_inl"
+fun assert_inr x =
+  case x of
+      inr a => a
+    | _ => raise Impossible "assert_inr"
 fun map_inl f s =
     case s of
         inl e => inl $ f e

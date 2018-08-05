@@ -47,6 +47,11 @@ fun str_inst a =
       | CALLER () => "CALLER"
       | CALLVALUE () => "CALLVALUE"
       | CALLDATASIZE () => "CALLDATASIZE"
+         | CALLDATALOAD () => "CALLDATALOAD"
+         | CALLDATACOPY () => "CALLDATACOPY"
+         | InstJUMP () => "InstJUMP"
+         | InstRETURN () => "InstRETURN"
+         | InstREVERT () => "InstREVERT"
       | CODESIZE () => "CODESIZE"
       | GASPRICE () => "GASPRICE"
       | COINBASE () => "COINBASE"
@@ -91,6 +96,7 @@ fun str_inst a =
       | ASCSPACE i => err ()
       | MACRO_tuple_malloc ts => err ()
       | MACRO_array_malloc t => err ()
+      | Dispatch _ => err ()
       | MACRO_inj t => err ()
       | SHA3 () => "SHA3"
       | SLOAD () => "SLOAD"
@@ -170,6 +176,23 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
     fun open_vbox () = PP.openVBox s (PP.Rel 2)
     fun open_vbox_noindent () = PP.openVBox s (PP.Rel 0)
     fun close_box () = PP.closeBox s
+    fun pp_list f ls =
+      case ls of
+          [] => ()
+        | [x] => f x
+        | x :: xs =>
+          (
+            f x;
+            comma ();
+            pp_list f xs
+          )
+    fun pp_bracket f =
+      (
+        str "[";
+        f ();
+        str "]"
+      )
+    fun pp_list_bracket f ls = pp_bracket $ (fn () => pp_list f ls)
   in
     case inst of
         PUSH (n, w) =>
@@ -313,6 +336,24 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           str ")";
           close_box ()
         )
+      | Dispatch ls =>
+        (
+          open_hbox ();
+          str "Dispatch";
+          space ();
+          str "(";
+          pp_list_bracket (fn (sg, t1, t2, n) =>
+                              (str $ str_int sg;
+                               comma ();
+                               pp_t t1;
+                               comma ();
+                               pp_t t2;
+                               comma ();
+                               str $ str_int n
+                          )) ls;
+          str ")";
+          close_box ()
+        )
       | _ => str $ str_inst inst
   end
 
@@ -344,6 +385,7 @@ fun pp_insts (params as (pp_t, pp_inst)) s insts =
         end
       | JUMP () => str "JUMP"
       | RETURN () => str "RETURN"
+         | REVERT () => str "REVERT"
       | ISDummy s => str s
       | MACRO_halt (b, t) =>
         (

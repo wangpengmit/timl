@@ -104,6 +104,9 @@ fun enc inst =
       | MACRO_map_ptr () => macro "MACRO_map_ptr"
       | MACRO_vector_ptr () => macro "MACRO_vector_ptr"
       | MACRO_vector_push_back () => macro "MACRO_vector_push_back"
+      | InstJUMP () => macro "InstJUMP"
+      | InstRETURN () => macro "InstRETURN"
+      | InstREVERT () => macro "InstREVERT"
   end
     
 fun enc_insts out insts =

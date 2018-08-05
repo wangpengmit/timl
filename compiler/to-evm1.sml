@@ -245,7 +245,7 @@ val array_init_len = [MACRO_array_init_len ()]
 val int2byte = [MACRO_int2byte ()]
 fun make_inj t_other = [MACRO_inj $ Inner t_other]
 val br_sum = [MACRO_br_sum ()]
-fun halt t = MACRO_halt t
+fun halt b t = MACRO_halt (b, t)
 
 val inline_macro_inst = inline_macro_inst (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr, TUnit)
 val inline_macro_insts = inline_macro_insts (inline_macro_inst, PUSH_reg, scratch)
@@ -364,7 +364,56 @@ fun debug_pad n =
   if CostDebug.is_debug_cost () then
     repeat n $ JUMPDEST ()
   else []
+
+fun assert_ID x =
+  case x of
+      ID a => a
+    | _ => raise Impossible "assert_ID"
                  
+fun assert_EVar x =
+  case x of
+      EVar a => a
+    | _ => raise Impossible "assert_EVar"
+                 
+fun TRecord2Tuple_ty_visitor_vtable cast () =
+  let
+    val vtable =
+        default_ty_visitor_vtable
+          cast
+          extend_noop
+          extend_noop
+          visit_noop
+          visit_noop
+          visit_noop
+          visit_noop
+    fun visit_ty this env t =
+      let
+        val super = vtable
+        val vtable = cast this
+      in
+      case t of
+          TRecord fields =>
+          let
+            val ts = map snd $ sort cmp_str_fst $ SMap.listItemsi fields
+          in
+            #visit_ty vtable this env $ TTuple ts
+          end
+        | _ => #visit_ty super this env t (* call super *)
+      end
+    val vtable = override_visit_ty vtable visit_ty
+  in
+    vtable
+  end
+
+fun new_TRecord2Tuple_ty_visitor a = new_ty_visitor TRecord2Tuple_ty_visitor_vtable a
+    
+fun TRecord2Tuple t =
+  let
+    val visitor as (TyVisitor vtable) = new_TRecord2Tuple_ty_visitor ()
+  in
+    #visit_ty vtable visitor () t
+  end
+    
 fun compile st_name2int ectx e =
   let
     val compile = compile st_name2int ectx
@@ -389,6 +438,7 @@ fun compile st_name2int ectx e =
         fun get_info (name, e, t_arg, t_ret) =
           let
             (* val (e, t) = assert_EAscType e *)
+            val (e, _) = collect_all_anno e
             val (x, _) = assert_ID $ assert_EVar e
             val (_, v) = assert_SOME $ nth_error ectx x
             val r = assert_inl v
@@ -401,9 +451,9 @@ fun compile st_name2int ectx e =
             (* val (_, t) = assert_TProd t *)
             val t_arg = TRecord2Tuple t_arg
             val t_ret = TRecord2Tuple t_ret
-            val sg = get_func_sig (name, t_arg)
+            val sg = EVMPrelude.get_func_sig (name, t_arg)
           in
-            (sg, t_arg, t_ret, r)
+            (sg, Inner t_arg, Inner t_ret, r)
           end
         val fields = map get_info fields
       in
@@ -1205,7 +1255,7 @@ fun test1 dirname =
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
     val () = println "before inline_macro_prog()"
-    val inlined_prog = inline_macro_prog $ add_prelude_prog fresh_label prog
+    val inlined_prog = inline_macro_prog $ EVMPrelude.add_prelude_prog fresh_label prog
     val () = println "after inline_macro_prog()"
     val inlined_prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) inlined_prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-inline-macro.tmp", inlined_prog_str)

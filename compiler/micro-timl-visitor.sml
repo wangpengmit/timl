@@ -1161,6 +1161,7 @@ fun default_expr_visitor_vtable
           | EState x => EState x
           | EEnv name => EEnv name
           | ERecord fields => ERecord $ SMap.map (#visit_expr vtable this env) fields
+          | EDispatch ls => EDispatch $ map (fn (name, e, t1, t2) => (name, #visit_expr vtable this env e, #visit_ty vtable this env t1, #visit_ty vtable this env t2)) ls
       end
     fun visit_EVar this env data =
       let

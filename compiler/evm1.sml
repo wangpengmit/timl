@@ -51,9 +51,7 @@ datatype ('idx, 'ty) inst =
          | BALANCE of unit
          | CALLER of unit
          | CALLVALUE of unit
-         | CALLDATALOAD of unit
          | CALLDATASIZE of unit
-         | CALLDATACOPY of unit
          | CODESIZE of unit
          | GASPRICE of unit
          | COINBASE of unit
@@ -108,7 +106,9 @@ datatype ('idx, 'ty) inst =
          | MACRO_map_ptr of unit
          | MACRO_vector_ptr of unit
          | MACRO_vector_push_back of unit
-         | Dispatch of (int(*function signature*) * 'ty(*argument type*) * 'ty(*return type*) * int(*reg for function closure*)) list
+         | Dispatch of (int(*function signature*) * 'ty inner(*argument type*) * 'ty inner(*return type*) * int(*reg for function closure*)) list
+         | CALLDATALOAD of unit
+         | CALLDATACOPY of unit
          | InstJUMP of unit
          | InstRETURN of unit
          | InstREVERT of unit

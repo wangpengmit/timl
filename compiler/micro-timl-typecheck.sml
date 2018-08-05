@@ -1030,6 +1030,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
            | NONE => raise MTCError "Unbound term variable"
         )
       | EConst c => (e_input, get_expr_const_type c, TN C_EConst, st)
+      | EDispatch ls =>
+        let
+          val ls = map (fn (name, e, t1, t2) => (name, #1 $ tc (ctx, st) e, kc_against_KType itctx t1, kc_against_KType itctx t2)) ls
+        in
+          (EDispatch ls, TUnit, TN C_EConst, st)
+        end
       | EEnv name => (EEnv name, get_msg_info_type name, TN $ C_EEnv name, st)
       (* | EUnOp (opr as EUTiML (EUProj proj), e) => *)
       (*   let *)

@@ -48,6 +48,7 @@ val C_MSTORE8 = C_verylow
 val C_PUSH = C_verylow
 val C_DUP = C_verylow
 val C_SWAP = C_verylow
+val C_CALLDATALOAD = C_verylow
                 
 val C_MUL = C_low
 val C_DIV = C_low
@@ -81,6 +82,7 @@ val C_MARK_PreTuple2TuplePtr = 0
                                  
 val C_JUMP = C_mid
 val C_RETURN = 0
+val C_REVERT = 0
 val C_ISDummy = 0
                       
 fun C_LOG n = 375 + n * C_logtopic

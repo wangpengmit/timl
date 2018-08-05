@@ -190,6 +190,7 @@ fun collect_EAppIT e = mapSnd rev $ collect_EAppIT_rev e
 fun is_value e =
   case e of
       EConst _ => true
+    | EDispatch _ => true (* pretend to be an EConst *)
     | EState _ => true
     | EEnv _ => true
     (* | EBinOp (EBPair (), e1, e2) => is_value e1 andalso is_value e2 *)

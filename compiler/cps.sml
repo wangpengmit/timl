@@ -607,6 +607,9 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
     | S.EConst c =>
       (* [[ c ]](k) = k c *)
       (k $$ EConst c, TN C_EConst %%+ j_k)
+    | S.EDispatch ls =>
+      (* [[ dispatch ]](k) = k dispatch *)
+      (k $$ EDispatch ls, TN C_EConst %%+ j_k)
     | S.EEnv name =>
       (* [[ msg_info ]](k) = k msg_info *)
       (k $$ EEnv name, TN (C_EEnv name) %%+ j_k)
@@ -1276,6 +1279,7 @@ fun check_CPSed_expr e =
     | ETriOp (ETVectorSet (), _, _, _) => err ()
     | EVar _ => err ()
     | EConst _ => err ()
+    | EDispatch _ => err () (* pretend to be an EConst *)
     | EEnv _ => err ()
     | EState _ => err ()
     | EUnOp _ => err ()
@@ -1336,6 +1340,7 @@ and check_value e =
     in
   case e of
       EConst _ => ()
+    | EDispatch _ => () (* pretend to be an EConst *)
     | EState _ => ()
     | EEnv _ => ()
     (* | EBinOp (EBPair (), e1, e2) => (check_value e1; check_value e2) *)

@@ -639,6 +639,24 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
           close_box ()
         )
       | EEnv name => str $ "env." ^ str_env_info name
+      | EDispatch ls =>
+        (
+          open_hbox ();
+          str "EDispatch";
+          space ();
+          str "(";
+          pp_list_bracket (fn (name, e, t1, t2) =>
+                              (str name;
+                               comma ();
+                               pp_e e;
+                               comma ();
+                               pp_t t1;
+                               comma ();
+                               pp_t t2
+                          )) ls;
+          str ")";
+          close_box ()
+        )
       | EMatchSum (e, branches) =>
         (
 	  open_vbox ();

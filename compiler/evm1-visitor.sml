@@ -108,6 +108,7 @@ fun default_evm1_visitor_vtable
           | MACRO_tuple_malloc ts => MACRO_tuple_malloc $ visit_inner (visit_list $ #visit_ty vtable this) env ts
           | MACRO_array_malloc (w, t, b) => MACRO_array_malloc (w, visit_inner (#visit_ty vtable this) env t, b)
           | MACRO_inj t => MACRO_inj $ visit_inner (#visit_ty vtable this) env t
+          | Dispatch ls => Dispatch $ map (fn (name, t1, t2, n) => (name, visit_inner (#visit_ty vtable this) env t1, visit_inner (#visit_ty vtable this) env t2, n)) ls
           | ADD () => ADD ()
           | MUL () => MUL ()
           | SUB () => SUB ()
@@ -133,6 +134,11 @@ fun default_evm1_visitor_vtable
           | CALLER () => CALLER ()
           | CALLVALUE () => CALLVALUE ()
           | CALLDATASIZE () => CALLDATASIZE ()
+         | CALLDATALOAD () => CALLDATALOAD ()
+         | CALLDATACOPY () => CALLDATACOPY ()
+         | InstJUMP () => InstJUMP ()
+         | InstRETURN () => InstRETURN ()
+         | InstREVERT () => InstREVERT ()
           | CODESIZE () => CODESIZE ()
           | GASPRICE () => GASPRICE ()
           | COINBASE () => COINBASE ()
@@ -178,6 +184,7 @@ fun default_evm1_visitor_vtable
             ISCons bind => ISCons $ visit_bind (#visit_inst vtable this) (#visit_insts vtable this) env bind
           | JUMP () => JUMP ()
           | RETURN () => RETURN ()
+         | REVERT () => REVERT ()
           | ISDummy a => ISDummy a
           | MACRO_halt (b, t) => MACRO_halt (b, #visit_ty vtable this env t)
       end

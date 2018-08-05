@@ -148,6 +148,7 @@ fun C_inst b =
     | CALLER () => C_CALLER
     | CALLVALUE () => C_CALLVALUE
     | CALLDATASIZE () => C_CALLDATASIZE
+         | CALLDATALOAD () => C_CALLDATALOAD
     | CODESIZE () => C_CODESIZE
     | GASPRICE () => C_GASPRICE
     | COINBASE () => C_COINBASE
@@ -215,6 +216,8 @@ fun C_inst b =
                                     
     | LOG n => C_LOG n
                            
+    | Dispatch _ => C_PUSH
+                      
     | MACRO_init_free_ptr _ => raise Impossible $ "C_inst() on MACRO_init_free_ptr"
     | MACRO_tuple_malloc _ => raise Impossible $ "C_inst() on MACRO_tuple_malloc"
     | MACRO_tuple_assign _ => raise Impossible $ "C_inst() on MACRO_tuple_assign"
@@ -228,6 +231,11 @@ fun C_inst b =
     | MACRO_map_ptr _ => raise Impossible $ "C_inst() on MACRO_map_ptr"
     | MACRO_vector_ptr _ => raise Impossible $ "C_inst() on MACRO_vector_ptr"
     | MACRO_vector_push_back _ => raise Impossible $ "C_inst() on MACRO_vector_push_back"
+
+         | InstJUMP () => raise Impossible $ "C_inst() on InstJUMP"
+         | InstRETURN () => raise Impossible $ "C_inst() on InstRETURN"
+         | InstREVERT () => raise Impossible $ "C_inst() on InstREVERT"
+         | CALLDATACOPY () => raise Impossible $ "C_inst() on CALLDATACOPY"
                                         
 fun C_insts insts =
   case insts of
@@ -239,6 +247,7 @@ fun C_insts insts =
       end
     | JUMP () => C_JUMP
     | RETURN () => C_RETURN
+         | REVERT () => C_REVERT
     (* only for debug/printing purpose *)
     | ISDummy _ => C_ISDummy
     | MACRO_halt _ => raise Impossible $ "C_insts() on MACRO_halt"

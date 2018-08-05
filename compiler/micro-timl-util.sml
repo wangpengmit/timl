@@ -260,13 +260,6 @@ fun map_kind f k =
       | KArrow (b, k) => KArrow (f b, map_kind f k)
       | KArrowT (k1, k2) => KArrowT (map_kind f k1, map_kind f k2)
 
-datatype ('idx, 'ty) anno =
-         AnnoType of 'ty
-         | AnnoTime of 'idx
-         | AnnoSpace of 'idx
-         | AnnoState of 'idx
-         | AnnoEA of expr_anno
-                       
 fun collect_all_anno_rev e =
   let
     val self = collect_all_anno_rev

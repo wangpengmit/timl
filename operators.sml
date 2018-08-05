@@ -482,4 +482,11 @@ fun str_env_info name =
       | EnvBalance () => "balance"
       | EnvBlockNumber () => "block.number"
                         
+datatype ('idx, 'ty, 'state) anno =
+         AnnoType of 'ty
+         | AnnoTime of 'idx
+         | AnnoSpace of 'idx
+         | AnnoState of 'state
+         | AnnoEA of expr_anno
+                       
 end

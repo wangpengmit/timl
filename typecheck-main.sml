@@ -758,6 +758,7 @@ fun is_value (e : U.expr) : bool =
     case e of
         EVar _ => true (* todo: is this right? *)
       | EConst _ => true
+      | EDispatch _ => true (* pretend to be an EConst *)
       | EEnv _ => true
       | EState _ => true
       | EUnOp (opr, e, _) =>
@@ -1533,6 +1534,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val fields = SMap.listItemsi fields
             fun get_info (name, (e, t)) =
               let
+                val (e, _) = collect_all_anno e
                 val () = case e of
                              EVar (ID _, _) => ()
                            | _ => raise Error (r (), ["must be variable"])

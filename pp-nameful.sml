@@ -519,6 +519,23 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
         app (fn (proj, _) => (space (); str "."; str $ str_sum str_int id proj)) path;
         close_box ()
       )
+    fun pp_list f ls =
+      case ls of
+          [] => ()
+        | [x] => f x
+        | x :: xs =>
+          (
+            f x;
+            comma ();
+            pp_list f xs
+          )
+    fun pp_bracket f =
+      (
+        str "[";
+        f ();
+        str "]"
+      )
+    fun pp_list_bracket f ls = pp_bracket $ (fn () => pp_list f ls)
   in
     case e of
         EVar (x, (b1, b2)) =>
@@ -547,6 +564,26 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           open_hbox ();
           strs "EState";
           str x;
+          close_box ()
+        )
+      | EDispatch (e, ls) =>
+        (
+          open_hbox ();
+          str "EDispatch";
+          space ();
+          str "(";
+          pp_e e;
+          comma ();
+          pp_list_bracket (fn (name, e, t1, t2) =>
+                              (str name;
+                               comma ();
+                               pp_e e;
+                               comma ();
+                               pp_t t1;
+                               comma ();
+                               pp_t t2
+                          )) ls;
+          str ")";
           close_box ()
         )
       | EUnOp (EUAnno (EALiveVars (n, b)), e, _) =>

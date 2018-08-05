@@ -291,6 +291,7 @@ fun live_vars_expr_visitor_vtable cast () =
             in
               ETuple es
             end
+          | EDispatch (e, ls) => T.EDispatch (#visit_expr vtable this env e, ls) (* no need to visit 'ls' *)
       in
         ret
       end
