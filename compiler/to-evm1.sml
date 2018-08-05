@@ -230,10 +230,7 @@ fun VAppITs_ctx (e, itctx) =
 
 fun PUSH_tuple_offset n = PUSH (2, Inner $ WNat n)
 fun PUSH_array_offset n = PUSH (32, Inner $ WNat n)
-fun PUSH_reg n = PUSH (2, Inner $ WNat n)
     
-fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD ()]
-fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE ()]
 val array_ptr = [PUSH1nat 32, MUL (), ADD ()]
 val byte2int = [BYTE2INT ()]
                   

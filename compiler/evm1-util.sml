@@ -78,4 +78,9 @@ val scratch = reg_addr 0
 val FIRST_GENERAL_REG = 2
 val ARG_REG = FIRST_GENERAL_REG
                
+fun PUSH_reg n = PUSH (2, Inner $ WNat n)
+                      
+fun get_reg r = [PUSH_reg $ reg_addr r, MLOAD ()]
+fun set_reg r = [PUSH_reg $ reg_addr r, MSTORE ()]
+                  
 end

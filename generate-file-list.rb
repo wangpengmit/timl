@@ -231,6 +231,7 @@ compiler/cc.sml
 # compiler/tital-eval.sml
 # compiler/code-gen.sml
 compiler/evm1.sml
+compiler/evm1-other-names.sml
 compiler/evm1-visitor.sml
 compiler/evm1-pp.sml
 compiler/evm1-export-pp.sml

@@ -3,7 +3,10 @@ structure EVMPrelude = struct
 open Util
 open BaseTypes
 open MicroTiML
+open EVM1Util
 open EVM1
+open EVM1OtherNames
+open MicroTiMLUtil
 
 infixr 0 $
        
@@ -58,13 +61,13 @@ fun assert_Int_Byte_Unit t = assert_b "assert_Int_Byte_Unit" $ is_Int_Byte_Unit 
 
 fun make_tuple n =
   (* [v_(n-1), ..., v_0] *)
-  [TupleMalloc (repeat n $ TUint)] @
+  [TupleMalloc (repeat n $ TUnit)] @
   int_concatMap_rev
     (fn i => [
        (* [ptr, v_i, v_(i-1)] *)
        Swap1, (* [v_i, ptr, v_(i-1)] *)
        Dup2, (* [ptr, v_i, ptr, v_(i-1)] *)
-       Push i*32,
+       Push $ i*32,
        Add, (* [ptr+32*i, v_i, ptr, v_(i-1)] *)
        MStore (* [ptr, v_(i-1)] *)
     ]) n
@@ -72,8 +75,9 @@ fun make_tuple n =
     
 fun untuple_save n =
   (* [ptr_to_tuple] *)
-  int_concatMap (fn i => [Dup1, Push i*32, Add, MLoad, Swap1]) n @
+  int_concatMap (fn i => [Dup1, Push $ i*32, Add, MLoad, Swap1]) n
 (* [ptr_to_tuple, v_(n-1), ..., v_0] *)
+                
 fun untuple n = untuple_save n @ [Pop]
 
 fun decode pos t =
@@ -93,7 +97,7 @@ fun decode pos t =
           Dup1,
           CallDataLoad, (* [array_len, ptr_to_input_array_len] *)
           Dup1, (* [array_len, array_len, ptr_to_input_array_len] *)
-          ArrayMalloc w t true, (* [ptr_to_array, array_len, ptr_to_input_array_len] *)
+          ArrayMalloc (w, t, true), (* [ptr_to_array, array_len, ptr_to_input_array_len] *)
           Dup2,
           ArrayInitLen, (* [ptr_to_array, array_len, ptr_to_input_array_len] *)
           Swap1, (* [array_len, ptr_to_array, ptr_to_input_array_len] *)
@@ -111,7 +115,7 @@ fun decode pos t =
     | TConst (TCUnit ()) =>
       [ Push 0 ]
     | _ =>
-      if is_Int_Byte t then
+      if is_Int_Byte_Unit t then
         [
           Push pos,
           CallDataLoad
@@ -146,7 +150,7 @@ fun encode_array w tuple_len pos_in_tuple =
       Swap1, (* [array_len, ptr_to_array_len-n] *)
       Push w,
       Mul,
-      Push 32+n,
+      Push $ 32+n,
       Add, (* [array_len*w+32+n, ptr_to_array_len-n] *)
       Swap1 (* [ptr_to_array_len-n, array_len*w+32+n] *)
     ] @
@@ -165,17 +169,19 @@ fun encode_array w tuple_len pos_in_tuple =
     )
   end
 
+fun is_TArray t =
+  case t of
+      TArray a => SOME a
+    | _ => NONE
+             
+fun at_most_one_Array_other_Int_Byte_Unit ts =
+  at_most_one_some_other_true is_TArray is_Int_Byte_Unit ts
+                              
 fun encode t =
   case t of
       TTuple ts =>
-      if List.all is_Int_Byte_Unit ts then
-        [
-          Push 32 * length ts,
-          Swap1
-        ]
-      else
-        (case one_Array_other_Int_Byte_Unit ts of
-             SOME (p, (w, t, _)) =>
+        (case at_most_one_Array_other_Int_Byte_Unit ts of
+             inl (p, (w, t, _)) =>
              let
                val () = assert_Int_Byte_Unit t
                val len = length ts
@@ -183,7 +189,7 @@ fun encode t =
                (* [ptr_to_tuple] *)
                untuple_save (length ts) @
                [ (* [ptr_to_tuple, v_(len-1), ..., v_0] *)
-                 Push 32*p,
+                 Push $ 32*p,
                  Add,
                  MLoad (* [ptr_to_array, vs] *)
                ] @
@@ -201,7 +207,7 @@ fun encode t =
                         else
                           [
                             Dup3, (* [ptr_to_array_len-n, v_i, array_len*w+32+n, ptr_to_array_len-n, v_(i-1)] *)
-                            Push i*32,
+                            Push $ i*32,
                             Add, (* [ptr_to_array_len-n+i*32, v_i, array_len*w+32+n, ptr_to_array_len-n, v_(i-1)] *)
                             MStore (* [array_len*w+32+n, ptr_to_array_len-n, v_(i-1)] *)
                           ]
@@ -211,7 +217,12 @@ fun encode t =
                  ) ts
                  (* [ptr_to_array_len-n, array_len*w+32+n] *)
              end
-           | NONE => raise Impossible "Can't encode tuple"
+           | inr true =>
+             [
+               Push $ 32 * length ts,
+               Swap1
+             ]
+           | inr false => raise Impossible "Can't encode tuple"
         )
     | TArray (w, t, len) =>
       let
@@ -230,6 +241,24 @@ fun encode t =
       else
         raise Impossible "Can't encode type"
 
+fun large_exp (b, n) =
+  if n <= 0 then LargeInt.fromInt 1
+  else LargeInt.* (b, large_exp (b, n-1))
+                     
+fun rshift n =
+  [
+    Push_large $ large_exp (LargeInt.fromInt 2, n),
+    Swap1,
+    DIV ()
+  ]
+    
+fun rshift_byte n = 
+  [
+    Push_large $ large_exp (LargeInt.fromInt 256, n),
+    Swap1,
+    DIV ()
+  ]
+    
 fun try_fun (fresh_label, output_heap) (sg, t_arg, t_ret, func) =
   let
     val l_decode = fresh_label ()
@@ -283,17 +312,19 @@ fun try_fun (fresh_label, output_heap) (sg, t_arg, t_ret, func) =
     code_try_sig
   end
 
-fun prelude fresh_label funs =
+fun prelude (params as (fresh_label, output_heap)) funs =
   let
-    val code_no_match =
+    fun revert_with error_code =
         [
-          Push ErrorCode.NO_MATCH,
+          Push error_code,
           Push 0,
           MStore,
           Push 32,
           Push 0,
           Revert
         ]
+    val l_no_sig_exit = fresh_label ()
+    val () = output_heap ((l_no_sig_exit, "prelude_no_fun_sig"), revert_with ErrorCode.NO_FUN_SIG)
   in
     [
       Push 4,
@@ -301,11 +332,13 @@ fun prelude fresh_label funs =
       Lt, (* 1 if size < 4 *)
       Push_l l_no_sig_exit,
       Jumpi
-    ]
-    @ concatMap (try_fun fresh_label) funs
-    @ code_no_match
+    ] @
+    concatMap (try_fun params) funs @
+    revert_with ErrorCode.NO_MATCH
   end
 
+val add_prelude_flag = ref false
+                           
 fun add_prelude_inst params (inst : ('a, 'b) inst) =
   let
     val add_prelude_inst = add_prelude_inst params
@@ -315,7 +348,7 @@ fun add_prelude_inst params (inst : ('a, 'b) inst) =
         if !add_prelude_flag then
           prelude params funs
         else
-          PUSH_value $ VConst WCUnit
+          PUSH_value $ VConst $ WCTT ()
       | _ => [inst]
   end
 
@@ -339,7 +372,7 @@ fun add_prelude_hval params code =
     val (binds, (spec, I)) = unBind code
     val I = add_prelude_insts params I
   in
-    Bind (binds, (spec, I))
+    Bind (binds, (spec, remove_early_end I))
   end
 
 fun add_prelude_prog fresh_label (H, I) =
@@ -348,7 +381,7 @@ fun add_prelude_prog fresh_label (H, I) =
     fun output_heap a = push_ref r a
     val params = (fresh_label, output_heap)
     val (H, I) = (map (mapSnd $ add_prelude_hval params) H, add_prelude_insts params I)
-    fun inst22hval I = Bind ([], ((IEmptyState (), Rctx.empty, [], TN0), I))
+    fun inst22hval I = Bind ([], ((IEmptyState (), Rctx.empty, [], TN0), list2insts I))
     val H' = map (mapSnd insts2hval) $ !r
   in
     (H @ H', I)

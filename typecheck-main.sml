@@ -1559,29 +1559,6 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                       | TArray (w, t, _) => assert_Int_Byte_Unit t
                       | _ => assert_Int_Byte_Unit t
                   end
-                fun at_most_one_some_other_true fo fb ls =
-                  let
-                    exception Fail of string
-                    fun f (x, (i, acc)) =
-                      let
-                        val acc = 
-                            case fo x of
-                                SOME a =>
-                                (case acc of
-                                     SOME _ => raise Fail "two some"
-                                   | NONE => SOME (i, a)
-                                )
-                              | NONE => if fb x then acc else raise Fail "false"
-                      in
-                        (i+1, acc)
-                      end
-                    val r = SOME (snd $ foldl f (0, NONE) ls) handle Fail _ => NONE
-                  in
-                    case r of
-                        NONE => inr false
-                      | SOME NONE => inr true
-                      | SOME (SOME a) => inl a
-                  end
                 fun is_TArray t =
                   case t of
                       TArray a => SOME a

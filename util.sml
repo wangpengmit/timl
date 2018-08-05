@@ -411,7 +411,10 @@ end
 
 fun int_mapi f n = Range.map f $ Range.zero_to n
 fun int_appi f n = Range.app f $ Range.zero_to n
+fun int_mapi_rev f n = int_mapi (fn i => f $ n-1-i) n
 val list_of_range = Range.to_list
+fun int_concatMap f n = List.concat $ int_mapi f n
+fun int_concatMap_rev f n = int_concatMap (fn i => f $ n-1-i) n
   
 fun repeat_app f n = Range.app (fn _ => f ()) (Range.zero_to n)
 
@@ -680,4 +683,28 @@ fun unzip_many n lss =
       r
     end
              
+fun at_most_one_some_other_true fo fb ls =
+  let
+    exception Fail of string
+    fun f (x, (i, acc)) =
+      let
+        val acc = 
+            case fo x of
+                SOME a =>
+                (case acc of
+                     SOME _ => raise Fail "two some"
+                   | NONE => SOME (i, a)
+                )
+              | NONE => if fb x then acc else raise Fail "false"
+      in
+        (i+1, acc)
+      end
+    val r = SOME (snd $ foldl f (0, NONE) ls) handle Fail _ => NONE
+  in
+    case r of
+        NONE => inr false
+      | SOME NONE => inr true
+      | SOME (SOME a) => inl a
+  end
+      
 end
