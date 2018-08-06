@@ -1085,6 +1085,8 @@ open TestUtil
 fun test1 dirname =
   let
     val () = println "ToEVM1.UnitTest started"
+    val timer = Timer.startRealTimer ()
+    val time_start = Timer.checkRealTimer timer
     val filename = join_dir_file' dirname "to-evm1-test.pkg"
     val filenames = map snd $ ParseFilename.expand_pkg (fn msg => raise Impossible msg) (true, filename)
     val prog = concatMap ParserFactory.parse_file filenames
@@ -1114,6 +1116,7 @@ fun test1 dirname =
             )
     (* val () = app println $ concatMap (fn vc => VC.str_vc false filename vc @ [""]) vcs *)
     val () = check_vcs vcs
+    val time_after_TiML_tc = Timer.checkRealTimer timer
     val () = println "Finished TiML typechecking"
                      
     open MergeModules
@@ -1304,6 +1307,9 @@ fun test1 dirname =
           println $ "Gas-bound: " ^ (ToString.str_i Gctx.empty [] $ Simp.simp_i total_gas )
         end
 
+    val time_end = Timer.checkRealTimer timer
+    val () = println $ sprintf "TiML typechecking time: $ seconds" [Time.fmt 3 $ Time.-(time_after_TiML_tc, time_start)]
+    val () = println $ sprintf "Total compilation time: $ seconds" [Time.fmt 3 $ Time.-(time_end, time_start)]
     val () = println "ToEVM1.UnitTest passed"
   in
     ((* t, e *))
