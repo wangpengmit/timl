@@ -175,7 +175,8 @@ fun default_expr_visitor_vtable
           | EEnv (name, r) => T.EEnv (name, r)
           | ERecord (fields, r) => T.ERecord (SMap.map (#visit_expr vtable this env) fields, r)
           | ETuple data => T.ETuple $ visit_list (#visit_expr vtable this) env data
-          | EDispatch (e, ls) => T.EDispatch (#visit_expr vtable this env e, map (fn (name, e, t1, t2) => (name, #visit_expr vtable this env e, #visit_mtype vtable this env t1, #visit_mtype vtable this env t2)) ls)
+          | EDispatch (ls, r) =>
+            T.EDispatch (map (fn (name, e, t1, t2) => (name, #visit_expr vtable this env e, Option.map (#visit_mtype vtable this env) t1, Option.map (#visit_mtype vtable this env) t2)) ls, r)
       end
     fun visit_EVar this env data =
       let

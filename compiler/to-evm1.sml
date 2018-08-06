@@ -1249,8 +1249,8 @@ fun test1 dirname =
     val () = println "Started Code Generation ..."
     val (prog, num_regs) = cg_prog (st_name2int, init_st) e
     val st_name2ty = StMap.map cg_t st_name2ty
-    val () = println "st_name2ty:"
-    val () = println $ StMapU.str_map (id, prefix "" o pp_t_to_string NONE o export_t NONE ([], [])) st_name2ty
+    (* val () = println "st_name2ty:" *)
+    (* val () = println $ StMapU.str_map (id, prefix "" o pp_t_to_string NONE o export_t NONE ([], [])) st_name2ty *)
     val () = println "Finished Code Generation"
     open EVM1Simp
     val () = println "before simp_prog()"

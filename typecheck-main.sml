@@ -1518,33 +1518,29 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
               end
           end
         | U.EConst (c, r) => (EConst (c, r), get_expr_const_type (c, r), TN C_EConst, st)
-        | U.EDispatch (e, _) =>
+        | U.EDispatch (fields, r) =>
           let
-            val (e, t, _, _) = get_mtype ctx_st e
-            fun r () = get_region_e e
-            val e_fields = case e of
-                               ERecord (a, _) => a
-                             | _ => raise Error (r (), ["must be record"])
-            (* val t = whnf_mt true gctx kctx t *)
-            val t = normalize_mt true gctx kctx t
-            val t_fields = case t of
-                               TRecord (a, _) => a
-                             | _ => raise Error (r (), ["type must be record"])
-            val fields = SMap.intersectWith id (e_fields, t_fields)
-            val fields = SMap.listItemsi fields
-            fun get_info (name, (e, t)) =
+            val fields = map (fn (name, e, _, _) =>
+                                 let
+                                   val (e, t, _, _) = get_mtype ctx_st e
+                                   (* val t = whnf_mt true gctx kctx t *)
+                                   val t = normalize_mt true gctx kctx t
+                                 in
+                                   (name, e, t)
+                                 end) fields
+            fun get_info (name, e, t) =
               let
                 val (e, _) = collect_all_anno e
                 val () = case e of
                              EVar (ID _, _) => ()
-                           | _ => raise Error (r (), ["must be variable"])
+                           | _ => raise Error (r, ["must be variable"])
                 val ((_, t_arg), _, (_, t_ret)) =
                     case t of
                         TArrow a => a
-                      | _ => raise Error (r (), ["must be function (arrow) type"])
+                      | _ => raise Error (r, ["must be function (arrow) type"])
                 fun assert_wordsize_ty t =
                   if is_wordsize_ty t = true then ()
-                  else raise Error (r (), ["can only be int/byte/unit"])
+                  else raise Error (r, ["can only be int/byte/unit"])
                 fun check_good_arg_ty t =
                   let
                     val loop = check_good_arg_ty
@@ -1570,7 +1566,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                         (case at_most_one_Array_other_wordsize_ty ts of
                              inl (_, (_, t, _)) => assert_wordsize_ty t
                            | inr true => ()
-                           | inr false => raise Error (r (), ["tuple can only have one array; others can be int/byte/unit"])
+                           | inr false => raise Error (r, ["tuple can only have one array; others can be int/byte/unit"])
                         )
                       | TArray (w, t, _) => assert_wordsize_ty t
                       | _ => assert_wordsize_ty t
@@ -1578,11 +1574,11 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                 val () = check_good_arg_ty t_arg
                 val () = check_good_ret_ty t_ret
               in
-                (name, e, t_arg, t_ret)
+                (name, e, SOME t_arg, SOME t_ret)
               end
             val fields = map get_info fields
           in
-            (EDispatch (e, fields), TUnit dummy, TN C_EConst, st)
+            (EDispatch (fields, r), TUnit dummy, TN C_EConst, st)
           end
         | U.EEnv (name, r) => (EEnv (name, r), get_msg_info_type r name, TN $ C_EEnv name, st)
         (* | U.EUnOp (opr as EUProj proj, e, r) => *)

@@ -1096,9 +1096,9 @@ fun tc_hval (params as (hctx, num_regs, st_name2ty, st_int2name)) h =
     val time = sc_against_sort ictx (time, STime)
     val space = sc_against_sort ictx (space, SNat)
     val st = sc_against_sort ictx (st, SState)
-    val () = println "before checking insts"
+    (* val () = println "before checking insts" *)
     val (i', ni) = tc_insts params (itctx, rctx, sctx, st) insts
-    val () = println "after checking insts"
+    (* val () = println "after checking insts" *)
     val () = close_n ni
     val i' = forget_i_2i 0 ni i'
     val () = check_prop (i' %%<= (time, space))
@@ -1121,7 +1121,10 @@ fun tc_prog (num_regs, st_name2ty, st_int2name, init_st) (H, I) =
       end
     fun get_hctx H = RctxUtil.fromList $ map (mapPair' fst get_hval_type) H
     val hctx = get_hctx H
-    val () = app (fn ((l, name), h) => (println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; tc_hval (hctx, num_regs, st_name2ty, st_int2name) h)) H
+    val () = app (fn ((l, name), h) =>
+                     (
+                       (* println $ sprintf "tc_hval() on: $ <$>" [str_int l, name]; *)
+                       tc_hval (hctx, num_regs, st_name2ty, st_int2name) h)) H
     val (i, ni) = tc_insts (hctx, num_regs, st_name2ty, st_int2name) (([], []), Rctx.empty, [], init_st) I
     val () = close_n ni
     val i = forget_i_2i 0 ni i

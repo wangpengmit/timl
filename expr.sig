@@ -47,7 +47,7 @@ signature EXPR = sig
            | ESet of string * (expr * proj_path) list * expr * Region.region
            | EEnv of Operators.env_info * Region.region
            | EAscState of expr * idx StMap.map
-           | EDispatch of expr * (string * expr * mtype * mtype) list
+           | EDispatch of (string * expr * mtype option * mtype option) list * Region.region
            (* these constructs won't show up in source program *)
            (* | EAbsT of (sort, expr) tbind_anno * region *)
 

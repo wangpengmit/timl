@@ -566,22 +566,20 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           str x;
           close_box ()
         )
-      | EDispatch (e, ls) =>
+      | EDispatch (ls, _) =>
         (
           open_hbox ();
           str "EDispatch";
           space ();
           str "(";
-          pp_e e;
-          comma ();
           pp_list_bracket (fn (name, e, t1, t2) =>
                               (str name;
                                comma ();
                                pp_e e;
-                               comma ();
-                               pp_t t1;
-                               comma ();
-                               pp_t t2
+                               Option.app (fn t => (comma ();
+                                                    pp_t t)) t1;
+                               Option.app (fn t => (comma ();
+                                                    pp_t t)) t2
                           )) ls;
           str ")";
           close_box ()

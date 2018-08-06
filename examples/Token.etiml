@@ -127,7 +127,7 @@ contract TokenERC20 = struct
   (*  * @param _value the amount to send *)
   public fun transfer (_to : address, _value : uint256) =
            _transfer(msg.sender, _to, _value)
-    ; (_to, _value, msg.sender, balanceOf[msg.sender], balanceOf[_to])
+    (* ; (_to, _value, msg.sender, balanceOf[msg.sender], balanceOf[_to]) *)
 
   (*  * Transfer tokens from other address *)
   (*  * *)
@@ -136,12 +136,13 @@ contract TokenERC20 = struct
   (*  * @param _from The address of the sender *)
   (*  * @param _to The address of the recipient *)
   (*  * @param _value the amount to send *)
-  public fun transferFrom (_from : address, _to : address, _value : uint256) return bool =
+  public fun transferFrom (_from : address, _to : address, _value : uint256) =
     require(_value <= allowance[_from][msg.sender]);     (* Check allowance *)
     modify allowance[_from][msg.sender] -= _value;
     _transfer(_from, _to, _value);
-    true
-
+    (* true *)
+    (_from, _to, _value, msg.sender, allowance[_from][msg.sender], balanceOf[_from], balanceOf[_to])
+      
   (*  * Set allowance for other address *)
   (*  * *)
   (*  * Allows `_spender` to spend no more than `_value` tokens on your behalf *)
@@ -163,12 +164,13 @@ contract TokenERC20 = struct
   (*  * @param _value the max amount they can spend *)
   (*  * @param _extraData some extra information to send to the approved contract *)
   (*  *)
-  public fun approveAndCall (_spender : address, _value : uint256(* , _extraData : bytes *)) using _ =
+  public fun approveAndCall (_spender : address, _value : uint256(* , _extraData : bytes *)) =
     let spender = attach _spender tokenRecipient;
     if approve(_spender, _value) then
       call spender receiveApproval(msg.sender, _value, this, _extraData);
       true
     else false end
+    (* ; (msg.sender, _spender, _value, allowance[msg.sender][_spender]) *)
 
   (** *)
   (*  * Destroy tokens *)
@@ -177,12 +179,13 @@ contract TokenERC20 = struct
   (*  * *)
   (*  * @param _value the amount of money to burn *)
   (*  *)
-  public fun burn (_value : uint256) return bool using _ =
+  public fun burn (_value : uint256) =
     require(balanceOf[msg.sender] >= _value);   (* Check if the sender has enough *)
     modify balanceOf[msg.sender] -= _value;            (* Subtract from the sender *)
     modify totalSupply -= _value;                      (* Updates totalSupply *)
     fire Burn(msg.sender, _value);
     true
+    (* (msg.sender, _value, balanceOf[msg.sender], !!totalSupply) *)
 
   (** *)
   (*  * Destroy tokens from other account *)
@@ -192,7 +195,7 @@ contract TokenERC20 = struct
   (*  * @param _from the address of the sender *)
   (*  * @param _value the amount of money to burn *)
   (*  *)
-  public fun burnFrom (_from : address, _value : uint256) return bool using _ =
+  public fun burnFrom (_from : address, _value : uint256) =
     require(balanceOf[_from] >= _value);                (* Check if the targeted balance is enough *)
     require(_value <= allowance[_from][msg.sender]);    (* Check allowance *)
     modify balanceOf[_from] -= _value;                         (* Subtract from the targeted balance *)
@@ -200,11 +203,21 @@ contract TokenERC20 = struct
     modify totalSupply -= _value;                              (* Update totalSupply *)
     fire Burn(_from, _value);
     true
+    (* (msg.sender, _from, _value, balanceOf[_from], !!totalSupply, allowance[_from][msg.sender]) *)
 
   val () = %init (0xa0, {}, {})
+            
+  val _ = transfer (0x246, 0x80)
+  val () = set allowance[0x246][0x8888] 0x50
+            
   val () = dispatch {transfer = transfer,
                      approve = approve,
+                     approveAndCall = approveAndCall,
+                     transferFrom = transferFrom,
+                     burn = burn,
+                     burnFrom = burnFrom,
                     }
+                    
   (* val () = transfer (0x123, 0x20) *)
                     
 end

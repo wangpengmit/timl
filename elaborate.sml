@@ -533,7 +533,7 @@ local
 		   else if x = "__&byte2int" orelse x = "byte2int" then EUnOp (EUPrim (EUPByte2Int ()), elab e2, r)
 		   else if x = "__&int2byte" orelse x = "int2byte" then EUnOp (EUPrim (EUPInt2Byte ()), elab e2, r)
 		   else if x = "__&array_length" orelse x = "array_len" then EUnOp (EUArrayLen (), elab e2, r)
-		   else if x = "dispatch" then EDispatch (elab e2, [])
+		   else if x = "dispatch" then EDispatch (elab_dispatch r e2, r)
 		   else if x = "vector_len" then EUnOp (EUVectorLen (), elab e2, r)
 		   else if x = "vector_clear" then EUnOp (EUVectorClear (), elab e2, r)
 		                                         (* else if x = "__&print" then EUnOp (EUPrint, elab e2, r) *)
@@ -716,6 +716,12 @@ local
               ) (elab e) projs
       (* | S.ETruncate (n, e, _) => EIntAnd (elab e, mask n) *)
 
+  and elab_dispatch r e =
+      case e of
+          S.ERecord (ls, _) =>
+          map (fn (id, e) => (fst id, elab e, NONE, NONE)) ls
+        | _ => raise Error (r, "dispatch must be with a record")
+                     
   and elab_decl decl =
       case decl of
 	  S.DVal (tnames, pn, e, r) =>
