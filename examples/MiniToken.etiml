@@ -4,7 +4,7 @@ structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
-  fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+  (* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
   fun require b = if b then (* waste_time ();  *)() else (throw using _) end
 end
 
@@ -15,24 +15,25 @@ contract MyToken = struct
   (* public state name : vector int = {10,} *)
 
   (* Initializes contract with initial supply tokens to the creator of the contract *)
-  fun init (initialSupply : uint256) using _ =
+  fun init (initialSupply : uint256) =
     set balanceOf[msg.sender] initialSupply           (* Give the creator all initial tokens *)
 
   fun addBy b a = a + b
                         
   (* Send coins *)
-  fun transfer (_to : address, _value : uint256) using _ =
+  fun transfer (_to : address, _value : uint256) =
     require(balanceOf[msg.sender] >= _value);           (* Check if the sender has enough *)
     require(balanceOf[_to] + _value >= balanceOf[_to]); (* Check for overflows *)
     modify balanceOf[msg.sender] -= _value;                    (* Subtract from the sender *)
     modify balanceOf[_to] += _value                     (* Add the same to the recipient *)
+    (* ;(_to, _value, msg.sender, balanceOf[msg.sender], balanceOf[_to]) *)
 
   val () = init 0xa0
   (* val () = throw balanceOf[msg.sender] *)
   (* val () = throw (balanceOf[msg.sender] >= 0x20) *)
   (* val () = throw (2 >= 1) *)
 
-  val () = dispatch {transfer = transfer,}
+  (* val () = dispatch {transfer = transfer,} *)
   (* val () = transfer (0x123, 0x20) *)
   (* val () = halt balanceOf[msg.sender] *)
   (* val () = halt balanceOf[0x123] *)

@@ -4,21 +4,20 @@ structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
-fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
                                                                                               
-fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 =
-  lets
-    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
-      ifi i #>= eend then waste_time (); acc
-      else
-        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
-      end
-  in
-    %loop (start, init)
-  end
+(* fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52*32)*(eend-start)+50*32 = *)
+(*   lets *)
+(*     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) = *)
+(*       ifi i #>= eend then (* waste_time (); *) acc *)
+(*       else *)
+(*         %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52*32) * (eend-i)+16*32 *)
+(*       end *)
+(*   in *)
+(*     %loop (start, init) *)
+(*   end *)
   
-  fun require b = if b then waste_time (); () else (throw using _) end
-  val require = require
+  fun require b = if b then (* waste_time ();  *)() else (throw using _) end
 end
 
 interface tokenRecipient = sig
@@ -28,10 +27,11 @@ end
 contract TokenERC20 = struct
 
   (* Public variables of the token *)
-  public state name : vector char
-  public state symbol : vector char
+  public state name : vector uint256
+  public state symbol : vector uint256
          
-  public val decimals = #18
+  (* public val decimals = #18 *)
+  public val decimals = #0
   (* 18 decimals is the strongly suggested default, avoid changing it *)
   public state totalSupply : cell uint256
 
@@ -45,40 +45,40 @@ contract TokenERC20 = struct
   (* This notifies clients about the amount burnt *)
   event Burn(indexed from : address, value : uint256)
 
-(* PW: here is a limitation of TiML: it can't parametrize on states. MicroTiML actually supports it (for continuations), so TiML should support it too.  *)                              
-fun for_name ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {j : Nat | start <= j /\ j < eend} using (m1, m1'), funtype pre {name : j} post {name : j+1} nat {j} * 'a -- m2, m2' --> 'a) pre {name : start} post {name : eend} return 'a (* using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 *) =
-  lets
-    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {name : i} post {name : eend} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
-      ifi i #>= eend then waste_time (); acc asc_state {name : eend}
-      else
-        @loop {i+1} (i #+ #1, @f {i} (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
-      end
-  in
-    %loop (start, init)
-  end
+(* (* PW: here is a limitation of TiML: it can't parametrize on states. MicroTiML actually supports it (for continuations), so TiML should support it too.  *)                               *)
+(* fun for_name ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {j : Nat | start <= j /\ j < eend} using (m1, m1'), funtype pre {name : j} post {name : j+1} nat {j} * 'a -- m2, m2' --> 'a) pre {name : start} post {name : eend} return 'a (* using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 *) = *)
+(*   lets *)
+(*     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {name : i} post {name : eend} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) = *)
+(*       ifi i #>= eend then (* waste_time ();  *)acc asc_state {name : eend} *)
+(*       else *)
+(*         @loop {i+1} (i #+ #1, @f {i} (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52*32) * (eend-i)+16*32 *)
+(*       end *)
+(*   in *)
+(*     %loop (start, init) *)
+(*   end *)
   
-  fun copy_name {old len : Nat} (s : string {len}) pre {name : old} post {name : len} =
-    vector_clear name;
-    %for_name (#0, array_len s, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) pre {name : i} post {name : i+1} =>
-      push_back (name, array_get(s, i))
-    )
+(*   fun copy_name {old len : Nat} (s : array uint256 {len}) pre {name : old} post {name : len} = *)
+(*     vector_clear name; *)
+(*     %for_name (#0, array_len s, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) pre {name : i} post {name : i+1} => *)
+(*       push_back (name, array_get(s, i)) *)
+(*     ) *)
 
-fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {j : Nat | start <= j /\ j < eend} using (m1, m1'), funtype pre {symbol : j} post {symbol : j+1} nat {j} * 'a -- m2, m2' --> 'a) pre {symbol : start} post {symbol : eend} return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 =
-  lets
-    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {symbol : i} post {symbol : eend} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
-      ifi i #>= eend then waste_time (); acc asc_state {symbol : eend}
-      else
-        @loop {i+1} (i #+ #1, @f {i} (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
-      end
-  in
-    %loop (start, init)
-  end
+(* fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {j : Nat | start <= j /\ j < eend} using (m1, m1'), funtype pre {symbol : j} post {symbol : j+1} nat {j} * 'a -- m2, m2' --> 'a) pre {symbol : start} post {symbol : eend} return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52*32)*(eend-start)+50*32 = *)
+(*   lets *)
+(*     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {symbol : i} post {symbol : eend} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) = *)
+(*       ifi i #>= eend then (* waste_time ();  *)acc asc_state {symbol : eend} *)
+(*       else *)
+(*         @loop {i+1} (i #+ #1, @f {i} (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52*32) * (eend-i)+16*32 *)
+(*       end *)
+(*   in *)
+(*     %loop (start, init) *)
+(*   end *)
   
-  fun copy_symbol {old len : Nat} (s : string {len}) pre {symbol : old} post {symbol : len} =
-    vector_clear symbol;
-    %for_symbol (#0, array_len s, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) pre {symbol : i} post {symbol : i+1} =>
-      push_back (symbol, array_get(s, i))
-    )
+(*   fun copy_symbol {old len : Nat} (s : array uint256 {len}) pre {symbol : old} post {symbol : len} = *)
+(*     vector_clear symbol; *)
+(*     %for_symbol (#0, array_len s, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) pre {symbol : i} post {symbol : i+1} => *)
+(*       push_back (symbol, array_get(s, i)) *)
+(*     ) *)
 
   (**
    * Constructor function
@@ -89,11 +89,11 @@ fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= e
         initialSupply : uint256,
         tokenName : array uint256 {len1},
         tokenSymbol : array uint256 {len2}
-    ) pre {name : old1, symbol : old2} post {name : len1, symbol : len2} using _ = 
+    ) (* pre {name : old1, symbol : old2} post {name : len1, symbol : len2} *) = 
            totalSupply ::= initialSupply * ((10 #** decimals) using _);  (* Update total supply with the decimal amount *)
-    set balanceOf[msg.sender] !!totalSupply;                (* Give the creator all initial tokens *)
-    %copy_name tokenName;                                   (* Set the name for display purposes *)
-    %copy_symbol tokenSymbol                               (* Set the symbol for display purposes *)
+    set balanceOf[msg.sender] !!totalSupply                (* Give the creator all initial tokens *)
+    (* %copy_name tokenName;                                   (* Set the name for display purposes *) *)
+    (* %copy_symbol tokenSymbol                               (* Set the symbol for display purposes *) *)
 
   (** *)
   (*  * Internal transfer, only can be called by this contract *)
@@ -125,8 +125,9 @@ fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= e
   (*  * *)
   (*  * @param _to The address of the recipient *)
   (*  * @param _value the amount to send *)
-  public fun transfer (_to : address, _value : uint256) using _ =
-    _transfer(msg.sender, _to, _value)
+  public fun transfer (_to : address, _value : uint256) =
+           _transfer(msg.sender, _to, _value)
+    ; (_to, _value, msg.sender, balanceOf[msg.sender], balanceOf[_to])
 
   (*  * Transfer tokens from other address *)
   (*  * *)
@@ -135,7 +136,7 @@ fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= e
   (*  * @param _from The address of the sender *)
   (*  * @param _to The address of the recipient *)
   (*  * @param _value the amount to send *)
-  public fun transferFrom (_from : address, _to : address, _value : uint256) return bool using _ =
+  public fun transferFrom (_from : address, _to : address, _value : uint256) return bool =
     require(_value <= allowance[_from][msg.sender]);     (* Check allowance *)
     modify allowance[_from][msg.sender] -= _value;
     _transfer(_from, _to, _value);
@@ -147,10 +148,12 @@ fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= e
   (*  * *)
   (*  * @param _spender The address authorized to spend *)
   (*  * @param _value the max amount they can spend *)
-  public fun approve (_spender : address, _value : uint256) return bool using _ =
+  public fun approve (_spender : address, _value : uint256) =
+           let old = allowance[msg.sender][_spender];
     set allowance[msg.sender][_spender] _value;
-    true
-
+    (* true *)
+    (msg.sender, _spender, _value, allowance[msg.sender][_spender], old)
+             
   (** *)
   (*  * Set allowance for other address and notify *)
   (*  * *)
@@ -160,12 +163,12 @@ fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= e
   (*  * @param _value the max amount they can spend *)
   (*  * @param _extraData some extra information to send to the approved contract *)
   (*  *)
-  public fun approveAndCall (_spender : address, _value : uint256(* , _extraData : bytes *)) using _ =
-    let spender = attach _spender tokenRecipient;
-    if approve(_spender, _value) then
-      call spender receiveApproval(msg.sender, _value, this, _extraData);
-      true
-    else false end
+  (* public fun approveAndCall (_spender : address, _value : uint256(* , _extraData : bytes *)) using _ = *)
+  (*   let spender = attach _spender tokenRecipient; *)
+  (*   if approve(_spender, _value) then *)
+  (*     call spender receiveApproval(msg.sender, _value, this, _extraData); *)
+  (*     true *)
+  (*   else false end *)
 
   (** *)
   (*  * Destroy tokens *)
@@ -198,7 +201,10 @@ fun for_symbol ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= e
     fire Burn(_from, _value);
     true
 
-  val () = %init (0xa0, "my_name", "my_symbol")
-  val () = transfer (0x123, 0x20)
+  val () = %init (0xa0, {}, {})
+  val () = dispatch {transfer = transfer,
+                     approve = approve,
+                    }
+  (* val () = transfer (0x123, 0x20) *)
                     
 end

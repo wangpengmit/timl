@@ -36,7 +36,7 @@ fun to_real n = IToReal' $ N n
 fun ILog256 i = ILog ("256", i, dummy)
 fun IIte' (i1, i2, i3) = IIte (i1, i2, i3, dummy)
                        
-fun nat_exp_cost i2 = IToReal' $ N C_exp %+ N C_expbyte %* (N 1 %+ IFloor' (ILog256 $ IToReal' i2))
+fun nat_exp_cost i2 = IIte'(i2 =? N 0, IToReal' $ N C_exp, IToReal' $ N C_exp %+ N C_expbyte %* (N 1 %+ IFloor' (ILog256 $ IToReal' i2)))
 fun E_nat_exp_cost i2 = nat_exp_cost i2 %+ to_real (C_SWAP + 2 * C_Var + C_Let)
 
 fun set_cost old new = IIte' (old =? N 0 /\? new <>? N 0, N C_sset, N C_sreset)
