@@ -270,20 +270,25 @@ fun is_rec_body e =
       EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
     | _ => (false, e)
              
-fun assert_wordsize_ty t =
+fun is_wordsize_ty t =
   case t of
-      TNat _ => ()
-    | TiBool _ => ()
+      TNat _ => true
+    | TiBool _ => true
     | TConst c =>
       (case c of
-           TCUnit () => ()
-         | TCEmpty () => ()
+           TCUnit () => true
+         | TCEmpty () => true
          | TCTiML c =>
            case c of
-               BTInt () => ()
-             | BTBool () => ()
-             | BTByte () => ())
-    | _ => raise Impossible "not a base storage type"
+               BTInt () => true
+             | BTBool () => true
+             | BTByte () => true
+      )
+    | _ => false
+
+fun assert_wordsize_ty t =
+  if is_wordsize_ty t then ()
+  else raise Impossible "not a base storage type"
 
 fun assert_TTuple t =
   case t of

@@ -149,10 +149,10 @@ contract TokenERC20 = struct
   (*  * @param _spender The address authorized to spend *)
   (*  * @param _value the max amount they can spend *)
   public fun approve (_spender : address, _value : uint256) =
-           let old = allowance[msg.sender][_spender];
+           (* let old = allowance[msg.sender][_spender]; *)
     set allowance[msg.sender][_spender] _value;
-    (* true *)
-    (msg.sender, _spender, _value, allowance[msg.sender][_spender], old)
+    true
+    (* (msg.sender, _spender, _value, allowance[msg.sender][_spender], old) *)
              
   (** *)
   (*  * Set allowance for other address and notify *)
@@ -163,12 +163,12 @@ contract TokenERC20 = struct
   (*  * @param _value the max amount they can spend *)
   (*  * @param _extraData some extra information to send to the approved contract *)
   (*  *)
-  (* public fun approveAndCall (_spender : address, _value : uint256(* , _extraData : bytes *)) using _ = *)
-  (*   let spender = attach _spender tokenRecipient; *)
-  (*   if approve(_spender, _value) then *)
-  (*     call spender receiveApproval(msg.sender, _value, this, _extraData); *)
-  (*     true *)
-  (*   else false end *)
+  public fun approveAndCall (_spender : address, _value : uint256(* , _extraData : bytes *)) using _ =
+    let spender = attach _spender tokenRecipient;
+    if approve(_spender, _value) then
+      call spender receiveApproval(msg.sender, _value, this, _extraData);
+      true
+    else false end
 
   (** *)
   (*  * Destroy tokens *)

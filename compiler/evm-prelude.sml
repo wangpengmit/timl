@@ -52,15 +52,6 @@ fun get_func_sig (name, t) =
     sg
   end
     
-fun is_Int_Byte_Unit t =
-  case t of
-      TConst (TCTiML (BTInt ())) => true
-    | TConst (TCTiML (BTByte ())) => true
-    | TConst (TCUnit ()) => true
-    | _ => false
-
-fun assert_Int_Byte_Unit t = assert_b "assert_Int_Byte_Unit" $ is_Int_Byte_Unit t = true
-
 fun make_tuple n =
   (* [v_(n-1), ..., v_0] *)
   [TupleMalloc (repeat n $ TUnit)] @
@@ -89,7 +80,7 @@ fun decode pos t =
       make_tuple (length ts)
     | TArray (w, t, len) =>
       let
-        val () = assert_Int_Byte_Unit t
+        val () = assert_wordsize_ty t
       in
         [
           Push pos,
@@ -117,7 +108,7 @@ fun decode pos t =
     | TConst (TCUnit ()) =>
       [ Push 0 ]
     | _ =>
-      if is_Int_Byte_Unit t then
+      if is_wordsize_ty t then
         [
           Push pos,
           CallDataLoad
@@ -176,16 +167,16 @@ fun is_TArray t =
       TArray a => SOME a
     | _ => NONE
              
-fun at_most_one_Array_other_Int_Byte_Unit ts =
-  at_most_one_some_other_true is_TArray is_Int_Byte_Unit ts
+fun at_most_one_Array_other_wordsize_ty ts =
+  at_most_one_some_other_true is_TArray is_wordsize_ty ts
                               
 fun encode t =
   case t of
       TTuple ts =>
-        (case at_most_one_Array_other_Int_Byte_Unit ts of
+        (case at_most_one_Array_other_wordsize_ty ts of
              inl (p, (w, t, _)) =>
              let
-               val () = assert_Int_Byte_Unit t
+               val () = assert_wordsize_ty t
                val len = length ts
              in
                (* [ptr_to_tuple] *)
@@ -228,12 +219,12 @@ fun encode t =
         )
     | TArray (w, t, len) =>
       let
-        val () = assert_Int_Byte_Unit t
+        val () = assert_wordsize_ty t
       in
         encode_array w 1 0
       end
     | _ =>
-      if is_Int_Byte_Unit t then
+      if is_wordsize_ty t then
         [
           Push 0,
           MStore,

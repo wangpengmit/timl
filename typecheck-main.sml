@@ -1542,14 +1542,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                     case t of
                         TArrow a => a
                       | _ => raise Error (r (), ["must be function (arrow) type"])
-                fun is_Int_Byte_Unit t =
-                  case t of
-                      TBase (BTInt (), _) => true
-                    | TBase (BTByte (), _) => true
-                    | TUnit r => true
-                    | _ => false
-                fun assert_Int_Byte_Unit t =
-                  if is_Int_Byte_Unit t = true then ()
+                fun assert_wordsize_ty t =
+                  if is_wordsize_ty t = true then ()
                   else raise Error (r (), ["can only be int/byte/unit"])
                 fun check_good_arg_ty t =
                   let
@@ -1558,28 +1552,28 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                     case t of
                         TTuple ts => app loop ts
                       | TRecord (fields, _) => SMap.app loop fields
-                      | TArray (w, t, _) => assert_Int_Byte_Unit t
-                      | _ => assert_Int_Byte_Unit t
+                      | TArray (w, t, _) => assert_wordsize_ty t
+                      | _ => assert_wordsize_ty t
                   end
                 fun is_TArray t =
                   case t of
                       TArray a => SOME a
                     | _ => NONE
-                fun at_most_one_Array_other_Int_Byte_Unit ts =
-                  at_most_one_some_other_true is_TArray is_Int_Byte_Unit ts
+                fun at_most_one_Array_other_wordsize_ty ts =
+                  at_most_one_some_other_true is_TArray is_wordsize_ty ts
                 fun check_good_ret_ty t =
                   let
                     val loop = check_good_ret_ty
                   in
                     case t of
                         TTuple ts =>
-                        (case at_most_one_Array_other_Int_Byte_Unit ts of
-                             inl (_, (_, t, _)) => assert_Int_Byte_Unit t
+                        (case at_most_one_Array_other_wordsize_ty ts of
+                             inl (_, (_, t, _)) => assert_wordsize_ty t
                            | inr true => ()
                            | inr false => raise Error (r (), ["tuple can only have one array; others can be int/byte/unit"])
                         )
-                      | TArray (w, t, _) => assert_Int_Byte_Unit t
-                      | _ => assert_Int_Byte_Unit t
+                      | TArray (w, t, _) => assert_wordsize_ty t
+                      | _ => assert_wordsize_ty t
                   end
                 val () = check_good_arg_ty t_arg
                 val () = check_good_ret_ty t_ret
