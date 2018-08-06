@@ -106,7 +106,7 @@ datatype ('idx, 'ty) inst =
          | MACRO_map_ptr of unit
          | MACRO_vector_ptr of unit
          | MACRO_vector_push_back of unit
-         | Dispatch of (int(*function signature*) * 'ty inner(*argument type*) * 'ty inner(*return type*) * int(*reg for function closure*)) list
+         | Dispatch of (LargeInt.int(*function signature*) * 'ty inner(*argument type*) * 'ty inner(*return type*) * int(*reg for function closure*)) list
          | CALLDATALOAD of unit
          | CALLDATACOPY of unit
          | InstJUMP of unit

@@ -12,18 +12,28 @@ def wrong_arguments
   exit 1
 end
 
-if ARGV.size != 1 then
+if ARGV.size < 1 || ARGV.size > 2 then
   wrong_arguments
 end
 
 target = ARGV[0]
+is_unit_test = false
 
 if target == "smlnj" then
   target = :smlnj
 elsif target == "mlton" then
   target = :mlton
+  if ARGV.size >= 2 then
+    if ARGV[1] == "unit-test"
+      is_unit_test = true
+    else
+      wrong_arguments
+    end
+  end
 elsif target == "Makefile" then
   target = :Makefile
+elsif target == "unit-test" then
+  target = :unit_test
 else
   wrong_arguments
 end
@@ -235,7 +245,6 @@ compiler/evm1-other-names.sml
 compiler/evm1-visitor.sml
 compiler/evm1-pp.sml
 compiler/evm1-export-pp.sml
-compiler/evm1-pp.sml
 compiler/evm1-util.sml
 compiler/evm1-tc.sml
 compiler/evm1-assemble.sml
@@ -255,11 +264,28 @@ $/ml-yacc-lib.cm
 $/pp-lib.cm
 }
 
-elsif target == :mlton || target == :Makefile then
+elsif target == :Makefile then
 
 print %{  
 mlton-main.sml
+unit-test/unit-test-util.sml
 }
+  
+elsif target == :mlton then
+
+  if is_unit_test then
+    
+    print %{  
+unit-test/unit-test-util.sml
+}
+
+  else
+    
+    print %{  
+mlton-main.sml
+}
+
+  end
 
 end
 

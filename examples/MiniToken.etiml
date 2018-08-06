@@ -32,7 +32,7 @@ contract MyToken = struct
   (* val () = throw (balanceOf[msg.sender] >= 0x20) *)
   (* val () = throw (2 >= 1) *)
 
-  val () = dispatch {"transfer", transfer}                
+  val () = dispatch {transfer = transfer,}
   (* val () = transfer (0x123, 0x20) *)
   (* val () = halt balanceOf[msg.sender] *)
   (* val () = halt balanceOf[0x123] *)

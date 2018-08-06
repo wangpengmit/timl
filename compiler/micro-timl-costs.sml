@@ -197,13 +197,13 @@ open Util
        
 infixr 0 $
          
-val () = println $ "C_EProj = " ^ str_int C_EProj
-val () = println $ "C_EPair = " ^ str_int C_EPair
-val () = println $ "C_EPack = " ^ str_int C_EPack
-val () = println $ "C_Let = " ^ str_int C_Let
-val () = println $ "C_Var = " ^ str_int C_Var
-val () = println $ "C_Proj = " ^ str_int C_Proj
-val () = println $ "C_Pair = " ^ str_int C_Pair
-val () = println $ "C_EHalt = " ^ str_int C_EHalt
+(* val () = println $ "C_EProj = " ^ str_int C_EProj *)
+(* val () = println $ "C_EPair = " ^ str_int C_EPair *)
+(* val () = println $ "C_EPack = " ^ str_int C_EPack *)
+(* val () = println $ "C_Let = " ^ str_int C_Let *)
+(* val () = println $ "C_Var = " ^ str_int C_Var *)
+(* val () = println $ "C_Proj = " ^ str_int C_Proj *)
+(* val () = println $ "C_Pair = " ^ str_int C_Pair *)
+(* val () = println $ "C_EHalt = " ^ str_int C_EHalt *)
                                          
 end

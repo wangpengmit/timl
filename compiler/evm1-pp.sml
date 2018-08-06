@@ -343,7 +343,7 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
           space ();
           str "(";
           pp_list_bracket (fn (sg, t1, t2, n) =>
-                              (str $ str_int sg;
+                              (str $ str_large_int sg;
                                comma ();
                                pp_t t1;
                                comma ();

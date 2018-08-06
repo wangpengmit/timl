@@ -10,15 +10,13 @@ open MicroTiMLUtil
 
 infixr 0 $
 
-infixr 5 @@
-         
 fun keccak256 s =
   let
     (* val filename = "keccak256.in.tmp" *)
     (* val () = write_bin_file (filename, s) *)
     val out_filename = "keccak256.out.tmp"
     val cmd = "keccak-256sum -l"
-    val cmd = sprintf "echo -n '' | $ > $" [s, cmd, out_filename]
+    val cmd = sprintf "echo -n '$' | $ > $" [s, cmd, out_filename]
     val () = println $ "Running cmd: " ^ cmd
     val _ = OS.Process.system cmd
     val r = read_file out_filename
@@ -46,8 +44,10 @@ fun get_func_sig (name, t) =
     val sg = name ^ str_arg t
     val sg = keccak256 sg
     val sg = String.substring (sg, 0, 8)
-    val sg = assert_some_m (fn () => raise Impossible "get_func_sig/str2int") $ str2int $ "0x" ^ sg
-    val () = println $ "fun sig: " ^ hex 4 sg
+    val sg = "0x" ^ sg
+    val () = println $ "str2large_int() on " ^ sg
+    val sg = assert_some_m (fn () => raise Impossible $ "get_func_sig/str2large_int: " ^ sg) $ str2large_int sg
+    val () = println $ "fun sig: " ^ hex_large_int 4 sg
   in
     sg
   end
@@ -246,7 +246,8 @@ fun encode t =
 fun large_exp (b, n) =
   if n <= 0 then LargeInt.fromInt 1
   else LargeInt.* (b, large_exp (b, n-1))
-                     
+
+(* todo: should use the LargeWord module *)                    
 fun rshift n =
   [
     Push_large $ large_exp (LargeInt.fromInt 2, n),
@@ -271,7 +272,7 @@ fun try_fun (fresh_label, output_heap) (sg, t_arg, t_ret, func) =
         ] @
         rshift_byte (32 - 4) @
         [
-          Push sg,
+          PushN_large 4 sg,
           Eq,
           Push_l l_decode,
           Jumpi
@@ -350,6 +351,12 @@ fun add_prelude_inst params inst =
         PUSH_value $ VConst $ WCTT ()
     | _ => [inst]
 
+infixr 5 @::
+infixr 5 @@
+
+fun a @:: b = ISCons $ Bind (a, b)
+fun ls @@ b = foldr (op@::) b ls 
+         
 fun add_prelude_insts params insts =
   let
     val add_prelude_insts = add_prelude_insts params
@@ -409,8 +416,8 @@ fun add_prelude_prog fresh_label (H, I) =
     fun output_heap a = push_ref r a
     val params = (fresh_label, output_heap)
     val (H, I) = (map (mapSnd $ add_prelude_hval params) H, add_prelude_insts params I)
-    fun insts2hval I = Bind (TeleNil, ((IEmptyState, Rctx.empty, [], TN0 dummy), list2insts I))
-    val H' = map (mapSnd insts2hval) $ !r
+    fun insts2hval I = Bind (TeleNil, ((IEmptyState, Rctx.empty, [], TN0 dummy), list2insts $ JumpDest :: I))
+    val H' = rev $ map (mapSnd insts2hval) $ !r
   in
     (H @ H', I)
   end

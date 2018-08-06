@@ -109,7 +109,9 @@ fun enc inst =
       | InstREVERT () => macro "InstREVERT"
       | Dispatch _ => macro "Dispatch"
   end
-    
+
+val has_Revert_flag = ref false
+                          
 fun enc_insts out insts =
   let
     fun macro name = raise Impossible $ "Can't assemble instruction " ^ name
@@ -123,7 +125,7 @@ fun enc_insts out insts =
         end
       | JUMP () => out "56"
       | RETURN () => out "f3"
-      | REVERT () => out "fd"
+      | REVERT () => if !has_Revert_flag then out "fd" else enc_insts out (RETURN ()) (* some EVM version doesn't have opcode 0xfd *)
       | ISDummy _ => out ""
       | MACRO_halt _ => macro "MACRO_halt"
   end

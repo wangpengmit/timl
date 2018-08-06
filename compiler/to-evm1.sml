@@ -247,7 +247,7 @@ fun make_inj t_other = [MACRO_inj $ Inner t_other]
 val br_sum = [MACRO_br_sum ()]
 fun halt b t = MACRO_halt (b, t)
 
-val inline_macro_inst = inline_macro_inst (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr, TUnit)
+val inline_macro_inst = inline_macro_inst (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr, TUnit, fn () => raise Impossible "inline_macro_inst(): Dispatch")
 val inline_macro_insts = inline_macro_insts (inline_macro_inst, PUSH_reg, scratch)
                                           
 fun inline_macro_hval code =

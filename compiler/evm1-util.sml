@@ -12,7 +12,7 @@ fun MSTORE_n w =
     [MSTORE8 ()]
   else raise Impossible "MSTORE_n(): w <> 32 or 1"
          
-fun inline_macro_inst (params as (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr, TUnit)) (inst : ('a, 'b) inst) =
+fun inline_macro_inst (params as (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr, TUnit, on_dispatch)) (inst : ('a, 'b) inst) =
   let
     val inline_macro_inst = inline_macro_inst params
   in
@@ -32,7 +32,7 @@ fun inline_macro_inst (params as (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr
     | MACRO_map_ptr () => [PUSH_reg $ scratch, MSTORE (), PUSH_reg $ scratch+32, MSTORE (), PUSH1nat 64, PUSH_reg $ scratch, SHA3 ()]
     | MACRO_vector_ptr () => [PUSH_reg $ scratch, MSTORE (), PUSH1nat 32, PUSH_reg $ scratch, SHA3 (), ADD ()]
     | MACRO_vector_push_back () => [DUP2, DUP1, SLOAD (), SWAP1, DUP2, PUSH1nat 1, ADD (), SWAP1, SSTORE (), SWAP1, SWAP2] @ inline_macro_inst (MACRO_vector_ptr ()) @ [SSTORE ()]
-    | Dispatch _ => raise Impossible "inline_macro_inst(): Dispatch"
+    | Dispatch _ => on_dispatch ()
     | _ => [inst]
   end
 

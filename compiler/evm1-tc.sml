@@ -253,7 +253,7 @@ fun C_insts insts =
     | MACRO_halt _ => raise Impossible $ "C_insts() on MACRO_halt"
                            
 local
-  fun dummy_inline_macro_inst b = inline_macro_inst (fn _ => PUSH1nat 0, fn _ => PUSH1nat 0, 0, fn _ => 0, TUnit) b
+  fun dummy_inline_macro_inst b = inline_macro_inst (fn _ => PUSH1nat 0, fn _ => PUSH1nat 0, 0, fn _ => 0, TUnit, fn _ => [PUSH1nat 0]) b
 in
 val C_inst = fn b => sum $ map C_inst $ dummy_inline_macro_inst b
 val C_insts = fn b => C_insts $ inline_macro_insts (dummy_inline_macro_inst, fn _ => PUSH1nat 0, 0) b

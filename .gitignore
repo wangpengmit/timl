@@ -23,6 +23,7 @@ learn-sml/io
 learn-sml/regexp
 main-image*
 main
+unit-test-bin
 *.x86-linux
 *.s
 *.o
@@ -38,6 +39,7 @@ main
 
 main.cm
 main.mlb
+unit-test.mlb
 
 tmp.timl
 

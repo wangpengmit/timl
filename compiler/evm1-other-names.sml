@@ -17,7 +17,8 @@ val Dup3 = DUP 3
 val Dup4 = DUP 4
 fun Push n = PUSH32 $ WNat n
 fun Push_l l = PUSH32 $ WLabel l
-fun Push_large n = PUSH32 $ WInt n
+fun PushN_large n i = PUSH (n, Inner $ WInt i)
+fun Push_large i = PushN_large 32 i
 val Add = ADD ()
 val Sub = SUB ()
 val Mul = MUL ()
@@ -36,5 +37,6 @@ val Jumpi = JUMPI ()
 val Jump = InstJUMP ()
 val Return = InstRETURN ()
 val Revert = InstREVERT ()
+val JumpDest = JUMPDEST ()
        
 end
