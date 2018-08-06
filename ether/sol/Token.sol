@@ -52,7 +52,7 @@ contract TokenERC20 {
         balanceOf[_from] -= _value;
         // Add the same to the recipient
         balanceOf[_to] += _value;
-        emit Transfer(_from, _to, _value);
+        /* emit Transfer(_from, _to, _value); */
         // Asserts are used to use static analysis to find bugs in your code. They should never fail
         assert(balanceOf[_from] + balanceOf[_to] == previousBalances);
     }
@@ -129,7 +129,7 @@ contract TokenERC20 {
         require(balanceOf[msg.sender] >= _value);   // Check if the sender has enough
         balanceOf[msg.sender] -= _value;            // Subtract from the sender
         totalSupply -= _value;                      // Updates totalSupply
-        emit Burn(msg.sender, _value);
+        /* emit Burn(msg.sender, _value); */
         return true;
     }
 
@@ -147,7 +147,7 @@ contract TokenERC20 {
         balanceOf[_from] -= _value;                         // Subtract from the targeted balance
         allowance[_from][msg.sender] -= _value;             // Subtract from the sender's allowance
         totalSupply -= _value;                              // Update totalSupply
-        emit Burn(_from, _value);
+        /* emit Burn(_from, _value); */
         return true;
     }
 }

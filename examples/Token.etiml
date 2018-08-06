@@ -207,17 +207,16 @@ contract TokenERC20 = struct
 
   val () = %init (0xa0, {}, {})
             
-  val _ = transfer (0x246, 0x80)
-  val () = set allowance[0x246][0x8888] 0x50
+  (* val _ = transfer (0x246, 0x80) *)
+                   
+  (* val () = set allowance[0x246][0x8888] 0x50 *)
             
   val () = dispatch {transfer = transfer,
+                     transferFrom = transferFrom,
                      approve = approve,
                      approveAndCall = approveAndCall,
-                     transferFrom = transferFrom,
                      burn = burn,
                      burnFrom = burnFrom,
                     }
-                    
-  (* val () = transfer (0x123, 0x20) *)
                     
 end
