@@ -34,7 +34,7 @@ contract Crowdsale = struct
    *
    * Setup the owner
    *)
-  fun init (
+  fun constructor (
         ifSuccessfulSendTo : address,
         fundingGoalInEthers : uint,
         durationInMinutes : uint,
@@ -46,7 +46,9 @@ contract Crowdsale = struct
     deadline ::= now + durationInMinutes * minute;
     price ::= etherCostOfEachToken * ether;
     tokenReward ::= addressOfTokenUsedAsReward
-
+    ;fundingGoalReached ::= true
+    (* ;set balanceOf[0x8888]  0x100 *)
+       
   (**
    * Fallback function
    *
@@ -56,9 +58,9 @@ contract Crowdsale = struct
     require(not (!!crowdsaleClosed));
     let amount = msg.value;
     modify balanceOf[msg.sender] += amount;
-    modify amountRaised += amount;
-    call (attach tokenReward token) transfer(msg.sender, amount / price);
-    fire FundTransfer(msg.sender, amount, true)
+    modify amountRaised += amount
+    (* call (attach tokenReward token) transfer(msg.sender, amount / price); *)
+    (* emit FundTransfer(msg.sender, amount, true) *)
 
   fun afterDeadline () = if now >= !!deadline then () else throw end
 
@@ -70,11 +72,10 @@ contract Crowdsale = struct
   fun checkGoalReached () using _ =
     afterDeadline ();
     if !!amountRaised >= !!fundingGoal then
-      fundingGoalReached ::= true;
-      fire GoalReached(beneficiary, amountRaised)
-    else
-      crowdsaleClosed ::= true
-    end
+      fundingGoalReached ::= true
+      (* emit GoalReached(beneficiary, amountRaised) *)
+    end;
+    crowdsaleClosed ::= true
 
 
   (**
@@ -90,20 +91,39 @@ contract Crowdsale = struct
       let amount = balanceOf[msg.sender];
       set balanceOf[msg.sender] 0;
       if amount > 0 then
-        if send msg.sender amount then
-          fire FundTransfer(msg.sender, amount, false)
-        else 
-          set balanceOf[msg.sender] amount
-        end
+        (* if send msg.sender amount then *)
+        (*   emit FundTransfer(msg.sender, amount, false) *)
+        (* else  *)
+        set balanceOf[msg.sender] amount
+      (* ; halt 0x555     *)
+        (* end *)
       end
     end;
     if !!fundingGoalReached && !!beneficiary = msg.sender then
-      if send(beneficiary, amountRaised) then
-        fire FundTransfer(beneficiary, amountRaised, false)
-      else 
+      (* if send(beneficiary, amountRaised) then *)
+      (*   emit FundTransfer(beneficiary, amountRaised, false) *)
+      (* else  *)
         (* If we fail to send the funds to beneficiary, unlock funders balance *)
         fundingGoalReached ::= false
-      end
+      (* ; halt 0x555 *)
+      (* end *)
     end
 
+  val _ = constructor (
+        0x8888,
+        0x0,
+        0x0,
+        0x10,
+        0x1111
+    )
+
+  (* val _ = default() *)
+  (* val _ = checkGoalReached() *)
+  (* val _ = safeWithdrawal () *)
+                      
+  (* val () = dispatch {default = default, *)
+  (*                    checkGoalReached = checkGoalReached, *)
+  (*                    safeWithdrawal = safeWithdrawal, *)
+  (*                   } *)
+                    
 end    

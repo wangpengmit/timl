@@ -230,18 +230,18 @@ contract EtherDelta = struct
     set tokens[0][msg.sender] safeAdd(tokens[0][msg.sender], msg.value);
     (* emit Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]) *)
 
-  (* fun withdraw (amount : uint) = *)
-  (*   if (tokens[0][msg.sender] < amount) then throw end; *)
-  (*   set tokens[0][msg.sender] safeSub(tokens[0][msg.sender], amount) *)
-  (*   if not (send msg.sender amount) then throw end; *)
-  (*   emit Withdraw(0, msg.sender, amount, tokens[0][msg.sender]) *)
+  fun withdraw (amount : uint) =
+    if (tokens[0][msg.sender] < amount) then throw end;
+    set tokens[0][msg.sender] safeSub(tokens[0][msg.sender], amount)
+    (* if not (send msg.sender amount) then throw end; *)
+    (* emit Withdraw(0, msg.sender, amount, tokens[0][msg.sender]) *)
 
-  (* fun depositToken (token : address, amount : uint) = *)
-  (*   (*remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.*) *)
-  (*   if (token==0) then throw end *)
-  (*   if not (call false (attach token Token) transferFrom(msg.sender, this, amount)) then throw end; *)
-  (*   set tokens[token][msg.sender] safeAdd(tokens[token][msg.sender], amount); *)
-  (*   emit Deposit(token, msg.sender, amount, tokens[token][msg.sender]) *)
+  fun depositToken (token : address, amount : uint) =
+    (*remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.*)
+    if (token==0) then throw end
+    (* if not (call false (attach token Token) transferFrom(msg.sender, this, amount)) then throw end; *)
+    set tokens[token][msg.sender] safeAdd(tokens[token][msg.sender], amount)
+    (* emit Deposit(token, msg.sender, amount, tokens[token][msg.sender]) *)
 
   (* fun withdrawToken (token : address, amount : uint) = *)
   (*   if (token==0) then throw end; *)
@@ -255,7 +255,7 @@ contract EtherDelta = struct
 
   fun order (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint) =
     let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    set orders[msg.sender][hash] true;
+    set orders[msg.sender][hash] true
     (* emit Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender) *)
 
   private fun tradeBalances (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, user : address, amount : uint) =
@@ -321,7 +321,9 @@ contract EtherDelta = struct
     set orderFills[msg.sender][hash] amountGet;
     (* emit Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s) *)
 
-  val () = dispatch {order = order,
-                      }
+  val () = constructor (0x8888, 0x8888, 0x8888, 1, 1, 1)
+    
+  (* val () = dispatch {order = order, *)
+  (*                   } *)
     
 end
