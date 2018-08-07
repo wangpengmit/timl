@@ -3,8 +3,8 @@
 (* test-for.timl *)
 (* MiniToken.etiml *)
 (* Token.etiml *)
-Crowdsale.etiml
-(* EtherDelta.etiml *)
+(* Crowdsale.etiml *)
+EtherDelta.etiml
 (* Congress.etiml *)
 (* MultiSig.etiml *)
 (* CryptoKitties.etiml *)

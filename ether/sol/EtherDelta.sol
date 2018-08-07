@@ -1,4 +1,4 @@
-pragma solidity ^0.4.9;
+pragma solidity ^0.4.24;
 
 contract SafeMath {
   function safeMul(uint a, uint b) internal returns (uint) {
@@ -20,6 +20,11 @@ contract SafeMath {
 
   function assert(bool assertion) internal {
     if (!assertion) throw;
+  }
+  
+    
+  function ttt(bytes32 a) returns (bool) {
+      return true;
   }
 }
 
@@ -172,6 +177,9 @@ contract EtherDelta is SafeMath {
     feeMake = feeMake_;
     feeTake = feeTake_;
     feeRebate = feeRebate_;
+    tokens[0x14723a09acff6d2a60dcdf7aa4aff308fddc160c][0xca35b7d915458ef540ade6068dfe2f44e8fa733c] = 0x20;
+    tokens[0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db][0x583031d1113ad414f02576bd6afabfb302140225] = 0x20;
+    orders[0x583031d1113ad414f02576bd6afabfb302140225][0] = true;
   }
 
   function() {
@@ -251,15 +259,15 @@ contract EtherDelta is SafeMath {
 
   function trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s, uint amount) {
     //amount is in amountGet terms
-    bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
+    bytes32 hash = /*sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce)*/0;
     if (!(
-      (orders[user][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
+      (orders[user][hash] || /*ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s)*/0 == user) &&
       block.number <= expires &&
       safeAdd(orderFills[user][hash], amount) <= amountGet
     )) throw;
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     orderFills[user][hash] = safeAdd(orderFills[user][hash], amount);
-    Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender);
+  //  Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender);
   }
 
   function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
@@ -267,7 +275,7 @@ contract EtherDelta is SafeMath {
     uint feeTakeXfer = safeMul(amount, feeTake) / (1 ether);
     uint feeRebateXfer = 0;
     if (accountLevelsAddr != 0x0) {
-      uint accountLevel = AccountLevels(accountLevelsAddr).accountLevel(user);
+      uint accountLevel = /*AccountLevels(accountLevelsAddr).accountLevel(user)*/1;
       if (accountLevel==1) feeRebateXfer = safeMul(amount, feeRebate) / (1 ether);
       if (accountLevel==2) feeRebateXfer = feeTakeXfer;
     }
@@ -309,4 +317,6 @@ contract EtherDelta is SafeMath {
     orderFills[msg.sender][hash] = amountGet;
     Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
   }
+
+  
 }

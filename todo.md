@@ -155,6 +155,21 @@
 - [ ] Add register-file polymorphism so that EVM snippets for new_array and string_concat can be shared instead of inlined.
 - [ ] pattern-ex.sml/remove_deep_many() should handle empty datatypes.
 - [ ] The changed EVM typechecker (checking ASCTIME without later premises) still works on example recursive functions annotated only with case's return clause, because TiML typechecker added EAscTime (_, return - adjust) to everybranch. This trick won't work when the truthfulness of 'return >= adjust' depends on local premises. A thorough solution should be having bi-directional typechecking on every level and in the 'check type' mode, passing in (total_time_spec, time_accumulated_already), and allowing time_accumulated_already to be larger than total_time_spec, because later code can introduce a 'false' premise.
+- [ ] This code in EtherDelta.etiml causes cost bug after CPS:
+  fun trade (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address, v : uint8, r : bytes32, s : bytes32, amount : uint) =
+    (*amount is in amountGet terms*)
+    let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
+    if (not (
+      (* (orders[user][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) && *)
+      (* block.number <= expires && *)
+      safeAdd(orderFills[user][hash], amount) <= amountGet
+    )) then throw end;
+    (* tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount); *)
+    (* set orderFills[user][hash] safeAdd(orderFills[user][hash], amount) *)
+    (* emit Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender) *)
+    (* ;(orderFills[user][hash], tokens[tokenGet][msg.sender], tokens[tokenGet][user], tokens[tokenGet][msg.sender], tokens[tokenGet][user], tokens[tokenGive][msg.sender], tokens[tokenGive][user]) *)
+    halt 0x555
+
 
 # To-do for Examples:
 
