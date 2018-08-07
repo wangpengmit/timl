@@ -94,7 +94,7 @@ contract StandardToken = struct
     (* //if (balances[msg.sender] >= _value && _value > 0) { *)
       modify balances[msg.sender] -= _value;
       modify balances[_to] += _value;
-      fire Transfer(msg.sender, _to, _value);
+      (* emit Transfer(msg.sender, _to, _value); *)
       true
     else
       false
@@ -107,7 +107,7 @@ contract StandardToken = struct
       modify balances[_to] += _value;
       modify balances[_from] -= _value;
       modify allowed[_from][msg.sender] -= _value;
-      fire Transfer(_from, _to, _value);
+      (* emit Transfer(_from, _to, _value); *)
       true
     else
       false
@@ -118,7 +118,7 @@ contract StandardToken = struct
 
   fun approve (_spender : address, _value : uint256) return bool =
     set allowed[msg.sender][_spender] _value;
-    fire Approval(msg.sender, _spender, _value);
+    (* emit Approval(msg.sender, _spender, _value); *)
     true
 
   fun allowance (_owner : address, _spender : address) constant return uint256 =
@@ -133,7 +133,7 @@ contract ReserveToken = struct
          
   public state minter : cell address
 
-  fun init () =
+  fun constructor () =
     minter ::= msg.sender
 
   fun create (account : address, amount : uint) =
@@ -188,7 +188,7 @@ contract EtherDelta = struct
   event Deposit(token : address, user : address, amount : uint, balance : uint)
   event Withdraw(token : address, user : address, amount : uint, balance : uint)
 
-  fun EtherDelta (admin_ : address, feeAccount_ : address, accountLevelsAddr_ : address, feeMake_ : uint, feeTake_ : uint, feeRebate_ : uint) =
+  fun constructor (admin_ : address, feeAccount_ : address, accountLevelsAddr_ : address, feeMake_ : uint, feeTake_ : uint, feeRebate_ : uint) =
     admin ::= admin_;
     feeAccount ::= feeAccount_;
     accountLevelsAddr ::= accountLevelsAddr_;
@@ -228,27 +228,27 @@ contract EtherDelta = struct
 
   fun deposit () payable =
     set tokens[0][msg.sender] safeAdd(tokens[0][msg.sender], msg.value);
-    fire Deposit(0, msg.sender, msg.value, tokens[0][msg.sender])
+    (* emit Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]) *)
 
-  fun withdraw (amount : uint) =
-    if (tokens[0][msg.sender] < amount) then throw end;
-    set tokens[0][msg.sender] safeSub(tokens[0][msg.sender], amount);
-    if not (send msg.sender amount) then throw end;
-    fire Withdraw(0, msg.sender, amount, tokens[0][msg.sender])
+  (* fun withdraw (amount : uint) = *)
+  (*   if (tokens[0][msg.sender] < amount) then throw end; *)
+  (*   set tokens[0][msg.sender] safeSub(tokens[0][msg.sender], amount) *)
+  (*   if not (send msg.sender amount) then throw end; *)
+  (*   emit Withdraw(0, msg.sender, amount, tokens[0][msg.sender]) *)
 
-  fun depositToken (token : address, amount : uint) =
-    (*remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.*)
-    if (token==0) then throw end;
-    if not (call false (attach token Token) transferFrom(msg.sender, this, amount)) then throw end;
-    set tokens[token][msg.sender] safeAdd(tokens[token][msg.sender], amount);
-    fire Deposit(token, msg.sender, amount, tokens[token][msg.sender])
+  (* fun depositToken (token : address, amount : uint) = *)
+  (*   (*remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.*) *)
+  (*   if (token==0) then throw end *)
+  (*   if not (call false (attach token Token) transferFrom(msg.sender, this, amount)) then throw end; *)
+  (*   set tokens[token][msg.sender] safeAdd(tokens[token][msg.sender], amount); *)
+  (*   emit Deposit(token, msg.sender, amount, tokens[token][msg.sender]) *)
 
-  fun withdrawToken (token : address, amount : uint) =
-    if (token==0) then throw end;
-    if (tokens[token][msg.sender] < amount) then throw end;
-    set tokens[token][msg.sender] safeSub(tokens[token][msg.sender], amount);
-    if not (call false (attach token Token) transfer(msg.sender, amount)) then throw end;
-    fire Withdraw(token, msg.sender, amount, tokens[token][msg.sender])
+  (* fun withdrawToken (token : address, amount : uint) = *)
+  (*   if (token==0) then throw end; *)
+  (*   if (tokens[token][msg.sender] < amount) then throw end; *)
+  (*   set tokens[token][msg.sender] safeSub(tokens[token][msg.sender], amount) *)
+  (*   if not (call false (attach token Token) transfer(msg.sender, amount)) then throw end; *)
+  (*   emit Withdraw(token, msg.sender, amount, tokens[token][msg.sender]) *)
 
   fun balanceOf (token : address, user : address) constant return uint =
     tokens[token][user]
@@ -256,14 +256,14 @@ contract EtherDelta = struct
   fun order (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint) =
     let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     set orders[msg.sender][hash] true;
-    fire Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender)
+    (* emit Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender) *)
 
   private fun tradeBalances (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, user : address, amount : uint) =
     let feeMakeXfer : uint = safeMul(amount, !!feeMake) / ether;
     let feeTakeXfer : uint = safeMul(amount, !!feeTake) / ether;
     let feeRebateXfer = ref 0;
     if (!!accountLevelsAddr != 0) then
-      let accountLevel : uint = call 0 (attach accountLevelsAddr AccountLevels) accountLevel(user);
+      let accountLevel : uint = (* call 0 (attach accountLevelsAddr AccountLevels) accountLevel(user) *)1;
       if (accountLevel==1) then feeRebateXfer := safeMul(amount, !!feeRebate) / ether end;
       if (accountLevel==2) then feeRebateXfer := feeTakeXfer end
     end;
@@ -283,7 +283,7 @@ contract EtherDelta = struct
     )) then throw end;
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     set orderFills[user][hash] safeAdd(orderFills[user][hash], amount);
-    fire Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender)
+    (* emit Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender) *)
 
   fun availableVolume (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address, v : uint8, r : bytes32, s : bytes32) constant return uint =
     let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
@@ -319,6 +319,9 @@ contract EtherDelta = struct
     let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     if (not (orders[msg.sender][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == msg.sender)) then throw end;
     set orderFills[msg.sender][hash] amountGet;
-    fire Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s)
+    (* emit Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s) *)
 
+  val () = dispatch {order = order,
+                      }
+    
 end

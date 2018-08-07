@@ -85,7 +85,7 @@ contract TokenERC20 = struct
    *
    * Initializes contract with initial supply tokens to the creator of the contract
    *)
-  public fun init {old1 old2 len1 len2 : Nat} (
+  public fun constructor {old1 old2 len1 len2 : Nat} (
         initialSupply : uint256,
         tokenName : array uint256 {len1},
         tokenSymbol : array uint256 {len2}
@@ -204,7 +204,7 @@ contract TokenERC20 = struct
     true
     (* (msg.sender, _from, _value, balanceOf[_from], !!totalSupply, allowance[_from][msg.sender]) *)
 
-  val () = %init (0xa0, {}, {})
+  val () = %constructor (0xa0, {}, {})
   (* val _ = transfer (0x246, 0x80) *)
   (* val () = set allowance[0x246][0x8888] 0x50 *)
   (* val _ = transferFrom (0x246, 0x123, 0x20) *)
