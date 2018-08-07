@@ -112,7 +112,7 @@ contract TokenERC20 = struct
     modify balanceOf[_from] -= _value;
     (* Add the same to the recipient *)
     modify balanceOf[_to] += _value;
-    fire Transfer(_from, _to, _value);
+    (* emit Transfer(_from, _to, _value); *)
     (* Asserts are used to use static analysis to find bugs in your code. They should never fail *)
     require(balanceOf[_from] + balanceOf[_to] = previousBalances)
     
@@ -140,8 +140,8 @@ contract TokenERC20 = struct
     require(_value <= allowance[_from][msg.sender]);     (* Check allowance *)
     modify allowance[_from][msg.sender] -= _value;
     _transfer(_from, _to, _value);
-    (* true *)
-    (_from, _to, _value, msg.sender, allowance[_from][msg.sender], balanceOf[_from], balanceOf[_to])
+    true
+    (* (_from, _to, _value, msg.sender, allowance[_from][msg.sender], balanceOf[_from], balanceOf[_to]) *)
       
   (*  * Set allowance for other address *)
   (*  * *)
@@ -150,10 +150,9 @@ contract TokenERC20 = struct
   (*  * @param _spender The address authorized to spend *)
   (*  * @param _value the max amount they can spend *)
   public fun approve (_spender : address, _value : uint256) =
-           (* let old = allowance[msg.sender][_spender]; *)
     set allowance[msg.sender][_spender] _value;
     true
-    (* (msg.sender, _spender, _value, allowance[msg.sender][_spender], old) *)
+    (* (msg.sender, _spender, _value, allowance[msg.sender][_spender]) *)
              
   (** *)
   (*  * Set allowance for other address and notify *)
@@ -183,7 +182,7 @@ contract TokenERC20 = struct
     require(balanceOf[msg.sender] >= _value);   (* Check if the sender has enough *)
     modify balanceOf[msg.sender] -= _value;            (* Subtract from the sender *)
     modify totalSupply -= _value;                      (* Updates totalSupply *)
-    fire Burn(msg.sender, _value);
+    (* emit Burn(msg.sender, _value); *)
     true
     (* (msg.sender, _value, balanceOf[msg.sender], !!totalSupply) *)
 
@@ -201,22 +200,25 @@ contract TokenERC20 = struct
     modify balanceOf[_from] -= _value;                         (* Subtract from the targeted balance *)
     modify allowance[_from][msg.sender] -= _value;             (* Subtract from the sender's allowance *)
     modify totalSupply -= _value;                              (* Update totalSupply *)
-    fire Burn(_from, _value);
+    (* emit Burn(_from, _value); *)
     true
     (* (msg.sender, _from, _value, balanceOf[_from], !!totalSupply, allowance[_from][msg.sender]) *)
 
   val () = %init (0xa0, {}, {})
-            
   (* val _ = transfer (0x246, 0x80) *)
-                   
   (* val () = set allowance[0x246][0x8888] 0x50 *)
+  (* val _ = transferFrom (0x246, 0x123, 0x20) *)
+  (* val _ = burnFrom (0x246, 0x20) *)
+  (* val _ = approve (0x123, 0x80) *)
+  (* val _ = burn 0x20 *)
+  (* val _ = approveAndCall (0x123, 0x80) *)
             
-  val () = dispatch {transfer = transfer,
-                     transferFrom = transferFrom,
-                     approve = approve,
-                     approveAndCall = approveAndCall,
-                     burn = burn,
-                     burnFrom = burnFrom,
-                    }
+  (* val () = dispatch {transfer = transfer, *)
+  (*                    transferFrom = transferFrom, *)
+  (*                    approve = approve, *)
+  (*                    approveAndCall = approveAndCall, *)
+  (*                    burn = burn, *)
+  (*                    burnFrom = burnFrom, *)
+  (*                   } *)
                     
 end

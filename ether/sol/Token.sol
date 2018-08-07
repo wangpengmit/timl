@@ -113,7 +113,7 @@ contract TokenERC20 {
         returns (bool success) {
         tokenRecipient spender = tokenRecipient(_spender);
         if (approve(_spender, _value)) {
-            spender.receiveApproval(msg.sender, _value, this, _extraData);
+            /* spender.receiveApproval(msg.sender, _value, this, _extraData); */
             return true;
         }
     }

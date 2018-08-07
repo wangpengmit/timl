@@ -131,7 +131,7 @@ val keywords = [
     ("call", T.CALL),
     ("call_with_value", T.CALLVALUE),
     ("send", T.SEND),
-    ("fire", T.FIRE),
+    ("emit", T.FIRE),
     ("attach", T.ATTACH),
     ("assembly", T.ASSEMBLY)
 ]
