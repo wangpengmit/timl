@@ -286,7 +286,7 @@ contract EtherDelta = struct
     (* emit Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender) *)
     (* ;(orderFills[user][hash], tokens[tokenGet][msg.sender], tokens[tokenGet][user], tokens[tokenGive][msg.sender], tokens[tokenGive][user]) *)
         
-  fun availableVolume (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address, v : uint8, r : bytes32, s : bytes32) constant return uint =
+  fun availableVolume (tokenGet : address, amountGet : uint, tokenGive : address, amountGive : uint, expires : uint, nonce : uint, user : address, v : uint8, r : bytes32, s : bytes32) constant =
     let hash : bytes32 = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     if (not (
       (orders[user][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
@@ -329,9 +329,11 @@ contract EtherDelta = struct
   val _ = set orders[0x4444][0] true
                        
   val _ = trade (0x1111, 0x10, 0x2222, 0x10, 0xffffffffffff, 0, 0x4444, 0, 0, 0, 5)
+  (* val _ = availableVolume(0x1111, 0x10, 0x2222, 0x10, 0xffffffffffff, 0, 0x4444, 0, 0, 0)               *)
   (* val () = halt 0x555 *)
                 
   (* val _ = dispatch {trade = trade, *)
+  (*                   availableVolume = availableVolume, *)
   (*                   } *)
     
 end
