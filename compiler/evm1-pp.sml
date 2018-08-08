@@ -29,6 +29,7 @@ fun str_inst a =
       | DIV () => "DIV"
       | SDIV () => "SDIV"
       | MOD () => "MOD"
+      | SMOD () => "SMOD"
       | EXP () => "EXP"
       | LT () => "LT"
       | GT () => "GT"

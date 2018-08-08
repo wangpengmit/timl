@@ -181,6 +181,7 @@ fun C_inst b =
     | DIV () => C_DIV
     | SDIV () => C_SDIV
     | MOD () => C_MOD
+    | SMOD () => C_SMOD
                   
     (* | EXP () => C_EXP *)
     | EXP () => 0 (* will depend on operands *)
@@ -268,19 +269,61 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     (* val () = println $ str_ts sctx *)
     (* val inst_input_str = EVM1ExportPP.pp_inst_to_string $ EVM1ExportPP.export_inst NONE (itctxn ()) inst *)
     (* val () = print $ inst_input_str *)
-    fun arith int_result nat_result name f =
+    (* fun arith int_result nat_result name f = *)
+    (*   let *)
+    (*     val (t0, t1, sctx) = assert_cons2 sctx *)
+    (*     val t = *)
+    (*         case (t0, t1) of *)
+    (*             (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => int_result *)
+    (*           | (TNat i0, TNat i1) => nat_result $ f (i0, i1) *)
+    (*           | _ => raise Impossible $ sprintf "$: can't operate on operands of types ($) and ($)" [name, str_t t0, str_t t1] *)
+    (*   in *)
+    (*     ((itctx, rctx, t :: sctx, st)) *)
+    (*   end *)
+    fun div_mod name f =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
         val t =
             case (t0, t1) of
-                (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => int_result
-              | (TNat i0, TNat i1) => nat_result $ f (i0, i1)
+                (TNat i0, TNat i1) => TNat $ f (i0, i1)
+              (* | (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TInt *)
               | _ => raise Impossible $ sprintf "$: can't operate on operands of types ($) and ($)" [name, str_t t0, str_t t1]
       in
         ((itctx, rctx, t :: sctx, st))
       end
-    fun mul_div a = arith TInt TNat a
-    fun cmp a = arith TBool TiBool a
+      (* arith TInt TNat a *)
+    fun sdiv_smod name f =
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t =
+            case (t0, t1) of
+                (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TInt
+              | _ => raise Impossible $ sprintf "$: can't operate on operands of types ($) and ($)" [name, str_t t0, str_t t1]
+      in
+        ((itctx, rctx, t :: sctx, st))
+      end
+    fun cmp name f =
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t =
+            case (t0, t1) of
+                (TNat i0, TNat i1) => TiBool $ f (i0, i1)
+              (* | (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TBool *)
+              | _ => raise Impossible $ sprintf "$: can't operate on operands of types ($) and ($)" [name, str_t t0, str_t t1]
+      in
+        ((itctx, rctx, t :: sctx, st))
+      end
+      (* arith TBool TiBool a *)
+    fun scmp name f =
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t =
+            case (t0, t1) of
+                (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TBool
+              | _ => raise Impossible $ sprintf "$: can't operate on operands of types ($) and ($)" [name, str_t t0, str_t t1]
+      in
+        ((itctx, rctx, t :: sctx, st))
+      end
     fun and_or name f =
       let
         val (t0, t1, sctx) = assert_cons2 sctx
@@ -354,10 +397,22 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     | NUMBER () => add_stack TInt ctx
     | DIFFICULTY () => add_stack TInt ctx
     | GASLIMIT () => add_stack TInt ctx
-    | MUL () => mul_div "MUL" op%*
-    | DIV () => mul_div "DIV" op%/
-    | SDIV () => mul_div "SDIV" op%/
-    | MOD () => mul_div "MOD" IMod
+    | MUL () =>
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t =
+            case (t0, t1) of
+                (TNat i0, TNat i1) => TNat $ i0 %* i1
+              | (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TInt
+              | _ => raise Impossible $ sprintf "MUL: can't operate on operands of types ($) and ($)" [str_t t0, str_t t1]
+      in
+        ((itctx, rctx, t :: sctx, st))
+      end
+      (* mul_div "MUL" op%* *)
+    | DIV () => div_mod "DIV" op%/
+    | SDIV () => sdiv_smod "SDIV" op%/
+    | MOD () => div_mod "MOD" IMod
+    | SMOD () => sdiv_smod "SMOD" IMod
     | EXP () =>
       let
         val (t0, t1, sctx) = assert_cons2 sctx
@@ -386,9 +441,24 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
     (*   end *)
     | LT () => cmp "LT" op<?
     | GT () => cmp "GT" op>?
-    | SLT () => cmp "LT" op<=?
-    | SGT () => cmp "GT" op>=?
-    | EQ () => cmp "EQ" op=?
+    | SLT () => scmp "SLT" op<=?
+    | SGT () => scmp "SGT" op>=?
+    | EQ () =>
+      let
+        val (t0, t1, sctx) = assert_cons2 sctx
+        val t =
+            case (t0, t1) of
+                (TConst (TCTiML (BTInt ())), TConst (TCTiML (BTInt ()))) => TBool
+              | (TConst (TCTiML (BTByte ())), TConst (TCTiML (BTByte ()))) => TBool
+              | (TConst (TCTiML (BTBool ())), TConst (TCTiML (BTBool ()))) => TBool
+              | (TConst (TCUnit ()), TConst (TCUnit ())) => TBool
+              | (TNat i0, TNat i1) => TiBool $ i0 =? i1
+              | (TiBool i0, TiBool i1) => TiBool $ i0 =? i1
+              | _ => raise Impossible $ sprintf "EQ: can't operate on operands of types ($) and ($)" [str_t t0, str_t t1]
+      in
+        ((itctx, rctx, t :: sctx, st))
+      end
+      (* cmp "EQ" op=? *)
     | ISZERO () =>
       let
         val (t0, sctx) = assert_cons sctx

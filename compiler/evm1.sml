@@ -32,6 +32,7 @@ datatype ('idx, 'ty) inst =
          | DIV of unit
          | SDIV of unit
          | MOD of unit
+         | SMOD of unit
          | EXP of unit
          | LT of unit
          | GT of unit

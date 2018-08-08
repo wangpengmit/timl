@@ -115,6 +115,7 @@ fun default_evm1_visitor_vtable
           | DIV () => DIV ()
           | SDIV () => SDIV ()
           | MOD () => MOD ()
+          | SMOD () => SMOD ()
           | EXP () => EXP ()
           | LT () => LT ()
           | GT () => GT ()

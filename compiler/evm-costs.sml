@@ -54,6 +54,7 @@ val C_MUL = C_low
 val C_DIV = C_low
 val C_SDIV = C_low
 val C_MOD = C_low
+val C_SMOD = C_low
               
 val C_JUMPI = C_high
                 

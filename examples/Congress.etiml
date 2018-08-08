@@ -308,8 +308,7 @@ contract Congress = struct inherit owned, tokenRecipient
         supportsProposal : bool,
         justificationText : string {n}
     )
-        guard onlyMembers, validProposalNumber proposalNumber
-        return uint =
+        guard onlyMembers, validProposalNumber proposalNumber =
     let p = &proposals->[proposalNumber];         (* Get the proposal *)
     require(not voted[proposalNumber][msg.sender]);         (* If has already voted, cancel *)
     set voted[proposalNumber][msg.sender] true;              (* Set this voter as having voted *)
@@ -323,6 +322,7 @@ contract Congress = struct inherit owned, tokenRecipient
     (* Create a log of this event *)
     (* emit Voted(proposalNumber,  supportsProposal, msg.sender, justificationText); *)
     deref p->numberOfVotes
+    (* ; (deref p->numberOfVotes, deref p->currentResult, proposalNumber, supportsProposal, array_len justificationText, justificationText) *)
 
   (** *)
 (*    * Finish vote *)
@@ -345,7 +345,7 @@ contract Congress = struct inherit owned, tokenRecipient
       (* Proposal passed; execute the transaction *)
 
       &p->executed ::= true; (* Avoid recursive calling *)
-      require(call_with_value false (deref p->recipient) (deref p->amount) transactionBytecode);
+      (* require(call_with_value false (deref p->recipient) (deref p->amount) transactionBytecode); *)
 
       &p->proposalPassed ::= true
     else
@@ -355,6 +355,7 @@ contract Congress = struct inherit owned, tokenRecipient
 
     (* Fire Events *)
     (* emit ProposalTallied(proposalNumber, !p.currentResult, !p.numberOfVotes, !p.proposalPassed) *)
+    (* ;(deref &p->proposalPassed, proposalNumber, array_len transactionBytecode, transactionBytecode) *)
 
 val _ = owned..constructor ()
 val _ = constructor (1, 0, 0)
@@ -368,26 +369,24 @@ val _ = constructor (1, 0, 0)
 (* val _ = %addMember 0x8 *)
 (* val _ = %addMember 0x9 *)
 (* val _ = %removeMember 0x2222 *)
-(* val _ = %newProposal (0x1111, 0, "job", "code") *)
+val _ = %newProposal (0x1111, 0, "job", "code")
 (* val _ = %vote (0, true, "LGTM") *)
+val _ = %vote (0, false, "LGTM")
+(* val r = %executeProposal (0, "code") *)
          
-(* val () = halt !!numMembers *)
+(* val () = halt r *)
 
-val addMember' = @addMember {2}
-val removeMember' = @removeMember {10}
-val newProposal' = @newProposal {3} {4}
-val vote' = @vote {4}
+(* val addMember' = @addMember {2} *)
+(* val removeMember' = @removeMember {10} *)
+(* val newProposal' = @newProposal {3} {4} *)
+(* val vote' = @vote {4} *)
+(* val executeProposal' = @executeProposal {4} *)
                   
-val _ = dispatch {addMember = addMember',
-                  removeMember = removeMember',
-                  newProposal = newProposal',
-                  vote = vote',
-                 }
+(* val _ = dispatch {addMember = addMember', *)
+(*                   removeMember = removeMember', *)
+(*                   newProposal = newProposal', *)
+(*                   vote = vote', *)
+(*                   executeProposal = executeProposal', *)
+(*                  } *)
                     
-(* addMember *)
-(* removeMember *)
-(* newProposal *)
-(* vote *)
-(* executeProposal *)
-
 end
