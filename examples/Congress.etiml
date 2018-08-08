@@ -8,20 +8,20 @@ structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a || b
-fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
                                                                                               
-fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52)*(eend-start)+50 =
+fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52*32)*(eend-start)+50*32 =
   lets
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
-      ifi i #>= eend then waste_time (); acc
+      ifi i #>= eend then (* waste_time ();  *)acc
       else
-        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52*32) * (eend-i)+16*32
       end
   in
     %loop (start, init)
   end
   
-  fun require b = if b then waste_time (); () else (throw using _) end
+  fun require b = if b then (* waste_time ();  *)() else (throw using _) end
   val ether = 1000000000000000000
   val minute = 60
 end
@@ -30,7 +30,7 @@ contract owned = struct
 
   public state owner : cell address = 0
 
-  public fun init () =
+  public fun constructor () =
     owner ::= msg.sender
 
   public fun onlyOwner () =
@@ -55,12 +55,12 @@ contract tokenRecipient = struct
 
     public fun receiveApproval (_from : address, _value : uint256, _token : address(* , _extraData : bytes *)) =
       let t = attach _token Token;
-      require(call false t transferFrom( _from, this, _value));
-      fire receivedTokens(_from, _value, _token, _extraData)
+      require(call false t transferFrom( _from, this, _value))
+      (* emit receivedTokens(_from, _value, _token, _extraData) *)
 
     public fun default () payable =
-      fire receivedEther(msg.sender, msg.value)
-
+      (* emit receivedEther(msg.sender, msg.value) *)
+      ()
 end
 
 contract Congress = struct inherit owned, tokenRecipient
@@ -74,6 +74,10 @@ contract Congress = struct inherit owned, tokenRecipient
   fun copy_Member (t : storage Member, s : Member) =
     &t->member ::= s.member;
     &t->memberSince ::= s.memberSince
+
+  fun clear_Member (t : storage Member) =
+    &t->member ::= 0;
+    &t->memberSince ::= 0
 
   (* type Vote = { *)
   (*   inSupport : bool, *)
@@ -134,52 +138,6 @@ contract Congress = struct inherit owned, tokenRecipient
   fun onlyMembers () =
     require(memberId[msg.sender] != 0)
 
-(*    * Add member *)
-(*    * *)
-(*    * Make `targetMember` a member named `memberName` *)
-(*    * *)
-(*    * @param targetMember ethereum address to be added *)
-(*    * @param memberName public name for that member *)
-  public fun addMember {len : Nat} (targetMember : address(* , memberName : string *)) pre {numMembers : len} post {numMembers : len+1} guard onlyOwner =
-    require(memberId[targetMember] = 0);
-    let id = nat2int (!!numMembers);
-    modify numMembers %nat_inc;
-    set memberId[targetMember] id;
-    copy_Member(&members->[id], {member = targetMember, memberSince = now, (* name = memberName,  *)} : Member );
-    fire MembershipChanged(targetMember, true)
-
-  public fun init (
-        minimumQuorumForProposals : uint,
-        minutesForDebate : uint,
-        marginOfVotesForMajority : int
-    ) payable pre {numMembers : 0} post {numMembers : 2} =
-    fire changeVotingRules(minimumQuorumForProposals, minutesForDebate, marginOfVotesForMajority);
-    (* It’s necessary to add an empty first member *)
-    %addMember(0(* , "" *));
-    (* and let's add the founder, to save a step later *)
-    %addMember(!!owner(* , 'founder' *))
-
-   (** *)
-  (*   * Remove member *)
-  (*   * *)
-  (*   * @notice Remove membership from `targetMember` *)
-  (*   * *)
-  (*   * @param targetMember ethereum address to be removed *)
-  (*   *)
-  public fun removeMember {len : Nat | len > 0} (targetMember : address) pre {numMembers : len} post {numMembers : len-1} guard onlyOwner =
-    require(memberId[targetMember] != 0);
-    (* for (i : uint = memberId[targetMember]; i < length members - 1; inc) *)
-    (*   set members[i] members[i+1] *)
-    (* end; *)
-    let begin = memberId[targetMember];
-    %for_ (#0, !!numMembers #- #1, (), fn {i | 0 <= i /\ i < len-1} (i : nat {i}, ()) =>
-      let i = nat2int i;
-      if i >= begin then
-        copy_Member_s2s (&members->[i], &members->[i+1])
-      end
-    );
-    modify numMembers %nat_dec
-
 (*    * Change voting rules *)
 (*    * *)
 (*    * Make so that proposals need to be discussed for at least `minutesForDebate/60` hours, *)
@@ -195,9 +153,58 @@ contract Congress = struct inherit owned, tokenRecipient
     ) guard onlyOwner =
     minimumQuorum ::= minimumQuorumForProposals;
     debatingPeriodInMinutes ::= minutesForDebate;
-    majorityMargin ::= marginOfVotesForMajority;
+    majorityMargin ::= marginOfVotesForMajority
 
-    fire ChangeOfRules(minimumQuorum, debatingPeriodInMinutes, majorityMargin)
+    (* emit ChangeOfRules(minimumQuorum, debatingPeriodInMinutes, majorityMargin) *)
+
+(*    * Add member *)
+(*    * *)
+(*    * Make `targetMember` a member named `memberName` *)
+(*    * *)
+(*    * @param targetMember ethereum address to be added *)
+(*    * @param memberName public name for that member *)
+  public fun addMember {len : Nat} (targetMember : address(* , memberName : string *)) pre {numMembers : len} post {numMembers : len+1} guard onlyOwner =
+    require(memberId[targetMember] = 0);
+    let id = nat2int (!!numMembers);
+    modify numMembers %nat_inc;
+    set memberId[targetMember] id;
+    copy_Member(&members->[id], {member = targetMember, memberSince = now, (* name = memberName,  *)} : Member )
+    (* emit MembershipChanged(targetMember, true) *)
+    (* ;(targetMember, !!numMembers, memberId[targetMember], memberId[0], !!owner, memberId[!!owner]) *)
+               
+  public fun constructor (
+        minimumQuorumForProposals : uint,
+        minutesForDebate : uint,
+        marginOfVotesForMajority : int
+    ) payable pre {numMembers : 0} post {numMembers : 2} =
+    changeVotingRules(minimumQuorumForProposals, minutesForDebate, marginOfVotesForMajority);
+    (* It’s necessary to add an empty first member *)
+    %addMember(0(* , "" *));
+    (* and let's add the founder, to save a step later *)
+    %addMember(!!owner(* , 'founder' *))
+
+   (** *)
+  (*   * Remove member *)
+  (*   * *)
+  (*   * @notice Remove membership from `targetMember` *)
+  (*   * *)
+  (*   * @param targetMember ethereum address to be removed *)
+  (*   PW: if you move 'members' here, how would 'memberId' values correspond to 'members' index?  *)
+  public fun removeMember {len : Nat | len > 0} (targetMember : address) pre {numMembers : len} post {numMembers : len-1} guard onlyOwner =
+    require(memberId[targetMember] != 0);
+    (* for (i : uint = memberId[targetMember]; i < length members - 1; inc) *)
+    (*   set members[i] members[i+1] *)
+    (* end; *)
+    let begin = memberId[targetMember];
+    %for_ (#0, !!numMembers #- #1, (), fn {i | 0 <= i /\ i < len-1} (i : nat {i}, ()) =>
+      let i = nat2int i;
+      if i >= begin then
+        copy_Member_s2s (&members->[i], &members->[i+1])
+      end
+    );
+    clear_Member(&members->[nat2int !!numMembers - 1]);
+    modify numMembers %nat_dec
+    (* ;(targetMember, !!numMembers, members[0].member, members[1].member, members[2].member, members[3].member) *)
 
   fun copy_Proposal (t : storage Proposal, s : Proposal) =
     &t->recipient ::= s.recipient;
@@ -238,7 +245,7 @@ contract Congress = struct inherit owned, tokenRecipient
       numberOfVotes = 0,
       currentResult = 0,
     } : Proposal);
-    fire ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription);
+    (* emit ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription); *)
     numProposals ::= proposalID+1;
     proposalID
 
@@ -315,7 +322,7 @@ contract Congress = struct inherit owned, tokenRecipient
     end;
 
     (* Create a log of this event *)
-    fire Voted(proposalNumber,  supportsProposal, msg.sender, justificationText);
+    (* emit Voted(proposalNumber,  supportsProposal, msg.sender, justificationText); *)
     deref p->numberOfVotes
 
   (** *)
@@ -328,7 +335,7 @@ contract Congress = struct inherit owned, tokenRecipient
 (*    *)
   public fun executeProposal {n : Nat} (proposalNumber : uint, transactionBytecode : bytes {n}) =
     let p = &proposals->[proposalNumber];
-    require(now > deref p->votingDeadline                                            (* If it is past the voting deadline *)
+    require(now (* > *)>=(*for testing*) deref p->votingDeadline                                            (* If it is past the voting deadline *)
       && not (deref p->executed)                                                         (* and it has not already been executed *)
       && deref p->proposalHash = keccak256(deref p->recipient, deref p->amount, transactionBytecode)  (* and the supplied code matches the proposal *)
       && deref p->numberOfVotes >= !!minimumQuorum);                                  (* and a minimum quorum has been reached... *)
@@ -345,9 +352,30 @@ contract Congress = struct inherit owned, tokenRecipient
     else
       (* Proposal failed *)
       &p->proposalPassed ::= false
-    end;
+    end
 
     (* Fire Events *)
-    fire ProposalTallied(proposalNumber, !p.currentResult, !p.numberOfVotes, !p.proposalPassed)
+    (* emit ProposalTallied(proposalNumber, !p.currentResult, !p.numberOfVotes, !p.proposalPassed) *)
+
+val _ = owned..constructor ()
+val _ = constructor (1, 0, 0)
+
+val _ = %addMember 0x2222
+val _ = %addMember 0x3333
+(* val _ = %removeMember 0x2222 *)
+(* val () = halt !!numMembers *)
+
+val addMember2 = @addMember {2}
+val removeMember4 = @removeMember {4}
+                  
+(* val _ = dispatch {addMember = addMember2, *)
+(*                   removeMember = removeMember4, *)
+(*                  } *)
+                    
+(* addMember *)
+(* removeMember *)
+(* newProposal *)
+(* vote *)
+(* executeProposal *)
 
 end
