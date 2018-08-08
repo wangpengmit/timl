@@ -1,4 +1,4 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.4.24;
 
 contract owned {
     address public owner;
@@ -62,21 +62,21 @@ contract Congress is owned, tokenRecipient {
         uint numberOfVotes;
         int currentResult;
         bytes32 proposalHash;
-        Vote[] votes;
+        /* Vote[] votes; */
         mapping (address => bool) voted;
     }
 
     struct Member {
         address member;
-        string name;
+        /* string name; */
         uint memberSince;
     }
 
-    struct Vote {
-        bool inSupport;
-        address voter;
-        string justification;
-    }
+    /* struct Vote { */
+    /*     bool inSupport; */
+    /*     address voter; */
+    /*     string justification; */
+    /* } */
 
     // Modifier that allows only shareholders to vote and create new proposals
     modifier onlyMembers {
@@ -94,9 +94,9 @@ contract Congress is owned, tokenRecipient {
     )  payable public {
         changeVotingRules(minimumQuorumForProposals, minutesForDebate, marginOfVotesForMajority);
         // It’s necessary to add an empty first member
-        addMember(0, "");
+        addMember(0/* , "" */);
         // and let's add the founder, to save a step later
-        addMember(owner, 'founder');
+        addMember(owner/* , 'founder' */);
     }
 
     /**
@@ -105,17 +105,20 @@ contract Congress is owned, tokenRecipient {
      * Make `targetMember` a member named `memberName`
      *
      * @param targetMember ethereum address to be added
-     * @param memberName public name for that member
      */
-    function addMember(address targetMember, string memberName) onlyOwner public {
+    function addMember(address targetMember/* , string memberName */) onlyOwner public {
         uint id = memberId[targetMember];
         if (id == 0) {
             memberId[targetMember] = members.length;
             id = members.length++;
         }
 
-        members[id] = Member({member: targetMember, memberSince: now, name: memberName});
-        MembershipChanged(targetMember, true);
+        members[id] = Member({member: targetMember, memberSince: now/* , name: memberName */});
+        /* MembershipChanged(targetMember, true); */
+    }
+    
+    function membersLen() public returns(uint) {
+        return members.length;
     }
 
     /**
@@ -154,7 +157,7 @@ contract Congress is owned, tokenRecipient {
         debatingPeriodInMinutes = minutesForDebate;
         majorityMargin = marginOfVotesForMajority;
 
-        ChangeOfRules(minimumQuorum, debatingPeriodInMinutes, majorityMargin);
+        /* ChangeOfRules(minimumQuorum, debatingPeriodInMinutes, majorityMargin); */
     }
 
     /**
@@ -186,7 +189,7 @@ contract Congress is owned, tokenRecipient {
         p.executed = false;
         p.proposalPassed = false;
         p.numberOfVotes = 0;
-        ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription);
+        /* ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription); */
         numProposals = proposalID+1;
 
         return proposalID;
@@ -233,7 +236,7 @@ contract Congress is owned, tokenRecipient {
         returns (bool codeChecksOut)
     {
         Proposal storage p = proposals[proposalNumber];
-        return p.proposalHash == keccak256(beneficiary, weiAmount, transactionBytecode);
+        return p.proposalHash == /*keccak256(beneficiary, weiAmount, transactionBytecode)*/0;
     }
 
     /**
@@ -264,7 +267,7 @@ contract Congress is owned, tokenRecipient {
         }
 
         // Create a log of this event
-        Voted(proposalNumber,  supportsProposal, msg.sender, justificationText);
+        /* Voted(proposalNumber,  supportsProposal, msg.sender, justificationText); */
         return p.numberOfVotes;
     }
 
@@ -281,16 +284,16 @@ contract Congress is owned, tokenRecipient {
 
         require(now > p.votingDeadline                                            // If it is past the voting deadline
             && !p.executed                                                         // and it has not already been executed
-            && p.proposalHash == keccak256(p.recipient, p.amount, transactionBytecode)  // and the supplied code matches the proposal
+                && p.proposalHash == /*keccak256(p.recipient, p.amount, transactionBytecode)*/0  // and the supplied code matches the proposal
             && p.numberOfVotes >= minimumQuorum);                                  // and a minimum quorum has been reached...
 
         // ...then execute result
 
-        if (p.currentResult > majorityMargin) {
+        if (p.currentResult /*>*/>= majorityMargin) {
             // Proposal passed; execute the transaction
 
             p.executed = true; // Avoid recursive calling
-            require(p.recipient.call.value(p.amount)(transactionBytecode));
+            /* require(p.recipient.call.value(p.amount)(transactionBytecode)); */
 
             p.proposalPassed = true;
         } else {
@@ -299,6 +302,6 @@ contract Congress is owned, tokenRecipient {
         }
 
         // Fire Events
-        ProposalTallied(proposalNumber, p.currentResult, p.numberOfVotes, p.proposalPassed);
+        /* ProposalTallied(proposalNumber, p.currentResult, p.numberOfVotes, p.proposalPassed); */
     }
 }

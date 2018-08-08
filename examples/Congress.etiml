@@ -54,9 +54,10 @@ contract tokenRecipient = struct
     event receivedTokens(_from : address, _value : uint256, _token : address, _extraData : bytes)
 
     public fun receiveApproval (_from : address, _value : uint256, _token : address(* , _extraData : bytes *)) =
-      let t = attach _token Token;
-      require(call false t transferFrom( _from, this, _value))
-      (* emit receivedTokens(_from, _value, _token, _extraData) *)
+      (* let t = attach _token Token; *)
+      (* require(call false t transferFrom( _from, this, _value)) *)
+             (* emit receivedTokens(_from, _value, _token, _extraData) *)
+             ()
 
     public fun default () payable =
       (* emit receivedEther(msg.sender, msg.value) *)
@@ -355,7 +356,7 @@ contract Congress = struct inherit owned, tokenRecipient
 
     (* Fire Events *)
     (* emit ProposalTallied(proposalNumber, !p.currentResult, !p.numberOfVotes, !p.proposalPassed) *)
-    (* ;(deref &p->proposalPassed, proposalNumber, array_len transactionBytecode, transactionBytecode) *)
+    ;(now, deref &p->proposalPassed, deref p->currentResult, proposalNumber, array_len transactionBytecode, transactionBytecode)
 
 val _ = owned..constructor ()
 val _ = constructor (1, 0, 0)
@@ -376,17 +377,17 @@ val _ = %vote (0, false, "LGTM")
          
 (* val () = halt r *)
 
-(* val addMember' = @addMember {2} *)
-(* val removeMember' = @removeMember {10} *)
-(* val newProposal' = @newProposal {3} {4} *)
-(* val vote' = @vote {4} *)
-(* val executeProposal' = @executeProposal {4} *)
+val addMember' = @addMember {2}
+val removeMember' = @removeMember {10}
+val newProposal' = @newProposal {3} {4}
+val vote' = @vote {4}
+val executeProposal' = @executeProposal {4}
                   
-(* val _ = dispatch {addMember = addMember', *)
-(*                   removeMember = removeMember', *)
-(*                   newProposal = newProposal', *)
-(*                   vote = vote', *)
-(*                   executeProposal = executeProposal', *)
-(*                  } *)
+val _ = dispatch {addMember = addMember',
+                  removeMember = removeMember',
+                  newProposal = newProposal',
+                  vote = vote',
+                  executeProposal = executeProposal',
+                 }
                     
 end
