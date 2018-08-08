@@ -189,7 +189,7 @@ contract Congress = struct inherit owned, tokenRecipient
   (*   * @notice Remove membership from `targetMember` *)
   (*   * *)
   (*   * @param targetMember ethereum address to be removed *)
-  (*   PW: if you move 'members' here, how would 'memberId' values correspond to 'members' index?  *)
+  (*   PW: if you move 'members' here, how would 'memberId' values correspond to 'members' index? And 'memberId[targetMember]' is not set to 0? *)
   public fun removeMember {len : Nat | len > 0} (targetMember : address) pre {numMembers : len} post {numMembers : len-1} guard onlyOwner =
     require(memberId[targetMember] != 0);
     (* for (i : uint = memberId[targetMember]; i < length members - 1; inc) *)
