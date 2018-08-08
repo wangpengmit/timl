@@ -15,7 +15,7 @@ def breakup(n, s)
 end
     
 def filter(s)
-  s.gsub(/(0x|--input[ ]+)([0-9a-fA-F]+)/){
+  s.gsub(/(0x|--input[ ]+[0-9a-fA-F]{8})([0-9a-fA-F]+)/){
     $1 + "\n" + breakup(64, $2).join("\n")
   }
 end

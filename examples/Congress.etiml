@@ -231,8 +231,7 @@ contract Congress = struct inherit owned, tokenRecipient
         jobDescription : string {n1},
         transactionBytecode : bytes {n2}
     )
-      guard onlyMembers
-      return uint =
+      guard onlyMembers =
     let proposalID = !!numProposals;
     copy_Proposal (&proposals->[proposalID], {
       recipient = beneficiary,
@@ -248,7 +247,8 @@ contract Congress = struct inherit owned, tokenRecipient
     (* emit ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription); *)
     numProposals ::= proposalID+1;
     proposalID
-
+    (* ; (proposalID, beneficiary, weiAmount, array_len jobDescription, (* jobDescription,  *)array_len transactionBytecode, transactionBytecode) *)
+      
   (** *)
 (*    * Add proposal in Ether *)
 (*    * *)
@@ -266,8 +266,7 @@ contract Congress = struct inherit owned, tokenRecipient
         jobDescription : string {n1},
         transactionBytecode : bytes {n2}
     )
-        guard onlyMembers
-        return uint =
+        guard onlyMembers =
     %newProposal(beneficiary, etherAmount * ether, jobDescription, transactionBytecode)
 
 (*    * Check if a proposal code matches *)
@@ -360,17 +359,30 @@ contract Congress = struct inherit owned, tokenRecipient
 val _ = owned..constructor ()
 val _ = constructor (1, 0, 0)
 
-val _ = %addMember 0x2222
-val _ = %addMember 0x3333
+(* val _ = %addMember 0x2222 *)
+(* val _ = %addMember 0x3333 *)
+(* val _ = %addMember 0x4 *)
+(* val _ = %addMember 0x5 *)
+(* val _ = %addMember 0x6 *)
+(* val _ = %addMember 0x7 *)
+(* val _ = %addMember 0x8 *)
+(* val _ = %addMember 0x9 *)
 (* val _ = %removeMember 0x2222 *)
+(* val _ = %newProposal (0x1111, 0, "job", "code") *)
+(* val _ = %vote (0, true, "LGTM") *)
+         
 (* val () = halt !!numMembers *)
 
-val addMember2 = @addMember {2}
-val removeMember4 = @removeMember {4}
+val addMember' = @addMember {2}
+val removeMember' = @removeMember {10}
+val newProposal' = @newProposal {3} {4}
+val vote' = @vote {4}
                   
-(* val _ = dispatch {addMember = addMember2, *)
-(*                   removeMember = removeMember4, *)
-(*                  } *)
+val _ = dispatch {addMember = addMember',
+                  removeMember = removeMember',
+                  newProposal = newProposal',
+                  vote = vote',
+                 }
                     
 (* addMember *)
 (* removeMember *)

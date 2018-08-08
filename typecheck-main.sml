@@ -1540,7 +1540,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                       | _ => raise Error (r, ["must be function (arrow) type"])
                 fun assert_wordsize_ty t =
                   if is_wordsize_ty t = true then ()
-                  else raise Error (r, ["can only be int/byte/unit"])
+                  else raise Error (r, ["can only be word-sized types (int, byte, bool, unit, etc.)"])
                 fun check_good_arg_ty t =
                   let
                     val loop = check_good_arg_ty
@@ -1566,7 +1566,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                         (case at_most_one_Array_other_wordsize_ty ts of
                              inl (_, (_, t, _)) => assert_wordsize_ty t
                            | inr true => ()
-                           | inr false => raise Error (r, ["tuple can only have one array; others can be int/byte/unit"])
+                           | inr false => raise Error (r, ["tuple can only have one array; others can be word-sized types (int, byte, bool, unit, etc.)"])
                         )
                       | TArray (w, t, _) => assert_wordsize_ty t
                       | _ => assert_wordsize_ty t

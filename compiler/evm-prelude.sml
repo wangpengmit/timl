@@ -31,7 +31,10 @@ fun get_func_sig (name, t) =
       case t of
           TConst (TCTiML (BTInt ())) => "int256"
         | TConst (TCTiML (BTByte ())) => "uint8"
+        | TConst (TCTiML (BTBool ())) => "bool"
         | TConst (TCUnit ()) => "uint8"
+        | TiBool _ => "bool"
+        | TNat _ => "uint256"
         | TTuple ts => surround "(" ")" $ join "," $ map str_t ts
         | TArray (1, t, _) => "bytes" (* or "string"? *)
         | TArray (32, t, _) => str_t t ^ "[]"
@@ -117,11 +120,12 @@ fun decode pos t =
         raise Impossible "Can't decode type"
 
 (* both tuple_len and pos_in_tuple are in bytes *)                  
-fun encode_array w tuple_len pos_in_tuple =
+fun encode_array num_regs w tuple_len pos_in_tuple =
   let
     (* the encoded data reuses the array's buffer, appending the tuple before the array *)
     (* there should be at least 'tuple_len' words before the array, such as the free pointer and scratch space *)
-    val () = assert_b "encode_array: tuple_len <= ..." $ tuple_len <= FIRST_GENERAL_REG + 1
+    (* val () = assert_b "encode_array: tuple_len <= ..." $ tuple_len <= FIRST_GENERAL_REG + 1 *)
+    val () = assert_b_m (fn () => sprintf "encode_array: tuple_len <= num_regs + 1 (tuple_len=$, num_regs=$)" [str_int tuple_len, str_int num_regs]) $ tuple_len <= num_regs + 1
     val n = 32 * tuple_len
     val p = 32 * pos_in_tuple
   in
@@ -155,7 +159,16 @@ fun encode_array w tuple_len pos_in_tuple =
          Add, (* [ptr_to_array_len+array_len*w+32=ptr_to_array_end, ptr_to_array_len-n, array_len*w+32+n] *)
          Push 0,
          Swap1,
-         MStore (* [ptr_to_array_len-n, array_len*w+32+n] *)
+         MStore, (* [ptr_to_array_len-n, array_len*w+32+n] *)
+         Swap1, (* [array_len*w+32+n, ptr_to_array_len-n] *)
+         Dup1,
+         Push 32,
+         Swap1,
+         Mod,
+         Push 32,
+         Sub,
+         Add, (* [array_len*w+32+n rounded up by 32, ptr_to_array_len-n] *)
+         Swap1
        ]
      else
        []
@@ -170,7 +183,7 @@ fun is_TArray t =
 fun at_most_one_Array_other_wordsize_ty ts =
   at_most_one_some_other_true is_TArray is_wordsize_ty ts
                               
-fun encode t =
+fun encode num_regs t =
   case t of
       TTuple ts =>
         (case at_most_one_Array_other_wordsize_ty ts of
@@ -186,7 +199,7 @@ fun encode t =
                  Add,
                  MLoad (* [ptr_to_array, vs] *)
                ] @
-               encode_array w len p @
+               encode_array num_regs w len p @
                (* [ptr_to_array_len-n, array_len*w+32+n, vs] *)
                concatMapi
                  (fn (i, _) =>
@@ -221,7 +234,7 @@ fun encode t =
       let
         val () = assert_wordsize_ty t
       in
-        encode_array w 1 0
+        encode_array num_regs w 1 0
       end
     | _ =>
       if is_wordsize_ty t then
@@ -253,7 +266,7 @@ fun rshift_byte n =
     DIV ()
   ]
     
-fun try_fun (fresh_label, output_heap) (sg, t_arg, t_ret, func) =
+fun try_fun (num_regs, fresh_label, output_heap) (sg, t_arg, t_ret, func) =
   let
     val l_decode = fresh_label ()
     val code_try_sig =
@@ -275,7 +288,7 @@ fun try_fun (fresh_label, output_heap) (sg, t_arg, t_ret, func) =
       get_reg ARG_REG @
       untuple 2 @
       [Swap1, Pop] @ (* discard closure environment *)
-      encode t_ret @
+      encode num_regs t_ret @
       [Return]
     val () = output_heap ((l_k, "prelude_k"), code_k)
                          
@@ -306,7 +319,7 @@ fun try_fun (fresh_label, output_heap) (sg, t_arg, t_ret, func) =
     code_try_sig
   end
 
-fun prelude (params as (fresh_label, output_heap)) funs =
+fun prelude (params as (num_regs, fresh_label, output_heap)) funs =
   let
     fun revert_with error_code =
         [
@@ -401,11 +414,11 @@ fun add_prelude_hval params code =
     Bind (binds, (spec, early_end I))
   end
 
-fun add_prelude_prog fresh_label (H, I) =
+fun add_prelude_prog (num_regs, fresh_label) (H, I) =
   let
     val r = ref []
     fun output_heap a = push_ref r a
-    val params = (fresh_label, output_heap)
+    val params = (num_regs, fresh_label, output_heap)
     val (H, I) = (map (mapSnd $ add_prelude_hval params) H, add_prelude_insts params I)
     fun insts2hval I = Bind (TeleNil, ((IEmptyState, Rctx.empty, [], TN0 dummy), list2insts $ JumpDest :: I))
     val H' = rev $ map (mapSnd insts2hval) $ !r
