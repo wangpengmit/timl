@@ -39,5 +39,6 @@ val Jump = InstJUMP ()
 val Return = InstRETURN ()
 val Revert = InstREVERT ()
 val JumpDest = JUMPDEST ()
+val Log0 = LOG0
        
 end

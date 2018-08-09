@@ -491,8 +491,10 @@ contract Wallet = struct inherit multiowned, daylimit
 
 val _ = %constructor ({0x2, 0x3, 0x4, 0x5, }, 3, 5)
 
-val () = &m_pending->[1]->ownersDone ::= 2
-val () = &m_pending->[1]->yetNeeded ::= 2
+(* val () = &m_pending->[1]->ownersDone ::= 2 *)
+(* val () = &m_pending->[1]->yetNeeded ::= 2 *)
+val () = &m_pending->[1]->ownersDone ::= 6
+val () = &m_pending->[1]->yetNeeded ::= 1
 (* val () = __&printc #"a" *)
 (* val r = %confirmAndCheck 1 *)
 (* val r = %confirmAndCheck 1 *)

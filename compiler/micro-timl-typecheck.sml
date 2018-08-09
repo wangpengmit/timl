@@ -1036,6 +1036,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EDispatch ls, TUnit, TN C_EConst, st)
         end
+      | EDebugLog e =>
+        let
+          val e = #1 $ tc (ctx, st) e
+        in
+          (EDebugLog e, TUnit, TN C_EConst, st)
+        end
       | EEnv name => (EEnv name, get_msg_info_type name, TN $ C_EEnv name, st)
       (* | EUnOp (opr as EUTiML (EUProj proj), e) => *)
       (*   let *)

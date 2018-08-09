@@ -459,6 +459,12 @@ fun compile st_name2int ectx e =
       in
         [Dispatch fields]
       end
+    | EDebugLog e =>
+      let
+        val (e, t) = assert_EAscType e
+      in
+        compile e @ [DebugLog $ Inner t]
+      end
     | EEnv name =>
       (case name of
            EnvSender () => [CALLER ()]
@@ -1264,7 +1270,7 @@ fun test1 dirname =
     val prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-code-gen.tmp", prog_str)
     val () = println "before inline_macro_prog()"
-    val inlined_prog = inline_macro_prog $ EVMPrelude.add_prelude_prog (num_regs, fresh_label) prog
+    val inlined_prog = inline_macro_prog $ EVMDebugLog.add_debug_log_prog $ EVMPrelude.add_prelude_prog (num_regs, fresh_label) prog
     val () = println "after inline_macro_prog()"
     val inlined_prog_str = EVM1ExportPP.pp_prog_to_string $ export_prog ((* SOME 1 *)NONE, NONE, NONE) inlined_prog
     val () = write_file (join_dir_file' dirname $ "unit-test-after-inline-macro.tmp", inlined_prog_str)

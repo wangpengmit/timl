@@ -301,6 +301,10 @@ fun usage () =
       val () = println "  -n <file-name>: typecheck a negative file (succeeds only when there are errors)"
       val () = println "  --etiml: use ETiML syntax"
       val () = println "  --pervasive: add 'open Pervasive' to each module"
+      val () = println "  --debug-cost: generate useless instructions to help debug costs"
+      val () = println "  --prelude: generate a prelude to dispatch based on EVM input"
+      val () = println "  --vc-check-off: turn off VC checking in --unit-test mode"
+      val () = println "  --debug-log: turn on the 'log' command for debugging"
     in
       ()
     end
@@ -352,6 +356,7 @@ fun parse_arguments (opts : options, args) =
 	    | "--debug-cost" :: ts => (CostDebug.debug_cost_flag := true; parseArgs ts)
 	    | "--prelude" :: ts => (EVMPrelude.add_prelude_flag := true; parseArgs ts)
 	    | "--vc-check-off" :: ts => (ToEVM1.UnitTest.vc_check_off_flag := true; parseArgs ts)
+	    | "--debug-log" :: ts => (EVMDebugLog.add_debug_log_flag := true; parseArgs ts)
 	    | arg :: ts =>
               if String.isPrefix "-" arg then
 	        raise ParseArgsError ("Unrecognized option: " ^ arg)

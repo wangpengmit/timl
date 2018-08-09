@@ -250,6 +250,7 @@ compiler/evm1-tc.sml
 compiler/evm1-assemble.sml
 compiler/evm1-simp.sml
 compiler/evm-prelude.sml
+compiler/evm-debug-log.sml
 compiler/to-evm1.sml
 unit-test.sml
 main.sml

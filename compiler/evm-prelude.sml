@@ -344,38 +344,12 @@ fun prelude (params as (num_regs, fresh_label, output_heap)) funs =
     revert_with ErrorCode.NO_MATCH
   end
 
-val add_prelude_flag = ref false
-                           
-fun add_prelude_inst params inst =
-  case inst of
-      Dispatch funs =>
-      if !add_prelude_flag then
-        prelude params $ map (fn (name, t1, t2, n) => (name, unInner t1, unInner t2, n)) funs
-      else
-        PUSH_value $ VConst $ WCTT ()
-    | _ => [inst]
-
 infixr 5 @::
 infixr 5 @@
 
 fun a @:: b = ISCons $ Bind (a, b)
 fun ls @@ b = foldr (op@::) b ls 
          
-fun add_prelude_insts params insts =
-  let
-    val add_prelude_insts = add_prelude_insts params
-    val add_prelude_inst = add_prelude_inst params
-  in
-    case insts of
-        ISCons bind =>
-        let
-          val (inst, I) = unBind bind
-        in
-          add_prelude_inst inst @@ add_prelude_insts I
-        end
-      | _ => insts
-  end
-
 fun is_block_end inst =
   case inst of
       InstJUMP () => SOME $ JUMP ()
@@ -406,6 +380,33 @@ fun list2insts ls =
     (foldl f [] ls; raise Impossible "list2insts: didn't find block ender") handle Done I => I
   end
              
+val add_prelude_flag = ref false
+                           
+fun add_prelude_inst params inst =
+  case inst of
+      Dispatch funs =>
+      if !add_prelude_flag then
+        prelude params $ map (fn (name, t1, t2, n) => (name, unInner t1, unInner t2, n)) funs
+      else
+        (* PUSH_value $ VConst $ WCTT () *)
+        [PUSH1 WTT]
+    | _ => [inst]
+
+fun add_prelude_insts params insts =
+  let
+    val add_prelude_insts = add_prelude_insts params
+    val add_prelude_inst = add_prelude_inst params
+  in
+    case insts of
+        ISCons bind =>
+        let
+          val (inst, I) = unBind bind
+        in
+          add_prelude_inst inst @@ add_prelude_insts I
+        end
+      | _ => insts
+  end
+
 fun add_prelude_hval params code =
   let
     val (binds, (spec, I)) = unBind code

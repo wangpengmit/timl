@@ -1580,6 +1580,13 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EDispatch (fields, r), TUnit dummy, TN C_EConst, st)
           end
+        | U.EDebugLog e =>
+          let
+            val (e, t, _, _) = get_mtype ctx_st e
+            val t = normalize_mt true gctx kctx t
+          in
+            (EDebugLog (e %: t), TUnit dummy, TN C_EConst, st)
+          end
         | U.EEnv (name, r) => (EEnv (name, r), get_msg_info_type r name, TN $ C_EEnv name, st)
         (* | U.EUnOp (opr as EUProj proj, e, r) => *)
 	(*   let  *)

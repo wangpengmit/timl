@@ -218,6 +218,7 @@ fun C_inst b =
     | LOG n => C_LOG n
                            
     | Dispatch _ => C_PUSH
+    | DebugLog _ => C_PUSH
                       
     | MACRO_init_free_ptr _ => raise Impossible $ "C_inst() on MACRO_init_free_ptr"
     | MACRO_tuple_malloc _ => raise Impossible $ "C_inst() on MACRO_tuple_malloc"
@@ -576,6 +577,12 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val () = app (fn (name, t1, t2, n) =>
                          (kc_against_KType itctx $ unInner t1;
                           kc_against_KType itctx $ unInner t2; ())) ls
+      in
+        add_stack TUnit ctx
+      end
+    | DebugLog t =>
+      let
+        val _ = kc_against_KType itctx $ unInner t
       in
         add_stack TUnit ctx
       end

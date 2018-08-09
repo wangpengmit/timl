@@ -48,6 +48,7 @@ signature EXPR = sig
            | EEnv of Operators.env_info * Region.region
            | EAscState of expr * idx StMap.map
            | EDispatch of (string * expr * mtype option * mtype option) list * Region.region
+           | EDebugLog of expr
            (* these constructs won't show up in source program *)
            (* | EAbsT of (sort, expr) tbind_anno * region *)
 
