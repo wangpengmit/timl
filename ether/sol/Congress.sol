@@ -184,7 +184,7 @@ contract Congress is owned, tokenRecipient {
         p.recipient = beneficiary;
         p.amount = weiAmount;
         p.description = jobDescription;
-        p.proposalHash = keccak256(beneficiary, weiAmount, transactionBytecode);
+        p.proposalHash = /*keccak256(beneficiary, weiAmount, transactionBytecode)*/0;
         p.votingDeadline = now + debatingPeriodInMinutes * 1 minutes;
         p.executed = false;
         p.proposalPassed = false;
@@ -302,6 +302,6 @@ contract Congress is owned, tokenRecipient {
         }
 
         // Fire Events
-        /* ProposalTallied(proposalNumber, p.currentResult, p.numberOfVotes, p.proposalPassed); */
+        //    ProposalTallied(proposalNumber, p.currentResult, p.numberOfVotes, p.proposalPassed);
     }
 }
