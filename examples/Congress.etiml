@@ -178,6 +178,7 @@ contract Congress = struct inherit owned, tokenRecipient
         minutesForDebate : uint,
         marginOfVotesForMajority : int
     ) payable pre {numMembers : 0} post {numMembers : 2} =
+    owned..constructor ();
     changeVotingRules(minimumQuorumForProposals, minutesForDebate, marginOfVotesForMajority);
     (* It’s necessary to add an empty first member *)
     %addMember(0(* , "" *));
@@ -356,9 +357,8 @@ contract Congress = struct inherit owned, tokenRecipient
 
     (* Fire Events *)
     (* emit ProposalTallied(proposalNumber, !p.currentResult, !p.numberOfVotes, !p.proposalPassed) *)
-    ;(now, deref &p->proposalPassed, deref p->currentResult, proposalNumber, array_len transactionBytecode, transactionBytecode)
+    (* ;(now, deref &p->proposalPassed, deref p->currentResult, proposalNumber, array_len transactionBytecode, transactionBytecode) *)
 
-val _ = owned..constructor ()
 val _ = constructor (1, 0, 0)
 
 (* val _ = %addMember 0x2222 *)

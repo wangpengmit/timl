@@ -1,340 +1,340 @@
 structure UnitTestBasic1 = struct
 
-(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
-(* fun assert p = if p then waste_time (); () else __&halt 0x11111111 *)
-(* fun assert_byte (a, b) = assert (byte2int a = byte2int b) *)
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+fun assert p = if p then waste_time (); () else __&halt 0x11111111
+fun assert_byte (a, b) = assert (byte2int a = byte2int b)
 
 (* val f = fn y => 1 + y *)
 (* val a = (f 64) using _ *)
 (* val () = __&halt 0x1111 *)
 (* val b = (f 64) using _ *)
-fun f () = (); (halt 0x1111); ()
-val a = f ()
+(* fun f () = (); (halt 0x1111); () *)
+(* val a = f () *)
                              
-(* val x = 1 *)
-(* val f = fn y => 1 + y *)
-(* fun f y = 1 + y *)
-(* val f = fn y => x + y *)
-(* fun f y = x + y *)
-(* val a = (f 64) using _ *)
-(* val g = fn y => 1 + y *)
-(* val b = f 64 *)
-(* val b = a + 2 *)
-(* val b = (a, 2) *)
+val x = 1
+val f = fn y => 1 + y
+fun f y = 1 + y
+val f = fn y => x + y
+fun f y = x + y
+val a = (f 64) using _
+val g = fn y => 1 + y
+val b = f 64
+val b = a + 2
+val b = (a, 2)
 
-(* val a = if __&false then 1 else 0 *)
+val a = if __&false then 1 else 0
 
-(* val x = 1 *)
-(* val f = fn {n : Nat} y => y + 1 *)
-(* val f = fn {n : Nat} => (fn y => y + 1) using _ *)
-(* val f = fn {n : Nat} y => x + y *)
-(* fun f {n : Nat} y = y + 1 *)
-(* fun f {n : Nat} y = x + y *)
-(* val a = @f {1} *)
-(* val b = a 1 *)
-(* val a = @f {1} 1 *)
+val x = 1
+val f = fn {n : Nat} y => y + 1
+val f = fn {n : Nat} => (fn y => y + 1) using _
+val f = fn {n : Nat} y => x + y
+fun f {n : Nat} y = y + 1
+fun f {n : Nat} y = x + y
+val a = @f {1}
+val b = a 1
+val a = @f {1} 1
 
-(* val x = 1 *)
-(* val f = fn y => y *)
-(* fun f y = y *)
-(* val f = fn y => (x, y) *)
-(* fun f y = (x, y) *)
-(* val a = %f 1 *)
-(* val g = %f *)
+val x = 1
+val f = fn y => y
+fun f y = y
+val f = fn y => (x, y)
+fun f y = (x, y)
+val a = %f 1
+val g = %f
 
-(* val f = fn y => 1 + y *)
-(* val g = fn y => f y *)
-(* val a = g 64 *)
+val f = fn y => 1 + y
+val g = fn y => f y
+val a = g 64
           
-(* val a = {1,2,3,} *)
-(* val () = assert (array_get (a, #0) = 1) *)
-(* val () = assert (array_get (a, #1) = 2) *)
-(* val () = assert (array_get (a, #2) = 3) *)
-(* val a : array _ {0} = empty_array using _, _ *)
-(* val a : array _ {0} = new_array (#0, 0x123) using _, _ *)
-(* val a : array _ {5} = new_array (#5, 0x123) using _, _ *)
-(* val () = assert (array_get (a, #0) = 0x123) *)
-(* val () = assert (array_get (a, #4) = 0x123) *)
-(* val () = assert (array_get (a, #1) = 0x123) *)
-(* val () = array_set (a, #1, 0x333) *)
-(* val () = assert (array_get (a, #1) = 0x333) *)
+val a = {1,2,3,}
+val () = assert (array_get (a, #0) = 1)
+val () = assert (array_get (a, #1) = 2)
+val () = assert (array_get (a, #2) = 3)
+val a : array _ {0} = empty_array using _, _
+val a : array _ {0} = new_array (#0, 0x123) using _, _
+val a : array _ {5} = new_array (#5, 0x123) using _, _
+val () = assert (array_get (a, #0) = 0x123)
+val () = assert (array_get (a, #4) = 0x123)
+val () = assert (array_get (a, #1) = 0x123)
+val () = array_set (a, #1, 0x333)
+val () = assert (array_get (a, #1) = 0x333)
 
-(* val a : string {0} = "" *)
-(* val a : array1 byte {3} = "abc" using _, _ *)
-(* val () = assert_byte (array1_get (a, #0), #"a") *)
-(* val () = assert_byte (array1_get (a, #1), #"b") *)
-(* val () = assert_byte (array1_get (a, #2), #"c") *)
-(* val a : array1 byte {4} = new_array1 (#4, #"d") using _, _ *)
-(* val () = assert_byte (array1_get (a, #0), #"d") *)
-(* val () = assert_byte (array1_get (a, #1), #"d") *)
-(* val () = assert_byte (array1_get (a, #2), #"d") *)
-(* val () = assert_byte (array1_get (a, #3), #"d") *)
+val a : string {0} = ""
+val a : array1 byte {3} = "abc" using _, _
+val () = assert_byte (array1_get (a, #0), #"a")
+val () = assert_byte (array1_get (a, #1), #"b")
+val () = assert_byte (array1_get (a, #2), #"c")
+val a : array1 byte {4} = new_array1 (#4, #"d") using _, _
+val () = assert_byte (array1_get (a, #0), #"d")
+val () = assert_byte (array1_get (a, #1), #"d")
+val () = assert_byte (array1_get (a, #2), #"d")
+val () = assert_byte (array1_get (a, #3), #"d")
                          
-(* val () = __&printc #"a" *)
-(* val () = __&printc #"b" *)
+val () = __&printc #"a"
+val () = __&printc #"b"
 
-(* val x = *)
-(*     (let *)
-(*       val (a, b) = (1, 2) *)
-(*     in *)
-(*       a *)
-(*     end) using _ *)
+val x =
+    (let
+      val (a, b) = (1, 2)
+    in
+      a
+    end) using _
     
-(* datatype t2 'a = C {0 = 0} {1 = 1} of 'a --> t2 'a *)
+datatype t2 'a = C {0 = 0} {1 = 1} of 'a --> t2 'a
 
-(* val x = *)
-(*     (let *)
-(*       val (_, C (_, x)) = ((), C ((), 2)) *)
-(*     in *)
-(*       x *)
-(*     end) using _ *)
+val x =
+    (let
+      val (_, C (_, x)) = ((), C ((), 2))
+    in
+      x
+    end) using _
     
-(* val f = (fn (_, ()) => ()) using _ *)
-(* fun f (_, ()) = () *)
-(* val a = (%f ((), ())) using _ *)
-(* val g = fn y => 1 + y *)
-(* val a = (%f (g 1, ())) using _ *)
+val f = (fn (_, ()) => ()) using _
+fun f (_, ()) = ()
+val a = (%f ((), ())) using _
+val g = fn y => 1 + y
+val a = (%f (g 1, ())) using _
 
-(* datatype t2 'a = C {0 = 0} {1 = 1} of 'a --> t2 'a *)
+datatype t2 'a = C {0 = 0} {1 = 1} of 'a --> t2 'a
 
-(* val f = fn ((), C ((), x)) => x : int *)
-(* val a = (f ((), C ((), 2))) using _ *)
+val f = fn ((), C ((), x)) => x : int
+val a = (f ((), C ((), 2))) using _
                             
-(* val f = fn (_, C (_, x)) => x *)
-(* val a = (%f ((), C ((), 2))) using _ *)
+val f = fn (_, C (_, x)) => x
+val a = (%f ((), C ((), 2))) using _
                                                 
-(* val f = fn x => if x then 1 else 0 *)
-(* fun f x = if x then 1 else 0 *)
-(* val a = f __&false *)
+val f = fn x => if x then 1 else 0
+fun f x = if x then 1 else 0
+val a = f __&false
 
-(* datatype t = Fst | Snd *)
-(* datatype t2 = C1 | C2 | C3 {n : Nat} {n = 0} of t --> t2 *)
+datatype t = Fst | Snd
+datatype t2 = C1 | C2 | C3 {n : Nat} {n = 0} of t --> t2
 
-(* val a = *)
-(*     (let *)
-(*       val x = @C3 {0} {_} Snd *)
-(*     in *)
-(*       (case x of *)
-(*            C1 => 1 *)
-(*          | C2 => 2 *)
-(*          | C3 Fst => 31 *)
-(*          | C3 Snd => 32) using _ *)
-(*     end) using _ *)
+val a =
+    (let
+      val x = @C3 {0} {_} Snd
+    in
+      (case x of
+           C1 => 1
+         | C2 => 2
+         | C3 Fst => 31
+         | C3 Snd => 32) using _
+    end) using _
 
-(* val a = (case @C3 {0} {} Snd of *)
-(*             C1 => 1 *)
-(*           | C2 => 2 *)
-(*           | C3 Fst => 31 *)
-(*           | C3 Snd => 32) using _ *)
+val a = (case @C3 {0} {} Snd of
+            C1 => 1
+          | C2 => 2
+          | C3 Fst => 31
+          | C3 Snd => 32) using _
 
-(* datatype t = C1 *)
+datatype t = C1
 
-(* val a = (case C1 of *)
-(*             C1 => 1) using _ *)
+val a = (case C1 of
+            C1 => 1) using _
 
-(* val a = *)
-(*     let *)
-(*       val x = C1 using _ *)
-(*     in *)
-(*     (case x of *)
-(*          C1 => 1) using _ *)
-(*     end *)
+val a =
+    let
+      val x = C1 using _
+    in
+    (case x of
+         C1 => 1) using _
+    end
                     
-(* datatype t = C1 | C2 *)
+datatype t = C1 | C2
 
-(* val a = *)
-(*     let *)
-(*       val x = C2 using _ *)
-(*     in *)
-(*       (case x of *)
-(*            C1 => 1 *)
-(*          | C2 => 2) using _ *)
-(*     end *)
+val a =
+    let
+      val x = C2 using _
+    in
+      (case x of
+           C1 => 1
+         | C2 => 2) using _
+    end
 
-(* val a = (case C2 of *)
-(*             C1 => 1 *)
-(*           | C2 => 2) using _ *)
+val a = (case C2 of
+            C1 => 1
+          | C2 => 2) using _
 
-(* val a = *)
-(*     let *)
-(*       val x = (C2, C2) *)
-(*     in *)
-(*       (case x of *)
-(*            (_, C1) => 1 *)
-(*          | (C1, C2) => 12 *)
-(*          | (C2, C2) => 22) using _ *)
-(*     end *)
+val a =
+    let
+      val x = (C2, C2)
+    in
+      (case x of
+           (_, C1) => 1
+         | (C1, C2) => 12
+         | (C2, C2) => 22) using _
+    end
 
-(* val a = (case (C2, C2) of *)
-(*             (_, C1) => 1 *)
-(*           | (C1, C2) => 12 *)
-(*           | (C2, C2) => 22) using _ *)
+val a = (case (C2, C2) of
+            (_, C1) => 1
+          | (C1, C2) => 12
+          | (C2, C2) => 22) using _
 
-(* datatype t = C1 | C2 | C3 *)
+datatype t = C1 | C2 | C3
 
-(* val a = (case C3 of *)
-(*             C1 => 1 *)
-(*           | C2 => 2 *)
-(*           | C3 => 3) using _ *)
+val a = (case C3 of
+            C1 => 1
+          | C2 => 2
+          | C3 => 3) using _
 
-(* datatype t = C1 | C2 | C3 | C4 *)
+datatype t = C1 | C2 | C3 | C4
 
-(* val a = (case C4 of *)
-(*             C1 => 1 *)
-(*           | C2 => 2 *)
-(*           | C3 => 3 *)
-(*           | C4 => 4) using _ *)
+val a = (case C4 of
+            C1 => 1
+          | C2 => 2
+          | C3 => 3
+          | C4 => 4) using _
 
-(* datatype list 'a : {Nat} = *)
-(*          Nil of list 'a {0} *)
-(*        | Nil2 of list 'a {0} *)
-(*        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1} *)
+datatype list 'a : {Nat} =
+         Nil of list 'a {0}
+       | Nil2 of list 'a {0}
+       | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1}
 
-(* val a = (case Cons (1, Nil) of *)
-(*             Nil => 1 *)
-(*           | Nil2 => 12 *)
-(*           | Cons _ => 2) using _ *)
+val a = (case Cons (1, Nil) of
+            Nil => 1
+          | Nil2 => 12
+          | Cons _ => 2) using _
 
-(* fun f y using $369 = 1 + y *)
-(* (* fun f y return using $370 = 1 + y *) *)
-(* val a = f 1 *)
+fun f y using $369 = 1 + y
+(* fun f y return using $370 = 1 + y *)
+val a = f 1
 
-(* val f = fn x => x + 1 *)
-(* val a = 1 + f 2 *)
+val f = fn x => x + 1
+val a = 1 + f 2
 
-(* datatype list 'a : {Nat} = *)
-(*          Nil of list 'a {0} *)
-(*        | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1} *)
+datatype list 'a : {Nat} =
+         Nil of list 'a {0}
+       | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1}
 
-(* (* val ls = [] : list int {_} *) *)
-(* (* val ls = [1, 2, 3] *) *)
-(* val ls = [1, 2, 3, 4, 5] *)
+(* val ls = [] : list int {_} *)
+(* val ls = [1, 2, 3] *)
+val ls = [1, 2, 3, 4, 5]
 
-(* fun length_int [a] {n : Nat} (l : list a {n}) using $(2111*n + 976), 32*30*n+32*4 = *)
-(*     case l return using $(2111*n + 777), 32*30*n+32*2 of *)
-(*         [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
-(*       | _ :: xs => 1 + %length_int xs *)
+fun length_int [a] {n : Nat} (l : list a {n}) using $(2111*n + 976), 32*30*n+32*4 =
+    case l return using $(2111*n + 777), 32*30*n+32*2 of
+        [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+      | _ :: xs => 1 + %length_int xs
 
-(* fun length_int [a] {n : Nat} (l : list a {n}) (* using $(2111*n + 976), 30*n+4 *) = *)
-(*     case l of *)
-(*         [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
-(*       | _ :: xs => (1 + %length_int xs) using $(2111*n+494), 32*30*n *)
+fun length_int [a] {n : Nat} (l : list a {n}) (* using $(2111*n + 976), 30*n+4 *) =
+    case l of
+        [] => 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+      | _ :: xs => (1 + %length_int xs) using $(2111*n+494), 32*30*n
 
-(* fun length_int [a] {n : Nat} (l : list a {n}) = *)
-(*     case l return using $(2111*n+777), 32*30*n+32*2 of *)
-(*         [] => (0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0) using _ *)
-(*       | _ :: xs => (1 + (%length_int xs using _, _)) using _ *)
+fun length_int [a] {n : Nat} (l : list a {n}) =
+    case l return using $(2111*n+777), 32*30*n+32*2 of
+        [] => (0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0) using _
+      | _ :: xs => (1 + (%length_int xs using _, _)) using _
 
-(* val a = %length_int ls *)
-(* val () = assert (a = 5) *)
+val a = %length_int ls
+val () = assert (a = 5)
            
-(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
                                                                                               
-(* fun for ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+32*52)*(eend-start)+32*50 = *)
-(*   let *)
-(*     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) = *)
-(*       ifi i #>= eend then waste_time (); acc *)
-(*       else *)
-(*         %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+32*52) * (eend-i)+32*16 *)
-(*   in *)
-(*     %loop (start, init) *)
-(*   end *)
+fun for ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+32*52)*(eend-start)+32*50 =
+  let
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then waste_time (); acc
+      else
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+32*52) * (eend-i)+32*16
+  in
+    %loop (start, init)
+  end
   
-(* val a = %for (#1, #4, 0, fn {i | 1 <= i /\ i < 4} (i : nat {i}, acc) => acc + __&nat2int i) *)
-(* val () = assert (a = 0+1+2+3) *)
+val a = %for (#1, #4, 0, fn {i | 1 <= i /\ i < 4} (i : nat {i}, acc) => acc + __&nat2int i)
+val () = assert (a = 0+1+2+3)
                 
-(* fun map ['a 'b] {m1 : Time} {m2 n : Nat} (f : 'a -- m1, m2 --> 'b) (ls : list _ {n}) = *)
-(*   case ls return list _ {n} using (6524.0+m1)*$n+1767.0, (32*104+m2)*n+32*17 of *)
-(*       Nil => waste_time (); Nil *)
-(*     | Cons (x, xs) => Cons (f x, %map f xs) *)
+fun map ['a 'b] {m1 : Time} {m2 n : Nat} (f : 'a -- m1, m2 --> 'b) (ls : list _ {n}) =
+  case ls return list _ {n} using (6524.0+m1)*$n+1767.0, (32*104+m2)*n+32*17 of
+      Nil => waste_time (); Nil
+    | Cons (x, xs) => Cons (f x, %map f xs)
 
-(* fun inc x = x + 1 *)
-(* val a = %map inc ls *)
+fun inc x = x + 1
+val a = %map inc ls
                                  
-(* val a = 1 *)
-(* val a = () *)
+val a = 1
+val a = ()
           
-(* val x = 1 + 2 *)
-(* val y = x + 1 *)
+val x = 1 + 2
+val y = x + 1
 
-(* fun f x = x + 1 *)
-(* val a = f 253 *)
-(* val a = f 0xdd *)
+fun f x = x + 1
+val a = f 253
+val a = f 0xdd
           
-(* fun f x y = x + y *)
-(* val a = f 1 2 *)
+fun f x y = x + y
+val a = f 1 2
           
-(* val foo = fn arg => arg + 1 *)
-(* val a = foo 0xe1 *)
+val foo = fn arg => arg + 1
+val a = foo 0xe1
 
-(* val p = (0xe1, 0xe2) *)
-(* val a = __&fst p *)
-(* val a = __&snd p *)
+val p = (0xe1, 0xe2)
+val a = __&fst p
+val a = __&snd p
           
-(* fun twice ['a] {m1 : Time} {m2 : Nat} (f : 'a -- m1,m2 --> _) x = %f (%f x) *)
-(* fun f x = x + 1 *)
-(* val a = %twice f 0xdd *)
+fun twice ['a] {m1 : Time} {m2 : Nat} (f : 'a -- m1,m2 --> _) x = %f (%f x)
+fun f x = x + 1
+val a = %twice f 0xdd
                   
-(* (* datatype sum 'a 'b = *) *)
-(* (*          inl of 'a --> sum 'a 'b *) *)
-(* (*          | inr of 'b --> sum 'a 'b *) *)
+(* datatype sum 'a 'b = *)
+(*          inl of 'a --> sum 'a 'b *)
+(*          | inr of 'b --> sum 'a 'b *)
                     
-(* (* datatype empty = *) *)
+(* datatype empty = *)
 
-(* (* val f = fn (a : empty) => case a return unit of *) *)
+(* val f = fn (a : empty) => case a return unit of *)
          
-(* (* val f = fn (a : sum unit empty) => *) *)
-(* (*            case a of *) *)
-(* (*                inl () => () *) *)
+(* val f = fn (a : sum unit empty) => *)
+(*            case a of *)
+(*                inl () => () *)
 
-(* val a = (if 1 > 2 then 1 else 2) using _, _ *)
-(* val a = (ifi #1 #>= #2 then 1 else 2) using _, _ *)
+val a = (if 1 > 2 then 1 else 2) using _, _
+val a = (ifi #1 #>= #2 then 1 else 2) using _, _
                                      
-(* fun f b = ifi b then 1 else 2 *)
-(* val a = f (#1 #>= #2) *)
+fun f b = ifi b then 1 else 2
+val a = f (#1 #>= #2)
 
-(* val a = #3 #+ #1 *)
-(* val a = #3 #- #1 *)
-(* val a = #3 #* #2 *)
-(* val a = #5 #/ #2 *)
+val a = #3 #+ #1
+val a = #3 #- #1
+val a = #3 #* #2
+val a = #5 #/ #2
                                
-(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
-(* fun assert p = if p then waste_time (); () else __&halt 0x11111111 *)
-(* fun iassert (p : ibool {true}) = ifi p then waste_time (); () else __&halt 0x11111111 *)
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+fun assert p = if p then waste_time (); () else __&halt 0x11111111
+fun iassert (p : ibool {true}) = ifi p then waste_time (); () else __&halt 0x11111111
                                    
-(* val () = assert (1 < 2) *)
-(* val () = assert (not (2 < 1)) *)
-(* val () = assert (2 > 1) *)
-(* val () = assert (not (1 > 2)) *)
-(* val () = assert (1 <= 2) *)
-(* val () = assert (not (2 <= 1)) *)
-(* val () = assert (2 >= 1) *)
-(* val () = assert (not (1 >= 2)) *)
+val () = assert (1 < 2)
+val () = assert (not (2 < 1))
+val () = assert (2 > 1)
+val () = assert (not (1 > 2))
+val () = assert (1 <= 2)
+val () = assert (not (2 <= 1))
+val () = assert (2 >= 1)
+val () = assert (not (1 >= 2))
            
-(* val () = iassert (#1 #< #2) *)
-(* val () = iassert (inot (#2 #< #1)) *)
-(* val () = iassert (#2 #> #1) *)
-(* val () = iassert (inot (#1 #> #2)) *)
-(* val () = iassert (#1 #<= #2) *)
-(* val () = iassert (inot (#2 #<= #1)) *)
-(* val () = iassert (#2 #>= #1) *)
-(* val () = iassert (inot (#1 #>= #2)) *)
+val () = iassert (#1 #< #2)
+val () = iassert (inot (#2 #< #1))
+val () = iassert (#2 #> #1)
+val () = iassert (inot (#1 #> #2))
+val () = iassert (#1 #<= #2)
+val () = iassert (inot (#2 #<= #1))
+val () = iassert (#2 #>= #1)
+val () = iassert (inot (#1 #>= #2))
            
-(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
 
-(* fun fact_tail {n : Nat} (n : nat {n}, acc) = *)
-(*   ifi n #< #1 then waste_time (); acc *)
-(*   else %fact_tail (n #- #1, __&nat2int n *acc) using $(1780*n+1651), 32*25*n+32*16 *)
+fun fact_tail {n : Nat} (n : nat {n}, acc) =
+  ifi n #< #1 then waste_time (); acc
+  else %fact_tail (n #- #1, __&nat2int n *acc) using $(1780*n+1651), 32*25*n+32*16
                  
-(* val a = (%fact_tail (#4, 1)) using _, _ *)
-(* val () = assert (a = 24) *)
+val a = (%fact_tail (#4, 1)) using _, _
+val () = assert (a = 24)
                   
-(* fun fact {n : Nat} (n : nat {n}) = *)
-(*   ifi n #< #1 then waste_time(); 1 *)
-(*   else *)
-(*     __&nat2int n * %fact (n #- #1) using $(2170*n+1454), 32*31*n+32*13 *)
+fun fact {n : Nat} (n : nat {n}) =
+  ifi n #< #1 then waste_time(); 1
+  else
+    __&nat2int n * %fact (n #- #1) using $(2170*n+1454), 32*31*n+32*13
                  
-(* val a = (%fact #4) using _, _ *)
-(* val () = assert (a = 24) *)
+val a = (%fact #4) using _, _
+val () = assert (a = 24)
                                             
 end

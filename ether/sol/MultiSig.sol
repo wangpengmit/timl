@@ -21,16 +21,16 @@ contract multiowned {
 
     // EVENTS
 
-    // this contract only has five types of events: it can accept a confirmation, in which case
-    // we record owner and operation (hash) alongside it.
-    event Confirmation(address owner, bytes32 operation);
-    event Revoke(address owner, bytes32 operation);
-    // some others are in the case of an owner changing.
-    event OwnerChanged(address oldOwner, address newOwner);
-    event OwnerAdded(address newOwner);
-    event OwnerRemoved(address oldOwner);
-    // the last one is emitted if the required signatures change
-    event RequirementChanged(uint newRequirement);
+    /* // this contract only has five types of events: it can accept a confirmation, in which case */
+    /* // we record owner and operation (hash) alongside it. */
+    /* event Confirmation(address owner, bytes32 operation); */
+    /* event Revoke(address owner, bytes32 operation); */
+    /* // some others are in the case of an owner changing. */
+    /* event OwnerChanged(address oldOwner, address newOwner); */
+    /* event OwnerAdded(address newOwner); */
+    /* event OwnerRemoved(address oldOwner); */
+    /* // the last one is emitted if the required signatures change */
+    /* event RequirementChanged(uint newRequirement); */
 
     // MODIFIERS
 
@@ -73,7 +73,7 @@ contract multiowned {
         if (pending.ownersDone & ownerIndexBit > 0) {
             pending.yetNeeded++;
             pending.ownersDone -= ownerIndexBit;
-            Revoke(msg.sender, _operation);
+            /* Revoke(msg.sender, _operation); */
         }
     }
     
@@ -87,7 +87,7 @@ contract multiowned {
         m_owners[ownerIndex] = uint(_to);
         m_ownerIndex[uint(_from)] = 0;
         m_ownerIndex[uint(_to)] = ownerIndex;
-        OwnerChanged(_from, _to);
+        /* OwnerChanged(_from, _to); */
     }
     
     function addOwner(address _owner) onlymanyowners(sha3(msg.data, block.number)) external {
@@ -101,7 +101,7 @@ contract multiowned {
         m_numOwners++;
         m_owners[m_numOwners] = uint(_owner);
         m_ownerIndex[uint(_owner)] = m_numOwners;
-        OwnerAdded(_owner);
+        /* OwnerAdded(_owner); */
     }
     
     function removeOwner(address _owner) onlymanyowners(sha3(msg.data, block.number)) external {
@@ -113,14 +113,14 @@ contract multiowned {
         m_ownerIndex[uint(_owner)] = 0;
         clearPending();
         reorganizeOwners(); //make sure m_numOwner is equal to the number of owners and always points to the optimal free slot
-        OwnerRemoved(_owner);
+        /* OwnerRemoved(_owner); */
     }
     
     function changeRequirement(uint _newRequired) onlymanyowners(sha3(msg.data, block.number)) external {
         if (_newRequired > m_numOwners) return;
         m_required = _newRequired;
         clearPending();
-        RequirementChanged(_newRequired);
+        /* RequirementChanged(_newRequired); */
     }
     
     function isOwner(address _addr) returns (bool) {
@@ -145,7 +145,7 @@ contract multiowned {
     
     // INTERNAL METHODS
 
-    function confirmAndCheck(bytes32 _operation) internal returns (bool) {
+    function confirmAndCheck(bytes32 _operation) returns (bool) {
         // determine what index the present sender is:
         uint ownerIndex = m_ownerIndex[uint(msg.sender)];
         // make sure they're an owner
@@ -165,7 +165,7 @@ contract multiowned {
         uint ownerIndexBit = 2**ownerIndex;
         // make sure we (the message sender) haven't confirmed this operation previously.
         if (pending.ownersDone & ownerIndexBit == 0) {
-            Confirmation(msg.sender, _operation);
+            /* Confirmation(msg.sender, _operation); */
             // ok - check if count is enough to go ahead.
             if (pending.yetNeeded <= 1) {
                 // enough confirmations: reset and run interior.
@@ -283,15 +283,15 @@ contract multisig {
 
     // EVENTS
 
-    // logged events:
-    // Funds has arrived into the wallet (record how much).
-    event Deposit(address from, uint value);
-    // Single transaction going out of the wallet (record who signed for it, how much, and to whom it's going).
-    event SingleTransact(address owner, uint value, address to, bytes data);
-    // Multi-sig transaction going out of the wallet (record who signed for it last, the operation hash, how much, and to whom it's going).
-    event MultiTransact(address owner, bytes32 operation, uint value, address to, bytes data);
-    // Confirmation still needed for a transaction.
-    event ConfirmationNeeded(bytes32 operation, address initiator, uint value, address to, bytes data);
+    /* // logged events: */
+    /* // Funds has arrived into the wallet (record how much). */
+    /* event Deposit(address from, uint value); */
+    /* // Single transaction going out of the wallet (record who signed for it, how much, and to whom it's going). */
+    /* event SingleTransact(address owner, uint value, address to, bytes data); */
+    /* // Multi-sig transaction going out of the wallet (record who signed for it last, the operation hash, how much, and to whom it's going). */
+    /* event MultiTransact(address owner, bytes32 operation, uint value, address to, bytes data); */
+    /* // Confirmation still needed for a transaction. */
+    /* event ConfirmationNeeded(bytes32 operation, address initiator, uint value, address to, bytes data); */
     
     // FUNCTIONS
     
@@ -314,7 +314,7 @@ contract Wallet is multisig, multiowned, daylimit {
     struct Transaction {
         address to;
         uint value;
-        bytes data;
+        bytes hashData;
     }
 
     // METHODS
@@ -325,17 +325,17 @@ contract Wallet is multisig, multiowned, daylimit {
             multiowned(_owners, _required) daylimit(_daylimit) {
     }
     
-    // kills the contract sending everything to `_to`.
-    function kill(address _to) onlymanyowners(sha3(msg.data, block.number)) external {
-        suicide(_to);
-    }
+    /* // kills the contract sending everything to `_to`. */
+    /* function kill(address _to) onlymanyowners(sha3(msg.data, block.number)) external { */
+    /*     suicide(_to); */
+    /* } */
     
-    // gets called when no other function matches
-    function() {
-        // just being sent some cash?
-        if (msg.value > 0)
-            Deposit(msg.sender, msg.value);
-    }
+    /* // gets called when no other function matches */
+    /* function() { */
+    /*     // just being sent some cash? */
+    /*     if (msg.value > 0) */
+    /*         Deposit(msg.sender, msg.value); */
+    /* } */
     
     // Outside-visible transact entry point. Executes transacion immediately if below daily spend limit.
     // If not, goes into multisig process. We provide a hash on return to allow the sender to provide
@@ -344,9 +344,9 @@ contract Wallet is multisig, multiowned, daylimit {
     function execute(address _to, uint _value, bytes _data) external onlyowner returns (bytes32 _r) {
         // first, take the opportunity to check that we're under the daily limit.
         if (underLimit(_value)) {
-            SingleTransact(msg.sender, _value, _to, _data);
+            /* SingleTransact(msg.sender, _value, _to, _data); */
             // yes - just execute the call.
-            _to.call.value(_value)(_data);
+            /* _to.call.value(_value)(_data); */
             return 0;
         }
         // determine our operation hash.
@@ -355,7 +355,7 @@ contract Wallet is multisig, multiowned, daylimit {
             m_txs[_r].to = _to;
             m_txs[_r].value = _value;
             m_txs[_r].data = _data;
-            ConfirmationNeeded(_r, msg.sender, _value, _to, _data);
+            /* ConfirmationNeeded(_r, msg.sender, _value, _to, _data); */
         }
     }
     
@@ -363,8 +363,8 @@ contract Wallet is multisig, multiowned, daylimit {
     // to determine the body of the transaction from the hash provided.
     function confirm(bytes32 _h) onlymanyowners(_h) returns (bool) {
         if (m_txs[_h].to != 0) {
-            m_txs[_h].to.call.value(m_txs[_h].value)(m_txs[_h].data);
-            MultiTransact(msg.sender, _h, m_txs[_h].value, m_txs[_h].to, m_txs[_h].data);
+            /* m_txs[_h].to.call.value(m_txs[_h].value)(m_txs[_h].data); */
+            /* MultiTransact(msg.sender, _h, m_txs[_h].value, m_txs[_h].to, m_txs[_h].data); */
             delete m_txs[_h];
             return true;
         }

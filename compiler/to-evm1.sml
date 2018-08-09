@@ -1081,6 +1081,8 @@ fun fail () = OS.Process.exit OS.Process.failure
 end
 
 open TestUtil
+
+val vc_check_off_flag = ref false
        
 fun test1 dirname =
   let
@@ -1106,7 +1108,10 @@ fun test1 dirname =
     val () = TypeCheck.debug_dir_name := SOME dirname
     val ((prog, _, _), (vcs, admits)) = typecheck_prog empty prog
     val (st_name2ty, st_name2int) = TypeCheck.get_st_types ()
-    fun check_vcs vcs = 
+    fun check_vcs vcs =
+      if !vc_check_off_flag then
+        println "VC checking is turned off"
+      else
         case VCSolver.vc_solver filename vcs of
             [] => ()
           | vcs =>

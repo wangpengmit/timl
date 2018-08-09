@@ -351,6 +351,7 @@ fun parse_arguments (opts : options, args) =
 	    | "--pervasive" :: ts => (Elaborate.add_pervasive_flag := true; parseArgs ts)
 	    | "--debug-cost" :: ts => (CostDebug.debug_cost_flag := true; parseArgs ts)
 	    | "--prelude" :: ts => (EVMPrelude.add_prelude_flag := true; parseArgs ts)
+	    | "--vc-check-off" :: ts => (ToEVM1.UnitTest.vc_check_off_flag := true; parseArgs ts)
 	    | arg :: ts =>
               if String.isPrefix "-" arg then
 	        raise ParseArgsError ("Unrecognized option: " ^ arg)
