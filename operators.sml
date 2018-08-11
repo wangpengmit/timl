@@ -210,6 +210,7 @@ datatype expr_un_op =
          | EUInt2Nat of unit
          | EUPrintc of unit
 (* | EUPrint of unit *)
+         | EUDebugLog of unit
          | EUStorageGet of unit
          | EUVectorClear of unit
          | EUVectorLen of unit
@@ -227,7 +228,8 @@ fun str_expr_un_op opr =
     | EUNat2Int () => "nat2int"
     | EUInt2Nat () => "int2nat"
     | EUPrintc () => "printc"
-(* | EUPrint => "print" *)
+    (* | EUPrint => "print" *)
+    | EUDebugLog () => "debug_log"
     | EUStorageGet () => "storage_get"
     | EUVectorClear () => "vector_clear"
     | EUVectorLen () => "vector_len"

@@ -292,6 +292,7 @@ fun impl_expr_un_op opr =
     (* | EUArray8LastWord () => [PUSH1nat 32, SWAP1, SUB (), DUP1, MLOAD (), ADD ()] *)
     | EUPrintc () => printc
     (* | EUPrint () => [PRINT] *)
+    | EUDebugLog () => raise Impossible "impl_expr_un_op/DebugLog"
     | EUStorageGet () => [SLOAD ()]
     | EUVectorClear () => [PUSH1nat 0, SWAP1, SSTORE (), PUSH1 WTT] (* should also zero out the contents, in order to save storage *)
     | EUVectorLen () => [SLOAD ()]
@@ -459,12 +460,6 @@ fun compile st_name2int ectx e =
       in
         [Dispatch fields]
       end
-    | EDebugLog e =>
-      let
-        val (e, t) = assert_EAscType e
-      in
-        compile e @ [DebugLog $ Inner t]
-      end
     | EEnv name =>
       (case name of
            EnvSender () => [CALLER ()]
@@ -480,6 +475,13 @@ fun compile st_name2int ectx e =
     | EPack (t_pack, t, e) => compile e @ [VALUE_Pack (Inner $ cg_t t_pack, Inner $ cg_t t)]
     | EPackI (t_pack, i, e) => compile e @ [VALUE_PackI (Inner $ cg_t t_pack, Inner i)]
     | EUnOp (EUFold t, e) => compile e @ [VALUE_Fold $ Inner $ cg_t t]
+    | EUnOp (EUTiML (EUDebugLog ()), e) =>
+      let
+        val (e, t) = assert_EAscType e
+        val t = cg_t t
+      in
+        compile e @ [DebugLog $ Inner t]
+      end
     | EAscType (e, t) => compile e @ [VALUE_AscType $ Inner $ cg_t t]
     | EAscState (e, st) => compile e
     | ENever t => PUSH_value $ VNever $ cg_t t
@@ -968,6 +970,7 @@ fun cg_e (reg_counter, st_name2int) (params as (ectx, itctx, rctx, st)) e : (idx
     | EVar _ => err ()
     | EConst _ => err ()
     | EDispatch _ => err ()
+    (* | EDebugLog _ => err () *)
     | EEnv _ => err ()
     | EState _ => err ()
     | EUnOp _ => err ()
@@ -1062,7 +1065,7 @@ val code_gen_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EIfi, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EIfi_e2_time, Anno_EPair, Anno_EInj, Anno_ENatCellSet]
+      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EIfi, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EIfi_e2_time, Anno_EPair, Anno_EInj, Anno_ENatCellSet, Anno_EDebugLog]
     end
                      
 structure UnitTest = struct

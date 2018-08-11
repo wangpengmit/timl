@@ -356,7 +356,8 @@ fun parse_arguments (opts : options, args) =
 	    | "--debug-cost" :: ts => (CostDebug.debug_cost_flag := true; parseArgs ts)
 	    | "--prelude" :: ts => (EVMPrelude.add_prelude_flag := true; parseArgs ts)
 	    | "--vc-check-off" :: ts => (ToEVM1.UnitTest.vc_check_off_flag := true; parseArgs ts)
-	    | "--debug-log" :: ts => (EVMDebugLog.add_debug_log_flag := true; parseArgs ts)
+	    (* | "--debug-log" :: ts => (EVMDebugLog.add_debug_log_flag := true; parseArgs ts) *)
+	    | "--debug-log" :: ts => (TypeCheck.debug_log_flag := true; parseArgs ts)
 	    | arg :: ts =>
               if String.isPrefix "-" arg then
 	        raise ParseArgsError ("Unrecognized option: " ^ arg)

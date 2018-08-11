@@ -293,6 +293,8 @@ fun live_vars_expr_visitor_vtable cast () =
             end
           | EDispatch (ls, r) =>
             T.EDispatch (mapr (fn (name, e, t1, t2) => (name, #visit_expr vtable this env e, t1, t2)) ls, r)
+          (* | EDebugLog e => *)
+          (*   T.EDebugLog $ #visit_expr vtable this env e *)
       in
         ret
       end

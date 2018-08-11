@@ -759,6 +759,7 @@ fun is_value (e : U.expr) : bool =
         EVar _ => true (* todo: is this right? *)
       | EConst _ => true
       | EDispatch _ => true (* pretend to be an EConst *)
+      (* | EDebugLog _ => true (* pretend to be an EConst *) *)
       | EEnv _ => true
       | EState _ => true
       | EUnOp (opr, e, _) =>
@@ -772,6 +773,7 @@ fun is_value (e : U.expr) : bool =
            | EUInt2Nat () => false
            | EUPrintc () => false
         (* | EUPrint () => false *)
+           | EUDebugLog _ => true (* pretend to be an EConst *)
            | EUStorageGet () => false
            | EUNatCellGet () => false
            | EUVectorClear () => false
@@ -1398,6 +1400,8 @@ fun check_submap r1 pre_st st =
     if StMap.numItems pre_st_minus_st = 0 then ()
     else raise Error (r1, ["these state fields are required by the function but missing in current state:", str_ls str_st_key $ StMapU.domain pre_st_minus_st])
   end
+
+val debug_log_flag = ref false
     
 fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (idx * idx) * idx StMap.map =
   let
@@ -1580,12 +1584,14 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           in
             (EDispatch (fields, r), TUnit dummy, TN C_EConst, st)
           end
-        | U.EDebugLog e =>
+        | U.EUnOp (EUDebugLog (), e, r) =>
           let
+            val () = if !debug_log_flag then ()
+                     else raise Error (r, ["debug_log is not allowed without the --debug-log switch"])
             val (e, t, _, _) = get_mtype ctx_st e
-            val t = normalize_mt true gctx kctx t
+            (* val t = normalize_mt true gctx kctx t *)
           in
-            (EDebugLog (e %: t), TUnit dummy, TN C_EConst, st)
+            (EUnOp (EUDebugLog (), e, r), TUnit dummy, TN C_EConst, st)
           end
         | U.EEnv (name, r) => (EEnv (name, r), get_msg_info_type r name, TN $ C_EEnv name, st)
         (* | U.EUnOp (opr as EUProj proj, e, r) => *)

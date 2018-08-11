@@ -143,6 +143,9 @@ contract multiowned = struct inherit Pervasive
         (* enough confirmations: reset and run interior. *)
         set m_pendingIndex[m_pending[_operation].index] 0;
         clear_PendingState (pending);
+        (* debug_log 3; *)
+        (* debug_log _operation; *)
+        debug_log "passed";
         true
       else
         (* not enough: record that this owner in particular confirmed. *)
@@ -496,16 +499,16 @@ val _ = %constructor ({0x2, 0x3, 0x4, 0x5, }, 3, 5)
 val () = &m_pending->[1]->ownersDone ::= 6
 val () = &m_pending->[1]->yetNeeded ::= 1
 (* val () = __&printc #"a" *)
-(* val r = %confirmAndCheck 1 *)
+val r = %confirmAndCheck 1
 (* val r = %confirmAndCheck 1 *)
 (* val () = halt r *)
 (* val () = halt (deref m_pending->[1]->yetNeeded) *)
 (* val () = halt (deref m_pending->[1]->ownersDone) *)
          
 (* multiowned: *)
+(* confirmAndCheck      *)
 (* revoke *)
 (* clearPending *)
-(* confirmAndCheck      *)
 (* changeOwner *)
 (* hasConfirmed *)
 (* reorganizeOwners *)

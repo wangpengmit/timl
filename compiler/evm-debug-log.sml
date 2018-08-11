@@ -6,12 +6,12 @@ infixr 0 $
 
 fun debug_log t =
   case t of
-      TTuple ts =>
+      TTuplePtr (ts, _, _) =>
       [
         Push $ 32 * length ts,
         Swap1
       ]
-    | TArray (w, t, len) =>
+    | TArrayPtr (w, _, _, _) =>
       [ (* [ptr_to_array] *)
         Push 32,
         Swap1,
@@ -24,18 +24,22 @@ fun debug_log t =
         Add, (* [array_len*w+32, ptr_to_array_len] *)
         Swap1 (* [ptr_to_array_len, array_len*w+32] *)
       ]
-    | _ => debug_log $ TTuple [t]
+    | _ =>
+      [
+        PUSH_reg scratch, MSTORE (), PUSH1nat 32, PUSH_reg scratch
+      ]
+      (* debug_log $ TTuple [t] *)
 
-val add_debug_log_flag = ref false
+(* val add_debug_log_flag = ref false *)
                            
 fun add_debug_log_inst () inst =
   case inst of
       DebugLog t =>
-      if !add_debug_log_flag then
+      (* if !add_debug_log_flag then *)
         debug_log (unInner t) @
         [Log0, PUSH1 WTT]
-      else
-        [PUSH1 WTT]
+      (* else *)
+      (*   [PUSH1 WTT] *)
     | _ => [inst]
 
 infixr 5 @@

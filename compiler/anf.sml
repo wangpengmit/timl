@@ -54,6 +54,7 @@ fun anf_decls_expr_visitor_vtable cast output =
                 | EVar _ => false
                 | EConst _ => false
                 | EDispatch _ => false (* pretend to be an EConst *)
+                (* | EDebugLog _ => false (* pretend to be an EConst *) *)
                 | EEnv _ => false
                 | EState _ => false
                 | EAscType _ => false

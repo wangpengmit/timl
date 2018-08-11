@@ -584,6 +584,16 @@ fun pp_e (params as (str_i, str_s, pp_t, pp_pn)) s e =
           str ")";
           close_box ()
         )
+      (* | EDebugLog e => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EDebugLog"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | EUnOp (EUAnno (EALiveVars (n, b)), e, _) =>
         (
           open_hbox ();

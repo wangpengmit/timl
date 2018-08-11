@@ -423,6 +423,7 @@ fun strn_e e =
     | ERecord (fields, _) => sprintf "(record $)" [SMapU.str_map (id, strn_e) fields]
     | ETuple es => str_ls_fn "(" ")" strn_e es
     | EDispatch _ => "dispatch"
+    (* | EDebugLog _ => "debug_log" *)
 
 and strn_offset (e, path) = strn_e e ^ (join_prefix "." $ map (str_sum str_int id o fst) path)
   

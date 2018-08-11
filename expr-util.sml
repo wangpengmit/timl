@@ -206,6 +206,7 @@ fun is_tail_call e =
     | EVar _ => false
     | EConst _ => false
     | EDispatch _ => false (* pretend to be an EConst *)
+    (* | EDebugLog _ => false (* pretend to be an EConst *) *)
     | EState _ => false
     | EUnOp _ => false
     | EBinOp _ => false

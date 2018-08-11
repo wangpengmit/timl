@@ -109,6 +109,7 @@ fun default_evm1_visitor_vtable
           | MACRO_array_malloc (w, t, b) => MACRO_array_malloc (w, visit_inner (#visit_ty vtable this) env t, b)
           | MACRO_inj t => MACRO_inj $ visit_inner (#visit_ty vtable this) env t
           | Dispatch ls => Dispatch $ map (fn (name, t1, t2, n) => (name, visit_inner (#visit_ty vtable this) env t1, visit_inner (#visit_ty vtable this) env t2, n)) ls
+          | DebugLog t => DebugLog $ visit_inner (#visit_ty vtable this) env t
           | ADD () => ADD ()
           | MUL () => MUL ()
           | SUB () => SUB ()

@@ -657,6 +657,16 @@ fun pp_e (params as (str_var, str_i, str_s, str_b, pp_t)) s (depth_t, depth) e =
           str ")";
           close_box ()
         )
+      (* | EDebugLog e => *)
+      (*   ( *)
+      (*     open_hbox (); *)
+      (*     str "EDebugLog"; *)
+      (*     space (); *)
+      (*     str "("; *)
+      (*     pp_e e; *)
+      (*     str ")"; *)
+      (*     close_box () *)
+      (*   ) *)
       | EMatchSum (e, branches) =>
         (
 	  open_vbox ();

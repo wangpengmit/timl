@@ -109,6 +109,7 @@ fun enc inst =
       | InstRETURN () => macro "InstRETURN"
       | InstREVERT () => macro "InstREVERT"
       | Dispatch _ => macro "Dispatch"
+      | DebugLog _ => macro "DebugLog"
   end
 
 val has_Revert_flag = ref false
@@ -214,6 +215,7 @@ fun size_inst inst =
       | MACRO_vector_ptr () => macro "MACRO_vector_ptr"
       | MACRO_vector_push_back () => macro "MACRO_vector_push_back"
          | Dispatch _ => macro "Dispatch"
+         | DebugLog _ => macro "DebugLog"
          | InstJUMP _ => macro "InstJUMP"
          | InstRETURN _ => macro "InstRETURN"
          | InstREVERT _ => macro "InstREVERT"

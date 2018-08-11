@@ -224,6 +224,7 @@ fun live_vars_expr_visitor_vtable cast () =
             end
           | EState x => EState x
           | EDispatch ls => EDispatch $ mapr (fn (name, e, t1, t2) => (name, #visit_expr vtable this env e, #visit_ty vtable this env t1, #visit_ty vtable this env t2)) ls
+          (* | EDebugLog e => EDebugLog $ #visit_expr vtable this env e *)
         (* val () = has_k := true *)
       in
         ret

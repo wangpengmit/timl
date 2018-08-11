@@ -163,6 +163,7 @@ fun get_region_e e =
     | EEnv (_, r) => r
     | ERecord (_, r) => r
     | EDispatch (_, r) => r
+    (* | EDebugLog e => get_region_e e *)
                                               
 fun get_region_rule (pn, e) = combine_region (get_region_pn pn) (get_region_e e)
 

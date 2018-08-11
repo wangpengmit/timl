@@ -57,7 +57,7 @@ datatype expr =
          | EEnv of env_info * region
          | EAscState of expr * idx StMap.map
          | EDispatch of (string * expr * mtype option * mtype option) list * Region.region
-         | EDebugLog of expr
+         (* | EDebugLog of expr *)
 
      and decl =
          DVal of ebinder * ((tbinder * (idx * idx) outer) list, expr) bind outer * region

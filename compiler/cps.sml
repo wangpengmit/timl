@@ -610,6 +610,9 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
     | S.EDispatch ls =>
       (* [[ dispatch ]](k) = k dispatch *)
       (k $$ EDispatch ls, TN C_EConst %%+ j_k)
+    (* | S.EDebugLog ls => *)
+    (*   (* [[ debug_log ]](k) = k debug_log *) *)
+    (*   (k $$ EDebugLog ls, TN C_EConst %%+ j_k) *)
     | S.EEnv name =>
       (* [[ msg_info ]](k) = k msg_info *)
       (k $$ EEnv name, TN (C_EEnv name) %%+ j_k)
@@ -881,6 +884,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
                        | EUNat2Int _ => (C_ENat2Int, 0)
                        | EUInt2Nat _ => (C_EInt2Nat, 0)
                        | EUPrintc _ => (C_EPrintc, 0)
+                       | EUDebugLog _ => (C_EConst, 0)
                        | EUStorageGet _ => (C_EStorageGet, 0)
                        | EUNatCellGet _ => (C_ENatCellGet, 0)
                        | EUVectorClear _ => (C_EVectorClear, 0)
@@ -1065,6 +1069,8 @@ Anno_ENatCellSet,
 Anno_ENatCellSet_state,
 Anno_EPtrProj,
 Anno_EPtrProj_state,
+Anno_EDebugLog,
+Anno_EDebugLog_state,
                                  
        Anno_EIfi,
        Anno_EVectorSet,
@@ -1280,6 +1286,7 @@ fun check_CPSed_expr e =
     | EVar _ => err ()
     | EConst _ => err ()
     | EDispatch _ => err () (* pretend to be an EConst *)
+    (* | EDebugLog _ => err () (* pretend to be an EConst *) *)
     | EEnv _ => err ()
     | EState _ => err ()
     | EUnOp _ => err ()
@@ -1341,6 +1348,7 @@ and check_value e =
   case e of
       EConst _ => ()
     | EDispatch _ => () (* pretend to be an EConst *)
+    (* | EDebugLog _ => () (* pretend to be an EConst *) *)
     | EState _ => ()
     | EEnv _ => ()
     (* | EBinOp (EBPair (), e1, e2) => (check_value e1; check_value e2) *)
@@ -1358,6 +1366,7 @@ and check_value e =
          | EUNat2Int () => err ()
          | EUInt2Nat () => err ()
          | EUPrintc () => err ()
+         | EUDebugLog _ => () (* pretend to be an EConst *)
          | EUStorageGet () => err ()
          | EUNatCellGet () => err ()
          | EUVectorClear () => err ()

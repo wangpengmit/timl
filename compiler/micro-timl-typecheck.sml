@@ -969,6 +969,9 @@ val anno_ENatCellSet_state = ref false
 val anno_EPtrProj = ref false
 val anno_EPtrProj_state = ref false
 
+val anno_EDebugLog = ref false
+val anno_EDebugLog_state = ref false
+                              
 val anno_ENew_cont = ref false
                               
 val allow_substate_call = ref false
@@ -1035,12 +1038,6 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
           val ls = map (fn (name, e, t1, t2) => (name, #1 $ tc (ctx, st) e, kc_against_KType itctx t1, kc_against_KType itctx t2)) ls
         in
           (EDispatch ls, TUnit, TN C_EConst, st)
-        end
-      | EDebugLog e =>
-        let
-          val e = #1 $ tc (ctx, st) e
-        in
-          (EDebugLog e, TUnit, TN C_EConst, st)
         end
       | EEnv name => (EEnv name, get_msg_info_type name, TN $ C_EEnv name, st)
       (* | EUnOp (opr as EUTiML (EUProj proj), e) => *)
@@ -1926,6 +1923,14 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         in
           (EUnOp (opr, e), t, j %%+ TN C_EStorageGet, st)
         end
+      | EUnOp (opr as EUTiML (EUDebugLog ()), e) =>
+        let
+          val (e, t, _, st) = tc (ctx, st) e (* cost of e isn't considered for now, and cost semantics of DebugLog is just a placeholder for now *)
+          val e = if !anno_EDebugLog then e %: t else e
+          val e = if !anno_EDebugLog_state then e %~ st else e
+        in
+          (EUnOp (opr, e), TUnit, TN C_EConst, st)
+        end
       | EBinOp (opr as EBStorageSet (), e1, e2) =>
         let
           val (e1, t1, j1, st) = tc (ctx, st) e1
@@ -2463,6 +2468,8 @@ datatype tc_flag =
        | Anno_ENatCellSet_state
        | Anno_EPtrProj
        | Anno_EPtrProj_state
+       | Anno_EDebugLog
+       | Anno_EDebugLog_state
                                  
            
 
@@ -2553,6 +2560,8 @@ val () = anno_ENatCellSet := mem Anno_ENatCellSet flags
 val () = anno_ENatCellSet_state := mem Anno_ENatCellSet_state flags
 val () = anno_EPtrProj := mem Anno_EPtrProj flags
 val () = anno_EPtrProj_state := mem Anno_EPtrProj_state flags
+val () = anno_EDebugLog := mem Anno_EDebugLog flags
+val () = anno_EDebugLog_state := mem Anno_EDebugLog_state flags
                                  
     val ret = runWriter (fn () => tc st_types ctx e) ()
   in

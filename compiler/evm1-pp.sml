@@ -98,6 +98,7 @@ fun str_inst a =
       | MACRO_tuple_malloc ts => err ()
       | MACRO_array_malloc t => err ()
       | Dispatch _ => err ()
+      | DebugLog _ => err ()
       | MACRO_inj t => err ()
       | SHA3 () => "SHA3"
       | SLOAD () => "SLOAD"
@@ -352,6 +353,16 @@ fun pp_inst (params as (str_i, pp_t, pp_w)) s inst =
                                comma ();
                                str $ str_int n
                           )) ls;
+          str ")";
+          close_box ()
+        )
+      | DebugLog t =>
+        (
+          open_hbox ();
+          str "DebugLog";
+          space ();
+          str "(";
+          pp_t t;
           str ")";
           close_box ()
         )

@@ -582,9 +582,12 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | DebugLog t =>
       let
-        val _ = kc_against_KType itctx $ unInner t
+        val t = unInner t
+        val _ = kc_against_KType itctx t
+        val (t0, sctx) = assert_cons sctx
+        val () = is_eq_ty itctx (t0, t)
       in
-        add_stack TUnit ctx
+        (itctx, rctx, TUnit :: sctx, st)
       end
     | DUP n => 
       let

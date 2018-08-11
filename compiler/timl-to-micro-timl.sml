@@ -306,7 +306,7 @@ fun on_e (e : S.expr) : mtiml_expr =
     | S.ERecord (fields, _) => ERecord $ SMap.map on_e fields
     | S.ETuple es => ETuple $ map on_e es
     | S.EDispatch (ls, _) => EDispatch $ map (fn (name, e, t1, t2) => (name, on_e e, on_mt $ assert_some t1, on_mt $ assert_some t2)) ls
-    | S.EDebugLog e => EDebugLog $ on_e e
+    (* | S.EDebugLog e => EDebugLog $ on_e e *)
     fun extra_msg () = "\nwhen translating\n" ^ ToString.str_e Gctx.empty ToStringUtil.empty_ctx e
     val ret = main ()
               handle
