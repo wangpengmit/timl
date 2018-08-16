@@ -1588,10 +1588,11 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           let
             val () = if !debug_log_flag then ()
                      else raise Error (r, ["debug_log is not allowed without the --debug-log switch"])
-            val (e, t, _, _) = get_mtype ctx_st e
+            val (e, t, i, st) = get_mtype ctx_st e
             (* val t = normalize_mt true gctx kctx t *)
           in
-            (EUnOp (EUDebugLog (), e, r), TUnit dummy, TN C_EConst, st)
+            (* cost of DebugLog is just a placeholder for now *)
+            (EUnOp (EUDebugLog (), e, r), TUnit dummy, i %%+ TN C_EConst, st)
           end
         | U.EEnv (name, r) => (EEnv (name, r), get_msg_info_type r name, TN $ C_EEnv name, st)
         (* | U.EUnOp (opr as EUProj proj, e, r) => *)

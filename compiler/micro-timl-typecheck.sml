@@ -1925,11 +1925,12 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | EUnOp (opr as EUTiML (EUDebugLog ()), e) =>
         let
-          val (e, t, _, st) = tc (ctx, st) e (* cost of e isn't considered for now, and cost semantics of DebugLog is just a placeholder for now *)
+          val (e, t, i, st) = tc (ctx, st) e 
           val e = if !anno_EDebugLog then e %: t else e
           val e = if !anno_EDebugLog_state then e %~ st else e
         in
-          (EUnOp (opr, e), TUnit, TN C_EConst, st)
+          (* cost of DebugLog is just a placeholder for now *)
+          (EUnOp (opr, e), TUnit, i %%+ TN C_EConst, st)
         end
       | EBinOp (opr as EBStorageSet (), e1, e2) =>
         let
