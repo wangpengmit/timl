@@ -1,0 +1,57 @@
+structure Pervasive = struct
+  fun inc n = n + 1
+  fun dec n = n - 1
+  fun nat_inc {n : Nat} (n : nat {n}) = n #+ #1
+  fun nat_dec {n : Nat | n >= 1} (n : nat {n}) = n #- #1
+  fun addBy b a = a + b
+  fun subBy b a = a - b
+  fun orBy b a = a bit_or b
+fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+                                                                                              
+  fun require b = if b then waste_time (); () else (throw using _) end
+  fun unop_ref ['a] {m : Time} {m' : Nat} (r : ref 'a) (f : 'a -- m, m' --> 'a) = r := f !r
+  val ether = 1000000000000000000
+  val finney = 1000000000000000
+  val minute = 60
+  val hour = 60 * minute
+  val day = 24 * hour
+  fun truncate {n : Nat} (n : nat {n}) v = v bit_and (((2 #** (#8 #* n)) (* using _, _ *)) - 1)
+  fun truncate4 v = %truncate #4 v
+  datatype some_nat = SomeNat {n : Nat | n < 2 ** 256} of nat {n} --> some_nat
+  fun imin {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a min b} =
+    ifi a #<= b then a : nat {a min b} else b : nat {a min b} end
+end
+
+contract Token = struct
+
+  state balanceOf : map address uint256
+  state outflows : vector address                           
+
+  fun constructor (initialSupply : uint256) =
+    set balanceOf[msg.sender] initialSupply  
+
+  fun transfer {n : Nat} (_to : address, _value : uint256)
+      pre {outflows : n} post {outflows : n+1} =
+    require(balanceOf[msg.sender] >= _value); 
+    require(balanceOf[_to] + _value >= balanceOf[_to]); (* Check for overflows *)
+    modify balanceOf[msg.sender] -= _value;  
+    modify balanceOf[_to] += _value;         
+    push_back (outflows, msg.sender)
+
+fun for_outflows ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), funtype pre {outflows : st} nat {i} * 'a -- m2, m2' --> 'a) pre {outflows : st} return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52*32)*(eend-start)+50*32 =
+  lets
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {outflows : st} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then waste_time (); acc
+      else
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52*32) * (eend-i)+16*32
+      end
+  in
+    %loop (start, init)
+  end
+
+  fun numOutflows {n : Nat} () pre {outflows : n} using $(4438*n+12384), 1984*n+5568 =         
+    %for_outflows (#0, vector_len outflows, 0, fn {i | 0 <= i /\ i < n} (i : nat {i}, acc) pre {outflows : n} =>
+      if outflows[i] = msg.sender then acc+1 else acc end                                 
+    )
+    
+end
