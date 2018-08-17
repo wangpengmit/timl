@@ -1,3 +1,5 @@
+pragma solidity ^0.4.24;
+
 //sol Wallet
 // Multi-sig, daily-limited account proxy/wallet.
 // @authors:
@@ -32,19 +34,21 @@ contract multiowned {
     /* // the last one is emitted if the required signatures change */
     /* event RequirementChanged(uint newRequirement); */
 
+    event Exchange(uint a, uint b);
+    
     // MODIFIERS
 
     // simple single-sig function modifier.
     modifier onlyowner {
         if (isOwner(msg.sender))
-            _
+            _;
     }
     // multi-sig function modifier: the operation must have an intrinsic hash in order
     // that later attempts can be realised as the same underlying operation and
     // thus count as confirmations.
     modifier onlymanyowners(bytes32 _operation) {
         if (confirmAndCheck(_operation))
-            _
+            _;
     }
 
     // METHODS
@@ -116,6 +120,12 @@ contract multiowned {
         /* OwnerRemoved(_owner); */
     }
     
+    function removeOwnerDirectly(uint index, address secondOwner) {
+      m_owners[index] = 0;
+      m_ownerIndex[uint256(secondOwner)] = 0;
+    }
+
+    
     function changeRequirement(uint _newRequired) onlymanyowners(sha3(msg.data, block.number)) external {
         if (_newRequired > m_numOwners) return;
         m_required = _newRequired;
@@ -182,7 +192,7 @@ contract multiowned {
         }
     }
 
-    function reorganizeOwners() private returns (bool) {
+    function reorganizeOwners() returns (bool) {
         uint free = 1;
         while (free < m_numOwners)
         {
@@ -193,11 +203,12 @@ contract multiowned {
                 m_owners[free] = m_owners[m_numOwners];
                 m_ownerIndex[m_owners[free]] = free;
                 m_owners[m_numOwners] = 0;
+        //        emit Exchange(free, m_numOwners);
             }
         }
     }
     
-    function clearPending() internal {
+    function clearPending() {
         uint length = m_pendingIndex.length;
         for (uint i = 0; i < length; ++i)
             if (m_pendingIndex[i] != 0)
@@ -232,7 +243,7 @@ contract daylimit is multiowned {
     // simple modifier for daily limit.
     modifier limitedDaily(uint _value) {
         if (underLimit(_value))
-            _
+            _;
     }
 
     // METHODS
@@ -314,7 +325,7 @@ contract Wallet is multisig, multiowned, daylimit {
     struct Transaction {
         address to;
         uint value;
-        bytes hashData;
+        bytes32 dataHash;
     }
 
     // METHODS
@@ -354,7 +365,7 @@ contract Wallet is multisig, multiowned, daylimit {
         if (!confirm(_r) && m_txs[_r].to == 0) {
             m_txs[_r].to = _to;
             m_txs[_r].value = _value;
-            m_txs[_r].data = _data;
+            m_txs[_r].dataHash = /*sha3(_data)*/0;
             /* ConfirmationNeeded(_r, msg.sender, _value, _to, _data); */
         }
     }
@@ -372,7 +383,7 @@ contract Wallet is multisig, multiowned, daylimit {
     
     // INTERNAL METHODS
     
-    function clearPending() internal {
+    function clearPending() {
         uint length = m_pendingIndex.length;
         for (uint i = 0; i < length; ++i)
             delete m_txs[m_pendingIndex[i]];

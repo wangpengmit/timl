@@ -33,7 +33,7 @@ fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (
   end
   
   fun require b = if b then (* waste_time ();  *)() else (throw using _) end
-  fun unop_ref ['a] {m : Time} {m' : Nat} r (f : 'a -- m, m' --> 'a) = r := f !r
+  (* fun unop_ref ['a] {m : Time} {m' : Nat} r (f : 'a -- m, m' --> 'a) = r := f !r *)
   val ether = 1000000000000000000
   val minute = 60
   val hour = 60 * minute
@@ -150,6 +150,7 @@ contract multiowned = struct inherit Pervasive
         (* not enough: record that this owner in particular confirmed. *)
         modify &pending->yetNeeded dec;
         modify &pending->ownersDone |= ownerIndexBit;
+        (* debug_log (deref pending->ownersDone, deref pending->yetNeeded); *)
         false
       end
     else
@@ -273,12 +274,13 @@ contract multiowned = struct inherit Pervasive
     (*   end *)
     (* end; *)
     %for_ (#0, len, (), fn {i | 0 <= i /\ i < len} (i : nat {i}, ()) => 
-      if !free < !notfree && m_owners[!free] <> 0 then %unop_ref free ++
-      elseif !notfree > 1 && m_owners[!notfree] = 0 then %unop_ref notfree --
+      if !free < !notfree && m_owners[!free] <> 0 then free := !free + 1
+      elseif !notfree > 1 && m_owners[!notfree] = 0 then notfree := !notfree - 1
       elseif !free < !notfree && m_owners[!notfree] <> 0 && m_owners[!free] = 0 then
         set m_owners[!free] m_owners[!notfree];
         set m_ownerIndex[m_owners[!free] ] !free;
         set m_owners[!notfree] 0
+        (* ; debug_log (!free, !notfree) *)
       end
     );
     set m_newNumOwners !notfree;
@@ -499,7 +501,6 @@ val _ = %constructor ({0x2, 0x3, 0x4, 0x5, }, 3, 5)
 (* val () = &m_pending->[1]->yetNeeded ::= 2 *)
 (* val () = &m_pending->[1]->ownersDone ::= 6 *)
 (* val () = &m_pending->[1]->yetNeeded ::= 1 *)
-(* val () = __&printc #"a" *)
 (* val r = %confirmAndCheck 1 *)
 (* val r = %confirmAndCheck 1 *)
 (* val r = %incNumOps () *)
@@ -517,20 +518,21 @@ val _ = %constructor ({0x2, 0x3, 0x4, 0x5, }, 3, 5)
 val () = set m_owners[2] 0
 val () = set m_ownerIndex[0x2] 0
 (* val () = debug_log (m_owners[1], m_owners[2], m_owners[3], m_owners[4], m_owners[5]) *)
-(* val () = %reorganizeOwners ()  *)
+(* val () = %reorganizeOwners () *)
 (* val () = debug_log (m_owners[1], m_owners[2], m_owners[3], m_owners[4], m_owners[5]) *)
 
-(* val () = halt r *)
-(* val () = halt (deref m_pending->[1]->yetNeeded) *)
-(* val () = halt (deref m_pending->[1]->ownersDone) *)
 (* val () = debug_log (deref m_pending->[1]->ownersDone, deref m_pending->[1]->yetNeeded) *)
-         
-(* multiowned: *)
-(* confirmAndCheck      *)
-(* revoke *)
-(* clearPending *)
-(* reorganizeOwners *)
 
+(* val confirmAndCheck' = @confirmAndCheck {0} *)
+(* val clearPending' = @clearPending {5} *)
+(* val reorganizeOwners' = @reorganizeOwners {5} *)
+             
+(* val _ = dispatch {confirmAndCheck = confirmAndCheck', *)
+(*                   revoke = revoke, *)
+(*                   clearPending = clearPending', *)
+(*                   reorganizeOwners = reorganizeOwners', *)
+(*                  } *)
+                    
 (* Wallet: *)
 (* confirm *)
 (* execute *)
