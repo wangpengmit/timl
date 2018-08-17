@@ -303,7 +303,7 @@ fun usage () =
       val () = println "  --pervasive: add 'open Pervasive' to each module"
       val () = println "  --debug-cost: generate useless instructions to help debug costs"
       val () = println "  --prelude: generate a prelude to dispatch based on EVM input"
-      val () = println "  --vc-check-off: turn off VC checking in --unit-test mode"
+      val () = println "  --vc-check-off, -n: turn off VC checking in --unit-test mode"
       val () = println "  --debug-log: turn on the 'log' command for debugging"
     in
       ()
@@ -345,19 +345,18 @@ fun parse_arguments (opts : options, args) =
               [] => ()
 	    | "--help" :: ts => (usage (); parseArgs ts)
 	    | "--annoless" :: ts => (#AnnoLess opts := true; parseArgs ts)
-	    | "--repeat" :: arg :: ts => (#Repeat opts := parse_repeat arg; parseArgs ts)
-	    | "-l" :: arg :: ts => (app (push_ref (#Libraries opts) o attach_fst true) $ parse_libraries arg; parseArgs ts)
-	    | "--unit-test" :: arg :: ts => (#UnitTest opts := SOME arg; parseArgs ts)
-	    (* | parseArgs ("-A" :: arg :: ts) = (do_A arg;       parseArgs ts) *)
-	    (* | parseArgs ("-B"        :: ts) = (do_B();         parseArgs ts) *)
-	    | "-n" :: arg :: ts => (push_ref positionals (false, arg); parseArgs ts)
 	    | "--etiml" :: ts => (ParserFactory.set ETiMLParser.parse_file; parseArgs ts)
 	    | "--pervasive" :: ts => (Elaborate.add_pervasive_flag := true; parseArgs ts)
 	    | "--debug-cost" :: ts => (CostDebug.debug_cost_flag := true; parseArgs ts)
 	    | "--prelude" :: ts => (EVMPrelude.add_prelude_flag := true; parseArgs ts)
 	    | "--vc-check-off" :: ts => (ToEVM1.UnitTest.vc_check_off_flag := true; parseArgs ts)
+	    | "-N" :: ts => (ToEVM1.UnitTest.vc_check_off_flag := true; parseArgs ts)
 	    (* | "--debug-log" :: ts => (EVMDebugLog.add_debug_log_flag := true; parseArgs ts) *)
 	    | "--debug-log" :: ts => (TypeCheck.debug_log_flag := true; parseArgs ts)
+	    | "--repeat" :: arg :: ts => (#Repeat opts := parse_repeat arg; parseArgs ts)
+	    | "-l" :: arg :: ts => (app (push_ref (#Libraries opts) o attach_fst true) $ parse_libraries arg; parseArgs ts)
+	    | "--unit-test" :: arg :: ts => (#UnitTest opts := SOME arg; parseArgs ts)
+	    | "-n" :: arg :: ts => (push_ref positionals (false, arg); parseArgs ts)
 	    | arg :: ts =>
               if String.isPrefix "-" arg then
 	        raise ParseArgsError ("Unrecognized option: " ^ arg)
