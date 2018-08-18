@@ -66,46 +66,46 @@ contract Ownable = struct
 
 end
 
-(* @title Interface for contracts conforming to ERC-721: Non-Fungible Tokens*)
-(* @author Dieter Shirley <dete@axiomzen.co> (https://github.com/dete)*)
-interface ERC721 = sig
-  (* Required methods*)
-  public fun totalSupply () view return (total : uint256)
-  public fun balanceOf (_owner : address) view return (balance : uint256)
-  external fun ownerOf (_tokenId : uint256) view return (owner : address)
-  external fun approve (_to : address, _tokenId : uint256)
-  external fun transfer (_to : address, _tokenId : uint256)
-  external fun transferFrom (_from : address, _to : address, _tokenId : uint256)
+(* (* @title Interface for contracts conforming to ERC-721: Non-Fungible Tokens*) *)
+(* (* @author Dieter Shirley <dete@axiomzen.co> (https://github.com/dete)*) *)
+(* interface ERC721 = sig *)
+(*   (* Required methods*) *)
+(*   public fun totalSupply () view return (total : uint256) *)
+(*   public fun balanceOf (_owner : address) view return (balance : uint256) *)
+(*   external fun ownerOf (_tokenId : uint256) view return (owner : address) *)
+(*   external fun approve (_to : address, _tokenId : uint256) *)
+(*   external fun transfer (_to : address, _tokenId : uint256) *)
+(*   external fun transferFrom (_from : address, _to : address, _tokenId : uint256) *)
 
-  (* Events*)
-  event Transfer(from : address, to : address, tokenId : uint256)
-  event Approval(owner : address, approved : address, tokenId : uint256)
+(*   (* Events*) *)
+(*   event Transfer(from : address, to : address, tokenId : uint256) *)
+(*   event Approval(owner : address, approved : address, tokenId : uint256) *)
 
-  (* Optional*)
-  (* public fun name () view return (name : string)*)
-  (* public fun symbol () view return (symbol : string)*)
-  (* external fun tokensOfOwner (_owner : address) view return (uint256[] tokenIds)*)
-  (* public fun tokenMetadata (_tokenId : uint256, _preferredTransport : string) view return (infoUrl : string)*)
+(*   (* Optional*) *)
+(*   (* public fun name () view return (name : string)*) *)
+(*   (* public fun symbol () view return (symbol : string)*) *)
+(*   (* external fun tokensOfOwner (_owner : address) view return (uint256[] tokenIds)*) *)
+(*   (* public fun tokenMetadata (_tokenId : uint256, _preferredTransport : string) view return (infoUrl : string)*) *)
 
-  (* ERC-165 Compatibility (https://github.com/ethereum/EIPs/issues/165)*)
-  external fun supportsInterface (_interfaceID : bytes4) view return bool
-end
+(*   (* ERC-165 Compatibility (https://github.com/ethereum/EIPs/issues/165)*) *)
+(*   external fun supportsInterface (_interfaceID : bytes4) view return bool *)
+(* end *)
 
-(* // Auction wrapper funs*)
+(* (* // Auction wrapper funs*) *)
 
-(* Auction wrapper funs*)
+(* (* Auction wrapper funs*) *)
 
-(* @title SEKRETOOOO*)
-interface GeneScienceInterface = sig
-  (* @dev simply a boolean to indicate this is the contract we expect to be*)
-  public fun isGeneScience () pure return bool
+(* (* @title SEKRETOOOO*) *)
+(* interface GeneScienceInterface = sig *)
+(*   (* @dev simply a boolean to indicate this is the contract we expect to be*) *)
+(*   public fun isGeneScience () pure return bool *)
 
-  (* @dev given genes of kitten 1 & 2, return a genetic combination - may have a random factor*)
-  (* @param genes1 genes of mom*)
-  (* @param genes2 genes of sire*)
-  (* @return the genes that are supposed to be passed down the child*)
-  public fun mixGenes (genes1 : uint256, genes2 : uint256, targetBlock : uint256) return uint256
-end
+(*   (* @dev given genes of kitten 1 & 2, return a genetic combination - may have a random factor*) *)
+(*   (* @param genes1 genes of mom*) *)
+(*   (* @param genes2 genes of sire*) *)
+(*   (* @return the genes that are supposed to be passed down the child*) *)
+(*   public fun mixGenes (genes1 : uint256, genes2 : uint256, targetBlock : uint256) return uint256 *)
+(* end *)
 
 (* @title A facet of KittyCore that manages special access privileges.*)
 (* @author Axiom Zen (https://www.axiomzen.co)*)
@@ -375,9 +375,9 @@ contract KittyBase = struct
       set sireAllowedToAddress[_tokenId] 0;
       (* clear any previously approved ownership exchange*)
       set kittyIndexToApproved[_tokenId] 0
-    end;
+    end
     (* Emit the transfer event.*)
-    fire Transfer(_from, _to, _tokenId)
+    (* fire Transfer(_from, _to, _tokenId) *)
 
   (* @dev An internal method that creates a new kitty and stores it. This*)
   (*  method doesn't do any checking and should only be called when the*)
@@ -430,14 +430,14 @@ contract KittyBase = struct
     (* let's just be 100% sure we never let this happen.*)
     require(newKittenId == truncate4 newKittenId);
 
-    (* emit the birth event*)
-    fire Birth(
-      _owner,
-      newKittenId,
-      _kitty.matronId,
-      _kitty.sireId,
-      _kitty.genes
-    );
+    (* (* emit the birth event*) *)
+    (* fire Birth( *)
+    (*   _owner, *)
+    (*   newKittenId, *)
+    (*   _kitty.matronId, *)
+    (*   _kitty.sireId, *)
+    (*   _kitty.genes *)
+    (* ); *)
 
     (* This will assign ownership, and also emit the Transfer event as*)
     (* per ERC721 draft*)
@@ -1124,6 +1124,13 @@ contract ClockAuctionBase = struct
     &t->duration ::= s.duration;
     &t->startedAt ::= s.startedAt
 
+  fun clear_Auction (t : storage Auction) =
+    &t->seller ::= 0;
+    &t->startingPrice ::= 0;
+    &t->endingPrice ::= 0;
+    &t->duration ::= 0;
+    &t->startedAt ::= 0
+
   (* Reference to contract tracking NFT ownership*)
   public state nonFungibleContract : cell address
 
@@ -1187,13 +1194,7 @@ contract ClockAuctionBase = struct
   (* @dev Removes an auction from the list of open auctions.*)
   (* @param _tokenId - ID of NFT on auction.*)
   fun _removeAuction (_tokenId : uint256) internal =
-    copy_Auction (&tokenIdToAuction->[_tokenId], {
-                   seller = 0,
-                   startingPrice = 0,
-                   endingPrice = 0,
-                   duration = 0,
-                   startedAt = 0,
-                 })
+    clear_Auction (&tokenIdToAuction->[_tokenId])
 
   (* @dev Cancels an auction unconditionally.*)
   fun _cancelAuction (_tokenId : uint256, _seller : address) internal =
@@ -2048,3 +2049,19 @@ contract KittyCore = struct inherit KittyMinting
     end
   
 end
+
+_createKitty
+tokensOfOwner
+_triggerCooldown
+_isValidMatingPair
+_breedWith
+breedWithAuto
+giveBirth
+_computeCurrentPrice
+_bid
+ClockAuction:
+createAuction
+SaleClockAuction:
+bid
+averageGen0SalePrice
+createPromoKitty
