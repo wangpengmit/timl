@@ -136,6 +136,7 @@ fun add_state (x, t) =
   (add_ref (#1 st_types_ref) (x, t);
    add_ref (#2 st_types_ref) (x, StMap.numItems $ !(#2 st_types_ref));
    add_ref st_ref (x, N0 dummy))
+fun state_exists x = isSome $ StMap.find (!(#1 st_types_ref), x)
 fun clear_st_types () =
   (#1 st_types_ref := StMap.empty;
    #2 st_types_ref := StMap.empty)
@@ -3282,6 +3283,7 @@ fun check_top_bind gctx (name, bind) =
             end
           | U.TBState t =>
             let
+              val () = if state_exists name then raise Error (U.get_region_mt t, ["state already exists"]) else ()
               val t = check_kind_Type Gctx.empty (([], []), t)
               val () = if is_wf_state_ty t then ()
                        else raise Error (get_region_mt t, ["illegal state type"])

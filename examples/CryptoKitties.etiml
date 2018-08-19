@@ -782,7 +782,7 @@ contract KittyBreeding = struct inherit KittyOwnership
     let candidateContract = attach _address GeneScienceInterface;
 
     (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*)
-    require(call false candidateContract isGeneScience());
+    (* require(call false candidateContract isGeneScience()); *)
 
     (* Set the new contract address*)
     geneScience ::= _address
@@ -1156,11 +1156,11 @@ contract ClockAuctionBase = struct
   event AuctionSuccessful(tokenId : uint256, totalPrice : uint256, winner : address)
   event AuctionCancelled(tokenId : uint256)
 
-  (* @dev Returns true if the claimant owns the token.*)
-  (* @param _claimant - Address claiming to own the token.*)
-  (* @param _tokenId - ID of token whose ownership to verify.*)
-  fun _owns (_claimant : address, _tokenId : uint256) internal view return bool =
-    ((call 0 (attach nonFungibleContract ERC721) ownerOf(_tokenId)) == _claimant)
+  (* (* @dev Returns true if the claimant owns the token.*) *)
+  (* (* @param _claimant - Address claiming to own the token.*) *)
+  (* (* @param _tokenId - ID of token whose ownership to verify.*) *)
+  (* fun _owns (_claimant : address, _tokenId : uint256) internal view return bool = *)
+  (*   ((call true (attach nonFungibleContract ERC721) ownerOf(_tokenId)) == _claimant) *)
 
   (* @dev Escrows the NFT, assigning ownership to this contract.*)
   (* Throws if the escrow fails.*)
@@ -1346,8 +1346,8 @@ contract ClockAuctionBase = struct
 
     (* Tell the world!*)
     emit AuctionSuccessful(_tokenId, price, msg.sender);
-    debug_log("AuctionSuccessful");
-    debug_log(_tokenId, price, msg.sender);
+    (* debug_log("AuctionSuccessful"); *)
+    (* debug_log(_tokenId, price, msg.sender); *)
 
     price
 
@@ -1367,26 +1367,26 @@ contract Pausable = struct inherit Ownable
   event Pause()
   event Unpause()
 
-  public val paused : ref bool = ref false
+  public state paused2 : cell bool
 
 
   (** *)
 (*    * @dev fun to allow actions only when the contract IS paused *)
 (*    *)
   fun whenNotPaused () =
-    require(not !!paused)
+    require(not (deref paused2))
 
   (** *)
 (*    * @dev fun to allow actions only when the contract IS NOT paused *)
 (*    *)
   fun whenPaused () =
-    require(!!paused)
+    require(deref paused2)
 
   (** *)
 (*    * @dev called by the owner to pause, triggers stopped state *)
 (*    *)
   fun pause () guard onlyOwner, whenNotPaused return bool =
-    set paused true;
+    set paused2 true;
     emit Pause();
     true
 
@@ -1395,7 +1395,7 @@ contract Pausable = struct inherit Ownable
 (*    *)
   fun unpause () return bool =
     onlyOwner (); whenPaused ();
-    paused := false;
+    paused2 ::= false;
     emit Unpause();
     true
 
@@ -1425,7 +1425,7 @@ contract ClockAuction = struct
     set ownerCut _cut;
 
     let candidateContract = attach _nftAddress ERC721;
-    require(call false candidateContract supportsInterface(InterfaceSignature_ERC721));
+    (* require(call false candidateContract supportsInterface(InterfaceSignature_ERC721)); *)
     nonFungibleContract ::= _nftAddress
 
   (* @dev Remove all Ether from the contract, which is the owner's cuts*)
@@ -1463,10 +1463,11 @@ contract ClockAuction = struct
     (* Sanity check that no inputs overflow how many bits we've allocated*)
     (* to store them in the auction struct.*)
     require(_startingPrice == truncate16 _startingPrice);
-    require(_endingPrice == truncate16 _endingPrice : uint128);
-    require(_duration == truncate8 _duration : uint64);
+    require(_endingPrice == truncate16 _endingPrice);
+    require(_duration == truncate8 _duration);
 
-    require(_owns(msg.sender, _tokenId));
+    (* debug_log (msg.sender, _tokenId, kittyIndexToOwner[_tokenId], _owns(msg.sender, _tokenId));          *)
+    (* require(_owns(msg.sender, _tokenId)); *)
     _escrow(msg.sender, _tokenId);
     let auction : Auction = make_Auction (
           _seller,
@@ -1618,7 +1619,6 @@ end
 
 
 
-
 (* @title Clock auction modified for sale of kitties*)
 (* @notice We omit a fallback fun to prevent accidental sends to this contract.*)
 contract SaleClockAuction = struct inherit ClockAuction
@@ -1732,7 +1732,7 @@ contract KittyAuction = struct inherit KittyBreeding
     let candidateContract = attach _address SaleClockAuction;
 
     (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*)
-    require(call false candidateContract isSaleClockAuction());
+    (* require(call false candidateContract isSaleClockAuction()); *)
 
     (* Set the new contract address*)
     saleAuction ::= _address
@@ -1744,7 +1744,7 @@ contract KittyAuction = struct inherit KittyBreeding
     let candidateContract = attach _address SiringClockAuction;
 
     (* NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117*)
-    require(call false candidateContract isSiringClockAuction());
+    (* require(call false candidateContract isSiringClockAuction()); *)
 
     (* Set the new contract address*)
     siringAuction ::= _address
@@ -2077,8 +2077,10 @@ contract KittyCore = struct inherit KittyMinting
   (* val r = breedWithAuto (5, 6) *)
   (* val r = %giveBirth 5 *)
   (* val () = debug_log r *)
+                      
   val r = %_createKitty (0, 0, 0, 0, 0x1)
-  val r = ClockAuction..createAuction (1, 0x100, 0x100, 1, 0x1)
+  (* val () = debug_log (kittyIndexToOwner[1], _owns(0x1, 1))          *)
+  (* val r = ClockAuction..createAuction (1, 0x100, 0x100, 60, 0x1) *)
   (* val r = ClockAuction.._bid (1, 0x200) *)
            
 (* _createKitty *)
@@ -2088,12 +2090,11 @@ contract KittyCore = struct inherit KittyMinting
 (* breedWithAuto *)
 (* giveBirth *)
 (* ClockAuction..createAuction *)
-(* ClockAuction..bid *)
-(* ClockAuction: *)
-(* createAuction *)
+(* ClockAuction.._bid *)
 (* SaleClockAuction: *)
 (* bid *)
 (* averageGen0SalePrice *)
-(* createPromoKitty *)
+
+(* The following can't be run because Auction contracts use Kitty contracts as external contracts *)
 
 end
