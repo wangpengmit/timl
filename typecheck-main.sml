@@ -1330,13 +1330,13 @@ fun get_rules_cost_adjustments (get_inj : 'cvar -> int * int) (rules : (('cvar, 
           | CUnfold () => C_EUnfold
           | CUnpackI () => C_EUnpack
           | CUnSum (len, i) => C_ECaseMany (len, i)
-      val () = println $ "C_EProj = " ^ str_int C_EProj
-      val () = println $ "C_EUnfold = " ^ str_int C_EUnfold
-      val () = println $ "C_EUnpack = " ^ str_int C_EUnpack
-      val () = println $ "C_Case_BeforeCodeGen = " ^ str_int C_Case_BeforeCodeGen
-      val () = println $ "C_ECaseMany (2, 0) = " ^ str_int (C_ECaseMany (2, 0))
-      val () = println $ "C_ECaseMany (2, 1) = " ^ str_int (C_ECaseMany (2, 1))
-      val () = println $ "C_App_BeforeCC = " ^ str_int C_App_BeforeCC
+      (* val () = println $ "C_EProj = " ^ str_int C_EProj *)
+      (* val () = println $ "C_EUnfold = " ^ str_int C_EUnfold *)
+      (* val () = println $ "C_EUnpack = " ^ str_int C_EUnpack *)
+      (* val () = println $ "C_Case_BeforeCodeGen = " ^ str_int C_Case_BeforeCodeGen *)
+      (* val () = println $ "C_ECaseMany (2, 0) = " ^ str_int (C_ECaseMany (2, 0)) *)
+      (* val () = println $ "C_ECaseMany (2, 1) = " ^ str_int (C_ECaseMany (2, 1)) *)
+      (* val () = println $ "C_App_BeforeCC = " ^ str_int C_App_BeforeCC *)
       val costs = collect_cost [] e
       fun str_cost c =
         case c of
@@ -1344,11 +1344,11 @@ fun get_rules_cost_adjustments (get_inj : 'cvar -> int * int) (rules : (('cvar, 
           | CUnfold () => "CUnfold"
           | CUnpackI () => "CUnpackI"
           | CUnSum (len, i) => sprintf "CUnSum ($, $)" [str_int len, str_int i]
-      val () = println "costs:"
-      val () = app println $ map (str_pair (str_int, str_ls str_cost)) costs
+      (* val () = println "costs:" *)
+      (* val () = app println $ map (str_pair (str_int, str_ls str_cost)) costs *)
       val costs = IMapU.fromList_multi costs
       val costs = IMap.map (max_from_0 o map (sum o map eval_cost)) costs
-      val () = println $ IMapU.str_map (str_int, str_int) costs
+      (* val () = println $ IMapU.str_map (str_int, str_int) costs *)
       fun m @! k = IMap.find (m, k)
       fun get_cost n = default 0 $ costs @! n
       val tail_app_cost = (C_App_BeforeCC, M_App_BeforeCC)
@@ -1474,8 +1474,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
           let
             val r = U.get_region_long_id x
             val t = fetch_type gctx (tctx, x)
-            val () = println $ "has_k = " ^ str_bool has_k
-            val () = println $ "n_live_vars = " ^ str_int n_live_vars
+            (* val () = println $ "has_k = " ^ str_bool has_k *)
+            (* val () = println $ "n_live_vars = " ^ str_int n_live_vars *)
             fun assert err p = if p then () else err ()
             fun has_insert_err () = raise Error (r, ["implicit index/type arguments must be annotated with %"])
           in
@@ -1496,8 +1496,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                               (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
                                M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
                             else (0, 0)
-                        val () = println $ "d2 = " ^ (str_i gctxn sctxn $ simp_i $ fst d2)
-                        val () = println $ "closure_cost = " ^ str_int (fst closure_cost)
+                        (* val () = println $ "d2 = " ^ (str_i gctxn sctxn $ simp_i $ fst d2) *)
+                        (* val () = println $ "closure_cost = " ^ str_int (fst closure_cost) *)
                         val cost = cost %%+ mapPair' to_real N (closure_cost ++ (C_App_BeforeCC, M_App_BeforeCC)) %%+ d2
                       in
                         (t, cost, t_arg :: t_args)
@@ -1506,7 +1506,7 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                 val () = assert has_insert_err (imply (length t_args > 0) has_insert)
                 val e = EVar (x, (true, false))
                 val e = EAppTs (e, t_args)
-                val () = println $ "cost = " ^ (str_i gctxn sctxn $ simp_i $ fst cost)
+                (* val () = println $ "cost = " ^ (str_i gctxn sctxn $ simp_i $ fst cost) *)
               in
                 (e, t, TN C_EVar %%+ cost, st)
               end
@@ -2325,12 +2325,12 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val (is_rec, e) = is_rec_body e
             val excluded = if is_rec then [0] else [] (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
-            val () = println $ "EAbsI/n_fvars = " ^ str_int n_fvars
+            (* val () = println $ "EAbsI/n_fvars = " ^ str_int n_fvars *)
             val tail_app_cost = if is_tail_call e then (0, 0)
                                 else (C_App_BeforeCC, M_App_BeforeCC)
             val extra_inner_cost = (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost
-            val () = println $ "EAbsI/d = " ^ (ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst d)
-            val () = println $ "EAbsI/extra_inner_cost = " ^ str_int (fst extra_inner_cost)
+            (* val () = println $ "EAbsI/d = " ^ (ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst d) *)
+            (* val () = println $ "EAbsI/extra_inner_cost = " ^ str_int (fst extra_inner_cost) *)
             val d = d %%+ mapPair' to_real N extra_inner_cost
             val cost = mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars)
           in
@@ -2537,8 +2537,8 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
             val len_pn_ebinds = length $ snd $ PatternVisitor.collect_binder_pn pn
             val excluded = (if is_rec then [len_pn_ebinds] else []) @ list_of_range (0, len_pn_ebinds) (* argument and (optionally) self-reference are not free evars *)
             val n_fvars = EVarSet.numItems $ EVarSet.difference (FreeEVars.free_evars e, EVarSetU.fromList $ map inl excluded)
-            val () = println $ "EAbs/is_rec = " ^ str_bool is_rec
-            val () = println $ "EAbs/n_fvars = " ^ str_int n_fvars
+            (* val () = println $ "EAbs/is_rec = " ^ str_bool is_rec *)
+            (* val () = println $ "EAbs/n_fvars = " ^ str_int n_fvars *)
             val d = mapPair' to_real N (hd $ get_rules_cost_adjustments snd [(pn, is_tail_call e)]) %%+ d
             val extra_inner_cost = (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars)
             val d = mapPair' to_real N extra_inner_cost %%+ d
@@ -2725,7 +2725,7 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
 	  | U.DRec (name, bind, r) =>
             (* a version that delegates most of the work to EAbs and EAbsI *)
 	    let
-              val () = println "before DRec"
+              (* val () = println "before DRec" *)
               val (name, r1) = unBinderName name
               val ((tnames, Rebind binds), ((pre_st, post_st), (t, d), e)) = Unbound.unBind $ unInner bind
               val tnames = map (mapPair' unBinderName unOuter) tnames
@@ -2781,9 +2781,9 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               (* val () = println $ sprintf "te[pre] = $" [US.str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
 	      val te = check_kind_Type gctx ((sctx, kctx), te)
               (* val () = println $ sprintf "te[post] = $" [str_mt (gctx_names gctx) (sctx_names sctx, names kctx) te] *)
-              val () = println "before check_mtype"
+              (* val () = println "before check_mtype" *)
 	      val (e, i, st) = check_mtype gctx (add_typing_skct (name, PTMono te) ctx, st) (e, te) 
-              val () = println "after check_mtype"
+              (* val () = println "after check_mtype" *)
               val n_fvars = EVarSet.numItems $ EVarSetU.delete (FreeEVars.free_evars e, inl 0)
               val sctxn = sctx_names sctx
               val is_tail_call = is_tail_call e
@@ -2791,13 +2791,13 @@ and check_decl gctx (ctx as (sctx, kctx, cctx, _), st) decl =
               val e = UpdateExpr.update_e e
               val e = ExprShift.shiftx_t_e 0 (length free_uvars) e
               val e = foldli (fn (v, uvar_ref, e) => SubstUVar.substu_t_e uvar_ref v e) e free_uvars
-              val () = println "before check_tname_times"
+              (* val () = println "before check_tname_times" *)
               val i = check_tname_times r sctxn n_fvars is_tail_call i tnames
-              val () = println "after check_tname_times"
+              (* val () = println "after check_tname_times" *)
               val poly_te = PTUni_Many (tnames, poly_te, r)
               val tnames = tnames @ free_uvar_names
               val decl = DRec (Binder $ EName (name, r1), Inner $ Unbound.Bind ((map (mapPair' (Binder o TName) Outer) tnames, Rebind TeleNil), ((StMap.empty, StMap.empty), (te, TN0 r), e)), r)
-              val () = println "after DRec"
+              (* val () = println "after DRec" *)
             in
               (decl, ctx_from_typing (name, poly_te), 0, [i], st)
 	    end

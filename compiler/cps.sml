@@ -358,11 +358,11 @@ fun TN n = (to_real n, N0)
 (* the 'unit' part can be relaxed if e is a value *)
 fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
   let
-    val () = println $ "CPS on\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) ([], [], [], []) e)
+    (* val () = println $ "CPS on\n" ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) ([], [], [], []) e) *)
     fun simp_2i a = unop_pair Simp.simp_i a
     val j_k = simp_2i j_k
     (* val () = println $ "k: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (SOME 4, SOME 4) ([], [], [], []) k) *)
-    val () = println $ sprintf "j_k: $, $\n" [ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst j_k, ToString.str_i Gctx.empty [] $ Simp.simp_i $ snd j_k]
+    (* val () = println $ sprintf "j_k: $, $\n" [ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst j_k, ToString.str_i Gctx.empty [] $ Simp.simp_i $ snd j_k] *)
     val cps_with_frame = cps
     fun cps (e, t_e) (k, j_k) = cps_with_frame (e, t_e, F) (k, j_k)
     fun err () = raise Impossible $ "unknown case of cps() on: " ^ (ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e)
@@ -395,8 +395,8 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
         val t_c = cont_type ((IV F, t_e), j)
         val e = EAbs (IV F, close0_e_e_anno ((c, "c", t_c), e), NONE)
         val e = EAbsICloseMany ([(j1, "j1", STime), (j2, "j2", SNat), (F, "F", SState)], e)
-        val () = println $ "n_fvars = " ^ str_int n_fvars
-        val () = println $ "C_Abs_BeforeCC n_fvars = " ^ str_int (C_Abs_BeforeCC n_fvars)
+        (* val () = println $ "n_fvars = " ^ str_int n_fvars *)
+        (* val () = println $ "C_Abs_BeforeCC n_fvars = " ^ str_int (C_Abs_BeforeCC n_fvars) *)
       in
         (e, mapPair' to_real N (C_Abs_BeforeCC n_fvars, M_Abs_BeforeCC n_fvars))
       end
@@ -629,7 +629,7 @@ fun cps (e, t_e, F : idx) (k, j_k : idx * idx) =
       (* [[ fix x.e ]](k) = k (fix x. [[e]](id)) *)
       let
         val ((name_x, _), e) = unBindAnno2 bind
-        val () = println $ "cps() on: " ^ name_x
+        (* val () = println $ "cps() on: " ^ name_x *)
         val x = fresh_evar ()
         val e = open0_e_e x e
         val t_x = cps_t t_e

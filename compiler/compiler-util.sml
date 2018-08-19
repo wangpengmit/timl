@@ -266,24 +266,6 @@ fun reduce_ELets e =
         end
       | _ => e
                
-fun collect_TForallIT b =
-  case b of
-      TQuanI (Forall (), bind) =>
-      let
-        val (s, (name, (_, b))) = unBindAnnoName bind
-        val (binds, b) = collect_TForallIT b
-      in
-        (inl (name, s) :: binds, b)
-      end
-    | TQuan (Forall (), _, bind) =>
-      let
-        val (k, (name, b)) = unBindAnnoName bind
-        val (binds, b) = collect_TForallIT b
-      in
-        (inr (name, k) :: binds, b)
-      end
-    | _ => ([], b)
-
 val Void = (IEmptyState, TUnit)
 fun cont_type (t, i) = TArrow (t, i, Void)
 

@@ -299,5 +299,65 @@ fun collect_all_anno_rev e =
   end
 fun collect_all_anno e = mapSnd rev $ collect_all_anno_rev e
 
+fun collect_TAppIT_rev t =
+  let
+    val self = collect_TAppIT_rev
+  in
+    case t of
+        TAppI (t, i) =>
+        let
+          val (t, args) = self t
+        in
+          (t, inl i :: args)
+        end
+      | TAppT (t, t') =>
+        let
+          val (t, args) = self t
+        in
+          (t, inr t' :: args)
+        end
+      | _ => (t, [])
+  end
+fun collect_TAppIT t = mapSnd rev $ collect_TAppIT_rev t
+
+fun TAppITs t args =
+  foldl (fn (arg, t) => case arg of inl i => TAppI (t, i) | inr t' => TAppT (t, t')) t args
+
+fun collect_TForallIT b =
+  case b of
+      TQuanI (Forall (), bind) =>
+      let
+        val (s, (name, (_, b))) = unBindAnnoName bind
+        val (binds, b) = collect_TForallIT b
+      in
+        (inl (name, s) :: binds, b)
+      end
+    | TQuan (Forall (), _, bind) =>
+      let
+        val (k, (name, b)) = unBindAnnoName bind
+        val (binds, b) = collect_TForallIT b
+      in
+        (inr (name, k) :: binds, b)
+      end
+    | _ => ([], b)
+
+fun collect_TExistsIT b =
+  case b of
+      TQuanI (Exists _, bind) =>
+      let
+        val (s, (name, (_, b))) = unBindAnnoName bind
+        val (binds, b) = collect_TExistsIT b
+      in
+        (inl (name, s) :: binds, b)
+      end
+    | TQuan (Exists _, _, bind) =>
+      let
+        val (k, (name, b)) = unBindAnnoName bind
+        val (binds, b) = collect_TExistsIT b
+      in
+        (inr (name, k) :: binds, b)
+      end
+    | _ => ([], b)
+
 end
                                  

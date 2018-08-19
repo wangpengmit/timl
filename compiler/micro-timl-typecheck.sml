@@ -631,30 +631,6 @@ fun forget01_t_t x = forget_t_t 0 1 x
 
 fun forget01_i_2i a = unop_pair forget01_i_i a
                                 
-fun collect_TAppIT_rev t =
-  let
-    val self = collect_TAppIT_rev
-  in
-    case t of
-        TAppI (t, i) =>
-        let
-          val (t, args) = self t
-        in
-          (t, inl i :: args)
-        end
-      | TAppT (t, t') =>
-        let
-          val (t, args) = self t
-        in
-          (t, inr t' :: args)
-        end
-      | _ => (t, [])
-  end
-fun collect_TAppIT t = mapSnd rev $ collect_TAppIT_rev t
-
-fun TAppITs t args =
-  foldl (fn (arg, t) => case arg of inl i => TAppI (t, i) | inr t' => TAppT (t, t')) t args
-
 fun get_msg_info_type name =
     case name of
         EnvSender () => TInt
@@ -1137,9 +1113,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
         end
       | EUnOp (EUTiML (EUInt2Nat ()), e) =>
         let
-          val () = println "begin Int2Nat"
+          (* val () = println "begin Int2Nat" *)
           val (e, j, st) = tc_against_ty (ctx, st) (e, TInt)
-          val () = println "end Int2Nat"
+          (* val () = println "end Int2Nat" *)
           val e = if !anno_EInt2Nat_state then e %~ st else e
         in
           (EUnOp (EUTiML (EUInt2Nat ()), e), TSomeNat (), j %%+ TN C_EInt2Nat, st)
@@ -1353,9 +1329,9 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                     (data, st, (EAppI (e1, diff), t))
                   end
                 | _ => raise MTCError "EApp"
-          val () = println "before is_eq_ty()"
+          (* val () = println "before is_eq_ty()" *)
           val () = is_eq_ty itctx (t_e2, t1)
-          val () = println "after is_eq_ty()"
+          (* val () = println "after is_eq_ty()" *)
           val (cost, e2) = 
               case !phase of
                   PhBeforeCodeGen () => ((C_App_BeforeCodeGen, 0), e2)
@@ -1415,21 +1391,21 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                 | PhBeforeCPS () =>
                   let
                     val (e, (n_live_vars, has_k)) = assert_EAnnoLiveVars e
-                    val () = println $ "has_k = " ^ str_bool has_k
-                    val () = println $ "n_live_vars = " ^ str_int n_live_vars
+                    (* val () = println $ "has_k = " ^ str_bool has_k *)
+                    (* val () = println $ "n_live_vars = " ^ str_int n_live_vars *)
                     val cost = if has_k then
                                  (C_Abs_BeforeCC n_live_vars + C_Abs_Inner_BeforeCC n_live_vars,
                                   M_Abs_BeforeCC n_live_vars + M_Abs_Inner_BeforeCC n_live_vars)
                                else (0, 0)
-                    val () = println $ "cost = " ^ str_int (fst cost)
+                    (* val () = println $ "cost = " ^ str_int (fst cost) *)
                     val cost = cost ++ (C_App_BeforeCC, M_App_BeforeCC)
                   in
                     (cost, e)
                   end
           val e = if !anno_EAppT then e %: t_e else e
           val e = if !anno_EAppT_state then e %~ st else e
-          val () = println $ "j = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst j)
-          val () = println $ "j2 = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst j2)
+          (* val () = println $ "j = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst j) *)
+          (* val () = println $ "j2 = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst j2) *)
         in
           (EAppT (e, t1), subst0_t_t t1 t, j %%+ mapPair' to_real N cost %%+ j2, st)
         end
@@ -1452,8 +1428,8 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                     val tail_app_cost = if is_tail_call e then (0, 0)
                                         else (C_App_BeforeCC, M_App_BeforeCC)
                     val extra_inner_cost = (C_AbsI_Inner_BeforeCPS n_fvars, M_AbsI_Inner_BeforeCPS n_fvars) ++ tail_app_cost
-                    val () = println $ "EAbsI/i = " ^ (ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst i)
-                    val () = println $ "EAbsI/extra_inner_cost = " ^ str_int (fst extra_inner_cost)
+                    (* val () = println $ "EAbsI/i = " ^ (ToString.str_i Gctx.empty [] $ Simp.simp_i $ fst i) *)
+                    (* val () = println $ "EAbsI/extra_inner_cost = " ^ str_int (fst extra_inner_cost) *)
                   in
                     i %%+ mapPair' to_real N extra_inner_cost
                   end
@@ -1515,10 +1491,10 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
                   in
                     (C_Abs_Inner_BeforeCPS n_fvars, M_Abs_Inner_BeforeCPS n_fvars) ++ tail_app_cost
                   end
-          val () = println $ "EAbs/i = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i)
-          val () = println $ "EAbs/extra = " ^ str_int (fst extra_inner_cost)
-          val () = println $ "EAbs/n_fvars = " ^ str_int n_fvars
-          val () = println $ "EAbs/C_Abs_Inner_BeforeCC n_fvars = " ^ str_int (C_Abs_Inner_BeforeCC n_fvars)
+          (* val () = println $ "EAbs/i = " ^ (ExportPP.str_i $ ExportPP.export_i (ictx_names ictx) $ simp_i $ fst i) *)
+          (* val () = println $ "EAbs/extra = " ^ str_int (fst extra_inner_cost) *)
+          (* val () = println $ "EAbs/n_fvars = " ^ str_int n_fvars *)
+          (* val () = println $ "EAbs/C_Abs_Inner_BeforeCC n_fvars = " ^ str_int (C_Abs_Inner_BeforeCC n_fvars) *)
           val i = i %%+ mapPair' to_real N extra_inner_cost              
           val e = if !anno_EAbs then e %: t2 (* |># i *) else e
           val e = if !anno_EAbs_state then e %~ post_st else e
@@ -1568,7 +1544,7 @@ fun tc st_types (ctx as (ictx, tctx, ectx : econtext), st : idx) e_input =
       | ERec data =>
         let
           val (t, (name, e)) = unBindAnnoName data
-          val () = println $ "tc() on: " ^ fst name
+          (* val () = println $ "tc() on: " ^ fst name *)
           fun collect_EAbsIT_ignore_Anno e =
             case e of
                 EAbsI data =>

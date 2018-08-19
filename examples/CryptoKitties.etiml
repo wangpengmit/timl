@@ -8,28 +8,31 @@ structure Pervasive = struct
   fun addBy b a = a + b
   fun subBy b a = a - b
   fun orBy b a = a bit_or b
-fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0
+(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
                                                                                               
-fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 =
+fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52*32)*(eend-start)+50*32 =
   lets
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
-      ifi i #>= eend then waste_time (); acc
+      ifi i #>= eend then (* waste_time ();  *)acc
       else
-        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52*32) * (eend-i)+16*32
       end
   in
     %loop (start, init)
   end
   
-  fun require b = if b then waste_time (); () else (throw using _) end
+  fun require b = if b then (* waste_time ();  *)() else (throw using _) end
   fun unop_ref ['a] {m : Time} {m' : Nat} (r : ref 'a) (f : 'a -- m, m' --> 'a) = r := f !r
   val ether = 1000000000000000000
   val finney = 1000000000000000
   val minute = 60
   val hour = 60 * minute
   val day = 24 * hour
-  fun truncate {n : Nat} (n : nat {n}) v = v bit_and (((2 #** (#8 #* n)) (* using _, _ *)) - 1)
-  fun truncate4 v = %truncate #4 v
+  (* fun truncate {n : Nat} (n : nat {n}) v = v bit_and (((2 #** (#8 #* n)) (* using _, _ *)) - 1) *)
+  fun truncate2 v = v bit_and 0xffff
+  fun truncate4 v = v bit_and 0xffffffff
+  fun truncate8 v = v bit_and 0xffffffffffffffff
+  fun truncate16 v = v bit_and 0xffffffffffffffffffffffffffffffff
   datatype some_nat = SomeNat {n : Nat | n < 2 ** 256} of nat {n} --> some_nat
   fun imin {a b : Nat} (a : nat {a}, b : nat {b}) return nat {a min b} =
     ifi a #<= b then a : nat {a min b} else b : nat {a min b} end
@@ -45,7 +48,7 @@ contract Ownable = struct
 (*    * @dev The Ownable constructor sets the original `owner` of the contract to the sender *)
 (*    * account. *)
 (*    *)
-  fun init () =
+  fun constructor () =
     owner ::= msg.sender
 
   (** *)
@@ -377,7 +380,7 @@ contract KittyBase = struct
       set kittyIndexToApproved[_tokenId] 0
     end
     (* Emit the transfer event.*)
-    (* fire Transfer(_from, _to, _tokenId) *)
+    (* emit Transfer(_from, _to, _tokenId) *)
 
   (* @dev An internal method that creates a new kitty and stores it. This*)
   (*  method doesn't do any checking and should only be called when the*)
@@ -402,9 +405,9 @@ contract KittyBase = struct
     (* sure that these conditions are never broken. However! _createKitty() is already*)
     (* an expensive call (for storage), and it doesn't hurt to be especially careful*)
     (* to ensure our data structures are always valid.*)
-    require(_matronId == _matronId);
-    require(_sireId == _sireId);
-    require(_generation == _generation);
+    require(_matronId == truncate4 _matronId);
+    require(_sireId == truncate4 _sireId);
+    require(_generation == truncate2 _generation);
 
     (* New kitty starts with the same cooldown as parent gen/2*)
     let cooldownIndex : ref uint16 = ref (_generation / 2);
@@ -431,7 +434,7 @@ contract KittyBase = struct
     require(newKittenId == truncate4 newKittenId);
 
     (* (* emit the birth event*) *)
-    (* fire Birth( *)
+    (* emit Birth( *)
     (*   _owner, *)
     (*   newKittenId, *)
     (*   _kitty.matronId, *)
@@ -600,7 +603,7 @@ contract KittyOwnership = struct inherit KittyBase
     _approve(_tokenId, _to);
 
     (* Emit approval event.*)
-    fire Approval(msg.sender, _to, _tokenId)
+    emit Approval(msg.sender, _to, _tokenId)
 
   (* @notice Transfer a Kitty owned by another address, for which the calling address*)
   (*  has previously been granted transfer approval by the owner.*)
@@ -665,7 +668,7 @@ contract KittyOwnership = struct inherit KittyBase
       else
         let totalCats = %totalSupply();
         let n = %imin (n, totalCats);
-        let result = new_array (n, 0) using $(141+60*(len-1)), len;
+        let result = new_array (n, 0) using $(141+60*(len-1)), len*32;
         let resultIndex : ref uint256 = ref 0;
 
         (* We count on the fact that all cats have IDs starting at 1 and increasing*)
@@ -762,7 +765,8 @@ contract KittyBreeding = struct inherit KittyOwnership
   (* @notice The minimum payment required to use breedWithAuto(). This fee goes towards*)
   (*  the gas cost paid by whatever calls giveBirth(), and can be dynamically updated by*)
   (*  the COO role as the gas price changes.*)
-  public state autoBirthFee : cell uint256 = 2 * finney
+  (* public state autoBirthFee : cell uint256 = 2 * finney *)
+  public state autoBirthFee : cell uint256 = 0
 
   (* Keeps track of number of pregnant kitties.*)
   public state pregnantKitties : cell uint256
@@ -833,7 +837,7 @@ contract KittyBreeding = struct inherit KittyOwnership
   (* @dev Checks to see if a given Kitty is pregnant and (if so) if the gestation*)
   (*  period has passed.*)
   fun _isReadyToGiveBirth (_matron : storage Kitty) private view return bool =
-    (deref _matron->siringWithId <> 0) && (deref _matron->cooldownEndBlock <= block.number)
+    (deref _matron->siringWithId <> 0) (* && (deref _matron->cooldownEndBlock <= block.number) *)
 
   (* @dev Checks that a given kitten is able to breed. Requires that the*)
   (*  current cooldown is finished (for sires) and also checks that there is*)
@@ -960,7 +964,8 @@ contract KittyBreeding = struct inherit KittyOwnership
     modify pregnantKitties ++;
 
     (* Emit the pregnancy event.*)
-    fire Pregnant(kittyIndexToOwner[_matronId], _matronId, _sireId, matron.cooldownEndBlock.v)
+    emit Pregnant(kittyIndexToOwner[_matronId], _matronId, _sireId, deref matron->cooldownEndBlock)
+    (* ;debug_log(kittyIndexToOwner[_matronId], _matronId, _sireId, deref matron->cooldownEndBlock, block.number, deref matron->cooldownEndBlock - block.number) *)
 
   (* @notice Breed a Kitty you own (as matron) with a sire that you own, or for which you*)
   (*  have previously been given Siring approval. Will either make your cat pregnant, or will*)
@@ -1184,7 +1189,7 @@ contract ClockAuctionBase = struct
 
     copy_Auction (&tokenIdToAuction->[_tokenId], _auction);
 
-    fire AuctionCreated(
+    emit AuctionCreated(
       uint256(_tokenId),
       uint256(_auction.startingPrice),
       uint256(_auction.endingPrice),
@@ -1200,7 +1205,7 @@ contract ClockAuctionBase = struct
   fun _cancelAuction (_tokenId : uint256, _seller : address) internal =
     _removeAuction(_tokenId);
     _transfer(_seller, _tokenId);
-    fire AuctionCancelled(_tokenId)
+    emit AuctionCancelled(_tokenId)
 
   (* @dev Returns true if the NFT is on auction.*)
   (* @param _auction - Auction to check.*)
@@ -1233,16 +1238,16 @@ contract ClockAuctionBase = struct
     else
       (* Starting price can be higher than ending price (and often is!), so*)
       (* this delta can be negative.*)
-      let totalPriceChange : int256 = _endingPrice : int256 - _startingPrice;
+      let totalPriceChange : int256 = _endingPrice - _startingPrice;
 
       (* This multiplication can't overflow, _secondsPassed will easily fit within*)
       (* 64-bits, and totalPriceChange will easily fit within 128-bits, their product*)
       (* will always fit within 256-bits.*)
-      let currentPriceChange : int256 = totalPriceChange * _secondsPassed : int256 / _duration;
+      let currentPriceChange : int256 = totalPriceChange * _secondsPassed / _duration;
 
       (* currentPriceChange can be negative, but if so, will have a magnitude*)
       (* less that _startingPrice. Thus, this result will always end up positive.*)
-      let currentPrice : int256 = _startingPrice : int256 + currentPriceChange;
+      let currentPrice : int256 = _startingPrice + currentPriceChange;
 
       currentPrice : uint256
     end
@@ -1340,7 +1345,9 @@ contract ClockAuctionBase = struct
     call_with_value () msg.sender.transfer bidExcess;
 
     (* Tell the world!*)
-    fire AuctionSuccessful(_tokenId, price, msg.sender);
+    emit AuctionSuccessful(_tokenId, price, msg.sender);
+    debug_log("AuctionSuccessful");
+    debug_log(_tokenId, price, msg.sender);
 
     price
 
@@ -1380,7 +1387,7 @@ contract Pausable = struct inherit Ownable
 (*    *)
   fun pause () guard onlyOwner, whenNotPaused return bool =
     set paused true;
-    fire Pause();
+    emit Pause();
     true
 
   (** *)
@@ -1389,7 +1396,7 @@ contract Pausable = struct inherit Ownable
   fun unpause () return bool =
     onlyOwner (); whenPaused ();
     paused := false;
-    fire Unpause();
+    emit Unpause();
     true
 
 end
@@ -1413,7 +1420,7 @@ contract ClockAuction = struct
   (*  the Nonfungible Interface.*)
   (* @param _cut - percent cut the owner takes on each auction, must be*)
   (*  between 0-10,000.*)
-  public fun init (_nftAddress : address, _cut : uint256) =
+  public fun constructor (_nftAddress : address, _cut : uint256) =
     require(_cut <= 10000);
     set ownerCut _cut;
 
@@ -1455,9 +1462,9 @@ contract ClockAuction = struct
     whenNotPaused ();
     (* Sanity check that no inputs overflow how many bits we've allocated*)
     (* to store them in the auction struct.*)
-    require(_startingPrice == _startingPrice : uint128);
-    require(_endingPrice == _endingPrice : uint128);
-    require(_duration == _duration : uint64);
+    require(_startingPrice == truncate16 _startingPrice);
+    require(_endingPrice == truncate16 _endingPrice : uint128);
+    require(_duration == truncate8 _duration : uint64);
 
     require(_owns(msg.sender, _tokenId));
     _escrow(msg.sender, _tokenId);
@@ -1554,8 +1561,8 @@ contract SiringClockAuction = struct inherit ClockAuction
   public val isSiringClockAuction : bool = true
 
   (* Delegate constructor*)
-  public fun init (_nftAddr : address, _cut : uint256) =
-    fire ClockAuction(_nftAddr, _cut)
+  public fun constructor (_nftAddr : address, _cut : uint256) =
+    emit ClockAuction(_nftAddr, _cut)
 
   (* @dev Creates and begins a new auction. Since this fun is wrapped,*)
   (* require sender to be KittyCore contract.*)
@@ -1625,8 +1632,8 @@ contract SaleClockAuction = struct inherit ClockAuction
   public state lastGen0SalePrices : vector uint256
 
   (* Delegate constructor*)
-  public fun init (_nftAddr : address, _cut : uint256) =
-    fire ClockAuction(_nftAddr, _cut)
+  public fun constructor (_nftAddr : address, _cut : uint256) =
+    emit ClockAuction(_nftAddr, _cut)
 
   (* @dev Creates and begins a new auction.*)
   (* @param _tokenId - ID of token to auction, sender must be owner.*)
@@ -1687,9 +1694,9 @@ contract SaleClockAuction = struct inherit ClockAuction
 fun for_lastGen0SalePrices ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), funtype pre {lastGen0SalePrices : st} nat {i} * 'a -- m2, m2' --> 'a) pre {lastGen0SalePrices : st} return 'a (* using (m1+m2+3281.0)*$(eend-start)+3970.0, (m1'+m2'+52)*(eend-start)+50 *) =
   lets
     fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) pre {lastGen0SalePrices : st} (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
-      ifi i #>= eend then waste_time (); acc
+      ifi i #>= eend then (* waste_time (); *) acc
       else
-        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52) * (eend-i)+16
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52*32) * (eend-i)+16*32
       end
   in
     %loop (start, init)
@@ -1954,7 +1961,7 @@ contract KittyCore = struct inherit KittyMinting
   public state newContractAddress : cell address
 
   (* @notice Creates the main CryptoKitties smart contract instance.*)
-  public fun init () pre {numKitties : 0} post {numKitties : 1} =
+  public fun constructor () pre {numKitties : 0} post {numKitties : 1} =
     (* Starts paused.*)
     paused ::= true;
 
@@ -1976,7 +1983,7 @@ contract KittyCore = struct inherit KittyMinting
   external fun setNewAddress (_v2Address : address) guard onlyCEO, whenPaused =
     (* See README.md for updgrade plan*)
     newContractAddress ::= _v2Address;
-    fire ContractUpgrade(_v2Address)
+    emit ContractUpgrade(_v2Address)
 
   (* @notice No tipping!*)
   (* @dev Reject all Ether from being sent here, unless it's from one of the*)
@@ -2047,21 +2054,46 @@ contract KittyCore = struct inherit KittyMinting
     else
       false
     end
-  
-end
 
-_createKitty
-tokensOfOwner
-_triggerCooldown
-_isValidMatingPair
-_breedWith
-breedWithAuto
-giveBirth
-_computeCurrentPrice
-_bid
-ClockAuction:
-createAuction
-SaleClockAuction:
-bid
-averageGen0SalePrice
-createPromoKitty
+  val _ = ClockAuction..constructor (0x1, 0)
+  val r = constructor ()
+  (* val r = %_createKitty (0, 0, 14, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 14, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 14, 0, 0x2) *)
+  (* val r = %_createKitty (0, 0, 14, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 14, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 14, 0, 0x2) *)
+  (* val r = %_createKitty (0, 0, 14, 0, 0x1) *)
+  (* val r = %tokensOfOwner 0x1 *)
+  (* val () = debug_log r *)
+  (* val r = %tokensOfOwner 0x2 *)
+  (* val () = debug_log r *)
+  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
+  (* val r = %_createKitty (1, 2, 1, 0, 0x1) *)
+  (* val r = %_createKitty (3, 4, 1, 0, 0x1) *)
+  (* val r = breedWithAuto (5, 6) *)
+  (* val r = %giveBirth 5 *)
+  (* val () = debug_log r *)
+  val r = %_createKitty (0, 0, 0, 0, 0x1)
+  val r = ClockAuction..createAuction (1, 0x100, 0x100, 1, 0x1)
+  (* val r = ClockAuction.._bid (1, 0x200) *)
+           
+(* _createKitty *)
+(* tokensOfOwner *)
+(* _isValidMatingPair *)
+(* _breedWith *)
+(* breedWithAuto *)
+(* giveBirth *)
+(* ClockAuction..createAuction *)
+(* ClockAuction..bid *)
+(* ClockAuction: *)
+(* createAuction *)
+(* SaleClockAuction: *)
+(* bid *)
+(* averageGen0SalePrice *)
+(* createPromoKitty *)
+
+end
