@@ -22,7 +22,7 @@ fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (
   end
   
   fun require b = if b then (* waste_time ();  *)() else (throw using _) end
-  fun unop_ref ['a] {m : Time} {m' : Nat} (r : ref 'a) (f : 'a -- m, m' --> 'a) = r := f !r
+  (* fun unop_ref ['a] {m : Time} {m' : Nat} (r : ref 'a) (f : 'a -- m, m' --> 'a) = r := f !r *)
   val ether = 1000000000000000000
   val finney = 1000000000000000
   val minute = 60
@@ -186,7 +186,7 @@ contract KittyAccessControl = struct
 
   (* @dev Modifier to allow actions only when the contract IS NOT paused*)
   fun whenNotPaused () =
-    require(!!paused)
+    require(not (!!paused))
 
   (* @dev Modifier to allow actions only when the contract IS paused*)
   fun whenPaused () =
@@ -687,7 +687,7 @@ contract KittyOwnership = struct inherit KittyBase
             in
               array_set(result, index imod n, catId)
             end;
-            %unop_ref resultIndex ++
+            resultIndex := !resultIndex + 1
           end
         );
 
@@ -1374,13 +1374,13 @@ contract Pausable = struct inherit Ownable
 (*    * @dev fun to allow actions only when the contract IS paused *)
 (*    *)
   fun whenNotPaused () =
-    require(not (deref paused2))
+    require(not (!!paused2))
 
   (** *)
 (*    * @dev fun to allow actions only when the contract IS NOT paused *)
 (*    *)
   fun whenPaused () =
-    require(deref paused2)
+    require(!!paused2)
 
   (** *)
 (*    * @dev called by the owner to pause, triggers stopped state *)
@@ -1715,7 +1715,7 @@ fun for_lastGen0SalePrices ['a] {m1 m2: Time} {m1' m2' st start : Nat} {eend : N
     (*   modify sum += lastGen0SalePrices[i] *)
     (* end; *)
     %for_lastGen0SalePrices (#0, #5, (), fn {i | 0 <= i /\ i < 5} (i : nat {i}, ()) pre {lastGen0SalePrices : 5} =>
-      %unop_ref sum (+= lastGen0SalePrices[i])
+      sum := !sum + lastGen0SalePrices[i]
     );
     !sum / 5
 
@@ -1970,7 +1970,7 @@ contract KittyCore = struct inherit KittyMinting
   (* @notice Creates the main CryptoKitties smart contract instance.*)
   public fun constructor () pre {numKitties : 0} post {numKitties : 1} =
     (* Starts paused.*)
-    paused ::= true;
+    (* paused ::= true; *)
 
     (* the creator of the contract is the initial CEO*)
     ceoAddress ::= msg.sender;
@@ -2072,17 +2072,17 @@ contract KittyCore = struct inherit KittyMinting
   (* val r = %_createKitty (0, 0, 14, 0, 0x1) *)
   (* val r = %tokensOfOwner 0x1 *)
   (* val () = debug_log r *)
-  (* val r = %tokensOfOwner 0x2 *)
-  (* val () = debug_log r *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
-  (* val r = %_createKitty (1, 2, 1, 0, 0x1) *)
-  (* val r = %_createKitty (3, 4, 1, 0, 0x1) *)
-  (* val r = breedWithAuto (5, 6) *)
-  (* val r = %giveBirth 5 *)
-  (* val () = debug_log r *)
+  (* (* val r = %tokensOfOwner 0x2 *) *)
+  (* (* val () = debug_log r *) *)
+  (* (* val r = %_createKitty (0, 0, 0, 0, 0x1) *) *)
+  (* (* val r = %_createKitty (0, 0, 0, 0, 0x1) *) *)
+  (* (* val r = %_createKitty (0, 0, 0, 0, 0x1) *) *)
+  (* (* val r = %_createKitty (0, 0, 0, 0, 0x1) *) *)
+  (* (* val r = %_createKitty (1, 2, 1, 0, 0x1) *) *)
+  (* (* val r = %_createKitty (3, 4, 1, 0, 0x1) *) *)
+  (* (* val r = breedWithAuto (5, 6) *) *)
+  (* (* val r = %giveBirth 5 *) *)
+  (* (* val () = debug_log r *) *)
                       
   (* val _ = ClockAuction..constructor (0x321, 0) *)
   (* val r = constructor () *)
@@ -2103,7 +2103,7 @@ contract KittyCore = struct inherit KittyMinting
   val r = SaleClockAuction..bid 1
   (* val () = debug_log "result:" *)
   (* val () = debug_log (!!gen0SaleCount, lastGen0SalePrices[#0], lastGen0SalePrices[#1], lastGen0SalePrices[#2], lastGen0SalePrices[#3], lastGen0SalePrices[#4]) *)
-  (* val r = SaleClockAuction..averageGen0SalePrice ()                       *)
+  (* val r = SaleClockAuction..averageGen0SalePrice () *)
   (* val () = debug_log "result2:" *)
   (* val () = debug_log r *)
 

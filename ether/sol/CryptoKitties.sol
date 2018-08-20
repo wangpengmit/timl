@@ -646,7 +646,7 @@ contract KittyOwnership is KittyBase, ERC721 {
     ///  expensive (it walks the entire Kitty array looking for cats belonging to owner),
     ///  but it also returns a dynamic array, which is only supported for web3 calls, and
     ///  not contract-to-contract calls.
-    function tokensOfOwner(address _owner) external view returns(uint256[] ownerTokens) {
+    function tokensOfOwner(address _owner) external returns(uint256[] ownerTokens) {
         uint256 tokenCount = balanceOf(_owner);
 
         if (tokenCount == 0) {
@@ -734,7 +734,7 @@ contract KittyBreeding is KittyOwnership {
 
     /// @dev The Pregnant event is fired when two cats successfully breed and the pregnancy
     ///  timer begins for the matron.
-    /* event Pregnant(address owner, uint256 matronId, uint256 sireId, uint256 cooldownEndBlock); */
+    event Pregnant(address owner, uint256 matronId, uint256 sireId, uint256 cooldownEndBlock);
 
     /// @notice The minimum payment required to use breedWithAuto(). This fee goes towards
     ///  the gas cost paid by whatever calls giveBirth(), and can be dynamically updated by
@@ -949,7 +949,7 @@ contract KittyBreeding is KittyOwnership {
         pregnantKitties++;
 
         /* // Emit the pregnancy event. */
-        /* Pregnant(kittyIndexToOwner[_matronId], _matronId, _sireId, matron.cooldownEndBlock); */
+        Pregnant(kittyIndexToOwner[_matronId], _matronId, _sireId, matron.cooldownEndBlock);
     }
 
     /// @notice Breed a Kitty you own (as matron) with a sire that you own, or for which you
@@ -967,6 +967,7 @@ contract KittyBreeding is KittyOwnership {
 
         // Caller must own the matron.
         require(_owns(msg.sender, _matronId));
+        Pregnant(0, 0, 0, 0);
 
         // Neither sire nor matron are allowed to be on auction during a normal
         // breeding operation, but we don't need to check that explicitly.
