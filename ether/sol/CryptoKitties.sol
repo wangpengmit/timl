@@ -734,7 +734,7 @@ contract KittyBreeding is KittyOwnership {
 
     /// @dev The Pregnant event is fired when two cats successfully breed and the pregnancy
     ///  timer begins for the matron.
-    event Pregnant(address owner, uint256 matronId, uint256 sireId, uint256 cooldownEndBlock);
+  //  event Pregnant(address owner, uint256 matronId, uint256 sireId, uint256 cooldownEndBlock);
 
     /// @notice The minimum payment required to use breedWithAuto(). This fee goes towards
     ///  the gas cost paid by whatever calls giveBirth(), and can be dynamically updated by
@@ -949,7 +949,7 @@ contract KittyBreeding is KittyOwnership {
         pregnantKitties++;
 
         /* // Emit the pregnancy event. */
-        Pregnant(kittyIndexToOwner[_matronId], _matronId, _sireId, matron.cooldownEndBlock);
+   //     Pregnant(kittyIndexToOwner[_matronId], _matronId, _sireId, matron.cooldownEndBlock);
     }
 
     /// @notice Breed a Kitty you own (as matron) with a sire that you own, or for which you
@@ -967,7 +967,7 @@ contract KittyBreeding is KittyOwnership {
 
         // Caller must own the matron.
         require(_owns(msg.sender, _matronId));
-        Pregnant(0, 0, 0, 0);
+  //      Pregnant(0, 0, 0, 0);
 
         // Neither sire nor matron are allowed to be on auction during a normal
         // breeding operation, but we don't need to check that explicitly.
@@ -990,13 +990,13 @@ contract KittyBreeding is KittyOwnership {
 
         // Make sure matron isn't pregnant, or in the middle of a siring cooldown
         require(_isReadyToBreed(matron));
-
+    //    Pregnant(10, 0, 0, 0);
         // Grab a reference to the potential sire
         Kitty storage sire = kitties[_sireId];
 
         // Make sure sire isn't pregnant, or in the middle of a siring cooldown
         require(_isReadyToBreed(sire));
-
+    //    Pregnant(20, 0, 0, 0);
         // Test that these cats are a valid mating pair.
         require(_isValidMatingPair(
             matron,
@@ -1004,7 +1004,7 @@ contract KittyBreeding is KittyOwnership {
             sire,
             _sireId
         ));
-
+ //       Pregnant(30, 0, 0, 0);
         // All checks passed, kitty gets pregnant!
         _breedWith(_matronId, _sireId);
     }
@@ -1657,7 +1657,7 @@ contract SaleClockAuction is ClockAuction {
         }
     }
 
-    function averageGen0SalePrice() external view returns (uint256) {
+    function averageGen0SalePrice() external returns (uint256) {
         uint256 sum = 0;
         for (uint256 i = 0; i < 5; i++) {
             sum += lastGen0SalePrices[i];
@@ -1915,7 +1915,7 @@ contract KittyCore is KittyMinting {
     /// @notice Creates the main CryptoKitties smart contract instance.
     function KittyCore() public {
         // Starts paused.
-        paused = true;
+     //   paused = true;
 
         // the creator of the contract is the initial CEO
         ceoAddress = msg.sender;
