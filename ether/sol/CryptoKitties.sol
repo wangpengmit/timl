@@ -1,5 +1,4 @@
-pragma solidity ^0.4.11;
-
+pragma solidity ^0.4.24;
 
 /**
  * @title Ownable
@@ -54,8 +53,8 @@ contract ERC721 {
     function transferFrom(address _from, address _to, uint256 _tokenId) external;
 
     // Events
-    event Transfer(address from, address to, uint256 tokenId);
-    event Approval(address owner, address approved, uint256 tokenId);
+    /* event Transfer(address from, address to, uint256 tokenId); */
+    /* event Approval(address owner, address approved, uint256 tokenId); */
 
     // Optional
     // function name() public view returns (string name);
@@ -119,7 +118,7 @@ contract KittyAccessControl {
     // account.
 
     /// @dev Emited when contract is upgraded - See README.md for updgrade plan
-    event ContractUpgrade(address newContract);
+    /* event ContractUpgrade(address newContract); */
 
     // The addresses of the accounts (or contracts) that can execute actions within each roles.
     address public ceoAddress;
@@ -223,11 +222,11 @@ contract KittyBase is KittyAccessControl {
     /// @dev The Birth event is fired whenever a new kitten comes into existence. This obviously
     ///  includes any time a cat is created through the giveBirth method, but it is also called
     ///  when a new gen0 cat is created.
-    event Birth(address owner, uint256 kittyId, uint256 matronId, uint256 sireId, uint256 genes);
+    /* event Birth(address owner, uint256 kittyId, uint256 matronId, uint256 sireId, uint256 genes); */
 
     /// @dev Transfer event as defined in current draft of ERC721. Emitted every time a kitten
     ///  ownership is assigned, including births.
-    event Transfer(address from, address to, uint256 tokenId);
+    /* event Transfer(address from, address to, uint256 tokenId); */
 
     /*** DATA TYPES ***/
 
@@ -358,8 +357,8 @@ contract KittyBase is KittyAccessControl {
             // clear any previously approved ownership exchange
             delete kittyIndexToApproved[_tokenId];
         }
-        // Emit the transfer event.
-        Transfer(_from, _to, _tokenId);
+        /* // Emit the transfer event. */
+        /* Transfer(_from, _to, _tokenId); */
     }
 
     /// @dev An internal method that creates a new kitty and stores it. This
@@ -378,7 +377,6 @@ contract KittyBase is KittyAccessControl {
         uint256 _genes,
         address _owner
     )
-        internal
         returns (uint)
     {
         // These requires are not strictly necessary, our calling code should make
@@ -411,14 +409,14 @@ contract KittyBase is KittyAccessControl {
         // let's just be 100% sure we never let this happen.
         require(newKittenId == uint256(uint32(newKittenId)));
 
-        // emit the birth event
-        Birth(
-            _owner,
-            newKittenId,
-            uint256(_kitty.matronId),
-            uint256(_kitty.sireId),
-            _kitty.genes
-        );
+        /* // emit the birth event */
+        /* Birth( */
+        /*     _owner, */
+        /*     newKittenId, */
+        /*     uint256(_kitty.matronId), */
+        /*     uint256(_kitty.sireId), */
+        /*     _kitty.genes */
+        /* ); */
 
         // This will assign ownership, and also emit the Transfer event as
         // per ERC721 draft
@@ -592,7 +590,7 @@ contract KittyOwnership is KittyBase, ERC721 {
         _approve(_tokenId, _to);
 
         // Emit approval event.
-        Approval(msg.sender, _to, _tokenId);
+     //   Approval(msg.sender, _to, _tokenId);
     }
 
     /// @notice Transfer a Kitty owned by another address, for which the calling address
@@ -736,12 +734,13 @@ contract KittyBreeding is KittyOwnership {
 
     /// @dev The Pregnant event is fired when two cats successfully breed and the pregnancy
     ///  timer begins for the matron.
-    event Pregnant(address owner, uint256 matronId, uint256 sireId, uint256 cooldownEndBlock);
+    /* event Pregnant(address owner, uint256 matronId, uint256 sireId, uint256 cooldownEndBlock); */
 
     /// @notice The minimum payment required to use breedWithAuto(). This fee goes towards
     ///  the gas cost paid by whatever calls giveBirth(), and can be dynamically updated by
     ///  the COO role as the gas price changes.
-    uint256 public autoBirthFee = 2 finney;
+    /* uint256 public autoBirthFee = 2 finney; */
+    uint256 public autoBirthFee = 0 finney;
 
     // Keeps track of number of pregnant kitties.
     uint256 public pregnantKitties;
@@ -756,7 +755,7 @@ contract KittyBreeding is KittyOwnership {
         GeneScienceInterface candidateContract = GeneScienceInterface(_address);
 
         // NOTE: verify that a contract is what we expect - https://github.com/Lunyr/crowdsale-contracts/blob/cfadd15986c30521d8ba7d5b6f57b4fefcc7ac38/contracts/LunyrToken.sol#L117
-        require(candidateContract.isGeneScience());
+        /* require(candidateContract.isGeneScience()); */
 
         // Set the new contract address
         geneScience = candidateContract;
@@ -821,7 +820,7 @@ contract KittyBreeding is KittyOwnership {
     /// @dev Checks to see if a given Kitty is pregnant and (if so) if the gestation
     ///  period has passed.
     function _isReadyToGiveBirth(Kitty _matron) private view returns (bool) {
-        return (_matron.siringWithId != 0) && (_matron.cooldownEndBlock <= uint64(block.number));
+      return (_matron.siringWithId != 0) /* && (_matron.cooldownEndBlock <= uint64(block.number)) */;
     }
 
     /// @notice Checks that a given kitten is able to breed (i.e. it is not pregnant or
@@ -949,8 +948,8 @@ contract KittyBreeding is KittyOwnership {
         // Every time a kitty gets pregnant, counter is incremented.
         pregnantKitties++;
 
-        // Emit the pregnancy event.
-        Pregnant(kittyIndexToOwner[_matronId], _matronId, _sireId, matron.cooldownEndBlock);
+        /* // Emit the pregnancy event. */
+        /* Pregnant(kittyIndexToOwner[_matronId], _matronId, _sireId, matron.cooldownEndBlock); */
     }
 
     /// @notice Breed a Kitty you own (as matron) with a sire that you own, or for which you
@@ -1042,7 +1041,7 @@ contract KittyBreeding is KittyOwnership {
         }
 
         // Call the sooper-sekret gene mixing operation.
-        uint256 childGenes = geneScience.mixGenes(matron.genes, sire.genes, matron.cooldownEndBlock - 1);
+        uint256 childGenes = /*geneScience.mixGenes(matron.genes, sire.genes, matron.cooldownEndBlock - 1)*/0;
 
         // Make the new kitten!
         address owner = kittyIndexToOwner[_matronId];
@@ -1056,7 +1055,7 @@ contract KittyBreeding is KittyOwnership {
         pregnantKitties--;
 
         // Send the balance fee to the person who made birth happen.
-        msg.sender.send(autoBirthFee);
+        /* msg.sender.send(autoBirthFee); */
 
         // return the new kitten's ID
         return kittenId;
@@ -1102,16 +1101,16 @@ contract ClockAuctionBase {
     // Map from token ID to their corresponding auction.
     mapping (uint256 => Auction) tokenIdToAuction;
 
-    event AuctionCreated(uint256 tokenId, uint256 startingPrice, uint256 endingPrice, uint256 duration);
-    event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
-    event AuctionCancelled(uint256 tokenId);
+    /* event AuctionCreated(uint256 tokenId, uint256 startingPrice, uint256 endingPrice, uint256 duration); */
+    /* event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner); */
+    /* event AuctionCancelled(uint256 tokenId); */
 
     /// @dev Returns true if the claimant owns the token.
     /// @param _claimant - Address claiming to own the token.
     /// @param _tokenId - ID of token whose ownership to verify.
-    function _owns(address _claimant, uint256 _tokenId) internal view returns (bool) {
-        return (nonFungibleContract.ownerOf(_tokenId) == _claimant);
-    }
+    /* function _owns(address _claimant, uint256 _tokenId) internal view returns (bool) { */
+    /*     return (nonFungibleContract.ownerOf(_tokenId) == _claimant); */
+    /* } */
 
     /// @dev Escrows the NFT, assigning ownership to this contract.
     /// Throws if the escrow fails.
@@ -1119,7 +1118,7 @@ contract ClockAuctionBase {
     /// @param _tokenId - ID of token whose approval to verify.
     function _escrow(address _owner, uint256 _tokenId) internal {
         // it will throw if transfer fails
-        nonFungibleContract.transferFrom(_owner, this, _tokenId);
+        /* nonFungibleContract.transferFrom(_owner, this, _tokenId); */
     }
 
     /// @dev Transfers an NFT owned by this contract to another address.
@@ -1128,7 +1127,7 @@ contract ClockAuctionBase {
     /// @param _tokenId - ID of token to transfer.
     function _transfer(address _receiver, uint256 _tokenId) internal {
         // it will throw if transfer fails
-        nonFungibleContract.transfer(_receiver, _tokenId);
+        /* nonFungibleContract.transfer(_receiver, _tokenId); */
     }
 
     /// @dev Adds an auction to the list of open auctions. Also fires the
@@ -1142,19 +1141,19 @@ contract ClockAuctionBase {
 
         tokenIdToAuction[_tokenId] = _auction;
 
-        AuctionCreated(
-            uint256(_tokenId),
-            uint256(_auction.startingPrice),
-            uint256(_auction.endingPrice),
-            uint256(_auction.duration)
-        );
+       // AuctionCreated(
+  //          uint256(_tokenId),
+    //        uint256(_auction.startingPrice),
+    //        uint256(_auction.endingPrice),
+    //        uint256(_auction.duration)
+    //    );
     }
 
     /// @dev Cancels an auction unconditionally.
     function _cancelAuction(uint256 _tokenId, address _seller) internal {
         _removeAuction(_tokenId);
         _transfer(_seller, _tokenId);
-        AuctionCancelled(_tokenId);
+        // AuctionCancelled(_tokenId);
     }
 
     /// @dev Computes the price and transfers winnings.
@@ -1200,7 +1199,7 @@ contract ClockAuctionBase {
             // before calling transfer(), and the only thing the seller
             // can DoS is the sale of their own asset! (And if it's an
             // accident, they can call cancelAuction(). )
-            seller.transfer(sellerProceeds);
+            /* seller.transfer(sellerProceeds); */
         }
 
         // Calculate any excess funds included with the bid. If the excess
@@ -1212,10 +1211,10 @@ contract ClockAuctionBase {
         // Return the funds. Similar to the previous transfer, this is
         // not susceptible to a re-entry attack because the auction is
         // removed before any transfers occur.
-        msg.sender.transfer(bidExcess);
+        /* msg.sender.transfer(bidExcess); */
 
         // Tell the world!
-        AuctionSuccessful(_tokenId, price, msg.sender);
+     //   AuctionSuccessful(_tokenId, price, msg.sender);
 
         return price;
     }
@@ -1323,8 +1322,8 @@ contract ClockAuctionBase {
  * @dev Base contract which allows children to implement an emergency stop mechanism.
  */
 contract Pausable is Ownable {
-  event Pause();
-  event Unpause();
+  /* event Pause(); */
+  /* event Unpause(); */
 
   bool public paused = false;
 
@@ -1350,7 +1349,7 @@ contract Pausable is Ownable {
    */
   function pause() onlyOwner whenNotPaused returns (bool) {
     paused = true;
-    Pause();
+  //  Pause();
     return true;
   }
 
@@ -1359,7 +1358,7 @@ contract Pausable is Ownable {
    */
   function unpause() onlyOwner whenPaused returns (bool) {
     paused = false;
-    Unpause();
+ //   Unpause();
     return true;
   }
 }
@@ -1385,7 +1384,7 @@ contract ClockAuction is Pausable, ClockAuctionBase {
         ownerCut = _cut;
 
         ERC721 candidateContract = ERC721(_nftAddress);
-        require(candidateContract.supportsInterface(InterfaceSignature_ERC721));
+        /* require(candidateContract.supportsInterface(InterfaceSignature_ERC721)); */
         nonFungibleContract = candidateContract;
     }
 
@@ -1427,7 +1426,7 @@ contract ClockAuction is Pausable, ClockAuctionBase {
         require(_endingPrice == uint256(uint128(_endingPrice)));
         require(_duration == uint256(uint64(_duration)));
 
-        require(_owns(msg.sender, _tokenId));
+        /* require(_owns(msg.sender, _tokenId)); */
         _escrow(msg.sender, _tokenId);
         Auction memory auction = Auction(
             _seller,
@@ -1936,7 +1935,7 @@ contract KittyCore is KittyMinting {
     function setNewAddress(address _v2Address) external onlyCEO whenPaused {
         // See README.md for updgrade plan
         newContractAddress = _v2Address;
-        ContractUpgrade(_v2Address);
+     //   ContractUpgrade(_v2Address);
     }
 
     /// @notice No tipping!
