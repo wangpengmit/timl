@@ -1632,8 +1632,13 @@ contract SaleClockAuction = struct inherit ClockAuction
   public state lastGen0SalePrices : vector uint256
 
   (* Delegate constructor*)
-  public fun constructor (_nftAddr : address, _cut : uint256) =
-    emit ClockAuction(_nftAddr, _cut)
+  public fun constructor (_nftAddr : address, _cut : uint256) pre {lastGen0SalePrices : 0} post {lastGen0SalePrices : 5} =
+    ClockAuction..constructor(_nftAddr, _cut);
+    push_back (lastGen0SalePrices, 0);
+    push_back (lastGen0SalePrices, 0);
+    push_back (lastGen0SalePrices, 0);
+    push_back (lastGen0SalePrices, 0);
+    push_back (lastGen0SalePrices, 0)
 
   (* @dev Creates and begins a new auction.*)
   (* @param _tokenId - ID of token to auction, sender must be owner.*)
@@ -1681,6 +1686,8 @@ contract SaleClockAuction = struct inherit ClockAuction
 
     (* If not a gen0 auction, exit*)
     if (seller == !!nonFungibleContract) then
+      (* debug_log "gen0:"; *)
+      (* debug_log (!!gen0SaleCount, price); *)
       (* Track gen0 sale prices*)
       lets
         val @SomeNat {n} n = int2nat (!!gen0SaleCount)
@@ -2055,7 +2062,8 @@ contract KittyCore = struct inherit KittyMinting
       false
     end
 
-  val _ = ClockAuction..constructor (0x1, 0)
+  (* val _ = ClockAuction..constructor (0x321, 0) *)
+  val _ = SaleClockAuction..constructor (0x321, 0)
   val r = constructor ()
   (* val r = %_createKitty (0, 0, 14, 0, 0x1) *)
   (* val r = %_createKitty (0, 0, 14, 0, 0x1) *)
@@ -2078,23 +2086,33 @@ contract KittyCore = struct inherit KittyMinting
   (* val r = %giveBirth 5 *)
   (* val () = debug_log r *)
                       
-  val r = %_createKitty (0, 0, 0, 0, 0x1)
-  (* val () = debug_log (kittyIndexToOwner[1], _owns(0x1, 1))          *)
+  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
+  (* (* val () = debug_log (kittyIndexToOwner[1], _owns(0x1, 1))          *) *)
   (* val r = ClockAuction..createAuction (1, 0x100, 0x100, 60, 0x1) *)
-  (* val r = ClockAuction.._bid (1, 0x200) *)
-           
+  (* (* val r = ClockAuction.._bid (1, 0x200) *) *)
+  (* val r = ClockAuction..bid 1 *)
+                      
+  val r = %_createKitty (0, 0, 0, 0, 0x1)
+  val r = %_createKitty (0, 0, 0, 0, 0x1)
+  val r = %_createKitty (0, 0, 0, 0, 0x1)
+  val r = %_createKitty (0, 0, 0, 0, 0x1)
+  val r = %_createKitty (0, 0, 0, 0, 0x1)
+  val r = ClockAuction..createAuction (1, 0x100, 0x100, 60, 0x321)
+  val r = SaleClockAuction..bid 1
+  (* val () = debug_log "result:" *)
+  (* val () = debug_log (!!gen0SaleCount, lastGen0SalePrices[#0], lastGen0SalePrices[#1], lastGen0SalePrices[#2], lastGen0SalePrices[#3], lastGen0SalePrices[#4]) *)
+  (* val r = SaleClockAuction..averageGen0SalePrice ()                       *)
+  (* val () = debug_log "result2:" *)
+  (* val () = debug_log r *)
+
 (* _createKitty *)
 (* tokensOfOwner *)
-(* _isValidMatingPair *)
-(* _breedWith *)
 (* breedWithAuto *)
 (* giveBirth *)
 (* ClockAuction..createAuction *)
 (* ClockAuction.._bid *)
-(* SaleClockAuction: *)
-(* bid *)
+(* ClockAuction..bid *)
+(* SaleClockAuction..bid *)
 (* averageGen0SalePrice *)
-
-(* The following can't be run because Auction contracts use Kitty contracts as external contracts *)
 
 end
