@@ -77,7 +77,7 @@ fun untuple_save n =
 fun untuple n = untuple_save n @ [Pop]
 
 fun decode pos t =
-  case t of
+  case whnf ([], []) $ snd $ collect_TExistsIT $ try_unfold t of
       TTuple ts =>
       concatMapi (fn (i, t) => decode (pos + i * 32) t) ts @
       make_tuple (length ts)
@@ -176,7 +176,7 @@ fun encode_array num_regs w tuple_len pos_in_tuple =
   end
 
 fun is_TArray t =
-  case t of
+  case whnf ([], []) $ snd $ collect_TExistsIT $ try_unfold t of
       TArray a => SOME a
     | _ => NONE
              
@@ -184,7 +184,7 @@ fun at_most_one_Array_other_wordsize_ty ts =
   at_most_one_some_other_true is_TArray is_wordsize_ty ts
                               
 fun encode num_regs t =
-  case t of
+  case whnf ([], []) $ snd $ collect_TExistsIT $ try_unfold t of
       TTuple ts =>
         (case at_most_one_Array_other_wordsize_ty ts of
              inl (p, (w, t, _)) =>

@@ -270,8 +270,22 @@ fun is_rec_body e =
       EUnOp (EUTiML (EUAnno (EABodyOfRecur ())), e) => (true, e)
     | _ => (false, e)
              
+fun is_TApp_TRec t =
+  let
+    val (t, args) = collect_TAppIT t
+  in
+    case t of
+        TRec data => SOME (unBindAnnoName data, args)
+      | _ => NONE
+  end
+
+fun try_unfold t =
+  case is_TApp_TRec t of
+      SOME ((k, (_, t1)), args) => whnf ([], []) $ TAppITs (subst0_t_t t t1) args
+    | NONE => t
+
 fun is_wordsize_ty t =
-  case t of
+  case whnf ([], []) $ snd $ collect_TExistsIT $ try_unfold t of
       TNat _ => true
     | TiBool _ => true
     | TConst c =>

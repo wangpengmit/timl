@@ -1544,8 +1544,9 @@ fun get_mtype gctx (ctx_st : context_state) (e_all : U.expr) : expr * mtype * (i
                         TArrow a => a
                       | _ => raise Error (r, ["must be function (arrow) type"])
                 fun assert_wordsize_ty t =
-                  if is_wordsize_ty t = true then ()
-                  else raise Error (r, ["can only be word-sized types (int, byte, bool, unit, etc.)"])
+                  ()
+                  (* if is_wordsize_ty t = true then () *)
+                  (* else raise Error (r, ["can only be word-sized types (int, byte, bool, unit, etc.)"]) *)
                 fun check_good_arg_ty t =
                   let
                     val loop = check_good_arg_ty

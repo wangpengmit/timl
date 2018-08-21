@@ -5,20 +5,6 @@ open EVMPrelude
        
 infixr 0 $
 
-fun is_TApp_TRec t =
-  let
-    val (t, args) = collect_TAppIT t
-  in
-    case t of
-        TRec data => SOME (unBindAnnoName data, args)
-      | _ => NONE
-  end
-
-fun try_unfold t =
-  case is_TApp_TRec t of
-      SOME ((k, (_, t1)), args) => whnf ([], []) $ TAppITs (subst0_t_t t t1) args
-    | NONE => t
-
 fun debug_log t =
   case whnf ([], []) $ snd $ collect_TExistsIT $ try_unfold t of
       TTuplePtr (ts, _, _) =>

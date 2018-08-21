@@ -669,7 +669,6 @@ contract KittyOwnership = struct inherit KittyBase
         let totalCats = %totalSupply();
         let n = %imin (n, totalCats);
         let result = new_array (n, 0) using $(141+60*(len-1)), len*32;
-        let resultIndex : ref uint256 = ref 0;
 
         (* We count on the fact that all cats have IDs starting at 1 and increasing*)
         (* sequentially up to the totalCat count. *)
@@ -679,17 +678,20 @@ contract KittyOwnership = struct inherit KittyBase
         (*     modify resultIndex ++ *)
         (*   end *)
         (* end; *)
-        (* %for_ (#1, totalCats #+ #1, (), fn {i | 1 <= i /\ i < len} (catId : nat {i}, ()) => *)
-        (*   let catId = nat2int catId; *)
-        (*   if (kittyIndexToOwner[catId] == _owner) then *)
-        (*     lets *)
-        (*       val @SomeNat {_} index = int2nat !resultIndex *)
-        (*     in *)
-        (*       array_set(result, index imod n, catId) *)
-        (*     end; *)
-        (*     resultIndex := !resultIndex + 1 *)
-        (*   end *)
-        (* ); *)
+            
+        %for_ (#1, totalCats #+ #1, 0, fn {i | 1 <= i /\ i < len} (catId : nat {i}, resultIndex) =>
+          let catId = nat2int catId;
+          if (kittyIndexToOwner[catId] == _owner) then
+            lets
+              val @SomeNat {_} index = int2nat resultIndex
+            in
+              array_set(result, index imod n, catId)
+            end;
+            resultIndex + 1
+          else
+            resultIndex
+          end
+        );
 
         SomeArray result
       end
@@ -2069,51 +2071,55 @@ contract KittyCore = struct inherit KittyMinting
   val r = %_createKitty (0, 0, 14, 0, 0x1)
   val r = %_createKitty (0, 0, 14, 0, 0x2)
   val r = %_createKitty (0, 0, 14, 0, 0x1)
-  val r = %tokensOfOwner 0x1
-  (* val () = debug_log r *)
-  (* (* val r = %tokensOfOwner 0x2 *) *)
+  (* (* val r = %tokensOfOwner 0x1 *) *)
   (* (* val () = debug_log r *) *)
-  (* (* val r = %_createKitty (0, 0, 0, 0, 0x1) *) *)
-  (* (* val r = %_createKitty (0, 0, 0, 0, 0x1) *) *)
-  (* (* val r = %_createKitty (0, 0, 0, 0, 0x1) *) *)
-  (* (* val r = %_createKitty (0, 0, 0, 0, 0x1) *) *)
-  (* (* val r = %_createKitty (1, 2, 1, 0, 0x1) *) *)
-  (* (* val r = %_createKitty (3, 4, 1, 0, 0x1) *) *)
-  (* (* val r = breedWithAuto (5, 6) *) *)
-  (* (* val r = %giveBirth 5 *) *)
-  (* (* val () = debug_log r *) *)
+  (* (* (* val r = %tokensOfOwner 0x2 *) *) *)
+  (* (* (* val () = debug_log r *) *) *)
+  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
+  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
+  (* val r = %_createKitty (1, 2, 1, 0, 0x1) *)
+  (* val r = %_createKitty (3, 4, 1, 0, 0x1) *)
+  (* val r = breedWithAuto (5, 6) *)
+  (* (* (* val r = %giveBirth 5 *) *) *)
+  (* (* (* val () = debug_log r *) *) *)
                       
   (* val _ = ClockAuction..constructor (0x321, 0) *)
   (* val r = constructor () *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
-  (* (* val () = debug_log (kittyIndexToOwner[1], _owns(0x1, 1))          *) *)
+  (* (* val r = %_createKitty (0, 0, 0, 0, 0x1) *) *)
+  (* (* (* val () = debug_log (kittyIndexToOwner[1], _owns(0x1, 1))          *) *) *)
   (* val r = ClockAuction..createAuction (1, 0x100, 0x100, 60, 0x1) *)
-  (* (* val r = ClockAuction.._bid (1, 0x200) *) *)
+  (* (* (* val r = ClockAuction.._bid (1, 0x200) *) *) *)
   (* val r = ClockAuction..bid 1 *)
                       
   (* val _ = SaleClockAuction..constructor (0x321, 0) *)
   (* val r = constructor () *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
-  (* val r = %_createKitty (0, 0, 0, 0, 0x1) *)
   (* val r = ClockAuction..createAuction (1, 0x100, 0x100, 60, 0x321) *)
   (* val r = SaleClockAuction..bid 1 *)
-  (* (* val () = debug_log "result:" *) *)
-  (* (* val () = debug_log (!!gen0SaleCount, lastGen0SalePrices[#0], lastGen0SalePrices[#1], lastGen0SalePrices[#2], lastGen0SalePrices[#3], lastGen0SalePrices[#4]) *) *)
-  (* val r = SaleClockAuction..averageGen0SalePrice () *)
-  (* (* val () = debug_log "result2:" *) *)
-  (* (* val () = debug_log r *) *)
+  (* (* (* val () = debug_log "result:" *) *) *)
+  (* (* (* val () = debug_log (!!gen0SaleCount, lastGen0SalePrices[#0], lastGen0SalePrices[#1], lastGen0SalePrices[#2], lastGen0SalePrices[#3], lastGen0SalePrices[#4]) *) *) *)
+  (* (* val r = SaleClockAuction..averageGen0SalePrice () *) *)
+  (* (* (* val () = debug_log "result2:" *) *) *)
+  (* (* (* val () = debug_log r *) *) *)
 
-(* _createKitty *)
-(* tokensOfOwner *)
-(* breedWithAuto *)
-(* giveBirth *)
-(* ClockAuction..createAuction *)
-(* ClockAuction.._bid *)
-(* ClockAuction..bid *)
-(* SaleClockAuction..bid *)
-(* averageGen0SalePrice *)
+val _createKitty' = @_createKitty {0}
+val tokensOfOwner' = @tokensOfOwner {1}
+val giveBirth' = @giveBirth {0}
+val ClockAuction_createAuction = ClockAuction..createAuction
+val ClockAuction_bid = ClockAuction..bid
+val SaleClockAuction_bid = SaleClockAuction..bid
+val SaleClockAuction_averageGen0SalePrice = SaleClockAuction..averageGen0SalePrice
+
+(* val _ = dispatch { *)
+(* _createKitty = _createKitty', *)
+(* tokensOfOwner = tokensOfOwner', *)
+(* breedWithAuto = breedWithAuto, *)
+(* giveBirth = giveBirth', *)
+(* ClockAuction_createAuction = ClockAuction_createAuction, *)
+(* ClockAuction_bid = ClockAuction_bid, *)
+(* SaleClockAuction_bid = SaleClockAuction_bid, *)
+(* SaleClockAuction_averageGen0SalePrice = SaleClockAuction_averageGen0SalePrice, *)
+(* } *)
 
 end
