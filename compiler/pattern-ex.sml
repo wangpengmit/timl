@@ -770,13 +770,16 @@ fun remove_deep_many fresh_name (params as (shift_i_e, shift_e_e, subst_e_e, EV,
               (* val () = println "after" *)
             in
               case is_all_Wildcard pns of
-                  NONE => remove_deep_many matchees pks'
+                  NONE =>
+                  (*todo: should evaluate 'matchee' first*)
+                  remove_deep_many matchees pks'
                 | SOME shape =>
                   case shape of
                       ShTT () =>
                       let
                         val () = is_all_TT pns
                       in
+                        (*todo: should evaluate 'matchee' first*)
                         remove_deep_many matchees pks'
                       end
                     (* | ShPair => *)
