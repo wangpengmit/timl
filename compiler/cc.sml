@@ -28,19 +28,19 @@ open MicroTiML
 fun free_ivars_with_anno_idx_visitor_vtable cast output =
   let
     fun visit_IVar this env (data as (var, sorts)) =
-        let
-          val sorts = visit_list (#visit_sort (cast this) this) env sorts
-          val () = 
-              case var of
-                  QID (_, (x, _)) =>
-                  (case sorts of
-                       s :: _ => output (Free_i x, s)
-                     | [] => raise Impossible $ "free_ivars_with_anno_i/IVar/QID/sorts=[]: " ^ str_int x
-                  )
-                | _ => ()
-        in
-          IVar data
-        end
+      let
+        val sorts = visit_list (#visit_sort (cast this) this) env sorts
+        val () = 
+            case var of
+                QID (_, (x, _)) =>
+                (case sorts of
+                     s :: _ => output (Free_i x, s)
+                   | [] => raise Impossible $ "free_ivars_with_anno_i/IVar/QID/sorts=[]: " ^ str_int x
+                )
+              | _ => ()
+      in
+        IVar data
+      end
     val vtable = 
         default_idx_visitor_vtable
           cast
@@ -56,7 +56,7 @@ fun free_ivars_with_anno_idx_visitor_vtable cast output =
   end
 
 fun new_free_ivars_with_anno_idx_visitor a = new_idx_visitor free_ivars_with_anno_idx_visitor_vtable a
-    
+                                                             
 fun free_ivars_with_anno_i_fn output b =
   let
     val visitor as (IdxVisitor vtable) = new_free_ivars_with_anno_idx_visitor output
@@ -72,17 +72,17 @@ fun free_ivars_with_anno_s_fn output b =
   end
     
 fun free_ivars_with_anno_ty_visitor_vtable cast (output, visit_i, visit_s) =
-    default_ty_visitor_vtable
-      cast
-      extend_noop
-      extend_noop
-      visit_noop
-      visit_noop
-      (ignore_this_env $ visit_i output)
-      (ignore_this_env $ visit_s output)
-      
-fun new_free_ivars_with_anno_ty_visitor params = new_ty_visitor free_ivars_with_anno_ty_visitor_vtable params
+  default_ty_visitor_vtable
+    cast
+    extend_noop
+    extend_noop
+    visit_noop
+    visit_noop
+    (ignore_this_env $ visit_i output)
+    (ignore_this_env $ visit_s output)
     
+fun new_free_ivars_with_anno_ty_visitor params = new_ty_visitor free_ivars_with_anno_ty_visitor_vtable params
+                                                                
 fun free_ivars_with_anno_t_fn output b =
   let
     val visitor as (TyVisitor vtable) = new_free_ivars_with_anno_ty_visitor (output, free_ivars_with_anno_i_fn, free_ivars_with_anno_s_fn)
@@ -91,21 +91,21 @@ fun free_ivars_with_anno_t_fn output b =
   end
 
 fun free_ivars_with_anno_expr_visitor_vtable cast (output, visit_i, visit_s, visit_t) =
-    default_expr_visitor_vtable
-      cast
-      extend_noop
-      extend_noop
-      extend_noop
-      extend_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      (ignore_this_env $ visit_i output)
-      (ignore_this_env $ visit_s output)
-      (ignore_this_env $ visit_t output)
+  default_expr_visitor_vtable
+    cast
+    extend_noop
+    extend_noop
+    extend_noop
+    extend_noop
+    visit_noop
+    visit_noop
+    visit_noop
+    (ignore_this_env $ visit_i output)
+    (ignore_this_env $ visit_s output)
+    (ignore_this_env $ visit_t output)
 
 fun new_free_ivars_with_anno_expr_visitor params = new_expr_visitor free_ivars_with_anno_expr_visitor_vtable params
-    
+                                                                    
 fun free_ivars_with_anno_e_fn output b =
   let
     val visitor as (ExprVisitor vtable) = new_free_ivars_with_anno_expr_visitor (output, free_ivars_with_anno_i_fn, free_ivars_with_anno_s_fn, free_ivars_with_anno_t_fn)
@@ -116,14 +116,14 @@ fun free_ivars_with_anno_e_fn output b =
 fun free_ivars_idx_visitor_vtable cast output =
   let
     fun visit_IVar this env (data as (var, sorts)) =
-        let
-          val () =
-              case var of
-                  QID (_, (x, _)) => output $ Free_i x
-                | _ => ()
-        in
-          IVar data
-        end
+      let
+        val () =
+            case var of
+                QID (_, (x, _)) => output $ Free_i x
+              | _ => ()
+      in
+        IVar data
+      end
     val vtable = 
         default_idx_visitor_vtable
           cast
@@ -139,7 +139,7 @@ fun free_ivars_idx_visitor_vtable cast output =
   end
 
 fun new_free_ivars_idx_visitor a = new_idx_visitor free_ivars_idx_visitor_vtable a
-    
+                                                   
 fun free_ivars_s_fn output b =
   let
     val visitor as (IdxVisitor vtable) = new_free_ivars_idx_visitor output
@@ -157,45 +157,45 @@ fun free_vars_0 f b =
   end
 
 fun free_ivars_s a = free_vars_0 free_ivars_s_fn a
-      
+                                 
 structure TopoSort = TopoSortFn (structure M = IntBinaryMap
                                  structure S = IntBinarySet
                                 )
                                 
 fun free_ivars_with_anno_e e =
-    let
-      val vars_anno = free_vars_with_anno_0 free_ivars_with_anno_e_fn e
-      val vars_anno = map (mapFst unFree_i) vars_anno
-      fun free_ivars_s_set s = TopoSort.SU.to_set $ map unFree_i $ free_ivars_s s
-      fun make_dep_graph vars_anno = TopoSort.MU.to_map $ map (mapSnd free_ivars_s_set)  vars_anno
-      val in_graph = make_dep_graph vars_anno
-      val var2anno = TopoSort.MU.to_map vars_anno
-      val vars = TopoSort.topo_sort in_graph
-                 handle
-                 TopoSortFailed =>
-                 let
-                   val msg = sprintf "topo_sort failed on expr: $\n" [ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e]
-                   val msg = msg ^ sprintf "with dep graph: $\n" [str_ls (str_pair (str_int, str_ls str_int o TopoSort.SU.to_list)) $ IntBinaryMap.listItemsi in_graph]
-                 in
-                   raise Impossible msg
-                 end
-      fun attach_values m ks = map (fn k => (k, IntBinaryMap.find (m, k))) ks
-      val vars_anno = map (mapSnd valOf) $ attach_values var2anno vars
-      val vars_anno = map (mapFst Free_i) vars_anno
-    in
-      vars_anno
-    end
+  let
+    val vars_anno = free_vars_with_anno_0 free_ivars_with_anno_e_fn e
+    val vars_anno = map (mapFst unFree_i) vars_anno
+    fun free_ivars_s_set s = TopoSort.SU.to_set $ map unFree_i $ free_ivars_s s
+    fun make_dep_graph vars_anno = TopoSort.MU.to_map $ map (mapSnd free_ivars_s_set)  vars_anno
+    val in_graph = make_dep_graph vars_anno
+    val var2anno = TopoSort.MU.to_map vars_anno
+    val vars = TopoSort.topo_sort in_graph
+               handle
+               TopoSortFailed =>
+               let
+                 val msg = sprintf "topo_sort failed on expr: $\n" [ExportPP.pp_e_to_string (NONE, NONE) $ ExportPP.export (NONE, NONE) ([], [], [], []) e]
+                 val msg = msg ^ sprintf "with dep graph: $\n" [str_ls (str_pair (str_int, str_ls str_int o TopoSort.SU.to_list)) $ IntBinaryMap.listItemsi in_graph]
+               in
+                 raise Impossible msg
+               end
+    fun attach_values m ks = map (fn k => (k, IntBinaryMap.find (m, k))) ks
+    val vars_anno = map (mapSnd valOf) $ attach_values var2anno vars
+    val vars_anno = map (mapFst Free_i) vars_anno
+  in
+    vars_anno
+  end
 
 fun free_tvars_with_anno_ty_visitor_vtable cast output (* : ('this, unit, 'var, 'basic_sort, 'idx, 'sort, 'var, 'basic_sort, 'idx, 'sort) ty_visitor_vtable *) =
   let
     fun visit_TVar this env (data as (var, ks)) =
-        case var of
-            QID (_, (x, _)) =>
-            (case ks of
-                 k :: _ => (output (Free_t x, k); TVar data)
-               | [] => raise Impossible "free_tvars_with_anno_t/TVar/QID/ks=[]"
-            )
-          | _ => TVar data
+      case var of
+          QID (_, (x, _)) =>
+          (case ks of
+               k :: _ => (output (Free_t x, k); TVar data)
+             | [] => raise Impossible "free_tvars_with_anno_t/TVar/QID/ks=[]"
+          )
+        | _ => TVar data
     val vtable = 
         default_ty_visitor_vtable
           cast
@@ -211,7 +211,7 @@ fun free_tvars_with_anno_ty_visitor_vtable cast output (* : ('this, unit, 'var, 
   end
 
 fun new_free_tvars_with_anno_ty_visitor a = new_ty_visitor free_tvars_with_anno_ty_visitor_vtable a
-    
+                                                           
 fun free_tvars_with_anno_t_fn output b =
   let
     val visitor as (TyVisitor vtable) = new_free_tvars_with_anno_ty_visitor output
@@ -220,23 +220,23 @@ fun free_tvars_with_anno_t_fn output b =
   end
     
 fun free_tvars_with_anno_t a = free_vars_with_anno_0 free_tvars_with_anno_t_fn a
-      
+                                                     
 fun free_tvars_with_anno_expr_visitor_vtable cast (output, visit_t) (* : ('this, int, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty2) expr_visitor_vtable *) =
-    default_expr_visitor_vtable
-      cast
-      extend_noop
-      extend_noop
-      extend_noop
-      extend_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      visit_noop
-      (ignore_this_env $ visit_t output)
+  default_expr_visitor_vtable
+    cast
+    extend_noop
+    extend_noop
+    extend_noop
+    extend_noop
+    visit_noop
+    visit_noop
+    visit_noop
+    visit_noop
+    visit_noop
+    (ignore_this_env $ visit_t output)
 
 fun new_free_tvars_with_anno_expr_visitor params = new_expr_visitor free_tvars_with_anno_expr_visitor_vtable params
-    
+                                                                    
 fun free_tvars_with_anno_e_fn output b =
   let
     val visitor as (ExprVisitor vtable) = new_free_tvars_with_anno_expr_visitor (output, free_tvars_with_anno_t_fn)
@@ -249,10 +249,10 @@ fun free_tvars_with_anno_e a = free_vars_with_anno_0 free_tvars_with_anno_e_fn a
 val code_blocks = ref ([] : (free_e * string * (var, idx, sort, basic_sort kind, (var, basic_sort, idx, sort) ty) expr) list)
 val code_labels = ref IntBinarySet.empty
 fun add_code_block (decl as (x, _, _)) =
-    (push_ref code_blocks decl;
-     binop_ref (curry IntBinarySet.add) code_labels (unFree_e x)
-    )
-                      
+  (push_ref code_blocks decl;
+   binop_ref (curry IntBinarySet.add) code_labels (unFree_e x)
+  )
+    
 fun free_evars_with_anno_expr_visitor_vtable cast (excluded, output) (* : ('this, unit, 'var, 'idx, 'sort, 'kind, 'ty, 'var, 'idx, 'sort, 'kind, 'ty) expr_visitor_vtable *) =
   let
     fun visit_EAscType this env (e, t) =
@@ -271,12 +271,12 @@ fun free_evars_with_anno_expr_visitor_vtable cast (excluded, output) (* : ('this
           | _ => EAscType (#visit_expr (cast this) this env e, t)
       end
     fun visit_var this env var =
-        case var of
-            QID (_, (x, _)) =>
-            if IntBinarySet.member (excluded, x) then var
-            else 
-              raise Impossible $ "free_evars_with_anno/visit_var/QID without EAscType: " ^ str_int x
-          | _ => var
+      case var of
+          QID (_, (x, _)) =>
+          if IntBinarySet.member (excluded, x) then var
+          else 
+            raise Impossible $ "free_evars_with_anno/visit_var/QID without EAscType: " ^ str_int x
+        | _ => var
     val vtable = 
         default_expr_visitor_vtable
           cast
@@ -305,7 +305,7 @@ fun free_evars_with_anno_fn excluded output b =
   end
 
 fun free_evars_with_anno excluded a = free_vars_with_anno_0 (free_evars_with_anno_fn excluded) a
-      
+                                                            
 fun IV (x, s) = IVar (make_Free_i x, [s])
 fun TV (x, k) = TVar (make_Free_t x, [k])
 
@@ -324,15 +324,15 @@ fun a %$ b = EApp (a, b)
 (*     in *)
 (*       (x, name, b) *)
 (*     end *)
-                      
+                  
 fun unBindSimpOpen_e bind =
-    let
-      val (name, b) = unBindSimpName bind
-      val x = fresh_evar ()
-      val b = open0_e_e x b
-    in
-      (x, name, b)
-    end
+  let
+    val (name, b) = unBindSimpName bind
+    val x = fresh_evar ()
+    val b = open0_e_e x b
+  in
+    (x, name, b)
+  end
 
 fun cc_ty_visitor_vtable cast () =
   let
@@ -349,56 +349,56 @@ fun cc_ty_visitor_vtable cast () =
       let
         fun cc_t t = #visit_ty (cast this) this env t
       in
-      case t of
-          TArrow _ => cc_t_arrow t
-        | TQuan (Forall (), _, _) => cc_t_arrow t
-        | TQuanI (Forall (), _) => cc_t_arrow t
-        | TQuan (Exists _, _, bind) =>
-          let
-            val (k, (name, t)) = unBindAnnoName bind
-            val a = fresh_tvar ()
-            val t = open0_t_t a t
-            val t = cc_t t
-          in
-            TExists $ close0_t_t_anno ((a, fst name, k), t)
-          end
-        | TQuanI (Exists _, bind) =>
-          let
-            val (s, (name, (_, t))) = unBindAnnoName bind
-            val a = fresh_ivar ()
-            val t = open0_i_t a t
-            val t = cc_t t
-          in
-            TExistsI $ close0_i_t_anno ((a, fst name, s), t)
-          end
-        | TRec bind =>
-          let
-            val (k, (name, t)) = unBindAnnoName bind
-            val a = fresh_tvar ()
-            val t = open0_t_t a t
-            val t = cc_t t
-          in
-            TRec $ close0_t_t_anno ((a, fst name, k), t)
-          end
-        | TAbsT bind =>
-          let
-            val (k, (name, t)) = unBindAnnoName bind
-            val a = fresh_tvar ()
-            val t = open0_t_t a t
-            val t = cc_t t
-          in
-            TAbsT $ close0_t_t_anno ((a, fst name, k), t)
-          end
-        | TAbsI bind =>
-          let
-            val (s, (name, t)) = unBindAnnoName bind
-            val a = fresh_ivar ()
-            val t = open0_i_t a t
-            val t = cc_t t
-          in
-            TAbsI $ close0_i_t_anno ((a, fst name, s), t)
-          end
-        | _ => #visit_ty vtable this env t (* call super *)
+        case t of
+            TArrow _ => cc_t_arrow t
+          | TQuan (Forall (), _, _) => cc_t_arrow t
+          | TQuanI (Forall (), _) => cc_t_arrow t
+          | TQuan (Exists _, _, bind) =>
+            let
+              val (k, (name, t)) = unBindAnnoName bind
+              val a = fresh_tvar ()
+              val t = open0_t_t a t
+              val t = cc_t t
+            in
+              TExists $ close0_t_t_anno ((a, fst name, k), t)
+            end
+          | TQuanI (Exists _, bind) =>
+            let
+              val (s, (name, (_, t))) = unBindAnnoName bind
+              val a = fresh_ivar ()
+              val t = open0_i_t a t
+              val t = cc_t t
+            in
+              TExistsI $ close0_i_t_anno ((a, fst name, s), t)
+            end
+          | TRec bind =>
+            let
+              val (k, (name, t)) = unBindAnnoName bind
+              val a = fresh_tvar ()
+              val t = open0_t_t a t
+              val t = cc_t t
+            in
+              TRec $ close0_t_t_anno ((a, fst name, k), t)
+            end
+          | TAbsT bind =>
+            let
+              val (k, (name, t)) = unBindAnnoName bind
+              val a = fresh_tvar ()
+              val t = open0_t_t a t
+              val t = cc_t t
+            in
+              TAbsT $ close0_t_t_anno ((a, fst name, k), t)
+            end
+          | TAbsI bind =>
+            let
+              val (s, (name, t)) = unBindAnnoName bind
+              val a = fresh_ivar ()
+              val t = open0_i_t a t
+              val t = cc_t t
+            in
+              TAbsI $ close0_i_t_anno ((a, fst name, s), t)
+            end
+          | _ => #visit_ty vtable this env t (* call super *)
       end
     val vtable = override_visit_ty vtable visit_ty
   in
@@ -406,14 +406,14 @@ fun cc_ty_visitor_vtable cast () =
   end
 
 and new_cc_ty_visitor a = new_ty_visitor cc_ty_visitor_vtable a
-    
+                                         
 and cc_t t =
-  let
-    val visitor as (TyVisitor vtable) = new_cc_ty_visitor ()
-  in
-    #visit_ty vtable visitor () t
-  end
-    
+    let
+      val visitor as (TyVisitor vtable) = new_cc_ty_visitor ()
+    in
+      #visit_ty vtable visitor () t
+    end
+      
 and cc_t_arrow t =
     let
       val (binds, t) = open_collect_TForallIT t
@@ -430,21 +430,21 @@ and cc_t_arrow t =
     end
 
 fun apply_TForallIT b args =
-    case (b, args) of
-        (TQuanI (Forall (), bind), inl v :: args) =>
-        let
-          val (_, (_, (_, b))) = unBindAnnoName bind
-        in
-          apply_TForallIT (subst0_i_t v b) args
-        end
-      | (TQuan (Forall (), _, bind), inr v :: args) =>
-        let
-          val (_, (_, b)) = unBindAnnoName bind
-        in
-          apply_TForallIT (subst0_t_t v b) args
-        end
-      | (_, []) => b
-      | _ => raise Impossible "apply_TForallIT"
+  case (b, args) of
+      (TQuanI (Forall (), bind), inl v :: args) =>
+      let
+        val (_, (_, (_, b))) = unBindAnnoName bind
+      in
+        apply_TForallIT (subst0_i_t v b) args
+      end
+    | (TQuan (Forall (), _, bind), inr v :: args) =>
+      let
+        val (_, (_, b)) = unBindAnnoName bind
+      in
+        apply_TForallIT (subst0_t_t v b) args
+      end
+    | (_, []) => b
+    | _ => raise Impossible "apply_TForallIT"
 
 fun cc_expr_visitor_vtable cast () =
   let
@@ -567,7 +567,7 @@ fun cc_expr_visitor_vtable cast () =
                   e
                 end
               | _ => #visit_expr vtable this env e (* call super *)
-        (* val () = println $ "cc() finished: " ^ e_str *)
+                                 (* val () = println $ "cc() finished: " ^ e_str *)
       in
         e
       end
@@ -579,17 +579,17 @@ fun cc_expr_visitor_vtable cast () =
 and new_cc_expr_visitor params = new_expr_visitor cc_expr_visitor_vtable params
 
 and cc env b =
-  let
-    val visitor as (ExprVisitor vtable) = new_cc_expr_visitor ()
-  in
-    #visit_expr vtable visitor env b
-  end
+    let
+      val visitor as (ExprVisitor vtable) = new_cc_expr_visitor ()
+    in
+      #visit_expr vtable visitor env b
+    end
 
 and cc_abs env e_all =
     let
       (* val () = println $ "cc_abs(): before open_collect_EAbsIT()" *)
       val (binds, e) = open_collect_EAbsIT e_all (* todo: this could be slow, should be combined *)
-      (* val () = println $ "cc_abs(): after open_collect_EAbsIT()" *)
+                                           (* val () = println $ "cc_abs(): after open_collect_EAbsIT()" *)
     in
       case e of
           ERec bind => cc_ERec env e_all binds bind
@@ -621,17 +621,17 @@ and cc_ERec env e_all outer_binds bind =
       val (ys, sigmas) = unzip $ ys_anno
       fun add_name prefix (i, (a, b)) = (a, prefix ^ str_int (1+i), b)
       fun eq_bind xx' =
-          case xx' of
-              (inl (x, _, _), inl (x', _, _)) => x = x'
-            | (inr (x, _, _), inr (x', _, _)) => x = x'
-            | _ => false
+        case xx' of
+            (inl (x, _, _), inl (x', _, _)) => x = x'
+          | (inr (x, _, _), inr (x', _, _)) => x = x'
+          | _ => false
 
       val free_ivars = rev env
       (* val () = println "before free_ivars" *)
       (* (* val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e *) *)
       (* val free_ivars = mapi (add_name "a") $ free_ivars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *) (* todo: e can be much smaller than e_all because e is after CC, so collecting free vars on e_all could be slow *) *)
       (* val () = println "after free_ivars" *)
-                       
+                           
       (* val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e *)
       val free_tvars = mapi (add_name "'a") $ free_tvars_with_anno_e e_all (* need [e_all] here because the [e_all - e] part may contain free vars *)
       val betas = map inl free_ivars @ map inr free_tvars
@@ -643,12 +643,12 @@ and cc_ERec env e_all outer_binds bind =
       val z_code = fresh_evar ()
       val z_env = fresh_evar ()
       fun EAppITs_binds (e, binds) =
-          let
-            (* fun proj_3_1 (a1, _, _) = a1 *)
-            fun make_var f (x, _, anno) = f (x, anno)
-          in
-            EAppITs (e, map (map_inl_inr (make_var IV) (make_var TV)) binds)
-          end
+        let
+          (* fun proj_3_1 (a1, _, _) = a1 *)
+          fun make_var f (x, _, anno) = f (x, anno)
+        in
+          EAppITs (e, map (map_inl_inr (make_var IV) (make_var TV)) binds)
+        end
       val def_x = EPack (cc_t t_x, t_env, EPair (EAppITs_binds (EV z_code, betas @ outer_binds), EV z_env))
                         
       (* val p = fresh_evar () *)
@@ -658,7 +658,7 @@ and cc_ERec env e_all outer_binds bind =
       val len_ys = length ys
       val ys_defs = mapi (fn (i, y) => (y, "y" ^ str_int (1+i), EProj (i, EV z_env))) ys
       (* val () = println $ "cc(): before ELetManyClose()" *)
-                       
+                         
       val e = ELetManyClose ((x, fst name_x, def_x) :: ys_defs, e)
       (* val e = ELetManyClose ((p, "p", p_def) :: (x, fst name_x, def_x) :: ys_defs, e) *)
                             
@@ -694,8 +694,8 @@ and cc_ERec env e_all outer_binds bind =
                     
       val x_v_code = (x_code, decorate_code_name $ fst name_x, v_code)
       val () = add_code_block x_v_code
-      (* val e = ELetClose (x_v_code, e) *)
-      (* val () = println $ "cc() done on: " ^ fst name_x *)
+                              (* val e = ELetClose (x_v_code, e) *)
+                              (* val () = println $ "cc() done on: " ^ fst name_x *)
     in
       e
     end
@@ -716,18 +716,18 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
           visit_noop
           visit_noop
     fun visit_ERec this env bind =
-        let
-          val (t_x, (name_x, e)) = unBindAnnoName bind
-          val (binds, e) = collect_EAbsIT e
-          val (st, (t_y, (name_y, e)), i_spec) = assert_EAbs e
-          val (e, _) = assert_EAscState e
-          (* val (e, _) = assert_EAscTimeSpace e *)
-          val (e, _) = assert_EAscType e
-          val e = #visit_expr (cast this) this env e
-          val e = EAbs (st, EBindAnno ((name_y, t_y), e), i_spec)
-        in
-          ERec $ EBindAnno ((name_x, t_x), EAbsITs (binds, e))
-        end
+      let
+        val (t_x, (name_x, e)) = unBindAnnoName bind
+        val (binds, e) = collect_EAbsIT e
+        val (st, (t_y, (name_y, e)), i_spec) = assert_EAbs e
+        val (e, _) = assert_EAscState e
+        (* val (e, _) = assert_EAscTimeSpace e *)
+        val (e, _) = assert_EAscType e
+        val e = #visit_expr (cast this) this env e
+        val e = EAbs (st, EBindAnno ((name_y, t_y), e), i_spec)
+      in
+        ERec $ EBindAnno ((name_x, t_x), EAbsITs (binds, e))
+      end
     val mark_begin = "__$begin$_"
     val len_mark_begin = String.size mark_begin
     val mark_end = #"$"
@@ -753,25 +753,25 @@ fun convert_EAbs_to_ERec_expr_visitor_vtable cast () =
         ERec $ EBindAnno (((fun_name, dummy), TArrow ((pre, t_y), i, (post, t_e))), shift01_e_e e)
       end
     fun visit_ELet this env (data as (e1, bind)) =
-        let
-          val ((name_x, _), _) = unBindSimpName bind
-          val (e1, ascs) = collect_EAscTypeTime e1
-          val (binds, e1) = collect_EAbsIT e1
-          val e1 = 
-              case e1 of
-                  EAbs (st, bind1, i_spec) =>
-                  let
-                    val (t_y, ((name_y, r), e1)) = unBindAnnoName bind1
-                  in
-                    EAbs (st, EBindAnno (((mark_begin ^ name_x ^ String.str mark_end ^ name_y, r), t_y), e1), i_spec)
-                  end
-                | _ => e1
-          val e1 = EAbsITs (binds, e1)
-          val e1 = EAscTypeTimes (e1, ascs)
-        in
-          (* call super *)
-          #visit_ELet vtable this env (e1, bind)
-        end
+      let
+        val ((name_x, _), _) = unBindSimpName bind
+        val (e1, ascs) = collect_EAscTypeTime e1
+        val (binds, e1) = collect_EAbsIT e1
+        val e1 = 
+            case e1 of
+                EAbs (st, bind1, i_spec) =>
+                let
+                  val (t_y, ((name_y, r), e1)) = unBindAnnoName bind1
+                in
+                  EAbs (st, EBindAnno (((mark_begin ^ name_x ^ String.str mark_end ^ name_y, r), t_y), e1), i_spec)
+                end
+              | _ => e1
+        val e1 = EAbsITs (binds, e1)
+        val e1 = EAscTypeTimes (e1, ascs)
+      in
+        (* call super *)
+        #visit_ELet vtable this env (e1, bind)
+      end
     val vtable = override_visit_ERec vtable visit_ERec
     val vtable = override_visit_EAbs vtable visit_EAbs
     val vtable = override_visit_ELet vtable visit_ELet
@@ -807,7 +807,7 @@ fun remove_var_anno_idx_visitor_vtable cast () =
   end
 
 fun new_remove_var_anno_idx_visitor a = new_idx_visitor remove_var_anno_idx_visitor_vtable a
-    
+                                                        
 fun remove_var_anno_i b =
   let
     val visitor as (IdxVisitor vtable) = new_remove_var_anno_idx_visitor ()
@@ -841,7 +841,7 @@ fun remove_var_anno_ty_visitor_vtable cast () =
   end
 
 fun new_remove_var_anno_ty_visitor a = new_ty_visitor remove_var_anno_ty_visitor_vtable a
-    
+                                                      
 fun remove_var_anno_t b =
   let
     val visitor as (TyVisitor vtable) = new_remove_var_anno_ty_visitor ()
@@ -951,7 +951,7 @@ fun combine_non_compute_expr_visitor_vtable cast is_debug_cost =
   end
 
 fun new_combine_non_compute_expr_visitor params = new_expr_visitor combine_non_compute_expr_visitor_vtable params
-    
+                                                                   
 fun combine_non_compute params b =
   let
     val visitor as (ExprVisitor vtable) = new_combine_non_compute_expr_visitor params
@@ -982,7 +982,7 @@ val cc_tc_flags =
     in
       [Anno_EAbs, Anno_EVar, Anno_EAbs_state, Anno_EUnpackI]
     end
-                     
+      
 (* val forget_var = Subst.forget_var *)
 (* val forget_i_i = Subst.forget_i_i *)
 (* val forget_i_s = Subst.forget_i_s *)
@@ -990,7 +990,7 @@ val cc_tc_flags =
 (* fun forget_t_t a = shift_t_t_fn forget_var a *)
 (* fun forget_i_e a = shift_i_e_fn (forget_i_i, forget_i_s, forget_i_t) a *)
 (* fun forget_t_e a = shift_t_e_fn (forget_t_t) a *)
-                               
+      
 (* fun check_ERec_closed_expr_visitor_vtable cast output = *)
 (*   let *)
 (*     val vtable =  *)
@@ -1060,7 +1060,7 @@ open MicroTiMLLongId
 open MicroTiML
        
 fun fail () = OS.Process.exit OS.Process.failure
-                   
+                              
 end
 
 open TestUtil
@@ -1118,21 +1118,21 @@ fun test1 dirname =
     open ExportPP
     val () = pp_t NONE $ export_t NONE ([], []) t
     fun print_time_space (i, j) =
-        let
-          val () = println "Time:"
-          val () = println $ ToString.str_i Gctx.empty [] $ simp_i i
-          val () = println "Space:"
-          val () = println $ ToString.str_i Gctx.empty [] $ simp_i j
-        in
-          ()
-        end
+      let
+        val () = println "Time:"
+        val () = println $ ToString.str_i Gctx.empty [] $ simp_i i
+        val () = println "Space:"
+        val () = println $ ToString.str_i Gctx.empty [] $ simp_i j
+      in
+        ()
+      end
     val () = print_time_space i
     (* val () = println $ "#VCs: " ^ str_int (length vcs) *)
     (* val () = println "VCs:" *)
     (* val () = app println $ concatMap (fn ls => ls @ [""]) $ map (str_vc false "") vcs *)
     (* val () = pp_e $ export empty_ctx e *)
     (* val () = println "" *)
-                     
+                              
     val () = println "Started CPS conversion ..."
     open MicroTiMLUtil
     val (e, _) = cps (e, TUnit, IEmptyState) (EHaltFun true TUnit TUnit, TN0)
@@ -1152,7 +1152,7 @@ fun test1 dirname =
     val () = print_time_space i
     (* val () = pp_e (NONE, NONE) $ export (NONE, NONE) empty_ctx e *)
     (* val () = println "" *)
-                     
+                              
     val () = println "Started CC ..."
     val e = cc [] e
     val () = println "Finished CC"
@@ -1171,7 +1171,7 @@ fun test1 dirname =
     val () = println "Type:"
     val () = pp_t NONE $ export_t NONE ([], []) t
     val () = print_time_space i
-                     
+                              
     val () = println "CC.UnitTest passed"
   in
     ((* t, e *))
@@ -1179,11 +1179,11 @@ fun test1 dirname =
   handle MicroTiMLTypecheck.MTCError msg => (println $ "MTiMLTC.MTCError: " ^ substr 0 1000 msg; fail ())
        | TypeCheck.Error (_, msgs) => (app println $ "TC.Error: " :: msgs; fail ())
        | NameResolve.Error (_, msg) => (println $ "NR.Error: " ^ msg; fail ())
-    
+                                         
 val test_suites = [
-      test1
+  test1
 ]
-                            
+                    
 end
                        
 end
