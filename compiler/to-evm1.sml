@@ -357,7 +357,8 @@ fun impl_nat_cmp opr =
     | NCGe () => [GT (), ISZERO ()]
     | NCEq () => [EQ ()]
     | NCNEq () => [EQ (), ISZERO ()]
-      
+
+(* todo: state annotations can be provided by the typechecker instead of calculated by the translation function (the advantage of calculating state specs by the translation is that initial state can be a parameter when translating the whole program; this flexibility is not used currently since the 'init_st' is fixed) *)
 val st_ref = ref IEmptyState
 
 (* adding noop instructions for costs debugging *)                 
