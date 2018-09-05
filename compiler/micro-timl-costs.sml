@@ -4,7 +4,9 @@ open EVMCosts
 open Operators
 
 val C_Var = max C_get_reg C_PUSH
+val C_EVar = 0 (* each computation is responsible for accounting for reading from variables, so here the cost is zero *)
 val C_Const = C_PUSH
+val C_EConst = C_Const + C_Let
 val C_Let = C_set_reg
 val C_Proj = C_PUSH + C_ADD + C_MLOAD
 val C_PtrProj = C_PUSH + C_ADD
@@ -147,8 +149,6 @@ val C_Case_BeforeCodeGen = C_Var + C_PUSH + C_br_sum + C_Case_branch_prelude
 fun C_Case_BeforeCPS n_live_vars = C_Case_BeforeCodeGen
 fun M_Case_BeforeCPS n_live_vars = 0                    
 
-val C_EVar = 0 (* each computation is responsible for accounting for reading from variables, so here the cost is zero *)
-val C_EConst = C_Const + C_Let
 fun C_Env name =
     case name of
         EnvSender () => C_CALLER
