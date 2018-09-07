@@ -5,9 +5,9 @@ open Operators
 
 val C_Var = max C_get_reg C_PUSH
 val C_EVar = 0 (* each computation is responsible for accounting for reading from variables, so here the cost is zero *)
+val C_Let = C_set_reg
 val C_Const = C_PUSH
 val C_EConst = C_Const + C_Let
-val C_Let = C_set_reg
 val C_Proj = C_PUSH + C_ADD + C_MLOAD
 val C_PtrProj = C_PUSH + C_ADD
 val C_Printc = 5 * C_PUSH + C_MSTORE + C_ADD + C_LOG 0 + C_logdata
