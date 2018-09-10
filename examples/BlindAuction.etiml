@@ -31,8 +31,8 @@ end
 
 contract BlindAuction = struct
     type Bid = {
-        blindedBid : bytes32,
-        deposit : uint,
+      blindedBid : bytes32,
+      deposit : uint,
     }
 
     public state beneficiary : cell address
@@ -54,8 +54,8 @@ contract BlindAuction = struct
 
     (* event AuctionEnded(address winner, uint highestBid); *)
 
-    fun onlyBefore(_time : uint) = require(now < _time)
-    fun onlyAfter(_time : uint) = require(now > _time)
+    (* fun onlyBefore(_time : uint) = require(now < _time) *)
+    (* fun onlyAfter(_time : uint) = require(now > _time) *)
 
     fun constructor(
         _biddingTime : uint,
@@ -75,14 +75,15 @@ contract BlindAuction = struct
     (*/ not the exact amount are ways to hide the real bid but *)
     (*/ still make the required deposit. The same address can *)
     (*/ place multiple bids. *)
-    fun bid(_blindedBid : bytes32)
+    fun bid(_blindedBid : bytes32, value : uint)
         public
         payable =
       (* onlyBefore(!!biddingEnd); *)
       let i = bidsLength[msg.sender];
       set bids[msg.sender][i].blindedBid _blindedBid;
-      set bids[msg.sender][i].deposit msg.value;
+      set bids[msg.sender][i].deposit (* msg.value *)value;
       set bidsLength[msg.sender] i+1
+      (* ;debug_log (bidsLength[0x1], bids[0x1][0].blindedBid, bids[0x1][0].deposit) *)
 
     (* This is an "internal" function which means that it *)
     (* can only be called from the contract itself (or from *)
@@ -107,8 +108,7 @@ contract BlindAuction = struct
         _values : array uint {n},
         _fake : array1 bool {n},
         _secret : array bytes32 {n}
-    )
-        public =
+    ) public =
       (* onlyAfter(!!biddingEnd); *)
       (* onlyBefore(!!revealEnd); *)
       let length = bidsLength[msg.sender];
@@ -130,15 +130,21 @@ contract BlindAuction = struct
             else
               refund := !refund + deref bid->deposit;
               if (not fake && deref bid->deposit >= value) then
-                  if (placeBid(msg.sender, value)) then
-                    refund := !refund - value
-                  end
+                let b = placeBid(msg.sender, value);
+                if b then
+                  refund := !refund - value
+                end
               end;
-              (* Make it impossible for the sender to re-claim *)
-              (* the same deposit. *)
+              (* (* Make it impossible for the sender to re-claim *) *)
+              (* (* the same deposit. *) *)
               &bid->blindedBid ::= 0
             end
-      )
+      );
+      (* debug_log (array_len _values, array_len _fake, array_len _secret); *)
+      (* debug_log (array_get (_values, #0), array_get (_values, #1), array_get (_values, #2), array_get (_values, #3), array_get (_values, #4)); *)
+      (* debug_log (array1_get (_fake, #0), array1_get (_fake, #1), array1_get (_fake, #2), array1_get (_fake, #3), array1_get (_fake, #4)); *)
+      (* debug_log (pendingReturns[0x1]); *)
+      !refund
       (* msg.sender.transfer(refund); *)
 
     (* (*/ Withdraw a bid that was overbid. *) *)
@@ -167,4 +173,24 @@ contract BlindAuction = struct
     (*     beneficiary.transfer(highestBid); *)
     (* } *)
 
+val () = constructor(0, 0, 0x2)
+                         
+val () = bid (0x123, 0x10)
+val () = bid (0x123, 0x20)
+val () = bid (0x123, 0x30)
+val () = bid (0x123, 0x40)
+val () = bid (0x123, 0x50)
+(* val () = debug_log (bidsLength[0x1], bids[0x1][0].blindedBid, bids[0x1][0].deposit) *)
+(* val () = debug_log (bidsLength[0x1], bids[0x1][4].blindedBid, bids[0x1][4].deposit) *)
+(* val r = %reveal ({0x10, 0x20, 0x30, 0x40, 0x50,}, new_array1 (#5, false), new_array (#5, 0)) *)
+(* val () = debug_log (r, pendingReturns[0x1]) *)
+
+val reveal' = @reveal {5}
+
+(* val _ = dispatch { *)
+(* bid = bid, *)
+(* reveal = reveal', *)
+(* } *)
+                    
 end
+

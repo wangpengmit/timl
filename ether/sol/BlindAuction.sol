@@ -19,14 +19,19 @@ contract BlindAuction {
     // Allowed withdrawals of previous bids
     mapping(address => uint) pendingReturns;
 
-    event AuctionEnded(address winner, uint highestBid);
+/*    event AuctionEnded(address winner, uint highestBid);
+    event DebugRefund(uint refund);
+    event DebugReturn(uint return_);
+    event placeBidBegin(uint value, uint highestBid, uint return_);
+    event String(string s);
+    event Point1(bool fake, uint deposit, uint value);*/
 
     /// Modifiers are a convenient way to validate inputs to
     /// functions. `onlyBefore` is applied to `bid` below:
     /// The new function body is the modifier's body where
     /// `_` is replaced by the old function body.
-    modifier onlyBefore(uint _time) { require(now < _time); _; }
-    modifier onlyAfter(uint _time) { require(now > _time); _; }
+    /* modifier onlyBefore(uint _time) { require(now < _time); _; } */
+    /* modifier onlyAfter(uint _time) { require(now > _time); _; } */
 
     constructor(
         uint _biddingTime,
@@ -47,14 +52,14 @@ contract BlindAuction {
     /// not the exact amount are ways to hide the real bid but
     /// still make the required deposit. The same address can
     /// place multiple bids.
-    function bid(bytes32 _blindedBid)
+    function bid(bytes32 _blindedBid, uint value)
         public
         payable
-        onlyBefore(biddingEnd)
+        /* onlyBefore(biddingEnd) */
     {
         bids[msg.sender].push(Bid({
             blindedBid: _blindedBid,
-            deposit: msg.value
+            deposit: /* msg. */value
         }));
     }
 
@@ -67,8 +72,8 @@ contract BlindAuction {
         bytes32[] _secret
     )
         public
-        onlyAfter(biddingEnd)
-        onlyBefore(revealEnd)
+        /* onlyAfter(biddingEnd) */
+        /* onlyBefore(revealEnd) */
     {
         uint length = bids[msg.sender].length;
         require(_values.length == length);
@@ -80,21 +85,27 @@ contract BlindAuction {
             Bid storage bid = bids[msg.sender][i];
             (uint value, bool fake, bytes32 secret) =
                     (_values[i], _fake[i], _secret[i]);
-            if (bid.blindedBid != keccak256(value, fake, secret)) {
+            if (/* bid.blindedBid != keccak256(value, fake, secret) */false) {
                 // Bid was not actually revealed.
                 // Do not refund deposit.
                 continue;
             }
+         //   emit String("point 1");
+        //    emit Point1(fake, bid.deposit, value);
             refund += bid.deposit;
             if (!fake && bid.deposit >= value) {
+        //        emit String("point 2");            
                 if (placeBid(msg.sender, value))
+         //           emit String("point 3");
                     refund -= value;
             }
             // Make it impossible for the sender to re-claim
             // the same deposit.
             bid.blindedBid = bytes32(0);
         }
-        msg.sender.transfer(refund);
+     //   emit DebugRefund(refund);
+     //   emit DebugReturn(pendingReturns[msg.sender]);
+        /* msg.sender.transfer(refund); */
     }
 
     // This is an "internal" function which means that it
@@ -103,41 +114,43 @@ contract BlindAuction {
     function placeBid(address bidder, uint value) internal
             returns (bool success)
     {
+    //    emit placeBidBegin(value, highestBid, pendingReturns[msg.sender]);
         if (value <= highestBid) {
             return false;
         }
         if (highestBidder != 0) {
             // Refund the previously highest bidder.
             pendingReturns[highestBidder] += highestBid;
+      //      emit DebugReturn(pendingReturns[msg.sender]);
         }
         highestBid = value;
         highestBidder = bidder;
         return true;
     }
 
-    /// Withdraw a bid that was overbid.
-    function withdraw() public {
-        uint amount = pendingReturns[msg.sender];
-        if (amount > 0) {
-            // It is important to set this to zero because the recipient
-            // can call this function again as part of the receiving call
-            // before `transfer` returns (see the remark above about
-            // conditions -> effects -> interaction).
-            pendingReturns[msg.sender] = 0;
+    /* /// Withdraw a bid that was overbid. */
+    /* function withdraw() public { */
+    /*     uint amount = pendingReturns[msg.sender]; */
+    /*     if (amount > 0) { */
+    /*         // It is important to set this to zero because the recipient */
+    /*         // can call this function again as part of the receiving call */
+    /*         // before `transfer` returns (see the remark above about */
+    /*         // conditions -> effects -> interaction). */
+    /*         pendingReturns[msg.sender] = 0; */
 
-            msg.sender.transfer(amount);
-        }
-    }
+    /*         msg.sender.transfer(amount); */
+    /*     } */
+    /* } */
 
-    /// End the auction and send the highest bid
-    /// to the beneficiary.
-    function auctionEnd()
-        public
-        onlyAfter(revealEnd)
-    {
-        require(!ended);
-        emit AuctionEnded(highestBidder, highestBid);
-        ended = true;
-        beneficiary.transfer(highestBid);
-    }
+    /* /// End the auction and send the highest bid */
+    /* /// to the beneficiary. */
+    /* function auctionEnd() */
+    /*     public */
+    /*     onlyAfter(revealEnd) */
+    /* { */
+    /*     require(!ended); */
+        /* emit AuctionEnded(highestBidder, highestBid); */
+    /*     ended = true; */
+    /*     beneficiary.transfer(highestBid); */
+    /* } */
 }
