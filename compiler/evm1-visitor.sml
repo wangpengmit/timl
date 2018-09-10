@@ -173,6 +173,7 @@ fun default_evm1_visitor_vtable
           | MACRO_array_init_assign w => MACRO_array_init_assign w
           | MACRO_array_init_len () => MACRO_array_init_len ()
           | MACRO_int2byte () => MACRO_int2byte ()
+          | MACRO_int2bool () => MACRO_int2bool ()
           | MACRO_br_sum () => MACRO_br_sum ()
           | MACRO_map_ptr () => MACRO_map_ptr ()
           | MACRO_vector_ptr () => MACRO_vector_ptr ()

@@ -1,0 +1,170 @@
+pragma etiml ^0.1
+
+structure Pervasive = struct
+  fun inc n = n + 1
+  fun dec n = n - 1
+  fun nat_inc {n : Nat} (n : nat {n}) = n #+ #1
+  fun nat_dec {n : Nat | n >= 1} (n : nat {n}) = n #- #1
+  fun addBy b a = a + b
+  fun subBy b a = a - b
+  fun orBy b a = a bit_or b
+(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
+                                                                                              
+fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52*32)*(eend-start)+50*32 =
+  lets
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then (* waste_time ();  *)acc
+      else
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52*32) * (eend-i)+16*32
+      end
+  in
+    %loop (start, init)
+  end
+  
+  fun require b = if b then (* waste_time ();  *)() else (throw using _) end
+  (* fun unop_ref ['a] {m : Time} {m' : Nat} r (f : 'a -- m, m' --> 'a) = r := f !r *)
+  val ether = 1000000000000000000
+  val minute = 60
+  val hour = 60 * minute
+  val day = 24 * hour
+end
+
+contract BlindAuction = struct
+    type Bid = {
+        blindedBid : bytes32,
+        deposit : uint,
+    }
+
+    public state beneficiary : cell address
+    public state biddingEnd : cell uint
+    public state revealEnd : cell uint
+    public state ended : cell bool
+
+    public state bids : map address (map uint {
+        blindedBid : bytes32,
+        deposit : uint,
+    })
+    public state bidsLength : map address uint
+
+    public state highestBidder : cell address
+    public state highestBid : cell uint
+
+    (* Allowed withdrawals of previous bids *)
+    state pendingReturns : map address uint
+
+    (* event AuctionEnded(address winner, uint highestBid); *)
+
+    fun onlyBefore(_time : uint) = require(now < _time)
+    fun onlyAfter(_time : uint) = require(now > _time)
+
+    fun constructor(
+        _biddingTime : uint,
+        _revealTime : uint,
+        _beneficiary : address
+    ) public =
+        beneficiary ::= _beneficiary;
+        biddingEnd ::= now + _biddingTime;
+        revealEnd ::= !!biddingEnd + _revealTime
+
+    (*/ Place a blinded bid with `_blindedBid` = keccak256(value, *)
+    (*/ fake, secret). *)
+    (*/ The sent ether is only refunded if the bid is correctly *)
+    (*/ revealed in the revealing phase. The bid is valid if the *)
+    (*/ ether sent together with the bid is at least "value" and *)
+    (*/ "fake" is not true. Setting "fake" to true and sending *)
+    (*/ not the exact amount are ways to hide the real bid but *)
+    (*/ still make the required deposit. The same address can *)
+    (*/ place multiple bids. *)
+    fun bid(_blindedBid : bytes32)
+        public
+        payable =
+      (* onlyBefore(!!biddingEnd); *)
+      let i = bidsLength[msg.sender];
+      set bids[msg.sender][i].blindedBid _blindedBid;
+      set bids[msg.sender][i].deposit msg.value;
+      set bidsLength[msg.sender] i+1
+
+    (* This is an "internal" function which means that it *)
+    (* can only be called from the contract itself (or from *)
+    (* derived contracts). *)
+    fun placeBid(bidder : address, value : uint) internal =
+      if (value <= !!highestBid) then
+        false
+      else
+        if (!!highestBidder <> 0) then
+            (* Refund the previously highest bidder. *)
+            modify pendingReturns[!!highestBidder] += !!highestBid
+        end;
+        highestBid ::= value;
+        highestBidder ::= bidder;
+        true
+      end
+
+    (*/ Reveal your blinded bids. You will get a refund for all *)
+    (*/ correctly blinded invalid bids and for all bids except for *)
+    (*/ the totally highest. *)
+    fun reveal {n : Nat} (
+        _values : array uint {n},
+        _fake : array1 bool {n},
+        _secret : array bytes32 {n}
+    )
+        public =
+      (* onlyAfter(!!biddingEnd); *)
+      (* onlyBefore(!!revealEnd); *)
+      let length = bidsLength[msg.sender];
+      let n = array_len _values;
+      require(nat2int n == length);
+      (* require(_fake.length == length); *)
+      (* require(_secret.length == length); *)
+
+      let refund = ref 0;
+      %for_ (#0, n, (), fn {i|0<=i /\ i<n} (i : nat {i}, ()) =>
+            let bid = &bids->[msg.sender]->[nat2int i];
+            let value = array_get (_values, i);
+            let fake = array1_get (_fake, i);
+            let secret = array_get (_secret, i);
+            if ((*bid.blindedBid != keccak256(value, fake, secret)*) false) then
+                (* Bid was not actually revealed. *)
+                (* Do not refund deposit. *)
+                ()
+            else
+              refund := !refund + deref bid->deposit;
+              if (not fake && deref bid->deposit >= value) then
+                  if (placeBid(msg.sender, value)) then
+                    refund := !refund - value
+                  end
+              end;
+              (* Make it impossible for the sender to re-claim *)
+              (* the same deposit. *)
+              &bid->blindedBid ::= 0
+            end
+      )
+      (* msg.sender.transfer(refund); *)
+
+    (* (*/ Withdraw a bid that was overbid. *) *)
+    (* function withdraw() public { *)
+    (*     uint amount = pendingReturns[msg.sender]; *)
+    (*     if (amount > 0) { *)
+    (*         (* It is important to set this to zero because the recipient *) *)
+    (*         (* can call this function again as part of the receiving call *) *)
+    (*         (* before `transfer` returns (see the remark above about *) *)
+    (*         (* conditions -> effects -> interaction). *) *)
+    (*         pendingReturns[msg.sender] = 0; *)
+
+    (*         msg.sender.transfer(amount); *)
+    (*     } *)
+    (* } *)
+
+    (* (*/ End the auction and send the highest bid *) *)
+    (* (*/ to the beneficiary. *) *)
+    (* function auctionEnd() *)
+    (*     public *)
+    (*     onlyAfter(revealEnd) *)
+    (* { *)
+    (*     require(!ended); *)
+    (*     emit AuctionEnded(highestBidder, highestBid); *)
+    (*     ended = true; *)
+    (*     beneficiary.transfer(highestBid); *)
+    (* } *)
+
+end

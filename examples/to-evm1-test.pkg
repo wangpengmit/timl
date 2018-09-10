@@ -8,7 +8,8 @@
 (* EtherDelta.etiml *)
 (* Congress.etiml *)
 (* MultiSig.etiml *)
-CryptoKitties.etiml
+(* CryptoKitties.etiml *)
+BlindAuction.etiml
 
 (* Token2.etiml *)
 

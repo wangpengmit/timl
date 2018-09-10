@@ -1,11 +1,15 @@
 pragma solidity ^0.4.22;
 
+// PW: this way of selling/buying goods is capital heavy because for buying P value of goods both seller and buyer need to commit and lock 2P capital
+
 contract Purchase {
     uint public value;
     address public seller;
     address public buyer;
     enum State { Created, Locked, Inactive }
     State public state;
+    uint public sellerCanWithdraw;
+    uint public buyerCanWithdraw;
 
     // Ensure that `msg.value` is an even number.
     // Division will truncate if it is an odd number.
@@ -59,7 +63,8 @@ contract Purchase {
     {
         emit Aborted();
         state = State.Inactive;
-        seller.transfer(address(this).balance);
+        sellCanWithdraw = address(this).balance;
+        /* seller.transfer(address(this).balance); */
     }
 
     /// Confirm the purchase as buyer.
@@ -75,6 +80,8 @@ contract Purchase {
         emit PurchaseConfirmed();
         buyer = msg.sender;
         state = State.Locked;
+        // PW: If the seller doesn't ship the good after this point, both sides lose 2*value money.
+        //     If the buy receives the good but doesn't call confirmReceived(), seller loses 3*value money and buy loses value money.
     }
 
     /// Confirm that you (the buyer) received the item.
@@ -93,7 +100,31 @@ contract Purchase {
         // NOTE: This actually allows both the buyer and the seller to
         // block the refund - the withdraw pattern should be used.
 
-        buyer.transfer(value);
-        seller.transfer(address(this).balance);
+        /* buyer.transfer(value); */
+        /* seller.transfer(address(this).balance); */
+        
+        buyerCanWithdraw = value;
+        sellerCanWithdraw = address(this).balance;
     }
+
+    function buyerWithdraw()
+        public
+        onlyBuyer
+        inState(State.Inactive)
+    {
+      let value = buyerCanWithdraw;
+      buyerCanWithdraw = 0;
+      buyer.transfer(value);
+    }
+    
+    function sellerWithdraw()
+        public
+        onlySeller
+        inState(State.Inactive)
+    {
+      let value = sellerCanWithdraw;
+      sellerCanWithdraw = 0;
+      seller.transfer(value);
+    }
+    
 }

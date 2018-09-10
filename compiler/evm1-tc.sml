@@ -228,6 +228,7 @@ fun C_inst b =
     | MACRO_array_init_assign _ => raise Impossible $ "C_inst() on MACRO_array_init_assign"
     | MACRO_array_init_len _ => raise Impossible $ "C_inst() on MACRO_array_init_len"
     | MACRO_int2byte _ => raise Impossible $ "C_inst() on MACRO_int2byte"
+    | MACRO_int2bool _ => raise Impossible $ "C_inst() on MACRO_int2bool"
     | MACRO_inj _ => raise Impossible $ "C_inst() on MACRO_inj"
     | MACRO_br_sum _ => raise Impossible $ "C_inst() on MACRO_br_sum"
     | MACRO_map_ptr _ => raise Impossible $ "C_inst() on MACRO_map_ptr"
@@ -738,6 +739,13 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
         val _ = assert_TInt $ whnf itctx t0
       in
         ((itctx, rctx, TByte :: sctx, st))
+      end
+    | MACRO_int2bool () =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val _ = assert_TInt $ whnf itctx t0
+      in
+        ((itctx, rctx, TBool :: sctx, st))
       end
     | MACRO_init_free_ptr _ => ctx
     | MACRO_array_malloc (width, t, is_upward) =>

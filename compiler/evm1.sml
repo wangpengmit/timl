@@ -102,6 +102,7 @@ datatype ('idx, 'ty) inst =
          | MACRO_array_init_assign of int
          | MACRO_array_init_len of unit
          | MACRO_int2byte of unit
+         | MACRO_int2bool of unit
          | MACRO_inj of 'ty inner
          | MACRO_br_sum of unit
          | MACRO_map_ptr of unit

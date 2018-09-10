@@ -203,13 +203,18 @@ fun unify_higher_kind r (k, k') =
       end
     | _  => raise Error (r, [kind_mismatch (str_hk k) str_hk k'])
 
-fun good_width r gctx skctx width t =
+fun good_width r gctx (skctx as (_, kctx)) width t =
   let
     fun err () = raise Error (r, ["array width must be 1 or 32"])
   in
     case simp_i width of
         IConst (ICNat width, _) =>
-        if width = 1 then unify_mt r gctx skctx (t, TByte r)
+        if width = 1 then
+          (case whnf_mt true gctx kctx t of
+               TBase (BTByte (), _) => ()
+             | TBase (BTBool (), _) => ()
+             | _ => raise Error (r, ["array1 can only be with byte or bool"])
+          )
         else if width = 32 then ()
         else err ()
       | _ => err ()

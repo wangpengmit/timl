@@ -25,6 +25,7 @@ fun inline_macro_inst (params as (PUSH_reg, PUSH_tuple_offset, scratch, reg_addr
     | MACRO_array_init_assign w => [DUP3, DUP3, DUP3, ADD ()] @ MSTORE_n w
     | MACRO_array_init_len () => [DUP2, PUSH1nat 32, SWAP1, SUB (), MSTORE ()]
     | MACRO_int2byte () => [PUSH1nat 31, BYTE ()]
+    | MACRO_int2bool () => [PUSH1nat 31, BYTE ()]
     | MACRO_inj t_other =>
       inline_macro_inst (MACRO_tuple_malloc $ Inner [TUnit, TUnit](*only length matters operationally*)) @
       [SWAP1, DUP2, MSTORE (), SWAP1, DUP2, PUSH1nat 32, ADD (), MSTORE ()(* , PACK_SUM (inj, Inner t_other) *)]

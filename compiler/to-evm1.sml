@@ -535,15 +535,26 @@ fun compile st_name2int ectx e =
         [POP (), MARK_PreArray2ArrayPtr ()]
       end
     | EBinOp (EBRead width, e1, e2) =>
-      compile e1 @
-      compile e2 @
-      (if width = 32 then
-         array_ptr @
-         [MLOAD ()]
-       else if width = 1 then
-         [ADD (), PUSH1nat 31, SWAP1, SUB (), MLOAD ()] @ int2byte
-       else raise Impossible "to-evm/ERead: width <> 32 or 1"
-      )
+      let
+        val (e1, t1) = assert_EAscType e1
+        val (e2, _) = assert_EAscType e2
+        val (_, t, _) = assert_TArray $ whnf ([], []) t1
+      in
+        compile e1 @
+        compile e2 @
+        (if width = 32 then
+           array_ptr @
+           [MLOAD ()]
+         else if width = 1 then
+           [ADD (), PUSH1nat 31, SWAP1, SUB (), MLOAD ()] @
+           (case whnf ([], []) t of
+                TConst (TCTiML (BTByte ())) => int2byte
+              | TConst (TCTiML (BTBool ())) => [MACRO_int2bool ()]
+              | _ => raise Impossible "to-evm/ERead1: type must be byte or bool"
+           )
+         else raise Impossible "to-evm/ERead: width <> 32 or 1"
+        )
+      end
     (* | EBinOp (EBRead8 (), e1, e2) => *)
     (*   compile e1 @ *)
     (*   compile e2 @ *)
@@ -1066,7 +1077,7 @@ val code_gen_tc_flags =
     let
       open MicroTiMLTypecheck
     in
-      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EIfi, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EIfi_e2_time, Anno_EPair, Anno_EInj, Anno_ENatCellSet, Anno_EDebugLog]
+      [Anno_ELet, Anno_EUnpack, Anno_EUnpackI, Anno_ECase, Anno_EIfi, Anno_EHalt, Anno_ECase_e2_time, Anno_EIte_e2_time, Anno_EIfi_e2_time, Anno_EPair, Anno_EInj, Anno_ENatCellSet, Anno_EDebugLog, Anno_ERead]
     end
                      
 structure UnitTest = struct
