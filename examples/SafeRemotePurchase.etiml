@@ -1,0 +1,153 @@
+pragma etiml ^0.1
+
+(* PW: this way of selling/buying goods is capital heavy because for buying P value of goods both seller and buyer need to commit and lock 2P capital *)
+
+structure Pervasive = struct
+  fun inc n = n + 1
+  fun dec n = n - 1
+  fun nat_inc {n : Nat} (n : nat {n}) = n #+ #1
+  fun nat_dec {n : Nat | n >= 1} (n : nat {n}) = n #- #1
+  fun addBy b a = a + b
+  fun subBy b a = a - b
+  fun orBy b a = a bit_or b
+(* fun waste_time () = 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 *)
+                                                                                              
+fun for_ ['a] {m1 m2: Time} {m1' m2' start : Nat} {eend : Nat | start <= eend} (start : nat {start}, eend : nat {eend}, init : 'a, f : forall {i : Nat | start <= i /\ i < eend} using (m1, m1'), nat {i} * 'a -- m2, m2' --> 'a) return 'a using (m1+m2+3281.0)*$(eend-start)+4012.0, (m1'+m2'+52*32)*(eend-start)+50*32 =
+  lets
+    fun loop {i : Nat | start <= i /\ i <= eend} (i : nat {i}, acc : 'a) (* using (m1+m2) * $(eend-i), (m1'+m2') * (eend-i) *) =
+      ifi i #>= eend then (* waste_time ();  *)acc
+      else
+        %loop (i #+ #1, %f (i, acc)) using (m1+m2+3281.0) * $(eend-i)+1651.0, (m1'+m2'+52*32) * (eend-i)+16*32
+      end
+  in
+    %loop (start, init)
+  end
+  
+  fun require b = if b then (* waste_time ();  *)() else (throw using _) end
+  (* fun unop_ref ['a] {m : Time} {m' : Nat} r (f : 'a -- m, m' --> 'a) = r := f !r *)
+  val ether = 1000000000000000000
+  val minute = 60
+  val hour = 60 * minute
+  val day = 24 * hour
+end
+
+contract Purchase = struct
+    public state value : cell uint
+    public state seller : cell address
+    public state buyer : cell address
+    type State = int
+    val Created = 0
+    val Locked = 1
+    val Inactive = 2
+    public state mState : cell int
+    public state sellerCanWithdraw : cell uint
+    public state buyerCanWithdraw : cell uint
+
+    (* Ensure that `msg.value` is an even number. *)
+    (* Division will truncate if it is an odd number. *)
+    (* Check via multiplication that it wasn't an odd number. *)
+    fun constructor(value_) public payable =
+        seller ::= msg.sender;
+        value ::= (* msg.value *)value_ / 2;
+        require((2 * !!value) == (* msg.value *)value_)
+
+    (* modifier condition(bool _condition) { *)
+    (*     require(_condition); *)
+    (*     _; *)
+    (* } *)
+
+    fun onlyBuyer() =
+        require(
+            msg.sender == !!buyer
+        )
+
+    fun onlySeller() =
+        require(
+            msg.sender == !!seller
+        )
+
+    fun inState(_state : State) =
+        require(
+            !!mState == _state
+        )
+
+    (* event Aborted(); *)
+    (* event PurchaseConfirmed(); *)
+    (* event ItemReceived(); *)
+
+    (*/ Abort the purchase and reclaim the ether. *)
+    (*/ Can only be called by the seller before *)
+    (*/ the contract is locked. *)
+    fun abort() public =
+      onlySeller ();
+      inState(Created);
+      (* emit Aborted(); *)
+      mState ::= Inactive;
+      (* seller.transfer(this_balance) *)
+      sellerCanWithdraw ::= this_balance
+
+    (*/ Confirm the purchase as buyer. *)
+    (*/ Transaction has to include `2 * value` ether. *)
+    (*/ The ether will be locked until confirmReceived *)
+    (*/ is called. *)
+    fun confirmPurchase()
+        public
+        payable =
+      inState(Created);
+      require(msg.value == (2 * !!value));
+      (* emit PurchaseConfirmed(); *)
+      buyer ::= msg.sender;
+      mState ::= Locked
+      (* PW: If the seller doesn't ship the good after this point, both sides lose 2*value money. *)
+      (*     If the buy receives the good but doesn't call confirmReceived(), seller loses 3*value money and buy loses value money. *)
+      (* ;debug_log (!!mState) *)
+
+    (*/ Confirm that you (the buyer) received the item. *)
+    (*/ This will release the locked ether. *)
+    fun confirmReceived() public =
+      onlyBuyer ();
+      inState(Locked);
+      (* emit ItemReceived(); *)
+      (* It is important to change the state first because *)
+      (* otherwise, the contracts called using `send` below *)
+      (* can call in again here. *)
+      mState ::= Inactive;
+
+      (* NOTE: This actually allows both the buyer and the seller to *)
+      (* block the refund - the withdraw pattern should be used. *)
+
+      (* buyer.transfer(value); *)
+      (* seller.transfer(address(this).balance); *)
+      
+      buyerCanWithdraw ::= !!value;
+      (* sellerCanWithdraw ::= this_balance - !!value *)
+      sellerCanWithdraw ::= 3 * !!value
+      (* ;debug_log (!!mState, !!buyerCanWithdraw, !!sellerCanWithdraw) *)
+
+    fun buyerWithdraw() public =
+      onlyBuyer ();
+      inState(Inactive);
+      let value = !!buyerCanWithdraw;
+      buyerCanWithdraw ::= 0
+      (* buyer.transfer(value) *)
+    
+    fun sellerWithdraw() public =
+      onlySeller ();
+      inState(Inactive);
+      let value = sellerCanWithdraw;
+      sellerCanWithdraw ::= 0
+      (* seller.transfer(value) *)
+
+val () = constructor 0x20
+(* val () = debug_log (!!mState) *)
+val () = confirmPurchase()
+(* val () = debug_log (!!mState) *)
+(* val () = confirmReceived() *)
+(* val () = debug_log (!!mState, !!buyerCanWithdraw, !!sellerCanWithdraw) *)
+
+(* val _ = dispatch { *)
+(*       confirmPurchase = confirmPurchase, *)
+(*       confirmReceived = confirmReceived, *)
+(* } *)
+                     
+end

@@ -388,7 +388,13 @@ fun tc_inst (hctx, num_regs, st_name2ty, st_int2name) (ctx as (itctx as (ictx, t
       end
     | ORIGIN () => add_stack TInt ctx
     | ADDRESS () => add_stack TInt ctx
-    | BALANCE () => add_stack TInt ctx
+    | BALANCE () =>
+      let
+        val (t0, sctx) = assert_cons sctx
+        val _ = assert_TInt $ whnf itctx t0
+      in
+        ((itctx, rctx, TInt :: sctx, st))
+      end
     | CALLER () => add_stack TInt ctx
     | CALLVALUE () => add_stack TInt ctx
     | CALLDATASIZE () => add_stack TInt ctx

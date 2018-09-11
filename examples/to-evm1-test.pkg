@@ -9,7 +9,8 @@
 (* Congress.etiml *)
 (* MultiSig.etiml *)
 (* CryptoKitties.etiml *)
-BlindAuction.etiml
+(* BlindAuction.etiml *)
+SafeRemotePurchase.etiml
 
 (* Token2.etiml *)
 

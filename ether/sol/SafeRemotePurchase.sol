@@ -27,31 +27,31 @@ contract Purchase {
 
     modifier onlyBuyer() {
         require(
-            msg.sender == buyer,
-            "Only buyer can call this."
+            msg.sender == buyer
+            /* "Only buyer can call this." */
         );
         _;
     }
 
     modifier onlySeller() {
         require(
-            msg.sender == seller,
-            "Only seller can call this."
+            msg.sender == seller
+            /* "Only seller can call this." */
         );
         _;
     }
 
     modifier inState(State _state) {
         require(
-            state == _state,
-            "Invalid state."
+            state == _state
+            /* "Invalid state." */
         );
         _;
     }
 
-    event Aborted();
-    event PurchaseConfirmed();
-    event ItemReceived();
+    /* event Aborted(); */
+    /* event PurchaseConfirmed(); */
+    /* event ItemReceived(); */
 
     /// Abort the purchase and reclaim the ether.
     /// Can only be called by the seller before
@@ -61,10 +61,10 @@ contract Purchase {
         onlySeller
         inState(State.Created)
     {
-        emit Aborted();
+        /* emit Aborted(); */
         state = State.Inactive;
-        sellCanWithdraw = address(this).balance;
         /* seller.transfer(address(this).balance); */
+        sellerCanWithdraw = address(this).balance;
     }
 
     /// Confirm the purchase as buyer.
@@ -77,7 +77,7 @@ contract Purchase {
         condition(msg.value == (2 * value))
         payable
     {
-        emit PurchaseConfirmed();
+        /* emit PurchaseConfirmed(); */
         buyer = msg.sender;
         state = State.Locked;
         // PW: If the seller doesn't ship the good after this point, both sides lose 2*value money.
@@ -91,7 +91,7 @@ contract Purchase {
         onlyBuyer
         inState(State.Locked)
     {
-        emit ItemReceived();
+        /* emit ItemReceived(); */
         // It is important to change the state first because
         // otherwise, the contracts called using `send` below
         // can call in again here.
@@ -104,7 +104,8 @@ contract Purchase {
         /* seller.transfer(address(this).balance); */
         
         buyerCanWithdraw = value;
-        sellerCanWithdraw = address(this).balance;
+        /* sellerCanWithdraw = address(this).balance - value; */
+        sellerCanWithdraw = 3 * value;
     }
 
     function buyerWithdraw()
@@ -112,7 +113,7 @@ contract Purchase {
         onlyBuyer
         inState(State.Inactive)
     {
-      let value = buyerCanWithdraw;
+      uint value = buyerCanWithdraw;
       buyerCanWithdraw = 0;
       buyer.transfer(value);
     }
@@ -122,7 +123,7 @@ contract Purchase {
         onlySeller
         inState(State.Inactive)
     {
-      let value = sellerCanWithdraw;
+      uint value = sellerCanWithdraw;
       sellerCanWithdraw = 0;
       seller.transfer(value);
     }

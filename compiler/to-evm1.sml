@@ -467,7 +467,7 @@ fun compile st_name2int ectx e =
          | EnvValue () => [CALLVALUE ()]
          | EnvNow () => [TIMESTAMP ()]
          | EnvThis () => [ADDRESS ()]
-         | EnvBalance () => [BALANCE ()]
+         | EnvBalance () => [ADDRESS (), BALANCE ()]
          | EnvBlockNumber () => [NUMBER ()]
       )
     | EState x => (PUSH_value $ VState $ st_name2int @!! x) @ debug_pad C_MLOAD (*to make gas cost the same as get_reg, for debugging purpose*)
