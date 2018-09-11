@@ -139,15 +139,15 @@ contract Purchase = struct
       (* seller.transfer(value) *)
 
 val () = constructor 0x20
-(* val () = debug_log (!!mState) *)
-val () = confirmPurchase()
-(* val () = debug_log (!!mState) *)
-(* val () = confirmReceived() *)
-(* val () = debug_log (!!mState, !!buyerCanWithdraw, !!sellerCanWithdraw) *)
+(* (* val () = debug_log (!!mState) *) *)
+(* val () = confirmPurchase() *)
+(* (* val () = debug_log (!!mState) *) *)
+(* (* val () = confirmReceived() *) *)
+(* (* val () = debug_log (!!mState, !!buyerCanWithdraw, !!sellerCanWithdraw) *) *)
 
-(* val _ = dispatch { *)
-(*       confirmPurchase = confirmPurchase, *)
-(*       confirmReceived = confirmReceived, *)
-(* } *)
+(* (* val _ = dispatch { *) *)
+(* (*       confirmPurchase = confirmPurchase, *) *)
+(* (*       confirmReceived = confirmReceived, *) *)
+(* (* } *) *)
                      
 end

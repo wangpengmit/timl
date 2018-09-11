@@ -324,16 +324,16 @@ contract EtherDelta = struct
 
   val _ = constructor (0x8888, 0x8888, 0x8888, 1, 1, 1)
 
-  val _ = set tokens[0x1111][0x8888] 0x20
-  val _ = set tokens[0x2222][0x4444] 0x20
-  val _ = set orders[0x4444][0] true
+  (* val _ = set tokens[0x1111][0x8888] 0x20 *)
+  (* val _ = set tokens[0x2222][0x4444] 0x20 *)
+  (* val _ = set orders[0x4444][0] true *)
                        
-  val _ = trade (0x1111, 0x10, 0x2222, 0x10, 0xffffffffffff, 0, 0x4444, 0, 0, 0, 5)
-  (* val _ = availableVolume(0x1111, 0x10, 0x2222, 0x10, 0xffffffffffff, 0, 0x4444, 0, 0, 0)               *)
-  (* val () = halt 0x555 *)
+  (* val _ = trade (0x1111, 0x10, 0x2222, 0x10, 0xffffffffffff, 0, 0x4444, 0, 0, 0, 5) *)
+  (* (* val _ = availableVolume(0x1111, 0x10, 0x2222, 0x10, 0xffffffffffff, 0, 0x4444, 0, 0, 0)               *) *)
+  (* (* val () = halt 0x555 *) *)
                 
-  (* val _ = dispatch {trade = trade, *)
-  (*                   availableVolume = availableVolume, *)
-  (*                   } *)
+  (* (* val _ = dispatch {trade = trade, *) *)
+  (* (*                   availableVolume = availableVolume, *) *)
+  (* (*                   } *) *)
     
 end

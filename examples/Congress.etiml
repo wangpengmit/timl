@@ -361,33 +361,33 @@ contract Congress = struct inherit owned, tokenRecipient
 
 val _ = constructor (1, 0, 0)
 
-(* val _ = %addMember 0x2222 *)
-(* val _ = %addMember 0x3333 *)
-(* val _ = %addMember 0x4 *)
-(* val _ = %addMember 0x5 *)
-(* val _ = %addMember 0x6 *)
-(* val _ = %addMember 0x7 *)
-(* val _ = %addMember 0x8 *)
-(* val _ = %addMember 0x9 *)
-(* val _ = %removeMember 0x2222 *)
-val _ = %newProposal (0x1111, 0, "job", "code")
-(* val _ = %vote (0, true, "LGTM") *)
-val _ = %vote (0, false, "LGTM")
-(* val r = %executeProposal (0, "code") *)
+(* (* val _ = %addMember 0x2222 *) *)
+(* (* val _ = %addMember 0x3333 *) *)
+(* (* val _ = %addMember 0x4 *) *)
+(* (* val _ = %addMember 0x5 *) *)
+(* (* val _ = %addMember 0x6 *) *)
+(* (* val _ = %addMember 0x7 *) *)
+(* (* val _ = %addMember 0x8 *) *)
+(* (* val _ = %addMember 0x9 *) *)
+(* (* val _ = %removeMember 0x2222 *) *)
+(* val _ = %newProposal (0x1111, 0, "job", "code") *)
+(* (* val _ = %vote (0, true, "LGTM") *) *)
+(* val _ = %vote (0, false, "LGTM") *)
+(* (* val r = %executeProposal (0, "code") *) *)
          
-(* val () = halt r *)
+(* (* val () = halt r *) *)
 
-val addMember' = @addMember {2}
-val removeMember' = @removeMember {10}
-val newProposal' = @newProposal {3} {4}
-val vote' = @vote {4}
-val executeProposal' = @executeProposal {4}
+(* val addMember' = @addMember {2} *)
+(* val removeMember' = @removeMember {10} *)
+(* val newProposal' = @newProposal {3} {4} *)
+(* val vote' = @vote {4} *)
+(* val executeProposal' = @executeProposal {4} *)
                   
-val _ = dispatch {addMember = addMember',
-                  removeMember = removeMember',
-                  newProposal = newProposal',
-                  vote = vote',
-                  executeProposal = executeProposal',
-                 }
+(* val _ = dispatch {addMember = addMember', *)
+(*                   removeMember = removeMember', *)
+(*                   newProposal = newProposal', *)
+(*                   vote = vote', *)
+(*                   executeProposal = executeProposal', *)
+(*                  } *)
                     
 end
