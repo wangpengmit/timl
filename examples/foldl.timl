@@ -1,0 +1,28 @@
+structure Foldl = struct
+
+datatype list 'a : {Nat} =
+         Nil of list 'a {0} 
+       | Cons {n : Nat} of 'a * list 'a {n} --> list 'a {n + 1}
+
+(* fun foldl ['a 'b] {m1 : Time} {m2 n : Nat} (f : 'a * 'b -- m1,m2 --> 'b) acc (l : list 'a {n}) *)
+(*     return 'b = *)
+(*   case l return using (8524.0+m1)*$n+1767.0, (32*204+m2)*n+32*17 of *)
+(*       [] => acc *)
+(*     | x :: xs => %foldl f (f (x, acc)) xs *)
+
+(* fun len ['a 'b] {n : Nat} (l : list 'a {n}) = *)
+(*   case l return using (8524.0+m1)*$n+1767.0, (32*204+m2)*n+32*17 of *)
+(*       [] => acc *)
+(*     | x :: xs => %len f (f (x, acc)) xs *)
+
+fun len {n : Nat} (l : list int {n}) =
+    case l return using $(2111*n+777), 32*30*n+32*2 of
+        [] => 0
+      | _ :: xs => 1 + %len xs
+
+(* fun fact {n : Nat} (n : nat {n}) = *)
+(*   ifi n #< #1 then 1 *)
+(*   else *)
+(*     nat2int n * %fact (n #- #1) using $(2170*n+1454), 32*31*n+32*13 *)
+                 
+end

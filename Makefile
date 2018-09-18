@@ -41,7 +41,8 @@ unit-test.mlb: generate-file-list.rb
 %.t.sml: %.sml
 	cp $< $@
 	# cat $< | ruby preprocess.rb > $@
-	sed -i '1i(* Auto-generated. Do not edit! *)' $@
+	# sed -i '1i(* Auto-generated. Do not edit! *)' $@
+	ex -sc '1i|(* Auto-generated. Do not edit! *)' -cx file
 
 clean:
 	find . -type f ! -name '*.exe' | xargs touch
