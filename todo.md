@@ -170,6 +170,7 @@
     (* ;(orderFills[user][hash], tokens[tokenGet][msg.sender], tokens[tokenGet][user], tokens[tokenGet][msg.sender], tokens[tokenGet][user], tokens[tokenGive][msg.sender], tokens[tokenGive][user]) *)
     halt 0x555
 - [ ] There is a bug in BlindAuction.etiml that when inline `let b = placeBid(msg.sender, value)` typechecking after translation generates two wrong VCs.
+- [ ] Functions below CPS should have multiple arguments to avoid tuple-related costs.
 
 # To-do for Examples:
 
