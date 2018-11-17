@@ -1,3 +1,0 @@
-[submodule "compiler/sml-llvm"]
-	path = compiler-by-wayne/sml-llvm
-	url = https://github.com/stonebuddha/sml-llvm

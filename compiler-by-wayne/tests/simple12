@@ -1,3 +1,0 @@
-(case (x (inl 5 (+t Int (*t Unit Int))))
-  (+ x 2)
-  (snd x))
