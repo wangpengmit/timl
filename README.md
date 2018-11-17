@@ -1,4 +1,4 @@
-TiML: A Functional Programming Language with Time Complexity (Parser, Typechecker and Coq Formalization)
+TiML: A Functional Programming Language with Time Complexity
 ===========================================
 
 Setup Instructions
@@ -15,53 +15,9 @@ Setup Instructions
 
 3. Install Ruby. Make sure command `ruby` is in current PATH.
 
-4. Use `make` to build TiML, or use `./test.sh` to build and test on files in [examples](examples) sub-directory.
+4. Use `make` to build TiML.
 
-5. (Optional). Install MLton (a whole-program optimizing SML compiler). Make sure command `mlton`, `mlyacc` and `mllex` is in current PATH. Use `make mlton` to build TiML with MLton, or use `./test-mlton.sh` to build and test on files in [examples](examples) sub-directory.
+5. (Optional). Install MLton (a whole-program optimizing SML compiler). Make sure command `mlton`, `mlyacc` and `mllex` is in current PATH. Use `make mlton` to build TiML with MLton.
 
-6. (Optional, requires step 5). Run `ruby benchmark.rb` in directory [examples](examples), which will generate file `result.csv` that reproduces results in Table 1 of the paper.
+6. (Optional). Follow [emacs/README.rst](emacs/README.rst) to install TiML mode on Emacs.
 
-7. (Optional). Follow [emacs/README.rst](emacs/README.rst) to install TiML mode on Emacs.
-
-Play with TiML
-----------------------------------
-
-[examples/test-suite.pkg](examples/test-suite.pkg) lists all the benchmark examples. You can use this command to run all the examples:
-
-  ```
-  ./main.sh examples/stdlib.pkg examples/test-suite.pkg
-  ```
-
-or this command to run a single example:
-
-  ```
-  ./main.sh examples/stdlib.pkg examples/FILENAME.timl
-  ```
-
-Note that [examples/stdlib.pkg](examples/stdlib.pkg) (the standard library) is usually needed.
-
-Readers are advised to read the example files following the order in Table 1 of the companion paper (and in file [examples/test-suite.pkg](examples/test-suite.pkg)), as new syntax are explained in that order.
-
-To reproduce the results in Table 1 of the companion paper, you can run
-
-  ```
-  cd examples
-  ruby benchmark.rb
-  ```
-
-The results will be printed out and written to file "result.csv". Note that this experiment requires MLton, and your processing time may vary.
-
-Coq Proof
-----------------------------------
-
-The Coq formalization of TiML and its soundness is in [proof/Soundness.v](proof/Soundness.v). The proof requires Coq 8.5pl3. To check the proof, first compile the utility library:
-
-  ```
-  make
-  ```
-
-You can also compile the utility library and the soundness proof altogether:
-
-  ```
-  make soundness
-  ```
